@@ -2,10 +2,10 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text
+from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base, UUIDMixin, TimestampMixin
+from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
 from app.db.mixins import utc_now
 
 
@@ -230,4 +230,258 @@ class Currency(Base, UUIDMixin):
         nullable=False,
         default=ReferenceStatus.ACTIVE
     )
+
+
+class CustomerStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MERGED = "merged"
+
+
+class SupplierStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MERGED = "merged"
+
+
+class BrandStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MERGED = "merged"
+
+
+class ManufacturerStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class SignerStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class Customer(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a customer organization in the system."""
+    __tablename__ = "customers"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    tax_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    province_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("provinces.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    contact_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    contact_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    contact_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[CustomerStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=CustomerStatus.ACTIVE
+    )
+    merged_into_customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("customers.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+    province: Mapped[Optional["Province"]] = relationship("Province")
+    aliases: Mapped[List["CustomerAlias"]] = relationship(
+        "CustomerAlias",
+        back_populates="customer",
+        cascade="all, delete-orphan"
+    )
+    merged_into: Mapped[Optional["Customer"]] = relationship(
+        "Customer",
+        remote_side="[Customer.id]"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "tax_code", name="uq_customer_tax_org"),
+    )
+
+
+class CustomerAlias(Base, UUIDMixin):
+    """Stores fuzzy matching name aliases for a customer."""
+    __tablename__ = "customer_aliases"
+
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    alias_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now
+    )
+
+    customer: Mapped["Customer"] = relationship("Customer", back_populates="aliases")
+
+
+class Supplier(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a supplier organization in the system."""
+    __tablename__ = "suppliers"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    tax_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    province_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("provinces.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    contact_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    contact_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    contact_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reliability_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+    status: Mapped[SupplierStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=SupplierStatus.ACTIVE
+    )
+    merged_into_supplier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+    province: Mapped[Optional["Province"]] = relationship("Province")
+    aliases: Mapped[List["SupplierAlias"]] = relationship(
+        "SupplierAlias",
+        back_populates="supplier",
+        cascade="all, delete-orphan"
+    )
+    merged_into: Mapped[Optional["Supplier"]] = relationship(
+        "Supplier",
+        remote_side="[Supplier.id]"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "tax_code", name="uq_supplier_tax_org"),
+    )
+
+
+class SupplierAlias(Base, UUIDMixin):
+    """Stores fuzzy matching name aliases for a supplier."""
+    __tablename__ = "supplier_aliases"
+
+    supplier_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    alias_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now
+    )
+
+    supplier: Mapped["Supplier"] = relationship("Supplier", back_populates="aliases")
+
+
+class Manufacturer(Base, UUIDMixin, TimestampMixin):
+    """Represents a product manufacturer."""
+    __tablename__ = "manufacturers"
+
+    legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("countries.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    website: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[ManufacturerStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ManufacturerStatus.ACTIVE
+    )
+
+    country: Mapped[Optional["Country"]] = relationship("Country")
+    brands: Mapped[List["Brand"]] = relationship(
+        "Brand",
+        back_populates="manufacturer"
+    )
+
+
+class Brand(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a product brand name."""
+    __tablename__ = "brands"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("countries.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("manufacturers.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    status: Mapped[BrandStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=BrandStatus.ACTIVE
+    )
+
+    country: Mapped[Optional["Country"]] = relationship("Country")
+    manufacturer: Mapped[Optional["Manufacturer"]] = relationship(
+        "Manufacturer",
+        back_populates="brands"
+    )
+
+    __table_args__ = (
+        Index("uq_brand_name_lower", text("lower(name)"), unique=True),
+    )
+
+
+class SignerProfile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents an authorized signature profile for appraisals."""
+    __tablename__ = "signer_profiles"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    certificate_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    signature_image_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[SignerStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=SignerStatus.ACTIVE
+    )
+
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+
 
