@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric
+from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -483,5 +483,223 @@ class SignerProfile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+
+
+class ProjectWorkflowStatus(str, enum.Enum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    ARCHIVED = "archived"
+    CANCELLED = "cancelled"
+
+
+class KnowledgeUpdateStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPLIED = "applied"
+    DEFERRED = "deferred"
+    IGNORED = "ignored"
+
+
+class AssetLineReviewStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    FLAGGED = "flagged"
+    REJECTED = "rejected"
+
+
+class AssetLineValidationStatus(str, enum.Enum):
+    UNVALIDATED = "unvalidated"
+    VALID = "valid"
+    INVALID = "invalid"
+    WARNING = "warning"
+
+
+class ProjectFileCategory(str, enum.Enum):
+    INPUT_CONTRACT = "input_contract"
+    REFERENCE_DOC = "reference_doc"
+    APPRAISAL_REPORT = "appraisal_report"
+    SUPPORT_FILE = "support_file"
+    OTHER = "other"
+
+
+class FileProcessingStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a valuation project in the system."""
+    __tablename__ = "projects"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("customers.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[ProjectWorkflowStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ProjectWorkflowStatus.DRAFT
+    )
+    knowledge_status: Mapped[KnowledgeUpdateStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=KnowledgeUpdateStatus.PENDING
+    )
+    fee_amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False, default=0.0)
+    fee_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("currencies.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    signer_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("signer_profiles.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+    customer: Mapped["Customer"] = relationship("Customer")
+    currency: Mapped[Optional["Currency"]] = relationship("Currency")
+    signer_profile: Mapped[Optional["SignerProfile"]] = relationship("SignerProfile")
+
+    asset_lines: Mapped[List["ProjectAssetLine"]] = relationship(
+        "ProjectAssetLine",
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )
+    files: Mapped[List["ProjectFile"]] = relationship(
+        "ProjectFile",
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_project_code_org"),
+        CheckConstraint("fee_amount >= 0", name="chk_project_fee_positive"),
+    )
+
+
+class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a single line item of assets under evaluation in a project."""
+    __tablename__ = "project_asset_lines"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    asset_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    quantity: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False, default=1.0)
+    unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("units.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    raw_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    raw_price_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("currencies.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    appraised_unit_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    appraised_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("currencies.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    review_status: Mapped[AssetLineReviewStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetLineReviewStatus.PENDING
+    )
+    validation_status: Mapped[AssetLineValidationStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetLineValidationStatus.UNVALIDATED
+    )
+    brand_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("brands.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("manufacturers.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    # Future Placeholders
+    matched_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    matched_knowledge_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    taxonomy_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+
+    project: Mapped["Project"] = relationship("Project", back_populates="asset_lines")
+    unit: Mapped[Optional["Unit"]] = relationship("Unit")
+    raw_price_currency: Mapped[Optional["Currency"]] = relationship(
+        "Currency",
+        foreign_keys=[raw_price_currency_id]
+    )
+    appraised_currency: Mapped[Optional["Currency"]] = relationship(
+        "Currency",
+        foreign_keys=[appraised_currency_id]
+    )
+    brand: Mapped[Optional["Brand"]] = relationship("Brand")
+    manufacturer: Mapped[Optional["Manufacturer"]] = relationship("Manufacturer")
+
+    __table_args__ = (
+        CheckConstraint("quantity >= 0", name="chk_asset_quantity_positive"),
+        CheckConstraint("raw_price >= 0", name="chk_asset_raw_price_positive"),
+        CheckConstraint("appraised_unit_price >= 0", name="chk_asset_appraised_price_positive"),
+    )
+
+
+class ProjectFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a file uploaded as part of a project."""
+    __tablename__ = "project_files"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_category: Mapped[ProjectFileCategory] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ProjectFileCategory.SUPPORT_FILE
+    )
+    file_size: Mapped[int] = mapped_column(nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    storage_object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    processing_status: Mapped[FileProcessingStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=FileProcessingStatus.PENDING
+    )
+    extracted_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    project: Mapped["Project"] = relationship("Project", back_populates="files")
+    uploader: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
+    )
+
 
 
