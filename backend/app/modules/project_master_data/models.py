@@ -144,3 +144,90 @@ class UserRole(Base, UUIDMixin):
             sqlite_where=text("is_active = 1")
         ),
     )
+
+
+class ReferenceStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class UnitType(str, enum.Enum):
+    QUANTITY = "quantity"
+    LENGTH = "length"
+    AREA = "area"
+    WEIGHT = "weight"
+    OTHER = "other"
+
+
+class Country(Base, UUIDMixin, TimestampMixin):
+    """Represents a country in the lookup database."""
+    __tablename__ = "countries"
+
+    iso2: Mapped[Optional[str]] = mapped_column(String(2), unique=True, nullable=True)
+    iso3: Mapped[Optional[str]] = mapped_column(String(3), unique=True, nullable=True)
+    name_vi: Mapped[str] = mapped_column(String(128), nullable=False)
+    name_en: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    status: Mapped[ReferenceStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ReferenceStatus.ACTIVE
+    )
+
+    provinces: Mapped[List["Province"]] = relationship(
+        "Province",
+        back_populates="country",
+        cascade="all, delete-orphan"
+    )
+
+
+class Province(Base, UUIDMixin):
+    """Represents a province/city within a country."""
+    __tablename__ = "provinces"
+
+    country_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("countries.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    status: Mapped[ReferenceStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ReferenceStatus.ACTIVE
+    )
+
+    country: Mapped["Country"] = relationship("Country", back_populates="provinces")
+
+
+class Unit(Base, UUIDMixin):
+    """Represents a measurement unit lookup."""
+    __tablename__ = "units"
+
+    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    symbol: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    unit_type: Mapped[Optional[UnitType]] = mapped_column(
+        String(50),
+        nullable=True
+    )
+    status: Mapped[ReferenceStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ReferenceStatus.ACTIVE
+    )
+
+
+class Currency(Base, UUIDMixin):
+    """Represents a monetary currency lookup."""
+    __tablename__ = "currencies"
+
+    code: Mapped[str] = mapped_column(String(3), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    symbol: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    decimal_places: Mapped[int] = mapped_column(nullable=False, default=0)
+    status: Mapped[ReferenceStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ReferenceStatus.ACTIVE
+    )
+
