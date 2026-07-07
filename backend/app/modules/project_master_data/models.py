@@ -1533,6 +1533,135 @@ class IdentityDecisionLog(Base, UUIDMixin):
     actor: Mapped[Optional["User"]] = relationship("User")
 
 
+class EvidenceSourceType(str, enum.Enum):
+    CATALOGUE = "catalogue"
+    SUPPLIER = "supplier"
+    INTERNET = "internet"
+    MANUAL = "manual"
+    AI = "ai"
+    SYSTEM = "system"
+
+
+class EvidenceFileStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class EvidenceSensitivityLevel(str, enum.Enum):
+    NORMAL = "normal"
+    SENSITIVE = "sensitive"
+    RESTRICTED = "restricted"
+
+
+class EvidenceAccessType(str, enum.Enum):
+    VIEW = "view"
+    DOWNLOAD = "download"
+    METADATA = "metadata"
+
+
+class EvidenceSource(Base, UUIDMixin, TimestampMixin):
+    """Tracks source providers or catalogue origins of evidence."""
+    __tablename__ = "evidence_sources"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_type: Mapped[EvidenceSourceType] = mapped_column(
+        String(50),
+        nullable=False,
+        default=EvidenceSourceType.MANUAL
+    )
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+class EvidenceFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Container for uploaded document files and metadata."""
+    __tablename__ = "evidence_files"
+
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_size: Mapped[int] = mapped_column(nullable=False)
+    object_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    checksum: Mapped[str] = mapped_column(String(255), nullable=False)
+    sensitivity_level: Mapped[EvidenceSensitivityLevel] = mapped_column(
+        String(50),
+        nullable=False,
+        default=EvidenceSensitivityLevel.NORMAL
+    )
+    status: Mapped[EvidenceFileStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=EvidenceFileStatus.ACTIVE
+    )
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    uploader: Mapped["User"] = relationship("User")
+
+
+class EvidenceLink(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Associates an EvidenceFile with a target domain entity (soft-deletable)."""
+    __tablename__ = "evidence_links"
+
+    evidence_file_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    deleted_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    delete_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    deleter: Mapped[Optional["User"]] = relationship("User", foreign_keys=[deleted_by])
+
+    __table_args__ = (
+        Index("idx_evidence_link_target", "target_type", "target_id"),
+    )
+
+
+class EvidenceAccessLog(Base, UUIDMixin):
+    """Append-only audit log tracking accesses to sensitive/restricted evidence files."""
+    __tablename__ = "evidence_access_logs"
+
+    evidence_file_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    accessed_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    access_type: Mapped[EvidenceAccessType] = mapped_column(String(50), nullable=False)
+    access_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    accessed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
+    accessor: Mapped["User"] = relationship("User")
+
+
+
 
 
 
