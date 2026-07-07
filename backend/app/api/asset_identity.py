@@ -71,12 +71,19 @@ def create_canonical_asset(
 
 
 @router.get("/assets", response_model=List[CanonicalAssetResponse])
-def list_canonical_assets(db: Session = Depends(get_db)):
+def list_canonical_assets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:asset:read"))
+):
     return db.query(CanonicalAsset).all()
 
 
 @router.get("/assets/{asset_id}", response_model=CanonicalAssetResponse)
-def get_canonical_asset(asset_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_canonical_asset(
+    asset_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:asset:read"))
+):
     asset = db.query(CanonicalAsset).filter(CanonicalAsset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="CanonicalAsset not found")
@@ -173,12 +180,20 @@ def create_asset_variant(
 
 
 @router.get("/assets/{asset_id}/variants", response_model=List[AssetVariantResponse])
-def list_asset_variants_under_asset(asset_id: uuid.UUID, db: Session = Depends(get_db)):
+def list_asset_variants_under_asset(
+    asset_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:variant:read"))
+):
     return db.query(AssetVariant).filter(AssetVariant.canonical_asset_id == asset_id).all()
 
 
 @router.get("/variants/{variant_id}", response_model=AssetVariantResponse)
-def get_asset_variant(variant_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_asset_variant(
+    variant_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:variant:read"))
+):
     variant = db.query(AssetVariant).filter(AssetVariant.id == variant_id).first()
     if not variant:
         raise HTTPException(status_code=404, detail="AssetVariant not found")
@@ -342,12 +357,19 @@ def create_variant_alias(
 
 
 @router.get("/aliases", response_model=List[AssetAliasResponse])
-def list_aliases(db: Session = Depends(get_db)):
+def list_aliases(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:alias:read"))
+):
     return db.query(AssetAlias).all()
 
 
 @router.get("/aliases/{alias_id}", response_model=AssetAliasResponse)
-def get_alias(alias_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_alias(
+    alias_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:alias:read"))
+):
     alias = db.query(AssetAlias).filter(AssetAlias.id == alias_id).first()
     if not alias:
         raise HTTPException(status_code=404, detail="AssetAlias not found")
