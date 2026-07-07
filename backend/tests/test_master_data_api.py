@@ -295,13 +295,6 @@ def test_master_data_rbac_and_audit(client: TestClient, db_session: Session) -> 
     assert aliases[0].alias_name == "Source Corp"
 
 
-def test_no_projects_api_exists(client: TestClient) -> None:
-    # Verify that calling projects API returns 404 (does not exist)
-    resp = client.get("/api/v1/projects")
-    assert resp.status_code == 404
-
-    resp = client.post("/api/v1/projects", json={})
-    assert resp.status_code == 404
 
 
 def test_supplier_contract_and_tenant_scoping(client: TestClient, db_session: Session) -> None:

@@ -208,3 +208,115 @@ class SupplierResponse(BaseSchema):
     reliability_score: Optional[float]
     status: str
     warnings: Optional[List[str]] = None
+
+
+# Project Schemas
+class ProjectCreate(BaseSchema):
+    code: str = Field(..., max_length=64)
+    name: str = Field(..., max_length=255)
+    customer_id: uuid.UUID
+    description: Optional[str] = None
+    fee_amount: float = Field(0.0, ge=0.0)
+    fee_currency_id: Optional[uuid.UUID] = None
+    signer_profile_id: Optional[uuid.UUID] = None
+
+
+class ProjectUpdate(BaseSchema):
+    name: Optional[str] = Field(None, max_length=255)
+    description: Optional[str] = None
+    fee_amount: Optional[float] = Field(None, ge=0.0)
+    fee_currency_id: Optional[uuid.UUID] = None
+    signer_profile_id: Optional[uuid.UUID] = None
+    row_version: int = Field(..., ge=1)
+
+
+class ProjectResponse(BaseSchema):
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    customer_id: uuid.UUID
+    code: str
+    name: str
+    description: Optional[str]
+    status: str
+    knowledge_status: str
+    fee_amount: float
+    fee_currency_id: Optional[uuid.UUID]
+    signer_profile_id: Optional[uuid.UUID]
+    row_version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+# ProjectAssetLine Schemas
+class ProjectAssetLineCreate(BaseSchema):
+    asset_name: str = Field(..., max_length=255)
+    description: Optional[str] = None
+    quantity: float = Field(1.0, ge=0.0)
+    unit_id: Optional[uuid.UUID] = None
+    raw_price: Optional[float] = Field(None, ge=0.0)
+    raw_price_currency_id: Optional[uuid.UUID] = None
+    appraised_unit_price: Optional[float] = Field(None, ge=0.0)
+    appraised_currency_id: Optional[uuid.UUID] = None
+    brand_id: Optional[uuid.UUID] = None
+    manufacturer_id: Optional[uuid.UUID] = None
+
+
+class ProjectAssetLineUpdate(BaseSchema):
+    asset_name: Optional[str] = Field(None, max_length=255)
+    description: Optional[str] = None
+    quantity: Optional[float] = Field(None, ge=0.0)
+    unit_id: Optional[uuid.UUID] = None
+    raw_price: Optional[float] = Field(None, ge=0.0)
+    raw_price_currency_id: Optional[uuid.UUID] = None
+    appraised_unit_price: Optional[float] = Field(None, ge=0.0)
+    appraised_currency_id: Optional[uuid.UUID] = None
+    brand_id: Optional[uuid.UUID] = None
+    manufacturer_id: Optional[uuid.UUID] = None
+    review_status: Optional[str] = Field(None, max_length=50)
+    validation_status: Optional[str] = Field(None, max_length=50)
+    row_version: int = Field(..., ge=1)
+
+
+class ProjectAssetLineResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    asset_name: str
+    description: Optional[str]
+    quantity: float
+    unit_id: Optional[uuid.UUID]
+    raw_price: Optional[float]
+    raw_price_currency_id: Optional[uuid.UUID]
+    appraised_unit_price: Optional[float]
+    appraised_currency_id: Optional[uuid.UUID]
+    review_status: str
+    validation_status: str
+    brand_id: Optional[uuid.UUID]
+    manufacturer_id: Optional[uuid.UUID]
+    row_version: int
+
+
+# ProjectFile Schemas (Metadata only)
+class ProjectFileCreate(BaseSchema):
+    file_name: str = Field(..., max_length=255)
+    file_category: str = Field(..., max_length=50)
+    file_size: int = Field(..., ge=0)
+    mime_type: str = Field(..., max_length=100)
+    storage_object_key: str = Field(..., max_length=1024)
+    checksum_sha256: str = Field(..., max_length=64)
+    extracted_metadata: Optional[dict] = None
+
+
+class ProjectFileResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    file_name: str
+    file_category: str
+    file_size: int
+    mime_type: str
+    storage_object_key: str
+    checksum_sha256: str
+    processing_status: str
+    extracted_metadata: Optional[dict]
+    uploaded_by: uuid.UUID
+    created_at: datetime
+
