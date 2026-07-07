@@ -1964,6 +1964,97 @@ class KnowledgeLineage(Base, UUIDMixin):
     actor: Mapped[Optional["User"]] = relationship("User")
 
 
+class QuoteBatchStatus(str, enum.Enum):
+    DRAFT = "draft"
+    CANDIDATE = "candidate"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+
+
+class QuoteLineStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    REJECTED = "rejected"
+
+
+class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Aggregation folder for vendor/market pricing quotes relating to canonical assets or variants."""
+    __tablename__ = "quote_batches"
+
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    status: Mapped[QuoteBatchStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=QuoteBatchStatus.DRAFT
+    )
+    revision_number: Mapped[int] = mapped_column(nullable=False, default=1)
+    previous_quote_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    override_blocking_conflict_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
+    previous_quote_batch: Mapped[Optional["QuoteBatch"]] = relationship("QuoteBatch", remote_side="QuoteBatch.id")
+    quote_lines: Mapped[list["QuoteLine"]] = relationship("QuoteLine", back_populates="quote_batch")
+
+
+class QuoteLine(Base, UUIDMixin, TimestampMixin):
+    """Raw pricing detail entries extracted from evidence files or catalog sources."""
+    __tablename__ = "quote_lines"
+
+    quote_batch_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    evidence_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    quoted_unit_price: Mapped[float] = mapped_column(nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    quantity: Mapped[Optional[float]] = mapped_column(nullable=True)
+    unit_of_measure: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    quote_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    quote_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    status: Mapped[QuoteLineStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=QuoteLineStatus.DRAFT
+    )
+
+    quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", back_populates="quote_lines")
+    evidence_file: Mapped[Optional["EvidenceFile"]] = relationship("EvidenceFile")
+
+
+
 
 
 

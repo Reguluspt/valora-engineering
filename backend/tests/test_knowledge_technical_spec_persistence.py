@@ -49,11 +49,8 @@ def test_table_registration() -> None:
     assert "knowledge_versions" in tables
     assert "knowledge_lineage" in tables
 
-    # Assert forbidden Quote and queue tables are NOT present in metadata
+    # Assert forbidden AppraisedPrice and workflow tables are NOT present in metadata
     forbidden_tables = [
-        "quote_batches",
-        "quote_lines",
-        "market_quotes",
         "appraised_price_decisions",
         "knowledge_queue_items",
         "knowledge_conflicts",
