@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint
+from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -700,6 +700,37 @@ class ProjectFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __table_args__ = (
         CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
     )
+
+
+class AuditEvent(Base, UUIDMixin):
+    """Stores append-only audit log events for system and user mutations."""
+    __tablename__ = "audit_events"
+
+    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    command_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    event_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    correlation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
+    actor: Mapped[Optional["User"]] = relationship("User")
+
 
 
 
