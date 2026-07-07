@@ -1812,6 +1812,159 @@ class EvidenceReviewDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingM
     reviewer: Mapped[Optional["User"]] = relationship("User")
 
 
+class TechnicalSpecificationVersionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    CANDIDATE = "candidate"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+
+
+class KnowledgeVersionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    CANDIDATE = "candidate"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+
+
+class KnowledgeType(str, enum.Enum):
+    TECHNICAL_SPEC = "technical_spec"
+    QUOTE_BATCH = "quote_batch"
+    APPRAISED_PRICE = "appraised_price"
+
+
+class TechnicalSpecification(Base, UUIDMixin, TimestampMixin):
+    """Catalog folder mapping technical specifications to canonical assets or variants."""
+    __tablename__ = "technical_specifications"
+
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+    creator: Mapped["User"] = relationship("User")
+
+
+class TechnicalSpecificationVersion(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Stores the concrete technical specifications payload attributes and lineage source links."""
+    __tablename__ = "technical_specification_versions"
+
+    technical_specification_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("technical_specifications.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    version_number: Mapped[int] = mapped_column(nullable=False)
+    attribute_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
+    source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    status: Mapped[TechnicalSpecificationVersionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=TechnicalSpecificationVersionStatus.DRAFT
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    technical_specification: Mapped["TechnicalSpecification"] = relationship("TechnicalSpecification")
+    source_project: Mapped[Optional["Project"]] = relationship("Project")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
+
+    __table_args__ = (
+        UniqueConstraint("technical_specification_id", "version_number", name="uq_tech_spec_version_num"),
+    )
+
+
+class KnowledgeVersion(Base, UUIDMixin, TimestampMixin):
+    """Generic indexing registry mapping active version indicators across catalog entities."""
+    __tablename__ = "knowledge_versions"
+
+    knowledge_type: Mapped[KnowledgeType] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    concrete_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    version_number: Mapped[int] = mapped_column(nullable=False)
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[KnowledgeVersionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=KnowledgeVersionStatus.DRAFT
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+    source_project: Mapped[Optional["Project"]] = relationship("Project")
+
+    __table_args__ = (
+        Index("idx_knowledge_version_active", "canonical_asset_id", "asset_variant_id", "knowledge_type", "status"),
+    )
+
+
+class KnowledgeLineage(Base, UUIDMixin):
+    """Append-only audit trail logging transitions, imports, and approval context events."""
+    __tablename__ = "knowledge_lineage"
+
+    knowledge_type: Mapped[KnowledgeType] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    concrete_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
+    actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    source_project: Mapped[Optional["Project"]] = relationship("Project")
+    actor: Mapped[Optional["User"]] = relationship("User")
+
+
+
 
 
 

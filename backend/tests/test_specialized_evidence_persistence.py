@@ -49,16 +49,12 @@ def test_table_registration() -> None:
     assert "evidence_extraction_results" in tables
     assert "evidence_review_decisions" in tables
 
-    # Confirm knowledge tables are NOT present
+    # Confirm quote/queue tables are NOT present in this scope
     forbidden_tables = [
-        "technical_specifications",
-        "technical_specification_versions",
         "quote_batches",
         "quote_lines",
         "market_quotes",
         "appraised_price_decisions",
-        "knowledge_versions",
-        "knowledge_lineages",
         "knowledge_queue_items",
         "knowledge_conflicts",
         "knowledge_confidence"
