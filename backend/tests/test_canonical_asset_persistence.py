@@ -117,9 +117,3 @@ def test_canonical_asset_persistence(db_session: Session) -> None:
     assert asset.attributes[0].value_string == "ONAN"
 
 
-def test_asset_variants_not_existing(db_session: Session) -> None:
-    # Verify that asset_variants table is not registered in SQLAlchemy Metadata
-    inspector = inspect(db_session.bind)
-    tables = inspector.get_table_names()
-    assert "asset_variants" not in tables
-    assert "asset_variant_attribute_values" not in tables

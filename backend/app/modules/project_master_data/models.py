@@ -1120,6 +1120,90 @@ class CanonicalAssetAttributeValue(Base, UUIDMixin):
     attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
 
 
+# ==================================================
+# ASSET VARIANT ENUMS & MODELS
+# ==================================================
+
+class AssetVariantStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    REJECTED = "rejected"
+    DEPRECATED = "deprecated"
+
+
+class AssetVariant(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a specific configuration/variant of an asset family (e.g. power, capacity details)."""
+    __tablename__ = "asset_variants"
+
+    asset_family_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_families.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    code: Mapped[str] = mapped_column(String(128), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[AssetVariantStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetVariantStatus.DRAFT
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    asset_family: Mapped["AssetFamily"] = relationship("AssetFamily")
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    attributes: Mapped[List["AssetVariantAttributeValue"]] = relationship(
+        "AssetVariantAttributeValue",
+        back_populates="asset_variant",
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("canonical_asset_id", "code", name="uq_asset_variant_canonical_code"),
+    )
+
+
+class AssetVariantAttributeValue(Base, UUIDMixin):
+    """Stores variant-specific technical attributes for AssetVariant."""
+    __tablename__ = "asset_variant_attribute_values"
+
+    asset_variant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    attribute_definition_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    value_string: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    value_number: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
+    value_boolean: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    value_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    normalized_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source: Mapped[AttributeValueSource] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AttributeValueSource.MANUAL
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+
+    # Relationships
+    asset_variant: Mapped["AssetVariant"] = relationship("AssetVariant", back_populates="attributes")
+    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
+
+
+
 
 
 
