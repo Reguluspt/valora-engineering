@@ -2106,6 +2106,111 @@ class AppraisedPriceDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingM
     approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
 
 
+class KnowledgeQueueItemStatus(str, enum.Enum):
+    PENDING = "pending"
+    CLAIMED = "claimed"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
+
+
+class KnowledgeConflictStatus(str, enum.Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
+class KnowledgeConflictSeverity(str, enum.Enum):
+    WARNING = "warning"
+    BLOCKING = "blocking"
+
+
+class KnowledgeQueueItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Holds candidate suggestions and extraction queue records before approval workflows."""
+    __tablename__ = "knowledge_queue_items"
+
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    status: Mapped[KnowledgeQueueItemStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=KnowledgeQueueItemStatus.PENDING
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    auto_rejected: Mapped[bool] = mapped_column(nullable=False, default=False)
+    auto_reject_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reviewer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    claimed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    is_manual: Mapped[bool] = mapped_column(nullable=False, default=False)
+    is_pinned: Mapped[bool] = mapped_column(nullable=False, default=False)
+
+    reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewer_id])
+    claimant: Mapped[Optional["User"]] = relationship("User", foreign_keys=[claimed_by])
+
+
+class KnowledgeConfidence(Base, UUIDMixin):
+    """Logs calculated metrics and metadata sources backing standard confidence scores."""
+    __tablename__ = "knowledge_confidence"
+
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    confidence_score: Mapped[float] = mapped_column(nullable=False)
+    confidence_source: Mapped[str] = mapped_column(String(100), nullable=False)
+    source_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+
+class KnowledgeConflict(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Tracks catalog price deviations, attribute misfits, and audit resolution logs."""
+    __tablename__ = "knowledge_conflicts"
+
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    conflict_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    severity: Mapped[KnowledgeConflictSeverity] = mapped_column(
+        String(50),
+        nullable=False,
+        default=KnowledgeConflictSeverity.WARNING
+    )
+    status: Mapped[KnowledgeConflictStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=KnowledgeConflictStatus.OPEN
+    )
+    calculated_value: Mapped[float] = mapped_column(nullable=False)
+    threshold_value: Mapped[float] = mapped_column(nullable=False)
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    resolver: Mapped[Optional["User"]] = relationship("User")
+
+
+
 
 
 

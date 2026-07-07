@@ -42,15 +42,6 @@ def test_table_registration() -> None:
     tables = Base.metadata.tables
     assert "appraised_price_decisions" in tables
 
-    # Assert forbidden Queue and conflict tables are NOT present in metadata
-    forbidden_tables = [
-        "knowledge_queue_items",
-        "knowledge_conflicts",
-        "knowledge_confidence"
-    ]
-    for table in forbidden_tables:
-        assert table not in tables
-
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):

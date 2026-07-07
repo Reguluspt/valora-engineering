@@ -48,15 +48,6 @@ def test_table_registration() -> None:
     assert "knowledge_versions" in tables
     assert "knowledge_lineage" in tables
 
-    # Assert forbidden Queue and conflict tables are NOT present in metadata
-    forbidden_tables = [
-        "knowledge_queue_items",
-        "knowledge_conflicts",
-        "knowledge_confidence"
-    ]
-    for table in forbidden_tables:
-        assert table not in tables
-
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):

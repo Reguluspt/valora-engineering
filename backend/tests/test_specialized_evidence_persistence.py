@@ -48,15 +48,6 @@ def test_table_registration() -> None:
     assert "evidence_extraction_results" in tables
     assert "evidence_review_decisions" in tables
 
-    # Confirm future workflow tables are NOT present in this scope
-    forbidden_tables = [
-        "knowledge_queue_items",
-        "knowledge_conflicts",
-        "knowledge_confidence"
-    ]
-    for table in forbidden_tables:
-        assert table not in tables
-
 
 @pytest.fixture
 def setup_uploader(db_session: Session):

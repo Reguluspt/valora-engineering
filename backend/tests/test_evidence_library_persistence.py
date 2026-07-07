@@ -44,15 +44,6 @@ def test_table_registration() -> None:
     assert "evidence_links" in tables
     assert "evidence_access_logs" in tables
 
-    # 2. Confirm future workflow tables are NOT present in this scope
-    forbidden_tables = [
-        "knowledge_queue_items",
-        "knowledge_conflicts",
-        "knowledge_confidence"
-    ]
-    for table in forbidden_tables:
-        assert table not in tables
-
 
 def test_evidence_source_persistence(db_session: Session) -> None:
     source = EvidenceSource(
