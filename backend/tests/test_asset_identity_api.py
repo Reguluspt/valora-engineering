@@ -361,7 +361,7 @@ def test_openapi_schema_loads(client: TestClient) -> None:
 def test_no_candidate_or_merge_endpoints(client: TestClient) -> None:
     # Verify no candidate matching or merge endpoints are exposed yet
     resp = client.post("/api/v1/asset-identity/candidates/generate-bulk")
-    assert resp.status_code == 404
+    assert resp.status_code in [404, 405]
 
     resp = client.post("/api/v1/asset-identity/assets/merge")
     assert resp.status_code in [404, 405]

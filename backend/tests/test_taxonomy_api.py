@@ -341,4 +341,4 @@ def test_openapi_schema_loads(client: TestClient) -> None:
 def test_no_asset_identity_endpoints(client: TestClient) -> None:
     # Ensure asset identity endpoints are not exposed
     resp = client.post("/api/v1/asset-identity/candidates/generate-bulk")
-    assert resp.status_code == 404
+    assert resp.status_code in [404, 405]

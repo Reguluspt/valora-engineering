@@ -12,12 +12,19 @@ from app.modules.project_master_data.models import (
     User, CanonicalAsset, AssetVariant, AssetAlias,
     AssetFamily, TaxonomyNode, CanonicalAssetStatus,
     AssetVariantStatus, AssetAliasStatus, AssetAliasScope,
-    normalize_alias_helper
+    normalize_alias_helper,
+    IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog,
+    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType
 )
 from app.modules.project_master_data.asset_identity_schemas import (
     CanonicalAssetCreate, CanonicalAssetUpdate, CanonicalAssetResponse,
     AssetVariantCreate, AssetVariantUpdate, AssetVariantResponse,
     AssetAliasCreate, AssetAliasUpdate, AssetAliasResponse
+)
+from app.modules.project_master_data.candidate_review_schemas import (
+    IdentityCandidateResponse, IdentityCandidateUpdate,
+    IdentityReviewItemResponse, IdentityReviewItemUpdate, IdentityReviewItemResolve,
+    IdentityDecisionLogResponse
 )
 
 router = APIRouter(prefix="/api/v1/asset-identity", tags=["asset-identity"])
@@ -403,3 +410,163 @@ def update_alias(
         payload={"raw_alias": alias.raw_alias}
     )
     return alias
+
+
+# ==========================================
+# IDENTITY CANDIDATE ENDPOINTS
+# ==========================================
+
+@router.get("/candidates", response_model=List[IdentityCandidateResponse])
+def list_identity_candidates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:candidate:read"))
+):
+    return db.query(IdentityCandidate).all()
+
+
+@router.get("/candidates/{candidate_id}", response_model=IdentityCandidateResponse)
+def get_identity_candidate(
+    candidate_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:candidate:read"))
+):
+    candidate = db.query(IdentityCandidate).filter(IdentityCandidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="IdentityCandidate not found")
+    return candidate
+
+
+@router.patch("/candidates/{candidate_id}", response_model=IdentityCandidateResponse)
+def update_identity_candidate(
+    candidate_id: uuid.UUID,
+    payload: IdentityCandidateUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:candidate:update"))
+):
+    candidate = db.query(IdentityCandidate).filter(IdentityCandidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="IdentityCandidate not found")
+
+    if payload.row_version is not None and payload.row_version != candidate.row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if payload.status is not None:
+        candidate.status = payload.status
+
+    db.commit()
+    db.refresh(candidate)
+
+    log_audit_event(
+        db=db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        event_name="IDENTITY_CANDIDATE_UPDATE",
+        entity_type="IdentityCandidate",
+        entity_id=candidate.id,
+        payload={"status": candidate.status}
+    )
+    return candidate
+
+
+# ==========================================
+# IDENTITY REVIEW ITEM ENDPOINTS
+# ==========================================
+
+@router.get("/review-items", response_model=List[IdentityReviewItemResponse])
+def list_identity_review_items(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:review:read"))
+):
+    return db.query(IdentityReviewItem).all()
+
+
+@router.get("/review-items/{review_item_id}", response_model=IdentityReviewItemResponse)
+def get_identity_review_item(
+    review_item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:review:read"))
+):
+    item = db.query(IdentityReviewItem).filter(IdentityReviewItem.id == review_item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="IdentityReviewItem not found")
+    return item
+
+
+@router.patch("/review-items/{review_item_id}", response_model=IdentityReviewItemResponse)
+def update_identity_review_item(
+    review_item_id: uuid.UUID,
+    payload: IdentityReviewItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:review:update"))
+):
+    item = db.query(IdentityReviewItem).filter(IdentityReviewItem.id == review_item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="IdentityReviewItem not found")
+
+    if payload.row_version is not None and payload.row_version != item.row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if payload.assigned_to is not None:
+        item.assigned_to = payload.assigned_to
+    if payload.reviewer_note is not None:
+        item.reviewer_note = payload.reviewer_note
+    if payload.review_status is not None:
+        item.review_status = payload.review_status
+
+    db.commit()
+    db.refresh(item)
+
+    log_audit_event(
+        db=db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        event_name="IDENTITY_REVIEW_ITEM_UPDATE",
+        entity_type="IdentityReviewItem",
+        entity_id=item.id,
+        payload={"review_status": item.review_status}
+    )
+    return item
+
+
+@router.post("/review-items/{review_item_id}/resolve", response_model=IdentityReviewItemResponse)
+def resolve_identity_review_item(
+    review_item_id: uuid.UUID,
+    payload: IdentityReviewItemResolve,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:review:update"))
+):
+    item = db.query(IdentityReviewItem).filter(IdentityReviewItem.id == review_item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="IdentityReviewItem not found")
+
+    if payload.row_version is not None and payload.row_version != item.row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    item.review_status = payload.review_status
+    item.reviewer_note = payload.reviewer_note
+    item.reviewed_by = current_user.id
+    item.reviewed_at = datetime.now(timezone.utc)
+
+    # Append append-only IdentityDecisionLog history record
+    log_entry = IdentityDecisionLog(
+        project_asset_line_id=item.project_asset_line_id,
+        decision_type=payload.decision_type,
+        actor_user_id=current_user.id,
+        details=payload.details
+    )
+    db.add(log_entry)
+
+    db.commit()
+    db.refresh(item)
+
+    log_audit_event(
+        db=db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        event_name="IDENTITY_REVIEW_ITEM_RESOLVE",
+        entity_type="IdentityReviewItem",
+        entity_id=item.id,
+        payload={"decision_type": payload.decision_type}
+    )
+    return item
+
