@@ -8,7 +8,8 @@ from app.modules.project_master_data.models import (
     TaxonomyNode, AssetFamily, AssetDNA, AssetAttributeDefinition, TaxonomyChangeRequest,
     CanonicalAsset, CanonicalAssetAttributeValue,
     AssetVariant, AssetVariantAttributeValue,
-    AssetAlias, IdentityCandidate, SimilarityScore
+    AssetAlias, IdentityCandidate, SimilarityScore,
+    DuplicateCandidate, MergeDecision, IdentityReviewItem, IdentityDecisionLog
 )
 
 __all__ = [
@@ -50,4 +51,8 @@ __all__ = [
     "AssetAlias",
     "IdentityCandidate",
     "SimilarityScore",
+    "DuplicateCandidate",
+    "MergeDecision",
+    "IdentityReviewItem",
+    "IdentityDecisionLog",
 ]

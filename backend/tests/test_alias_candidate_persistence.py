@@ -203,10 +203,3 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
     assert float(cand.similarity_scores[0].score) == 0.95
 
 
-def test_merge_review_not_existing(db_session: Session) -> None:
-    # Verify that duplicate_candidates and merge_decisions tables are not registered in SQLAlchemy Metadata
-    inspector = inspect(db_session.bind)
-    tables = inspector.get_table_names()
-    assert "duplicate_candidates" not in tables
-    assert "merge_decisions" not in tables
-    assert "identity_review_items" not in tables

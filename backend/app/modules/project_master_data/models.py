@@ -1322,6 +1322,168 @@ class SimilarityScore(Base, UUIDMixin):
     identity_candidate: Mapped["IdentityCandidate"] = relationship("IdentityCandidate", back_populates="similarity_scores")
 
 
+# ==================================================
+# DUPLICATE, MERGE & REVIEW ENUMS & MODELS
+# ==================================================
+
+class DuplicateCandidateStatus(str, enum.Enum):
+    PENDING = "pending"
+    IGNORED = "ignored"
+    RESOLVED = "resolved"
+
+
+class MergeDecisionStatus(str, enum.Enum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    APPLIED = "applied"
+
+
+class IdentityReviewStatus(str, enum.Enum):
+    PENDING = "pending"
+    REVIEWED = "reviewed"
+    SKIPPED = "skipped"
+
+
+class IdentityDecisionType(str, enum.Enum):
+    APPROVE_CANDIDATE = "approve_candidate"
+    MERGE_ASSETS = "merge_assets"
+    IGNORE_CANDIDATE = "ignore_candidate"
+    CREATE_NEW = "create_new"
+
+
+class DuplicateCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Holds duplicate similarity proposals between two Canonical Assets."""
+    __tablename__ = "duplicate_candidates"
+
+    source_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    status: Mapped[DuplicateCandidateStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DuplicateCandidateStatus.PENDING
+    )
+    metadata_info: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    source_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[source_asset_id])
+    target_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[target_asset_id])
+
+    __table_args__ = (
+        CheckConstraint("source_asset_id <> target_asset_id", name="chk_duplicate_diff_assets"),
+    )
+
+
+class MergeDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Auditable log of canonical asset merge resolutions."""
+    __tablename__ = "merge_decisions"
+
+    source_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    status: Mapped[MergeDecisionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=MergeDecisionStatus.PROPOSED
+    )
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    configuration_flags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    executed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    executed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    source_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[source_asset_id])
+    target_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[target_asset_id])
+    executor: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        CheckConstraint("source_asset_id <> target_asset_id", name="chk_merge_diff_assets"),
+    )
+
+
+class IdentityReviewItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Proposals assigned to a human reviewer for asset line verification."""
+    __tablename__ = "identity_review_items"
+
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    identity_candidate_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("identity_candidates.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    review_status: Mapped[IdentityReviewStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=IdentityReviewStatus.PENDING
+    )
+    reviewer_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    project_asset_line: Mapped["ProjectAssetLine"] = relationship("ProjectAssetLine")
+    identity_candidate: Mapped[Optional["IdentityCandidate"]] = relationship("IdentityCandidate")
+    assignee: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_to])
+    reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
+
+
+class IdentityDecisionLog(Base, UUIDMixin):
+    """Append-only audit trail of identity decision approvals or merges."""
+    __tablename__ = "identity_decision_logs"
+
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    decision_type: Mapped[IdentityDecisionType] = mapped_column(String(50), nullable=False)
+    actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    executed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    project_asset_line: Mapped["ProjectAssetLine"] = relationship("ProjectAssetLine")
+    actor: Mapped[Optional["User"]] = relationship("User")
+
+
+
 
 
 
