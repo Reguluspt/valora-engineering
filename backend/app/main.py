@@ -4,6 +4,7 @@ from app.api.health import router as health_router
 from app.api.master_data import router as master_data_router
 from app.api.projects import router as projects_router
 from app.api.taxonomy import router as taxonomy_router
+from app.api.asset_identity import router as asset_identity_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -20,6 +21,7 @@ app.include_router(health_router)
 app.include_router(master_data_router)
 app.include_router(projects_router)
 app.include_router(taxonomy_router)
+app.include_router(asset_identity_router)
 
 
 @app.get("/")

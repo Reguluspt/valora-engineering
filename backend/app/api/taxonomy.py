@@ -416,6 +416,7 @@ def activate_dna(
     ).all()
     for active_dna in active_dnas:
         active_dna.status = AssetDNAStatus.DEPRECATED
+    db.flush()
 
     dna.status = AssetDNAStatus.ACTIVE
     dna.approved_by = current_user.id
