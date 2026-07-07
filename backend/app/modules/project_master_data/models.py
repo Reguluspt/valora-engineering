@@ -2054,6 +2054,59 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
     evidence_file: Mapped[Optional["EvidenceFile"]] = relationship("EvidenceFile")
 
 
+class AppraisedPriceDecisionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    CANDIDATE = "candidate"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+
+
+class AppraisedPriceDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Professional catalog price decision standard and appraiser rationale."""
+    __tablename__ = "appraised_price_decisions"
+
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    quote_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    final_unit_price: Mapped[float] = mapped_column(nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[AppraisedPriceDecisionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AppraisedPriceDecisionStatus.DRAFT
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+    quote_batch: Mapped[Optional["QuoteBatch"]] = relationship("QuoteBatch")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
+
+
+
 
 
 

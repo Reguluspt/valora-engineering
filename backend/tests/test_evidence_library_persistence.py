@@ -34,7 +34,6 @@ def db_session() -> Session:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 def test_table_registration() -> None:
@@ -47,7 +46,6 @@ def test_table_registration() -> None:
 
     # 2. Confirm future workflow tables are NOT present in this scope
     forbidden_tables = [
-        "appraised_price_decisions",
         "knowledge_queue_items",
         "knowledge_conflicts",
         "knowledge_confidence"

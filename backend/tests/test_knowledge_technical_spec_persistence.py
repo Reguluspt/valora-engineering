@@ -39,7 +39,6 @@ def db_session() -> Session:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 def test_table_registration() -> None:
@@ -49,9 +48,8 @@ def test_table_registration() -> None:
     assert "knowledge_versions" in tables
     assert "knowledge_lineage" in tables
 
-    # Assert forbidden AppraisedPrice and workflow tables are NOT present in metadata
+    # Assert forbidden Queue and conflict tables are NOT present in metadata
     forbidden_tables = [
-        "appraised_price_decisions",
         "knowledge_queue_items",
         "knowledge_conflicts",
         "knowledge_confidence"
