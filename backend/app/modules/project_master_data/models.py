@@ -999,6 +999,128 @@ class TaxonomyChangeRequest(Base, UUIDMixin, TimestampMixin):
     reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
 
 
+# ==================================================
+# CANONICAL ASSET ENUMS & MODELS
+# ==================================================
+
+class CanonicalAssetStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    MERGED = "merged"
+    REJECTED = "rejected"
+
+
+class CanonicalAssetMaturity(str, enum.Enum):
+    DRAFT = "draft"
+    OBSERVED = "observed"
+    REVIEWED = "reviewed"
+    VALIDATED = "validated"
+    CANONICAL = "canonical"
+    DEPRECATED = "deprecated"
+
+
+class AttributeValueSource(str, enum.Enum):
+    MANUAL = "manual"
+    AI = "ai"
+    IMPORT = "import"
+    KNOWLEDGE = "knowledge"
+
+
+class CanonicalAsset(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a master/canonical asset record in the catalog."""
+    __tablename__ = "canonical_assets"
+
+    asset_family_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_families.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    primary_taxonomy_node_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    standard_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    short_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    brand_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("brands.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("manufacturers.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("countries.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    model_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    maturity_level: Mapped[CanonicalAssetMaturity] = mapped_column(
+        String(50),
+        nullable=False,
+        default=CanonicalAssetMaturity.DRAFT
+    )
+    status: Mapped[CanonicalAssetStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=CanonicalAssetStatus.DRAFT
+    )
+    merged_into_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id"),
+        nullable=True
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    asset_family: Mapped["AssetFamily"] = relationship("AssetFamily")
+    primary_taxonomy_node: Mapped["TaxonomyNode"] = relationship("TaxonomyNode")
+    brand: Mapped[Optional["Brand"]] = relationship("Brand")
+    manufacturer: Mapped[Optional["Manufacturer"]] = relationship("Manufacturer")
+    country: Mapped[Optional["Country"]] = relationship("Country")
+    attributes: Mapped[List["CanonicalAssetAttributeValue"]] = relationship(
+        "CanonicalAssetAttributeValue",
+        back_populates="canonical_asset",
+        cascade="all, delete-orphan"
+    )
+
+
+class CanonicalAssetAttributeValue(Base, UUIDMixin):
+    """Stores common, identity-level attribute values for CanonicalAsset."""
+    __tablename__ = "canonical_asset_attribute_values"
+
+    canonical_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    attribute_definition_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    value_string: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    value_number: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
+    value_boolean: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    value_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    normalized_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source: Mapped[AttributeValueSource] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AttributeValueSource.MANUAL
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+
+    # Relationships
+    canonical_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", back_populates="attributes")
+    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
+
+
+
 
 
 

@@ -5,7 +5,8 @@ from app.modules.project_master_data.models import (
     OrganizationProfile, User, Role, UserRole, Country, Province, Unit, Currency,
     Customer, CustomerAlias, Supplier, SupplierAlias, Brand, Manufacturer, SignerProfile,
     Project, ProjectAssetLine, ProjectFile, AuditEvent,
-    TaxonomyNode, AssetFamily, AssetDNA, AssetAttributeDefinition, TaxonomyChangeRequest
+    TaxonomyNode, AssetFamily, AssetDNA, AssetAttributeDefinition, TaxonomyChangeRequest,
+    CanonicalAsset, CanonicalAssetAttributeValue
 )
 
 __all__ = [
@@ -40,4 +41,6 @@ __all__ = [
     "AssetDNA",
     "AssetAttributeDefinition",
     "TaxonomyChangeRequest",
+    "CanonicalAsset",
+    "CanonicalAssetAttributeValue",
 ]
