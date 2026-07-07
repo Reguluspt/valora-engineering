@@ -15,13 +15,22 @@ from app.modules.project_master_data.models import (
     UserRole,
     Province,
     Country,
+    ReferenceStatus,
     AuditEvent,
     Customer,
     CustomerStatus,
     CustomerAlias,
     Supplier,
     SupplierStatus,
-    SupplierAlias
+    SupplierAlias,
+    Brand,
+    BrandStatus,
+    Manufacturer,
+    ManufacturerStatus,
+    Unit,
+    Currency,
+    SignerProfile,
+    SignerStatus
 )
 
 from sqlalchemy.pool import StaticPool
@@ -293,3 +302,333 @@ def test_no_projects_api_exists(client: TestClient) -> None:
 
     resp = client.post("/api/v1/projects", json={})
     assert resp.status_code == 404
+
+
+def test_supplier_contract_and_tenant_scoping(client: TestClient, db_session: Session) -> None:
+    # Seed org and users
+    org = OrganizationProfile(legal_name="Supp Org", organization_slug="supp-org", status=OrganizationStatus.ACTIVE)
+    db_session.add(org)
+    db_session.commit()
+
+    role_admin = Role(
+        code="admin",
+        display_name="Admin",
+        permissions=[
+            "master_data:supplier:create", "master_data:supplier:read",
+            "master_data:supplier:update", "master_data:supplier:deactivate",
+            "master_data:supplier:merge", "master_data:reference:create"
+        ]
+    )
+    db_session.add(role_admin)
+    db_session.commit()
+
+    user = User(organization_id=org.id, email="supp_admin@test.com", full_name="Supplier Admin", status=UserStatus.ACTIVE)
+    db_session.add(user)
+    db_session.commit()
+
+    ur = UserRole(user_id=user.id, role_id=role_admin.id, is_active=True)
+    db_session.add(ur)
+    db_session.commit()
+
+    headers = {"X-User-Id": str(user.id)}
+
+    # Create Country and Province first
+    country = Country(iso2="SG", iso3="SGP", name_vi="Singapore", status=ReferenceStatus.ACTIVE)
+    db_session.add(country)
+    db_session.commit()
+    province = Province(country_id=country.id, name="Singapore City", code="SG-01", status=ReferenceStatus.ACTIVE)
+    db_session.add(province)
+    db_session.commit()
+
+    # 1. Create Supplier -> 201
+    resp = client.post(
+        "/api/v1/master-data/suppliers",
+        headers=headers,
+        json={
+            "legal_name": "Supplier A",
+            "display_name": "Supp A",
+            "tax_code": "TAXSUPP1",
+            "province_id": str(province.id),
+            "reliability_score": 0.95
+        }
+    )
+    assert resp.status_code == 201
+    supp1_id = resp.json()["id"]
+
+    # Verify duplicate tax code -> 409
+    resp = client.post(
+        "/api/v1/master-data/suppliers",
+        headers=headers,
+        json={"legal_name": "Supplier B", "tax_code": "TAXSUPP1"}
+    )
+    assert resp.status_code == 409
+
+    # Create fuzzy duplicate supplier -> returns warnings
+    resp = client.post(
+        "/api/v1/master-data/suppliers",
+        headers=headers,
+        json={"legal_name": "supplier a", "tax_code": "TAXSUPP2"}
+    )
+    assert resp.status_code == 201
+    assert len(resp.json()["warnings"]) > 0
+
+    # 2. Get Suppliers with filters
+    resp = client.get("/api/v1/master-data/suppliers?q=Supp&min_reliability=0.9", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    # 3. Patch Supplier
+    resp = client.patch(
+        f"/api/v1/master-data/suppliers/{supp1_id}",
+        headers=headers,
+        json={"display_name": "Updated Supp A", "reliability_score": 0.88}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["reliability_score"] == 0.88
+
+    # 4. Deactivate Supplier
+    resp = client.post(
+        f"/api/v1/master-data/suppliers/{supp1_id}/deactivate",
+        headers=headers,
+        json={"reason": "Out of business"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "inactive"
+
+    # 5. Merge Suppliers
+    s_source = Supplier(organization_id=org.id, legal_name="S Source", tax_code="TAXSS", created_by=user.id, status=SupplierStatus.ACTIVE)
+    s_target = Supplier(organization_id=org.id, legal_name="S Target", tax_code="TAXST", created_by=user.id, status=SupplierStatus.ACTIVE)
+    db_session.add_all([s_source, s_target])
+    db_session.commit()
+
+    resp = client.post(
+        "/api/v1/master-data/suppliers/merge",
+        headers=headers,
+        json={
+            "source_supplier_id": str(s_source.id),
+            "target_supplier_id": str(s_target.id),
+            "reason": "Duplicate supplier"
+        }
+    )
+    assert resp.status_code == 200
+    db_session.refresh(s_source)
+    assert s_source.status == SupplierStatus.MERGED
+    assert s_source.merged_into_supplier_id == s_target.id
+
+    # Verify alias preserved on target
+    aliases = db_session.query(SupplierAlias).filter(SupplierAlias.supplier_id == s_target.id).all()
+    assert len(aliases) == 1
+    assert aliases[0].alias_name == "S Source"
+
+
+def test_brands_and_manufacturers(client: TestClient, db_session: Session) -> None:
+    # Seed org/user with reference and brand/mfg privileges
+    org = OrganizationProfile(legal_name="Brand Org", organization_slug="brand-org", status=OrganizationStatus.ACTIVE)
+    db_session.add(org)
+    db_session.commit()
+
+    role = Role(
+        code="admin",
+        display_name="Admin",
+        permissions=[
+            "master_data:reference:create", "master_data:brand:create", "master_data:brand:read",
+            "master_data:manufacturer:create", "master_data:manufacturer:read"
+        ]
+    )
+    db_session.add(role)
+    db_session.commit()
+
+    user = User(organization_id=org.id, email="brand_admin@test.com", full_name="Brand Admin", status=UserStatus.ACTIVE)
+    db_session.add(user)
+    db_session.commit()
+
+    ur = UserRole(user_id=user.id, role_id=role.id, is_active=True)
+    db_session.add(ur)
+    db_session.commit()
+
+    headers = {"X-User-Id": str(user.id)}
+
+    # Create Country
+    country = Country(iso2="VN", iso3="VNM", name_vi="Việt Nam", status=ReferenceStatus.ACTIVE)
+    db_session.add(country)
+    db_session.commit()
+
+    # 1. Create Manufacturer
+    resp = client.post(
+        "/api/v1/master-data/manufacturers",
+        headers=headers,
+        json={"legal_name": "Rang Dong Joint Stock", "country_id": str(country.id), "website": "https://rangdong.com"}
+    )
+    assert resp.status_code == 201
+    mfg_id = resp.json()["id"]
+
+    # 2. List Manufacturers
+    resp = client.get("/api/v1/master-data/manufacturers", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    # 3. Create Brand
+    resp = client.post(
+        "/api/v1/master-data/brands",
+        headers=headers,
+        json={"name": "Rang Dong", "country_id": str(country.id), "manufacturer_id": mfg_id}
+    )
+    assert resp.status_code == 201
+    brand_id = resp.json()["id"]
+
+    # Try duplicate brand name (case-insensitive) -> 409
+    resp = client.post(
+        "/api/v1/master-data/brands",
+        headers=headers,
+        json={"name": "rang dong"}
+    )
+    assert resp.status_code == 409
+
+    # 4. List Brands
+    resp = client.get("/api/v1/master-data/brands?q=Dong", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+def test_units_and_currencies(client: TestClient, db_session: Session) -> None:
+    # Seed org/user
+    org = OrganizationProfile(legal_name="Unit Org", organization_slug="unit-org", status=OrganizationStatus.ACTIVE)
+    db_session.add(org)
+    db_session.commit()
+
+    role = Role(
+        code="admin",
+        display_name="Admin",
+        permissions=[
+            "master_data:unit:create", "master_data:unit:read",
+            "master_data:currency:create", "master_data:reference:read"
+        ]
+    )
+    db_session.add(role)
+    db_session.commit()
+
+    user = User(organization_id=org.id, email="unit_admin@test.com", full_name="Unit Admin", status=UserStatus.ACTIVE)
+    db_session.add(user)
+    db_session.commit()
+
+    ur = UserRole(user_id=user.id, role_id=role.id, is_active=True)
+    db_session.add(ur)
+    db_session.commit()
+
+    headers = {"X-User-Id": str(user.id)}
+
+    # 1. Create Unit -> 201
+    resp = client.post(
+        "/api/v1/master-data/units",
+        headers=headers,
+        json={"code": "kg", "display_name": "Kilogram", "symbol": "kg", "unit_type": "weight"}
+    )
+    assert resp.status_code == 201
+
+    # Try duplicate unit code -> 409
+    resp = client.post(
+        "/api/v1/master-data/units",
+        headers=headers,
+        json={"code": "kg", "display_name": "Kilo"}
+    )
+    assert resp.status_code == 409
+
+    # 2. List Units -> 200
+    resp = client.get("/api/v1/master-data/units", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    # 3. Create Currency -> 201
+    resp = client.post(
+        "/api/v1/master-data/currencies",
+        headers=headers,
+        json={"code": "USD", "display_name": "US Dollar", "symbol": "$", "decimal_places": 2}
+    )
+    assert resp.status_code == 201
+
+    # Try duplicate currency code -> 409
+    resp = client.post(
+        "/api/v1/master-data/currencies",
+        headers=headers,
+        json={"code": "USD", "display_name": "Dollar"}
+    )
+    assert resp.status_code == 409
+
+    # 4. List Currencies -> 200
+    resp = client.get("/api/v1/master-data/currencies", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+def test_signers_contract(client: TestClient, db_session: Session) -> None:
+    # Seed org/user
+    org = OrganizationProfile(legal_name="Sign Org", organization_slug="sign-org", status=OrganizationStatus.ACTIVE)
+    db_session.add(org)
+    db_session.commit()
+
+    role = Role(
+        code="admin",
+        display_name="Admin",
+        permissions=["master_data:signer:create", "master_data:signer:update", "master_data:reference:read"]
+    )
+    db_session.add(role)
+    db_session.commit()
+
+    user = User(organization_id=org.id, email="sign_admin@test.com", full_name="Sign Admin", status=UserStatus.ACTIVE)
+    db_session.add(user)
+    db_session.commit()
+
+    ur = UserRole(user_id=user.id, role_id=role.id, is_active=True)
+    db_session.add(ur)
+    db_session.commit()
+
+    headers = {"X-User-Id": str(user.id)}
+
+    # 1. Create Signer A (default=True)
+    resp = client.post(
+        "/api/v1/master-data/signers",
+        headers=headers,
+        json={"full_name": "Signer A", "title": "Director", "certificate_number": "CERT-1", "is_default": True}
+    )
+    assert resp.status_code == 201
+    s1_id = resp.json()["id"]
+
+    # 2. Create Signer B (default=True) - should unset Signer A's default
+    resp = client.post(
+        "/api/v1/master-data/signers",
+        headers=headers,
+        json={"full_name": "Signer B", "title": "Manager", "certificate_number": "CERT-2", "is_default": True}
+    )
+    assert resp.status_code == 201
+    s2_id = resp.json()["id"]
+
+    # Verify defaults in database
+    db_session.expire_all()
+    s1 = db_session.query(SignerProfile).filter(SignerProfile.id == uuid.UUID(s1_id)).first()
+    s2 = db_session.query(SignerProfile).filter(SignerProfile.id == uuid.UUID(s2_id)).first()
+    assert s1.is_default is False
+    assert s2.is_default is True
+
+    # 3. Patch Signer A to title="CEO"
+    resp = client.patch(
+        f"/api/v1/master-data/signers/{s1_id}",
+        headers=headers,
+        json={"title": "CEO"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "CEO"
+
+    # 4. List Signers
+    resp = client.get("/api/v1/master-data/signers", headers=headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_openapi_json_loads(client: TestClient) -> None:
+    # Verifies that openapi.json is loaded correctly
+    resp = client.get("/openapi.json")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "paths" in data
+    assert "/api/v1/master-data/customers" in data["paths"]
+
