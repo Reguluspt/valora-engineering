@@ -45,15 +45,8 @@ def test_table_registration() -> None:
     assert "evidence_links" in tables
     assert "evidence_access_logs" in tables
 
-    # 2. Confirm specialized/knowledge tables are NOT present in this PR scope
+    # 2. Confirm knowledge tables are NOT present in Sprint 3 early persistence scope
     forbidden_tables = [
-        "supplier_quote_evidences",
-        "catalogue_evidences",
-        "internet_evidences",
-        "image_evidences",
-        "email_evidences",
-        "evidence_extraction_results",
-        "evidence_review_decisions",
         "technical_specifications",
         "technical_specification_versions",
         "quote_batches",
