@@ -4,7 +4,8 @@ from app.db.mixins import UUIDMixin, TimestampMixin, OptimisticLockingMixin
 from app.modules.project_master_data.models import (
     OrganizationProfile, User, Role, UserRole, Country, Province, Unit, Currency,
     Customer, CustomerAlias, Supplier, SupplierAlias, Brand, Manufacturer, SignerProfile,
-    Project, ProjectAssetLine, ProjectFile, AuditEvent
+    Project, ProjectAssetLine, ProjectFile, AuditEvent,
+    TaxonomyNode, AssetFamily, AssetDNA, AssetAttributeDefinition, TaxonomyChangeRequest
 )
 
 __all__ = [
@@ -34,4 +35,9 @@ __all__ = [
     "ProjectAssetLine",
     "ProjectFile",
     "AuditEvent",
+    "TaxonomyNode",
+    "AssetFamily",
+    "AssetDNA",
+    "AssetAttributeDefinition",
+    "TaxonomyChangeRequest",
 ]

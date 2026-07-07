@@ -732,5 +732,273 @@ class AuditEvent(Base, UUIDMixin):
     actor: Mapped[Optional["User"]] = relationship("User")
 
 
+# ==================================================
+# TAXONOMY CORE ENUMS & MODELS
+# ==================================================
+
+class TaxonomyNodeLevel(str, enum.Enum):
+    DOMAIN = "domain"
+    CATEGORY = "category"
+    SUBCATEGORY = "subcategory"
+    GROUP = "group"
+
+
+class TaxonomyStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    REJECTED = "rejected"
+    MERGED = "merged"
+
+
+class AssetFamilyStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    REJECTED = "rejected"
+    MERGED = "merged"
+
+
+class AssetDNAStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+
+
+class AssetAttributeDataType(str, enum.Enum):
+    STRING = "string"
+    NUMBER = "number"
+    BOOLEAN = "boolean"
+    ENUM = "enum"
+    DATE = "date"
+
+
+class AssetAttributeScope(str, enum.Enum):
+    CANONICAL = "canonical"
+    VARIANT = "variant"
+    BOTH = "both"
+
+
+class TaxonomyChangeRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class TaxonomyNode(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a node in the hierarchical equipment/asset taxonomy."""
+    __tablename__ = "taxonomy_nodes"
+
+    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="CASCADE"),
+        nullable=True
+    )
+    level: Mapped[TaxonomyNodeLevel] = mapped_column(String(50), nullable=False)
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[TaxonomyStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=TaxonomyStatus.DRAFT
+    )
+    is_system_seed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    merged_into_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id"),
+        nullable=True
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    # Relationships
+    parent: Mapped[Optional["TaxonomyNode"]] = relationship(
+        "TaxonomyNode",
+        remote_side="TaxonomyNode.id",
+        back_populates="children",
+        foreign_keys=[parent_id]
+    )
+    children: Mapped[List["TaxonomyNode"]] = relationship(
+        "TaxonomyNode",
+        back_populates="parent",
+        foreign_keys=[parent_id],
+        cascade="all, delete-orphan"
+    )
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
+
+
+class AssetFamily(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a logical grouping of canonical assets within a taxonomy group."""
+    __tablename__ = "asset_families"
+
+    taxonomy_node_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
+    default_unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("units.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    status: Mapped[AssetFamilyStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetFamilyStatus.DRAFT
+    )
+    is_system_seed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    taxonomy_node: Mapped["TaxonomyNode"] = relationship("TaxonomyNode")
+    default_unit: Mapped[Optional["Unit"]] = relationship("Unit")
+    dna_schemas: Mapped[List["AssetDNA"]] = relationship(
+        "AssetDNA",
+        back_populates="asset_family",
+        cascade="all, delete-orphan"
+    )
+
+
+class AssetDNA(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Represents a versioned schema template mapping technical attributes to a family."""
+    __tablename__ = "asset_dna"
+
+    asset_family_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_families.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    version: Mapped[int] = mapped_column(nullable=False, default=1)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[AssetDNAStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetDNAStatus.DRAFT
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Relationships
+    asset_family: Mapped["AssetFamily"] = relationship("AssetFamily", back_populates="dna_schemas")
+    attributes: Mapped[List["AssetAttributeDefinition"]] = relationship(
+        "AssetAttributeDefinition",
+        back_populates="asset_dna",
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_active_dna_per_family",
+            "asset_family_id",
+            unique=True,
+            sqlite_where=text("status = 'active'"),
+            postgresql_where=text("status = 'active'")
+        ),
+    )
+
+
+class AssetAttributeDefinition(Base, UUIDMixin, TimestampMixin):
+    """Represents a schema validation rule for individual characteristics inside a DNA template."""
+    __tablename__ = "asset_attribute_definitions"
+
+    asset_dna_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("asset_dna.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
+    label_vi: Mapped[str] = mapped_column(String(255), nullable=False)
+    data_type: Mapped[AssetAttributeDataType] = mapped_column(String(50), nullable=False)
+    unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("units.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    scope: Mapped[AssetAttributeScope] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetAttributeScope.BOTH
+    )
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_variant_defining: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_searchable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    enum_values: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    validation_rule: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    asset_dna: Mapped["AssetDNA"] = relationship("AssetDNA", back_populates="attributes")
+    unit: Mapped[Optional["Unit"]] = relationship("Unit")
+
+    __table_args__ = (
+        UniqueConstraint("asset_dna_id", "key", name="uq_attribute_definition_dna_key"),
+    )
+
+
+class TaxonomyChangeRequest(Base, UUIDMixin, TimestampMixin):
+    """Represents a user-proposed taxonomy node change request requiring review."""
+    __tablename__ = "taxonomy_change_requests"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    change_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    node_level: Mapped[str] = mapped_column(String(50), nullable=False)
+    parent_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id"),
+        nullable=True
+    )
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[TaxonomyChangeRequestStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=TaxonomyChangeRequestStatus.PENDING
+    )
+    review_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    # Relationships
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
+
+
+
 
 
