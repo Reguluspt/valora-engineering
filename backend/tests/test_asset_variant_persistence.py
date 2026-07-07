@@ -154,14 +154,6 @@ def test_asset_variant_persistence(db_session: Session) -> None:
     assert variant.attributes[0].value_number == 10.0
 
 
-def test_asset_alias_and_candidates_not_existing(db_session: Session) -> None:
-    # Verify that asset_aliases, identity_candidates, duplicate_candidates and merge_decisions tables are not registered in SQLAlchemy Metadata
-    inspector = inspect(db_session.bind)
-    tables = inspector.get_table_names()
-    assert "asset_aliases" not in tables
-    assert "identity_candidates" not in tables
-    assert "duplicate_candidates" not in tables
-    assert "merge_decisions" not in tables
 
 
 def test_parent_deletion_restricted(db_session: Session) -> None:

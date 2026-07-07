@@ -1203,6 +1203,126 @@ class AssetVariantAttributeValue(Base, UUIDMixin):
     attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
 
 
+# ==================================================
+# ALIAS & IDENTITY CANDIDATE ENUMS & MODELS
+# ==================================================
+
+class AssetAliasScope(str, enum.Enum):
+    CANONICAL = "canonical"
+    VARIANT = "variant"
+
+
+class AssetAliasStatus(str, enum.Enum):
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+
+
+class IdentityCandidateStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    IGNORED = "ignored"
+
+
+def normalize_alias_helper(raw: str) -> str:
+    import re
+    if not raw:
+        return ""
+    # Downcase, strip special chars, collapse spaces
+    s = raw.lower()
+    s = re.sub(r'[^\w\s]', '', s)
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+
+class AssetAlias(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Maps variation names or historical catalog labels to canonical assets or variants."""
+    __tablename__ = "asset_aliases"
+
+    alias_scope: Mapped[AssetAliasScope] = mapped_column(String(50), nullable=False)
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    raw_alias: Mapped[str] = mapped_column(String(255), nullable=False)
+    normalized_alias: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    status: Mapped[AssetAliasStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=AssetAliasStatus.ACTIVE
+    )
+
+    # Relationships
+    canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+
+    __table_args__ = (
+        UniqueConstraint("normalized_alias", "canonical_asset_id", name="uq_alias_normalized_canonical"),
+        UniqueConstraint("normalized_alias", "asset_variant_id", name="uq_alias_normalized_variant"),
+    )
+
+
+class IdentityCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Holds deterministic or AI suggested target proposals for raw project asset lines."""
+    __tablename__ = "identity_candidates"
+
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    proposed_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    proposed_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    proposed_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    status: Mapped[IdentityCandidateStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=IdentityCandidateStatus.PENDING
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+    match_method: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Relationships
+    project_asset_line: Mapped["ProjectAssetLine"] = relationship("ProjectAssetLine")
+    proposed_canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
+    proposed_asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
+    proposed_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship("TaxonomyNode")
+    similarity_scores: Mapped[List["SimilarityScore"]] = relationship(
+        "SimilarityScore",
+        back_populates="identity_candidate",
+        cascade="all, delete-orphan"
+    )
+
+
+class SimilarityScore(Base, UUIDMixin):
+    """Stores detailed scoring breakdowns for an IdentityCandidate."""
+    __tablename__ = "similarity_scores"
+
+    identity_candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("identity_candidates.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    component: Mapped[str] = mapped_column(String(64), nullable=False)
+    score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    metadata_info: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    identity_candidate: Mapped["IdentityCandidate"] = relationship("IdentityCandidate", back_populates="similarity_scores")
+
+
+
 
 
 

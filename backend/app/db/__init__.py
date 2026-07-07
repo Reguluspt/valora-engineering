@@ -7,7 +7,8 @@ from app.modules.project_master_data.models import (
     Project, ProjectAssetLine, ProjectFile, AuditEvent,
     TaxonomyNode, AssetFamily, AssetDNA, AssetAttributeDefinition, TaxonomyChangeRequest,
     CanonicalAsset, CanonicalAssetAttributeValue,
-    AssetVariant, AssetVariantAttributeValue
+    AssetVariant, AssetVariantAttributeValue,
+    AssetAlias, IdentityCandidate, SimilarityScore
 )
 
 __all__ = [
@@ -46,4 +47,7 @@ __all__ = [
     "CanonicalAssetAttributeValue",
     "AssetVariant",
     "AssetVariantAttributeValue",
+    "AssetAlias",
+    "IdentityCandidate",
+    "SimilarityScore",
 ]
