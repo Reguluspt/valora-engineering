@@ -17,7 +17,8 @@ from app.modules.project_master_data.models import (
     SimilarityScore,
     IdentityReviewItem, IdentityReviewStatus, IdentityDecisionLog, IdentityDecisionType,
     CanonicalAsset, CanonicalAssetStatus, CanonicalAssetMaturity, AssetVariant, AssetVariantStatus,
-    DuplicateCandidate, DuplicateCandidateStatus, MergeDecision, MergeDecisionStatus
+    DuplicateCandidate, DuplicateCandidateStatus, MergeDecision, MergeDecisionStatus,
+    AssetAlias, AssetAliasScope, AssetAliasStatus
 )
 
 @pytest.fixture
@@ -142,6 +143,17 @@ def setup_data(db_session: Session):
     db_session.add(variant)
     db_session.commit()
 
+    # Seed Alias
+    alias = AssetAlias(
+        canonical_asset_id=canon_asset.id,
+        alias_scope=AssetAliasScope.CANONICAL,
+        raw_alias="ABB Trafo",
+        normalized_alias="abb trafo",
+        status=AssetAliasStatus.ACTIVE
+    )
+    db_session.add(alias)
+    db_session.commit()
+
     # 3. Seed Project & Asset Line
     proj = Project(
         organization_id=org.id,
@@ -227,7 +239,8 @@ def setup_data(db_session: Session):
         "variant_id": variant.id,
         "score_id": score.id,
         "duplicate_id": dup.id,
-        "merge_decision_id": merge_dec.id
+        "merge_decision_id": merge_dec.id,
+        "alias_id": alias.id
     }
 
 
@@ -488,6 +501,9 @@ def test_duplicate_candidate_endpoints(client: TestClient, db_session: Session, 
         db_session.commit()
     db_session.rollback()
 
+    # 7. DELETE returns 405 Method Not Allowed
+    assert client.delete(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_admin).status_code == 405
+
 
 def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup_data) -> None:
     h_admin = setup_data["headers_admin"]
@@ -545,7 +561,30 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
     )
     assert resp.status_code == 422
 
-    # 6. Verify merge execution was NOT run (assets status and merged_into remain unmodified, no relinking of aliases/variants)
+    # 6. Verify POST rejects empty reason
+    resp = client.post(
+        "/api/v1/asset-identity/merge-decisions",
+        headers=h_admin,
+        json={
+            "source_asset_id": str(asset_id),
+            "target_asset_id": str(asset2_id),
+            "reason": ""
+        }
+    )
+    assert resp.status_code == 422
+
+    # 7. Verify POST rejects missing reason
+    resp = client.post(
+        "/api/v1/asset-identity/merge-decisions",
+        headers=h_admin,
+        json={
+            "source_asset_id": str(asset_id),
+            "target_asset_id": str(asset2_id)
+        }
+    )
+    assert resp.status_code == 422
+
+    # 8. Verify merge execution was NOT run (assets status and merged_into remain unmodified, no relinking of aliases/variants)
     db_session.expire_all()
     src = db_session.query(CanonicalAsset).filter(CanonicalAsset.id == asset_id).one()
     tgt = db_session.query(CanonicalAsset).filter(CanonicalAsset.id == asset2_id).one()
@@ -553,7 +592,15 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
     assert src.merged_into_asset_id is None
     assert tgt.status == CanonicalAssetStatus.DRAFT
 
-    # 7. No direct mutation endpoints or hard deletes exist for decisions (they return 405 Method Not Allowed since path parameter matches GET)
+    # 9. Verify no relinking of aliases or variants
+    alias_id = setup_data["alias_id"]
+    variant_id = setup_data["variant_id"]
+    alias = db_session.query(AssetAlias).filter(AssetAlias.id == alias_id).one()
+    variant = db_session.query(AssetVariant).filter(AssetVariant.id == variant_id).one()
+    assert alias.canonical_asset_id == asset_id
+    assert variant.canonical_asset_id == asset_id
+
+    # 10. No direct mutation endpoints or hard deletes exist for decisions (they return 405 Method Not Allowed since path parameter matches GET)
     assert client.delete(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_admin).status_code == 405
     assert client.patch(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_admin, json={"reason": "edited"}).status_code == 405
 
