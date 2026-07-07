@@ -310,3 +310,135 @@ def test_openapi_loads_and_no_future_routes(client: TestClient) -> None:
     # E.g. Document Intelligence/OCR route
     resp = client.post("/api/v1/ocr/import")
     assert resp.status_code == 404
+
+
+def test_project_api_granular_contracts(client: TestClient, db_session: Session) -> None:
+    # 1. Seed two organizations and users
+    org1 = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
+    db_session.add_all([org1, org2])
+    db_session.commit()
+
+    role_admin = Role(
+        code="admin",
+        display_name="Admin",
+        permissions=[
+            "project:create", "project:read", "project:update",
+            "project:archive", "project:cancel", "project:file:upload",
+            "project:asset_line:read"
+        ]
+    )
+    db_session.add(role_admin)
+    db_session.commit()
+
+    user_org1 = User(organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE)
+    user_org2 = User(organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE)
+    db_session.add_all([user_org1, user_org2])
+    db_session.commit()
+
+    ur1 = UserRole(user_id=user_org1.id, role_id=role_admin.id, is_active=True)
+    ur2 = UserRole(user_id=user_org2.id, role_id=role_admin.id, is_active=True)
+    db_session.add_all([ur1, ur2])
+    db_session.commit()
+
+    headers_org1 = {"X-User-Id": str(user_org1.id)}
+    headers_org2 = {"X-User-Id": str(user_org2.id)}
+
+    cust_org1 = Customer(organization_id=org1.id, legal_name="Cust 1", status=CustomerStatus.ACTIVE, created_by=user_org1.id)
+    cust_org2 = Customer(organization_id=org2.id, legal_name="Cust 2", status=CustomerStatus.ACTIVE, created_by=user_org2.id)
+    db_session.add_all([cust_org1, cust_org2])
+    db_session.commit()
+
+    # 2. Verify duplicate project code is allowed in different orgs
+    # Create project in Org 1
+    resp = client.post(
+        "/api/v1/projects",
+        headers=headers_org1,
+        json={"code": "DUP-CODE", "name": "Project Org 1", "customer_id": str(cust_org1.id)}
+    )
+    assert resp.status_code == 201
+    proj1_id = resp.json()["id"]
+
+    # Create project with same code in Org 2 (should be allowed)
+    resp = client.post(
+        "/api/v1/projects",
+        headers=headers_org2,
+        json={"code": "DUP-CODE", "name": "Project Org 2", "customer_id": str(cust_org2.id)}
+    )
+    assert resp.status_code == 201
+    proj2_id = resp.json()["id"]
+
+    # 3. Verify optimistic locking on ProjectAssetLine updates
+    unit = Unit(code="pcs", display_name="Pieces", status=ReferenceStatus.ACTIVE)
+    db_session.add(unit)
+    db_session.commit()
+
+    resp = client.post(
+        "/api/v1/projects/{}/asset-lines".format(proj1_id),
+        headers=headers_org1,
+        json={"asset_name": "Line 1", "quantity": 10.0, "unit_id": str(unit.id)}
+    )
+    assert resp.status_code == 201
+    line_id = resp.json()["id"]
+
+    # Update line with wrong row_version -> 409
+    resp = client.patch(
+        "/api/v1/projects/{}/asset-lines/{}".format(proj1_id, line_id),
+        headers=headers_org1,
+        json={"quantity": 15.0, "row_version": 99}
+    )
+    assert resp.status_code == 409
+
+    # Update line with correct row_version -> 200
+    resp = client.patch(
+        "/api/v1/projects/{}/asset-lines/{}".format(proj1_id, line_id),
+        headers=headers_org1,
+        json={"quantity": 15.0, "row_version": 1}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["quantity"] == 15.0
+    assert resp.json()["row_version"] == 2
+
+    # 4. Verify status-only cancel/archive behavior
+    # Archive Org 2 project
+    resp = client.post(f"/api/v1/projects/{proj2_id}/archive", headers=headers_org2)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "archived"
+
+    # Verify project record is still in the database (not hard deleted)
+    db_session.expire_all()
+    db_proj2 = db_session.query(Project).filter(Project.id == uuid.UUID(proj2_id)).first()
+    assert db_proj2 is not None
+    assert db_proj2.status == ProjectWorkflowStatus.ARCHIVED
+
+    # 5. Verify RBAC deny-by-default for lack of permissions
+    role_empty = Role(code="empty", display_name="Empty Role", permissions=[])
+    db_session.add(role_empty)
+    db_session.commit()
+
+    user_unprivileged = User(organization_id=org1.id, email="unpriv@test.com", full_name="Unpriv User", status=UserStatus.ACTIVE)
+    db_session.add(user_unprivileged)
+    db_session.commit()
+
+    ur_unpriv = UserRole(user_id=user_unprivileged.id, role_id=role_empty.id, is_active=True)
+    db_session.add(ur_unpriv)
+    db_session.commit()
+
+    headers_unpriv = {"X-User-Id": str(user_unprivileged.id)}
+
+    # Attempt project list -> 403
+    resp = client.get("/api/v1/projects", headers=headers_unpriv)
+    assert resp.status_code == 403
+
+    # Attempt file list -> 403
+    resp = client.get("/api/v1/projects/{}/files".format(proj1_id), headers=headers_unpriv)
+    assert resp.status_code == 403
+
+    # Attempt asset line creation -> 403
+    resp = client.post(
+        "/api/v1/projects/{}/asset-lines".format(proj1_id),
+        headers=headers_unpriv,
+        json={"asset_name": "Line 2"}
+    )
+    assert resp.status_code == 403
+
