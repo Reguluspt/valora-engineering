@@ -14,7 +14,8 @@ from app.modules.project_master_data.models import (
     AssetVariantStatus, AssetAliasStatus, AssetAliasScope,
     normalize_alias_helper,
     IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog,
-    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType
+    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType,
+    DuplicateCandidate, MergeDecision, DuplicateCandidateStatus, MergeDecisionStatus
 )
 from app.modules.project_master_data.asset_identity_schemas import (
     CanonicalAssetCreate, CanonicalAssetUpdate, CanonicalAssetResponse,
@@ -24,7 +25,9 @@ from app.modules.project_master_data.asset_identity_schemas import (
 from app.modules.project_master_data.candidate_review_schemas import (
     IdentityCandidateResponse, IdentityCandidateUpdate,
     IdentityReviewItemResponse, IdentityReviewItemUpdate, IdentityReviewItemResolve,
-    IdentityDecisionLogResponse
+    IdentityDecisionLogResponse,
+    DuplicateCandidateResponse, DuplicateCandidateUpdate,
+    MergeDecisionCreate, MergeDecisionResponse
 )
 
 router = APIRouter(prefix="/api/v1/asset-identity", tags=["asset-identity"])
@@ -569,4 +572,130 @@ def resolve_identity_review_item(
         payload={"decision_type": payload.decision_type}
     )
     return item
+
+
+# ==========================================
+# DUPLICATE CANDIDATE ENDPOINTS
+# ==========================================
+
+@router.get("/duplicates", response_model=List[DuplicateCandidateResponse])
+def list_duplicate_candidates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:duplicate:read"))
+):
+    return db.query(DuplicateCandidate).all()
+
+
+@router.get("/duplicates/{duplicate_id}", response_model=DuplicateCandidateResponse)
+def get_duplicate_candidate(
+    duplicate_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:duplicate:read"))
+):
+    duplicate = db.query(DuplicateCandidate).filter(DuplicateCandidate.id == duplicate_id).first()
+    if not duplicate:
+        raise HTTPException(status_code=404, detail="DuplicateCandidate not found")
+    return duplicate
+
+
+@router.patch("/duplicates/{duplicate_id}", response_model=DuplicateCandidateResponse)
+def update_duplicate_candidate(
+    duplicate_id: uuid.UUID,
+    payload: DuplicateCandidateUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:duplicate:update"))
+):
+    duplicate = db.query(DuplicateCandidate).filter(DuplicateCandidate.id == duplicate_id).first()
+    if not duplicate:
+        raise HTTPException(status_code=404, detail="DuplicateCandidate not found")
+
+    if payload.row_version is not None and payload.row_version != duplicate.row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if payload.status is not None:
+        duplicate.status = payload.status
+    if payload.metadata_info is not None:
+        duplicate.metadata_info = payload.metadata_info
+
+    db.commit()
+    db.refresh(duplicate)
+
+    log_audit_event(
+        db=db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        event_name="DUPLICATE_CANDIDATE_UPDATE",
+        entity_type="DuplicateCandidate",
+        entity_id=duplicate.id,
+        payload={"status": duplicate.status}
+    )
+    return duplicate
+
+
+# ==========================================
+# MERGE DECISION ENDPOINTS
+# ==========================================
+
+@router.post("/merge-decisions", response_model=MergeDecisionResponse, status_code=201)
+def create_merge_decision(
+    payload: MergeDecisionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:merge:create"))
+):
+    if payload.source_asset_id == payload.target_asset_id:
+        raise HTTPException(status_code=422, detail="Source and target assets must be different")
+
+    # Validate assets exist
+    src = db.query(CanonicalAsset).filter(CanonicalAsset.id == payload.source_asset_id).first()
+    if not src:
+        raise HTTPException(status_code=422, detail="Source asset not found")
+
+    tgt = db.query(CanonicalAsset).filter(CanonicalAsset.id == payload.target_asset_id).first()
+    if not tgt:
+        raise HTTPException(status_code=422, detail="Target asset not found")
+
+    decision = MergeDecision(
+        source_asset_id=payload.source_asset_id,
+        target_asset_id=payload.target_asset_id,
+        reason=payload.reason,
+        configuration_flags=payload.configuration_flags,
+        status=MergeDecisionStatus.PROPOSED
+    )
+    db.add(decision)
+    db.commit()
+    db.refresh(decision)
+
+    log_audit_event(
+        db=db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        event_name="MERGE_DECISION_CREATE",
+        entity_type="MergeDecision",
+        entity_id=decision.id,
+        payload={
+            "source_asset_id": str(payload.source_asset_id),
+            "target_asset_id": str(payload.target_asset_id)
+        }
+    )
+    return decision
+
+
+@router.get("/merge-decisions", response_model=List[MergeDecisionResponse])
+def list_merge_decisions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:merge:read"))
+):
+    return db.query(MergeDecision).all()
+
+
+@router.get("/merge-decisions/{decision_id}", response_model=MergeDecisionResponse)
+def get_merge_decision(
+    decision_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset_identity:merge:read"))
+):
+    decision = db.query(MergeDecision).filter(MergeDecision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=404, detail="MergeDecision not found")
+    return decision
 

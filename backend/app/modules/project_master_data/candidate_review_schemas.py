@@ -3,7 +3,8 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
 from app.modules.project_master_data.models import (
-    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType
+    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType,
+    DuplicateCandidateStatus, MergeDecisionStatus
 )
 
 class BaseSchema(BaseModel):
@@ -77,3 +78,44 @@ class IdentityDecisionLogResponse(BaseSchema):
     actor_user_id: Optional[uuid.UUID]
     executed_at: datetime
     details: Optional[Dict[str, Any]] = None
+
+
+# DuplicateCandidate Schemas
+class DuplicateCandidateUpdate(BaseSchema):
+    status: Optional[DuplicateCandidateStatus] = None
+    metadata_info: Optional[Dict[str, Any]] = None
+    row_version: Optional[int] = None
+
+
+class DuplicateCandidateResponse(BaseSchema):
+    id: uuid.UUID
+    source_asset_id: uuid.UUID
+    target_asset_id: uuid.UUID
+    confidence_score: float
+    status: DuplicateCandidateStatus
+    metadata_info: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    updated_at: datetime
+    row_version: int
+
+
+# MergeDecision Schemas
+class MergeDecisionCreate(BaseSchema):
+    source_asset_id: uuid.UUID
+    target_asset_id: uuid.UUID
+    reason: str = Field(..., min_length=1, max_length=1000)
+    configuration_flags: Optional[Dict[str, Any]] = None
+
+
+class MergeDecisionResponse(BaseSchema):
+    id: uuid.UUID
+    source_asset_id: uuid.UUID
+    target_asset_id: uuid.UUID
+    status: MergeDecisionStatus
+    reason: Optional[str] = None
+    configuration_flags: Optional[Dict[str, Any]] = None
+    executed_by: Optional[uuid.UUID] = None
+    executed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    row_version: int
