@@ -645,6 +645,31 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     matched_knowledge_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     taxonomy_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
 
+    suggested_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    suggested_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    suggested_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+
     project: Mapped["Project"] = relationship("Project", back_populates="asset_lines")
     unit: Mapped[Optional["Unit"]] = relationship("Unit")
     raw_price_currency: Mapped[Optional["Currency"]] = relationship(
@@ -657,6 +682,31 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
     brand: Mapped[Optional["Brand"]] = relationship("Brand")
     manufacturer: Mapped[Optional["Manufacturer"]] = relationship("Manufacturer")
+
+    suggested_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship(
+        "TaxonomyNode",
+        foreign_keys=[suggested_taxonomy_node_id]
+    )
+    approved_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship(
+        "TaxonomyNode",
+        foreign_keys=[approved_taxonomy_node_id]
+    )
+    suggested_canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship(
+        "CanonicalAsset",
+        foreign_keys=[suggested_canonical_asset_id]
+    )
+    approved_canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship(
+        "CanonicalAsset",
+        foreign_keys=[approved_canonical_asset_id]
+    )
+    suggested_asset_variant: Mapped[Optional["AssetVariant"]] = relationship(
+        "AssetVariant",
+        foreign_keys=[suggested_asset_variant_id]
+    )
+    approved_asset_variant: Mapped[Optional["AssetVariant"]] = relationship(
+        "AssetVariant",
+        foreign_keys=[approved_asset_variant_id]
+    )
 
     __table_args__ = (
         CheckConstraint("quantity >= 0", name="chk_asset_quantity_positive"),
