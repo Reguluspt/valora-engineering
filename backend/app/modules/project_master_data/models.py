@@ -2210,6 +2210,292 @@ class KnowledgeConflict(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin)
     resolver: Mapped[Optional["User"]] = relationship("User")
 
 
+class WorkflowDefinitionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+
+
+class WorkflowDefinition(Base, UUIDMixin, TimestampMixin):
+    """Configuration definition specifying states and lifecycle rules."""
+    __tablename__ = "workflow_definitions"
+
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    version: Mapped[int] = mapped_column(nullable=False, default=1)
+    status: Mapped[WorkflowDefinitionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkflowDefinitionStatus.DRAFT
+    )
+
+    transitions: Mapped[List["WorkflowTransition"]] = relationship(
+        "WorkflowTransition",
+        back_populates="workflow_definition"
+    )
+
+
+class WorkflowInstanceStatus(str, enum.Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class WorkflowInstance(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Running execution tracker of a workflow lifecycle target."""
+    __tablename__ = "workflow_instances"
+
+    workflow_definition_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    current_state: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[WorkflowInstanceStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkflowInstanceStatus.ACTIVE
+    )
+
+    workflow_definition: Mapped["WorkflowDefinition"] = relationship("WorkflowDefinition")
+    tasks: Mapped[List["WorkflowTask"]] = relationship("WorkflowTask", back_populates="workflow_instance")
+
+
+class WorkflowTransition(Base, UUIDMixin):
+    """Authorized paths linking lifecycle states together."""
+    __tablename__ = "workflow_transitions"
+
+    workflow_definition_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    from_state: Mapped[str] = mapped_column(String(100), nullable=False)
+    to_state: Mapped[str] = mapped_column(String(100), nullable=False)
+    command_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    required_permission: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    guard_expression: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+
+    workflow_definition: Mapped["WorkflowDefinition"] = relationship(
+        "WorkflowDefinition",
+        back_populates="transitions"
+    )
+
+
+class WorkflowTaskStatus(str, enum.Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class WorkflowTaskPriority(str, enum.Enum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class WorkflowTask(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Curation task checklist record associated with workflow instances."""
+    __tablename__ = "workflow_tasks"
+
+    workflow_instance_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workflow_instances.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    task_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[WorkflowTaskStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkflowTaskStatus.OPEN
+    )
+    priority: Mapped[WorkflowTaskPriority] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkflowTaskPriority.NORMAL
+    )
+    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    due_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    workflow_instance: Mapped["WorkflowInstance"] = relationship(
+        "WorkflowInstance",
+        back_populates="tasks"
+    )
+    assignee: Mapped[Optional["User"]] = relationship("User")
+
+
+class ReviewDecisionChoice(str, enum.Enum):
+    APPROVE = "approve"
+    REJECT = "reject"
+    DEFER = "defer"
+    REQUEST_CHANGES = "request_changes"
+    OVERRIDE = "override"
+
+
+class ReviewDecision(Base, UUIDMixin):
+    """Append-only audit record detailing human curator review gates."""
+    __tablename__ = "review_decisions"
+
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    decision: Mapped[ReviewDecisionChoice] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    evidence_ids: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    previous_state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    new_state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    decider: Mapped["User"] = relationship("User")
+
+
+class ApprovalGateStatus(str, enum.Enum):
+    PASS = "pass"
+    FAIL = "fail"
+    WARNING = "warning"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class ApprovalGate(Base, UUIDMixin):
+    """Consolidated gates evaluating checklist status constraints."""
+    __tablename__ = "approval_gates"
+
+    gate_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    gate_status: Mapped[ApprovalGateStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ApprovalGateStatus.NOT_APPLICABLE
+    )
+    blocking_issue_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    evaluated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+
+class ValidationRuleCategory(str, enum.Enum):
+    IDENTITY = "identity"
+    TAXONOMY = "taxonomy"
+    TECHNICAL_SPEC = "technical_spec"
+    EVIDENCE = "evidence"
+    QUOTE = "quote"
+
+
+class ValidationRule(Base, UUIDMixin):
+    """Declarative check validation constraints definition library."""
+    __tablename__ = "validation_rules"
+
+    rule_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    category: Mapped[ValidationRuleCategory] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_blocking: Mapped[bool] = mapped_column(nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+
+
+class ValidationIssueSeverity(str, enum.Enum):
+    WARNING = "warning"
+    BLOCKING = "blocking"
+
+
+class ValidationIssueStatus(str, enum.Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+    IGNORED = "ignored"
+
+
+class ValidationIssue(Base, UUIDMixin, OptimisticLockingMixin):
+    """Anomalies flagged by rule checker running against assets or data batches."""
+    __tablename__ = "validation_issues"
+
+    validation_rule_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("validation_rules.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    severity: Mapped[ValidationIssueSeverity] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ValidationIssueSeverity.WARNING
+    )
+    status: Mapped[ValidationIssueStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ValidationIssueStatus.OPEN
+    )
+    issue_message: Mapped[str] = mapped_column(Text, nullable=False)
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    validation_rule: Mapped["ValidationRule"] = relationship("ValidationRule")
+    resolver: Mapped[Optional["User"]] = relationship("User")
+
+
+class UserActionLog(Base, UUIDMixin):
+    """Append-only timeline events detailing human curation workspace history."""
+    __tablename__ = "user_action_logs"
+
+    session_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    action_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    action_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")
+
+
+
 
 
 
