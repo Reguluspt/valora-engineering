@@ -3282,6 +3282,157 @@ class DocumentPackageItem(Base, UUIDMixin):
     generated_document: Mapped["GeneratedDocument"] = relationship("GeneratedDocument")
 
 
+# ==========================================
+# SPRINT 5 - DOCUMENT INTELLIGENCE ENUMS
+# ==========================================
+
+class ParsedDocumentStatus(str, enum.Enum):
+    CANDIDATE = "candidate"
+    PARSED = "parsed"
+    FAILED = "failed"
+    REVIEWED = "reviewed"
+
+
+class ExtractedFieldStatus(str, enum.Enum):
+    CANDIDATE = "candidate"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    CORRECTED = "corrected"
+
+
+class DocumentDiffType(str, enum.Enum):
+    GENERATED_VS_EDITED = "generated_vs_edited"
+    DOCUMENT_VS_VALORA = "document_vs_valora"
+
+
+class DocumentDiffStatus(str, enum.Enum):
+    CANDIDATE = "candidate"
+    REVIEW_READY = "review_ready"
+    REVIEWED = "reviewed"
+    RESOLVED = "resolved"
+
+
+class DocumentCorrectionDecision(str, enum.Enum):
+    ACCEPT = "accept"
+    REJECT = "reject"
+    REQUEST_CHANGE = "request_change"
+
+
+class DocumentCorrectionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    REVIEWED = "reviewed"
+    COMMITTED = "committed"
+
+
+# ==========================================
+# SPRINT 5 - DOCUMENT INTELLIGENCE MODELS
+# ==========================================
+
+class ParsedDocument(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "parsed_documents"
+
+    evidence_file_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    document_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    page_count: Mapped[Optional[int]] = mapped_column(nullable=True)
+    text_content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    parse_status: Mapped[ParsedDocumentStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ParsedDocumentStatus.CANDIDATE
+    )
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+
+    evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
+
+
+class ExtractedField(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "extracted_fields"
+
+    parsed_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    field_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    field_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    extracted_value: Mapped[dict] = mapped_column(JSON, nullable=False)
+    normalized_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
+    source_page_number: Mapped[Optional[int]] = mapped_column(nullable=True)
+    status: Mapped[ExtractedFieldStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ExtractedFieldStatus.CANDIDATE
+    )
+
+    parsed_document: Mapped["ParsedDocument"] = relationship("ParsedDocument")
+
+
+class DocumentDiff(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "document_diffs"
+
+    source_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("generated_documents.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    diff_type: Mapped[DocumentDiffType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    status: Mapped[DocumentDiffStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DocumentDiffStatus.CANDIDATE
+    )
+    diff_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    source_document: Mapped["GeneratedDocument"] = relationship("GeneratedDocument")
+    target_document: Mapped["ParsedDocument"] = relationship("ParsedDocument")
+
+
+class DocumentCorrection(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "document_corrections"
+
+    parsed_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False) # e.g. extracted_field
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    affects_approved_data: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    correction_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    decision: Mapped[DocumentCorrectionDecision] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DocumentCorrectionDecision.REQUEST_CHANGE
+    )
+    decided_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    status: Mapped[DocumentCorrectionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DocumentCorrectionStatus.DRAFT
+    )
+
+    parsed_document: Mapped["ParsedDocument"] = relationship("ParsedDocument")
+    decider: Mapped["User"] = relationship("User")
+
+
+
 
 
 

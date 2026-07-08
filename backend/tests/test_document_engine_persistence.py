@@ -397,9 +397,3 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
         db_session.commit()
     db_session.rollback()
 
-
-def test_document_intelligence_not_implemented() -> None:
-    # Verify no Document Intelligence classes are registered yet in the metadata
-    mapper_classes = [mapper.class_.__name__ for mapper in Base.registry.mappers]
-    for forbidden in ["ParsedDocument", "ExtractedField", "DocumentDiff", "DocumentCorrection"]:
-        assert forbidden not in mapper_classes
