@@ -6,6 +6,9 @@ import { AssetGrid } from "../workbench/AssetGrid";
 import { generateLargeMockSet } from "../workbench/mockAssetRows";
 import { MOCK_CONTEXT_DATA } from "../workbench/panels/mockContextData";
 
+import { useDraftSession } from "../workbench/drafts/useDraftSession";
+import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
+
 interface WorkbenchLayoutProps {
   projectTitle: string;
   status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
@@ -23,6 +26,17 @@ export function WorkbenchLayout({
 }: WorkbenchLayoutProps) {
   const largeMockData = React.useMemo(() => generateLargeMockSet(), []);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
+  const {
+    drafts,
+    undoStack,
+    redoStack,
+    checkpoint,
+    updateDraft,
+    undo,
+    redo,
+    triggerAutosaveMock
+  } = useDraftSession();
 
   const selectedContextData = React.useMemo(() => {
     if (!activeRowId) return undefined;
@@ -63,6 +77,8 @@ export function WorkbenchLayout({
     };
   }, [activeRowId]);
 
+  const draftsCount = Object.keys(drafts).length;
+
   return (
     <div className="workbench-container">
       <WorkbenchHeader
@@ -70,13 +86,39 @@ export function WorkbenchLayout({
         status={status}
         statusLabel={statusLabel}
       />
+      
+      {/* Inline Toolbar for Undo/Redo */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-sm) var(--space-lg)", borderBottom: "1px solid var(--border-color)", backgroundColor: "rgba(255,255,255,0.01)" }}>
+        <UndoRedoControls
+          undoDisabled={undoStack.length === 0}
+          redoDisabled={redoStack.length === 0}
+          onUndo={undo}
+          onRedo={redo}
+        />
+        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
+          * Double click cell values to enter draft edit mode.
+        </span>
+      </div>
+
       <div className="workbench-body">
         <main className="workbench-grid-pane" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {children || <AssetGrid rows={largeMockData} onActiveRowChange={setActiveRowId} />}
+          {children || (
+            <AssetGrid
+              rows={largeMockData}
+              onActiveRowChange={setActiveRowId}
+              drafts={drafts}
+              onDraftChange={updateDraft}
+            />
+          )}
         </main>
         <WorkbenchRightPanelShell contextData={selectedContextData} />
       </div>
-      <WorkbenchFooter issuesCount={issuesCount} />
+      <WorkbenchFooter
+        issuesCount={issuesCount}
+        draftsCount={draftsCount}
+        checkpoint={checkpoint}
+        onAutosaveMock={triggerAutosaveMock}
+      />
     </div>
   );
 }

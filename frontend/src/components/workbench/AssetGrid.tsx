@@ -2,14 +2,19 @@ import React, { useState, useMemo, useRef, UIEvent } from "react";
 import { AssetLineGridRow, GridSortState, SortField } from "./AssetGridTypes";
 import { AssetGridToolbar } from "./AssetGridToolbar";
 import { StatusBadge } from "../common/StatusBadge";
+import { InlineDraftCell } from "./drafts/InlineDraftCell";
 import { EmptyState } from "../common/EmptyState";
+
+import { InlineEditDraft } from "./drafts/DraftStateTypes";
 
 interface AssetGridProps {
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
+  drafts?: Record<string, InlineEditDraft>;
+  onDraftChange?: (id: string, field: string, value: any, baseValue: any, rowVersion: number) => void;
 }
 
-export function AssetGrid({ rows, onActiveRowChange }: AssetGridProps) {
+export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [validationFilter, setValidationFilter] = useState("All");
@@ -190,6 +195,15 @@ export function AssetGrid({ rows, onActiveRowChange }: AssetGridProps) {
                   const isActive = activeId === row.project_asset_line_id;
                   const rowClass = `grid-row ${isSelected ? "selected" : ""} ${isActive ? "active" : ""}`;
 
+                  const nameDraftKey = `${row.project_asset_line_id}:normalized_name`;
+                  const priceDraftKey = `${row.project_asset_line_id}:appraised_price`;
+
+                  const nameValue = drafts[nameDraftKey]?.draft_value ?? row.normalized_name;
+                  const priceValue = drafts[priceDraftKey]?.draft_value ?? row.appraised_price;
+
+                  const isNameDirty = !!drafts[nameDraftKey];
+                  const isPriceDirty = !!drafts[priceDraftKey];
+
                   return (
                     <tr
                       key={row.project_asset_line_id}
@@ -221,7 +235,17 @@ export function AssetGrid({ rows, onActiveRowChange }: AssetGridProps) {
                       <td style={{ padding: "var(--space-sm)", fontWeight: 600, color: "#fff", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.raw_name}>
                         {row.raw_name}
                       </td>
-                      <td style={{ padding: "var(--space-sm)" }}>{row.normalized_name}</td>
+                      <td style={{ padding: "var(--space-sm)" }}>
+                        <InlineDraftCell
+                          value={nameValue}
+                          isDirty={isNameDirty}
+                          onSave={(newVal) => {
+                            if (onDraftChange) {
+                              onDraftChange(row.project_asset_line_id, "normalized_name", newVal, row.normalized_name, row.row_version);
+                            }
+                          }}
+                        />
+                      </td>
                       <td style={{ padding: "var(--space-sm)", color: "var(--accent-cyan)" }}>
                         {row.canonical_asset.standard_name}
                       </td>
@@ -246,7 +270,16 @@ export function AssetGrid({ rows, onActiveRowChange }: AssetGridProps) {
                         {row.currency.code}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontWeight: 600, width: "120px", color: "var(--accent-blue)" }}>
-                        {row.appraised_price.toLocaleString()}
+                        <InlineDraftCell
+                          value={typeof priceValue === "number" ? priceValue.toString() : priceValue}
+                          isDirty={isPriceDirty}
+                          onSave={(newVal) => {
+                            if (onDraftChange) {
+                              const numericVal = parseInt(newVal.replace(/,/g, ""), 10);
+                              onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price, row.row_version);
+                            }
+                          }}
+                        />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <StatusBadge
