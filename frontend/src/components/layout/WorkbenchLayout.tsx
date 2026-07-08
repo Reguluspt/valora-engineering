@@ -12,6 +12,8 @@ import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
 import { useWorkbenchSession } from "../workbench/session/useWorkbenchSession";
 import { WorkbenchSessionStatus } from "../workbench/session/WorkbenchSessionStatus";
 
+import { useWorkbenchStateSync } from "../workbench/session/useWorkbenchStateSync";
+
 interface WorkbenchLayoutProps {
   projectTitle: string;
   status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
@@ -39,6 +41,15 @@ export function WorkbenchLayout({
     lastHeartbeat,
     retry
   } = useWorkbenchSession("hd-98-gia-lai");
+
+  const { syncSelection } = useWorkbenchStateSync(session?.id);
+
+  const handleActiveRowChange = (id: string | null) => {
+    setActiveRowId(id);
+    if (id) {
+      syncSelection("ProjectAssetLine", [id]);
+    }
+  };
 
   const {
     drafts,
@@ -130,7 +141,7 @@ export function WorkbenchLayout({
           {children || (
             <AssetGrid
               rows={largeMockData}
-              onActiveRowChange={setActiveRowId}
+              onActiveRowChange={handleActiveRowChange}
               drafts={drafts}
               onDraftChange={updateDraft}
             />
