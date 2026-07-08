@@ -8,6 +8,7 @@ from app.api.asset_identity import router as asset_identity_router
 from app.api.evidence import router as evidence_router
 from app.api.knowledge import router as knowledge_router
 from app.api.workflow import router as workflow_router
+from app.api.workbench import router as workbench_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -28,6 +29,7 @@ app.include_router(asset_identity_router)
 app.include_router(evidence_router)
 app.include_router(knowledge_router)
 app.include_router(workflow_router)
+app.include_router(workbench_router)
 
 
 @app.get("/")

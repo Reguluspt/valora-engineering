@@ -483,10 +483,6 @@ def test_gates_and_logs(client: TestClient, db_session: Session, setup_rbac_user
 
 
 def test_forbidden_apis_exist(client: TestClient) -> None:
-    # Workbench is out of scope and must return 404
-    resp = client.get("/api/v1/workbench/sessions")
-    assert resp.status_code == 404
-
     # ChangeRequest is out of scope and must return 404
     resp = client.get("/api/v1/workflow/change-requests")
     assert resp.status_code == 404
