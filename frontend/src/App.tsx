@@ -3,6 +3,8 @@ import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
 
+import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
+
 export function App() {
   const [currentPath, setCurrentPath] = useState("/workbench/projects/hd-98-gia-lai");
 
@@ -38,18 +40,7 @@ export function App() {
     }
 
     if (currentPath === "/workbench/queue") {
-      return (
-        <div style={{ padding: "var(--space-xl)" }}>
-          <h2 style={{ color: "#fff" }}>Review Queue</h2>
-          <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
-            Below is the list of pending review items requiring human action.
-          </p>
-          <EmptyState
-            title="Queue is Empty"
-            message="No pending items matching the identity_review or appraised_price_review queues."
-          />
-        </div>
-      );
+      return <ReviewQueueDashboard />;
     }
 
     if (currentPath === "/workbench/validation") {
