@@ -2495,6 +2495,282 @@ class UserActionLog(Base, UUIDMixin):
     user: Mapped["User"] = relationship("User")
 
 
+class WorkbenchSessionStatus(str, enum.Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CLOSED = "closed"
+
+
+class WorkbenchSession(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Active curation session linking curators to specific projects."""
+    __tablename__ = "workbench_sessions"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    status: Mapped[WorkbenchSessionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkbenchSessionStatus.ACTIVE
+    )
+    current_selection: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    last_active_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")
+    project: Mapped["Project"] = relationship("Project")
+
+
+class WorkbenchLayout(Base, UUIDMixin, TimestampMixin):
+    """User-specific customization details for panel configurations."""
+    __tablename__ = "workbench_layouts"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    layout_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    layout_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    is_default: Mapped[bool] = mapped_column(nullable=False, default=False)
+
+    user: Mapped["User"] = relationship("User")
+
+
+class AssetGridView(Base, UUIDMixin, TimestampMixin):
+    """User grid workspace view profiles specifying columns and filters."""
+    __tablename__ = "asset_grid_views"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    view_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    columns: Mapped[dict] = mapped_column(JSON, nullable=False)
+    filters: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    sort: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    is_default: Mapped[bool] = mapped_column(nullable=False, default=False)
+
+    user: Mapped["User"] = relationship("User")
+    project: Mapped[Optional["Project"]] = relationship("Project")
+
+
+class WorkbenchSelection(Base, UUIDMixin):
+    """Ephemeral selection state cached for multi-select workflows."""
+    __tablename__ = "workbench_selections"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    selected_target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    selected_target_ids: Mapped[dict] = mapped_column(JSON, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
+
+
+class InlineEditDraftStatus(str, enum.Enum):
+    DRAFT = "draft"
+    VALIDATED = "validated"
+    COMMITTED = "committed"
+    DISCARDED = "discarded"
+    CONFLICTED = "conflicted"
+
+
+class InlineEditDraft(Base, UUIDMixin):
+    """Pending attributes modified in-place before final database execution."""
+    __tablename__ = "inline_edit_drafts"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    field_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    draft_value: Mapped[dict] = mapped_column(JSON, nullable=False)
+    base_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    base_row_version: Mapped[Optional[int]] = mapped_column(nullable=True)
+    status: Mapped[InlineEditDraftStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=InlineEditDraftStatus.DRAFT
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
+
+
+class AutosaveCheckpoint(Base, UUIDMixin):
+    """Periodic backup snapshots containing workbench draft payloads."""
+    __tablename__ = "autosave_checkpoints"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    checkpoint_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
+
+
+class UndoRedoActionType(str, enum.Enum):
+    EDIT = "edit"
+    APPLY_SUGGESTION = "apply_suggestion"
+    DISCARD = "discard"
+
+
+class UndoRedoStackEntry(Base, UUIDMixin):
+    """Session stack tracing editor events for local undo/redo actions."""
+    __tablename__ = "undo_redo_stack_entries"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    sequence_no: Mapped[int] = mapped_column(nullable=False)
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    field_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    before_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    after_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    action_type: Mapped[UndoRedoActionType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    is_undone: Mapped[bool] = mapped_column(nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
+
+
+class WorkbenchPanelType(str, enum.Enum):
+    KNOWLEDGE_PANEL = "knowledge_panel"
+    PRICE_EVIDENCE_PANEL = "price_evidence_panel"
+    LINEAGE_VIEWER = "lineage_viewer"
+
+
+class PanelState(Base, UUIDMixin):
+    """Client panel layout attributes cached inside specific workspaces."""
+    __tablename__ = "panel_states"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    panel_type: Mapped[WorkbenchPanelType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    is_expanded: Mapped[bool] = mapped_column(nullable=False, default=False)
+    width: Mapped[Optional[int]] = mapped_column(nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
+
+
+class ReviewQueueView(Base, UUIDMixin, TimestampMixin):
+    """User review candidate queue sorting filter structures."""
+    __tablename__ = "review_queue_views"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    filter_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    sort_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    user: Mapped["User"] = relationship("User")
+
+
+class WorkbenchNotificationType(str, enum.Enum):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    SUCCESS = "success"
+
+
+class WorkbenchNotification(Base, UUIDMixin):
+    """Curator notifications detailing job issues or layout updates."""
+    __tablename__ = "workbench_notifications"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
+        nullable=True
+    )
+    notification_type: Mapped[WorkbenchNotificationType] = mapped_column(
+        String(50),
+        nullable=False,
+        default=WorkbenchNotificationType.INFO
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    is_read: Mapped[bool] = mapped_column(nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")
+    session: Mapped[Optional["WorkbenchSession"]] = relationship("WorkbenchSession")
+
+
+
 
 
 

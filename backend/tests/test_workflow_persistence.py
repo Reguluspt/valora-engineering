@@ -52,10 +52,8 @@ def test_table_registration() -> None:
     assert "validation_issues" in tables
     assert "user_action_logs" in tables
 
-    # Assert no future Workbench or ChangeRequest tables
+    # Assert no future ChangeRequest tables
     forbidden_tables = [
-        "workbench_sessions",
-        "inline_edit_drafts",
         "change_requests"
     ]
     for t in forbidden_tables:
