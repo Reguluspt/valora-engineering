@@ -10,6 +10,7 @@ from app.api.knowledge import router as knowledge_router
 from app.api.workflow import router as workflow_router
 from app.api.workbench import router as workbench_router
 from app.api.document_engine import router as document_engine_router
+from app.api.document_intelligence import router as document_intelligence_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -32,6 +33,7 @@ app.include_router(knowledge_router)
 app.include_router(workflow_router)
 app.include_router(workbench_router)
 app.include_router(document_engine_router)
+app.include_router(document_intelligence_router)
 
 
 @app.get("/")
