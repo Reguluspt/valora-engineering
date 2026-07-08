@@ -9,6 +9,9 @@ import { MOCK_CONTEXT_DATA } from "../workbench/panels/mockContextData";
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
 
+import { useWorkbenchSession } from "../workbench/session/useWorkbenchSession";
+import { WorkbenchSessionStatus } from "../workbench/session/WorkbenchSessionStatus";
+
 interface WorkbenchLayoutProps {
   projectTitle: string;
   status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
@@ -26,6 +29,16 @@ export function WorkbenchLayout({
 }: WorkbenchLayoutProps) {
   const largeMockData = React.useMemo(() => generateLargeMockSet(), []);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
+  const {
+    session,
+    loading,
+    error,
+    rbacError,
+    conflictError,
+    lastHeartbeat,
+    retry
+  } = useWorkbenchSession("hd-98-gia-lai");
 
   const {
     drafts,
@@ -85,6 +98,18 @@ export function WorkbenchLayout({
         projectTitle={projectTitle}
         status={status}
         statusLabel={statusLabel}
+      />
+      
+      {/* Session lock banner status */}
+      <WorkbenchSessionStatus
+        loading={loading}
+        error={error}
+        rbacError={rbacError}
+        conflictError={conflictError}
+        sessionId={session?.id}
+        rowVersion={session?.row_version}
+        lastHeartbeat={lastHeartbeat}
+        onRetry={retry}
       />
       
       {/* Inline Toolbar for Undo/Redo */}
