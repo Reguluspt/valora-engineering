@@ -5,6 +5,8 @@ from app.api.master_data import router as master_data_router
 from app.api.projects import router as projects_router
 from app.api.taxonomy import router as taxonomy_router
 from app.api.asset_identity import router as asset_identity_router
+from app.api.evidence import router as evidence_router
+from app.api.knowledge import router as knowledge_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -22,6 +24,8 @@ app.include_router(master_data_router)
 app.include_router(projects_router)
 app.include_router(taxonomy_router)
 app.include_router(asset_identity_router)
+app.include_router(evidence_router)
+app.include_router(knowledge_router)
 
 
 @app.get("/")
@@ -31,3 +35,4 @@ def root() -> dict[str, str]:
         "status": "ok",
         "phase": "engineering-sprint-0",
     }
+
