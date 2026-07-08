@@ -14,6 +14,8 @@ import { WorkbenchSessionStatus } from "../workbench/session/WorkbenchSessionSta
 
 import { useWorkbenchStateSync } from "../workbench/session/useWorkbenchStateSync";
 
+import { useWorkbenchDraftSync } from "../workbench/session/useWorkbenchDraftSync";
+
 interface WorkbenchLayoutProps {
   projectTitle: string;
   status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
@@ -42,7 +44,21 @@ export function WorkbenchLayout({
     retry
   } = useWorkbenchSession("hd-98-gia-lai");
 
-  const { syncSelection } = useWorkbenchStateSync(session?.id);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncConflict, setSyncConflict] = useState(false);
+
+  const { syncSelection } = useWorkbenchStateSync(session?.id, (msg) => setSyncError(msg));
+
+  const {
+    syncInlineEdit,
+    syncCheckpoint,
+    syncUndo,
+    syncRedo
+  } = useWorkbenchDraftSync(
+    session?.id,
+    (msg) => setSyncError(msg),
+    () => setSyncConflict(true)
+  );
 
   const handleActiveRowChange = (id: string | null) => {
     setActiveRowId(id);
@@ -61,6 +77,26 @@ export function WorkbenchLayout({
     redo,
     triggerAutosaveMock
   } = useDraftSession();
+
+  const handleDraftChange = (id: string, field: string, value: any, baseValue: any, rowVersion: number) => {
+    updateDraft(id, field, value, baseValue, rowVersion);
+    syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
+  };
+
+  const handleUndo = () => {
+    undo();
+    syncUndo();
+  };
+
+  const handleRedo = () => {
+    redo();
+    syncRedo();
+  };
+
+  const handleCheckpoint = () => {
+    triggerAutosaveMock();
+    syncCheckpoint(drafts);
+  };
 
   const selectedContextData = React.useMemo(() => {
     if (!activeRowId) return undefined;
@@ -114,13 +150,17 @@ export function WorkbenchLayout({
       {/* Session lock banner status */}
       <WorkbenchSessionStatus
         loading={loading}
-        error={error}
+        error={error || syncError}
         rbacError={rbacError}
-        conflictError={conflictError}
+        conflictError={conflictError || syncConflict}
         sessionId={session?.id}
         rowVersion={session?.row_version}
         lastHeartbeat={lastHeartbeat}
-        onRetry={retry}
+        onRetry={() => {
+          setSyncConflict(false);
+          setSyncError(null);
+          retry();
+        }}
       />
       
       {/* Inline Toolbar for Undo/Redo */}
@@ -128,8 +168,8 @@ export function WorkbenchLayout({
         <UndoRedoControls
           undoDisabled={undoStack.length === 0}
           redoDisabled={redoStack.length === 0}
-          onUndo={undo}
-          onRedo={redo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
         />
         <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
           * Double click cell values to enter draft edit mode.
@@ -143,7 +183,7 @@ export function WorkbenchLayout({
               rows={largeMockData}
               onActiveRowChange={handleActiveRowChange}
               drafts={drafts}
-              onDraftChange={updateDraft}
+              onDraftChange={handleDraftChange}
             />
           )}
         </main>
@@ -153,7 +193,7 @@ export function WorkbenchLayout({
         issuesCount={issuesCount}
         draftsCount={draftsCount}
         checkpoint={checkpoint}
-        onAutosaveMock={triggerAutosaveMock}
+        onAutosaveMock={handleCheckpoint}
       />
     </div>
   );
