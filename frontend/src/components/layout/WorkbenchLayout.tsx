@@ -2,6 +2,8 @@ import React from "react";
 import { WorkbenchHeader } from "./WorkbenchHeader";
 import { WorkbenchFooter } from "./WorkbenchFooter";
 import { WorkbenchRightPanelShell } from "./WorkbenchRightPanelShell";
+import { AssetGrid } from "../workbench/AssetGrid";
+import { generateLargeMockSet } from "../workbench/mockAssetRows";
 
 interface WorkbenchLayoutProps {
   projectTitle: string;
@@ -18,6 +20,8 @@ export function WorkbenchLayout({
   issuesCount,
   children
 }: WorkbenchLayoutProps) {
+  const largeMockData = React.useMemo(() => generateLargeMockSet(), []);
+
   return (
     <div className="workbench-container">
       <WorkbenchHeader
@@ -26,15 +30,8 @@ export function WorkbenchLayout({
         statusLabel={statusLabel}
       />
       <div className="workbench-body">
-        <main className="workbench-grid-pane">
-          {children || (
-            <div style={{ padding: "var(--space-md)", border: "1px dashed var(--border-color)", borderRadius: "var(--radius-lg)" }}>
-              <h3>Main Workspace Grid Region Placeholder</h3>
-              <p style={{ color: "var(--text-muted)" }}>
-                This section will house the virtualized Asset Grid implementation.
-              </p>
-            </div>
-          )}
+        <main className="workbench-grid-pane" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {children || <AssetGrid rows={largeMockData} />}
         </main>
         <WorkbenchRightPanelShell />
       </div>
