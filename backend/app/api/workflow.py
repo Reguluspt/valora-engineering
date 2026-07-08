@@ -13,14 +13,17 @@ from app.modules.project_master_data.models import (
     WorkflowDefinition, WorkflowInstance, WorkflowInstanceStatus,
     WorkflowTransition, WorkflowTask, WorkflowTaskStatus,
     ReviewDecision, ValidationRule, ValidationIssue, ValidationIssueStatus,
-    ValidationIssueSeverity, ApprovalGate, UserActionLog
+    ValidationIssueSeverity, ApprovalGate, UserActionLog,
+    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ChangeRequestPriority,
+    ReviewDecisionChoice, ReviewDecisionReversal
 )
 from app.modules.project_master_data.workflow_schemas import (
     WorkflowInstanceCreate, WorkflowInstanceSchema, WorkflowTransitionRequest,
     WorkflowTaskUpdate, WorkflowTaskSchema, ReviewDecisionCreate,
     ReviewDecisionSchema, ApprovalGateSchema, ValidationRuleSchema,
     ValidationIssueUpdate, ValidationIssueResolveRequest, ValidationIssueSchema,
-    UserActionLogSchema
+    UserActionLogSchema, ChangeRequestCreate, ChangeRequestReviewRequest,
+    ChangeRequestSchema, ReviewDecisionReversalSchema
 )
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["Workflow"])
@@ -429,3 +432,211 @@ def list_action_logs(
     current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(UserActionLog).all()
+
+
+@router.post("/change-requests", response_model=ChangeRequestSchema, status_code=201)
+def create_change_request(
+    data: ChangeRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:change_request:create"))
+):
+    code = f"CR-{uuid.uuid4().hex[:8].upper()}"
+    cr = ChangeRequest(
+        request_code=code,
+        target_type=data.target_type,
+        target_id=data.target_id,
+        change_type=data.change_type,
+        requested_payload=data.requested_payload,
+        reason=data.reason,
+        status=ChangeRequestStatus.PENDING_REVIEW,
+        priority=data.priority,
+        requested_by=current_user.id
+    )
+    db.add(cr)
+    db.commit()
+    db.refresh(cr)
+
+    log_audit_event(
+        db=db,
+        event_name="CHANGE_REQUEST_CREATE",
+        entity_type="change_request",
+        entity_id=cr.id,
+        actor_user_id=current_user.id
+    )
+    log_action(db, current_user.id, "change_request_creation", "change_request", cr.id, {})
+    db.commit()
+
+    return cr
+
+
+@router.get("/change-requests", response_model=List[ChangeRequestSchema])
+def list_change_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:read"))
+):
+    return db.query(ChangeRequest).all()
+
+
+@router.get("/change-requests/{change_request_id}", response_model=ChangeRequestSchema)
+def get_change_request(
+    change_request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:read"))
+):
+    cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Change request not found")
+    return cr
+
+
+@router.post("/change-requests/{change_request_id}/approve", response_model=ChangeRequestSchema)
+def approve_change_request(
+    change_request_id: uuid.UUID,
+    req: ChangeRequestReviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:change_request:review"))
+):
+    cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Change request not found")
+
+    if cr.row_version != req.expected_row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    cr.status = ChangeRequestStatus.APPROVED
+    cr.reviewed_by = current_user.id
+    cr.reviewed_at = datetime.now(timezone.utc)
+    cr.review_note = req.review_note
+    cr.row_version += 1
+    db.commit()
+    db.refresh(cr)
+
+    log_audit_event(
+        db=db,
+        event_name="CHANGE_REQUEST_APPROVE",
+        entity_type="change_request",
+        entity_id=cr.id,
+        actor_user_id=current_user.id
+    )
+    log_action(db, current_user.id, "change_request_approval", "change_request", cr.id, {})
+    db.commit()
+
+    return cr
+
+
+@router.post("/change-requests/{change_request_id}/reject", response_model=ChangeRequestSchema)
+def reject_change_request(
+    change_request_id: uuid.UUID,
+    req: ChangeRequestReviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:change_request:review"))
+):
+    cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Change request not found")
+
+    if cr.row_version != req.expected_row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if not req.review_note:
+        raise HTTPException(status_code=400, detail="Rejection reason is required")
+
+    cr.status = ChangeRequestStatus.REJECTED
+    cr.reviewed_by = current_user.id
+    cr.reviewed_at = datetime.now(timezone.utc)
+    cr.review_note = req.review_note
+    cr.row_version += 1
+    db.commit()
+    db.refresh(cr)
+
+    log_audit_event(
+        db=db,
+        event_name="CHANGE_REQUEST_REJECT",
+        entity_type="change_request",
+        entity_id=cr.id,
+        actor_user_id=current_user.id
+    )
+    log_action(db, current_user.id, "change_request_rejection", "change_request", cr.id, {})
+    db.commit()
+
+    return cr
+
+
+@router.post("/change-requests/{change_request_id}/execute", response_model=ChangeRequestSchema)
+def execute_change_request(
+    change_request_id: uuid.UUID,
+    expected_row_version: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workflow:change_request:execute"))
+):
+    cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Change request not found")
+
+    if cr.row_version != expected_row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if cr.status != ChangeRequestStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="Change request must be approved before execution")
+
+    # Execution logic
+    if cr.change_type == ChangeRequestType.REVERSE_REVIEW_DECISION:
+        # Locate original review decision
+        orig_dec_id = cr.requested_payload.get("original_decision_id")
+        if not orig_dec_id:
+            raise HTTPException(status_code=400, detail="Missing original_decision_id in requested_payload")
+
+        orig_dec = db.query(ReviewDecision).filter(ReviewDecision.id == uuid.UUID(orig_dec_id)).first()
+        if not orig_dec:
+            raise HTTPException(status_code=404, detail="Original review decision not found")
+
+        # Determine target choice reversal
+        reversal_choice = ReviewDecisionChoice.REJECT if orig_dec.decision == ReviewDecisionChoice.APPROVE else ReviewDecisionChoice.APPROVE
+
+        # Append a new reversal ReviewDecision
+        rev_dec = ReviewDecision(
+            target_type=orig_dec.target_type,
+            target_id=orig_dec.target_id,
+            decision=reversal_choice,
+            reason=f"Reversed via ChangeRequest {cr.request_code}: {cr.reason}",
+            decided_by=current_user.id,
+            previous_state=orig_dec.new_state,
+            new_state=orig_dec.previous_state
+        )
+        db.add(rev_dec)
+        db.commit()
+        db.refresh(rev_dec)
+
+        # Create ReviewDecisionReversal link
+        reversal_link = ReviewDecisionReversal(
+            change_request_id=cr.id,
+            original_review_decision_id=orig_dec.id,
+            reversal_review_decision_id=rev_dec.id,
+            reason=cr.reason,
+            created_by=current_user.id
+        )
+        db.add(reversal_link)
+
+    else:
+        # Reopening or other data modifications are unsupported/deferred to keep execution safe
+        raise HTTPException(status_code=422, detail="Reversal execution is not supported for this change request type")
+
+    cr.status = ChangeRequestStatus.EXECUTED
+    cr.executed_by = current_user.id
+    cr.executed_at = datetime.now(timezone.utc)
+    cr.row_version += 1
+    db.commit()
+    db.refresh(cr)
+
+    log_audit_event(
+        db=db,
+        event_name="CHANGE_REQUEST_EXECUTE",
+        entity_type="change_request",
+        entity_id=cr.id,
+        actor_user_id=current_user.id
+    )
+    log_action(db, current_user.id, "change_request_execution", "change_request", cr.id, {})
+    db.commit()
+
+    return cr
+

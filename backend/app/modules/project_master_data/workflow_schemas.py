@@ -5,7 +5,8 @@ from pydantic import BaseModel, ConfigDict
 from app.modules.project_master_data.models import (
     WorkflowDefinitionStatus, WorkflowInstanceStatus, WorkflowTaskStatus,
     WorkflowTaskPriority, ReviewDecisionChoice, ApprovalGateStatus,
-    ValidationRuleCategory, ValidationIssueSeverity, ValidationIssueStatus
+    ValidationRuleCategory, ValidationIssueSeverity, ValidationIssueStatus,
+    ChangeRequestStatus, ChangeRequestType, ChangeRequestPriority
 )
 
 # Shared Config
@@ -172,3 +173,51 @@ class UserActionLogSchema(SchemaBase):
     target_id: uuid.UUID
     action_payload: Optional[Dict[str, Any]]
     created_at: datetime
+
+
+# ChangeRequest
+class ChangeRequestCreate(BaseModel):
+    target_type: str
+    target_id: uuid.UUID
+    change_type: ChangeRequestType
+    requested_payload: Dict[str, Any]
+    reason: str
+    priority: Optional[ChangeRequestPriority] = ChangeRequestPriority.NORMAL
+
+
+class ChangeRequestReviewRequest(BaseModel):
+    expected_row_version: int
+    review_note: str
+
+
+class ChangeRequestSchema(SchemaBase):
+    id: uuid.UUID
+    request_code: str
+    target_type: str
+    target_id: uuid.UUID
+    change_type: ChangeRequestType
+    requested_payload: Dict[str, Any]
+    reason: str
+    status: ChangeRequestStatus
+    priority: ChangeRequestPriority
+    requested_by: uuid.UUID
+    reviewed_by: Optional[uuid.UUID]
+    reviewed_at: Optional[datetime]
+    review_note: Optional[str]
+    executed_by: Optional[uuid.UUID]
+    executed_at: Optional[datetime]
+    row_version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+# ReviewDecisionReversal
+class ReviewDecisionReversalSchema(SchemaBase):
+    id: uuid.UUID
+    change_request_id: uuid.UUID
+    original_review_decision_id: uuid.UUID
+    reversal_review_decision_id: uuid.UUID
+    reason: str
+    created_by: uuid.UUID
+    created_at: datetime
+

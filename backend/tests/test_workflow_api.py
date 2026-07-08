@@ -483,10 +483,6 @@ def test_gates_and_logs(client: TestClient, db_session: Session, setup_rbac_user
 
 
 def test_forbidden_apis_exist(client: TestClient) -> None:
-    # ChangeRequest is out of scope and must return 404
-    resp = client.get("/api/v1/workflow/change-requests")
-    assert resp.status_code == 404
-
     # Root validation issue resolve endpoint (without /workflow) is not configured and must return 404
     some_id = str(uuid.uuid4())
     resp = client.post(f"/api/v1/validation-issues/{some_id}/resolve")

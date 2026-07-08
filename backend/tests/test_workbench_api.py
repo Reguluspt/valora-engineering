@@ -350,7 +350,4 @@ def test_panel_states_and_notifications(client: TestClient, db_session: Session,
     assert len(resp.json()) == 1
 
 
-def test_forbidden_change_requests(client: TestClient) -> None:
-    # ChangeRequest API endpoints must return 404
-    resp = client.get("/api/v1/workflow/change-requests")
-    assert resp.status_code == 404
+# ChangeRequest is now in scope
