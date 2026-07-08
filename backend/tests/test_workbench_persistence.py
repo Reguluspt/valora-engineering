@@ -54,8 +54,7 @@ def test_table_registration() -> None:
     assert "review_queue_views" in tables
     assert "workbench_notifications" in tables
 
-    # Assert no ChangeRequest tables
-    assert "change_requests" not in tables
+    # All Sprint 4 persistence tables are now loaded in metadata
 
 
 @pytest.fixture

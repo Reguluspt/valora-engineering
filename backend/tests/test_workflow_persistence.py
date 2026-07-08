@@ -52,12 +52,7 @@ def test_table_registration() -> None:
     assert "validation_issues" in tables
     assert "user_action_logs" in tables
 
-    # Assert no future ChangeRequest tables
-    forbidden_tables = [
-        "change_requests"
-    ]
-    for t in forbidden_tables:
-        assert t not in tables
+    # All Sprint 4 persistence tables are now loaded in metadata
 
 
 @pytest.fixture

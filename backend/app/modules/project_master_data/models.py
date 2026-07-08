@@ -2770,6 +2770,115 @@ class WorkbenchNotification(Base, UUIDMixin):
     session: Mapped[Optional["WorkbenchSession"]] = relationship("WorkbenchSession")
 
 
+class ChangeRequestStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXECUTED = "executed"
+    CANCELLED = "cancelled"
+
+
+class ChangeRequestType(str, enum.Enum):
+    CORRECTION = "correction"
+    REOPEN = "reopen"
+    REVERSE_REVIEW_DECISION = "reverse_review_decision"
+    OVERRIDE_GATE = "override_gate"
+    UPDATE_LOCKED_DATA = "update_locked_data"
+
+
+class ChangeRequestPriority(str, enum.Enum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class ChangeRequest(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    """Formal request logs documenting updates requested against approved assets."""
+    __tablename__ = "change_requests"
+
+    request_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    change_type: Mapped[ChangeRequestType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    requested_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[ChangeRequestStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ChangeRequestStatus.DRAFT
+    )
+    priority: Mapped[ChangeRequestPriority] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ChangeRequestPriority.NORMAL
+    )
+    requested_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    review_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    executed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    executed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    requester: Mapped["User"] = relationship("User", foreign_keys=[requested_by])
+    reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
+    executor: Mapped[Optional["User"]] = relationship("User", foreign_keys=[executed_by])
+
+
+class ReviewDecisionReversal(Base, UUIDMixin):
+    """Correlation log linking a decision reversal back to the original review."""
+    __tablename__ = "review_decision_reversals"
+
+    change_request_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("change_requests.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    original_review_decision_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("review_decisions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    reversal_review_decision_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("review_decisions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    change_request: Mapped["ChangeRequest"] = relationship("ChangeRequest")
+    original_decision: Mapped["ReviewDecision"] = relationship("ReviewDecision", foreign_keys=[original_review_decision_id])
+    reversal_decision: Mapped["ReviewDecision"] = relationship("ReviewDecision", foreign_keys=[reversal_review_decision_id])
+    creator: Mapped["User"] = relationship("User")
+
+
+
 
 
 
