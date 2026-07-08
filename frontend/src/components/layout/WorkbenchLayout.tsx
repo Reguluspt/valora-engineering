@@ -16,6 +16,10 @@ import { useWorkbenchStateSync } from "../workbench/session/useWorkbenchStateSyn
 
 import { useWorkbenchDraftSync } from "../workbench/session/useWorkbenchDraftSync";
 
+import { ApiErrorBanner } from "../common/ApiErrorBanner";
+import { ConflictWarning } from "../common/ConflictWarning";
+import { RbacLockNotice } from "../common/RbacLockNotice";
+
 interface WorkbenchLayoutProps {
   projectTitle: string;
   status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
@@ -79,21 +83,25 @@ export function WorkbenchLayout({
   } = useDraftSession();
 
   const handleDraftChange = (id: string, field: string, value: any, baseValue: any, rowVersion: number) => {
+    if (conflictError || syncConflict || rbacError) return; // Prevent edits when locked
     updateDraft(id, field, value, baseValue, rowVersion);
     syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
   };
 
   const handleUndo = () => {
+    if (conflictError || syncConflict || rbacError) return;
     undo();
     syncUndo();
   };
 
   const handleRedo = () => {
+    if (conflictError || syncConflict || rbacError) return;
     redo();
     syncRedo();
   };
 
   const handleCheckpoint = () => {
+    if (conflictError || syncConflict || rbacError) return;
     triggerAutosaveMock();
     syncCheckpoint(drafts);
   };
@@ -146,6 +154,25 @@ export function WorkbenchLayout({
         status={status}
         statusLabel={statusLabel}
       />
+
+      {(conflictError || syncConflict) && (
+        <ConflictWarning
+          onResolve={() => {
+            setSyncConflict(false);
+            setSyncError(null);
+            retry();
+          }}
+        />
+      )}
+
+      {rbacError && <RbacLockNotice permission="workbench:edit" />}
+
+      {syncError && (
+        <ApiErrorBanner
+          message={syncError}
+          onDismiss={() => setSyncError(null)}
+        />
+      )}
       
       {/* Session lock banner status */}
       <WorkbenchSessionStatus
