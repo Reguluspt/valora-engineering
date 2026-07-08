@@ -6,9 +6,10 @@ import { EmptyState } from "../common/EmptyState";
 
 interface AssetGridProps {
   rows: AssetLineGridRow[];
+  onActiveRowChange?: (id: string | null) => void;
 }
 
-export function AssetGrid({ rows }: AssetGridProps) {
+export function AssetGrid({ rows, onActiveRowChange }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [validationFilter, setValidationFilter] = useState("All");
@@ -59,6 +60,9 @@ export function AssetGrid({ rows }: AssetGridProps) {
   // 2. Select / Highlight Functions
   const handleRowClick = (id: string) => {
     setActiveId(id);
+    if (onActiveRowChange) {
+      onActiveRowChange(id);
+    }
   };
 
   const handleCheckboxClick = (e: React.MouseEvent, id: string) => {
