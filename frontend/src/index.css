@@ -1,0 +1,280 @@
+/* E:\Project Valora\valora-engineering-phase-sprint-0-starter\frontend\src\index.css */
+
+:root {
+  /* Colors */
+  --bg-primary: #0b0c10;
+  --bg-secondary: #1f2833;
+  --text-primary: #c5c6c7;
+  --text-muted: #8892b0;
+  --accent-cyan: #66fcf1;
+  --accent-blue: #45f3ff;
+  --border-color: #2b3a4a;
+
+  /* Status Colors */
+  --status-draft: #e5c158;
+  --status-review: #3498db;
+  --status-approved: #2ecc71;
+  --status-warning: #e67e22;
+  --status-error: #e74c3c;
+  --status-blocking: #9b2c2c;
+
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* Typography Scale */
+  --font-family-primary: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --font-family-mono: 'Fira Code', 'Courier New', monospace;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-xxl: 36px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadow & Elevation (Glassmorphic) */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.9);
+  --glass-bg: rgba(31, 40, 51, 0.45);
+  --glass-blur: blur(8px);
+  --glass-border: 1px solid rgba(102, 252, 241, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family-primary);
+  overflow-x: hidden;
+}
+
+/* App Shell Layout */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 240px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Navigation Links */
+.nav-links {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-lg) 0;
+}
+
+.nav-item {
+  margin-bottom: var(--space-sm);
+}
+
+.nav-link {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--accent-cyan);
+  background-color: rgba(102, 252, 241, 0.08);
+}
+
+/* Base Workbench Page Layout (Header + Split View + Footer) */
+.workbench-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workbench-header {
+  height: 70px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--space-lg);
+}
+
+.project-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.project-status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.workbench-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  height: calc(100% - 130px); /* 100% minus header and footer height */
+}
+
+.workbench-grid-pane {
+  flex: 1;
+  padding: var(--space-lg);
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+}
+
+.workbench-right-drawer {
+  width: 380px;
+  background-color: var(--bg-secondary);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+}
+
+.workbench-footer {
+  height: 60px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+}
+
+/* Status Badges */
+.badge {
+  padding: 4px 8px;
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-draft {
+  background-color: rgba(229, 193, 88, 0.2);
+  color: var(--status-draft);
+}
+
+.badge-review {
+  background-color: rgba(52, 152, 219, 0.2);
+  color: var(--status-review);
+}
+
+.badge-approved {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: var(--status-approved);
+}
+
+.badge-warning {
+  background-color: rgba(230, 126, 34, 0.2);
+  color: var(--status-warning);
+}
+
+.badge-error {
+  background-color: rgba(231, 76, 180, 0.2);
+  color: var(--status-error);
+}
+
+.badge-blocking {
+  background-color: rgba(155, 44, 44, 0.3);
+  color: var(--status-blocking);
+  border: 1px solid var(--status-blocking);
+}
+
+/* Common State Components Styling */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  padding: var(--space-xl);
+}
+
+.state-title {
+  font-size: var(--font-size-xl);
+  color: #fff;
+  margin-bottom: var(--space-sm);
+}
+
+.state-message {
+  color: var(--text-muted);
+  max-width: 480px;
+  margin-bottom: var(--space-lg);
+}
+
+.action-btn {
+  background-color: transparent;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background-color: var(--accent-cyan);
+  color: var(--bg-primary);
+}
+
+.action-btn:disabled {
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Drawer Panels tabs styling */
+.panel-tab {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.panel-tab-title {
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+  color: var(--accent-cyan);
+}
