@@ -2878,6 +2878,411 @@ class ReviewDecisionReversal(Base, UUIDMixin):
     creator: Mapped["User"] = relationship("User")
 
 
+# ==========================================
+# SPRINT 5 - DOCUMENT ENGINE ENUMS
+# ==========================================
+
+class DocumentTemplateStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    ARCHIVED = "archived"
+
+
+class TemplateVersionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    REJECTED = "rejected"
+
+
+class PlaceholderDataType(str, enum.Enum):
+    SCALAR = "scalar"
+    DATE = "date"
+    NUMBER = "number"
+    CURRENCY = "currency"
+    BOOLEAN = "boolean"
+    LIST = "list"
+    TABLE = "table"
+    IMAGE = "image"
+    RICH_TEXT = "rich_text"
+    COMPUTED = "computed"
+
+
+class PlaceholderSourceContext(str, enum.Enum):
+    PROJECT = "project"
+    ASSET = "asset"
+    CUSTOM = "custom"
+
+
+class ComputedExpressionType(str, enum.Enum):
+    VALORA_EXPR = "valora_expr"
+
+
+class ComputedExpressionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+
+
+class PlaceholderBindingType(str, enum.Enum):
+    DIRECT = "direct"
+    COMPUTED = "computed"
+    REPEATING = "repeating"
+    IMAGE = "image"
+
+
+class RenderJobStatus(str, enum.Enum):
+    QUEUED = "queued"
+    VALIDATING_TEMPLATE = "validating_template"
+    BUILDING_DATA_SNAPSHOT = "building_data_snapshot"
+    BINDING_PLACEHOLDERS = "binding_placeholders"
+    RENDERING_DOCX = "rendering_docx"
+    RENDERING_PDF = "rendering_pdf"
+    STORING_OUTPUT = "storing_output"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    TIMED_OUT = "timed_out"
+
+
+class GeneratedDocumentStatus(str, enum.Enum):
+    DRAFT = "draft"
+    OFFICIAL = "official"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+    ARCHIVED = "archived"
+
+
+class DocumentPackageType(str, enum.Enum):
+    CONTRACT = "contract"
+    REPORT = "report"
+    QC = "qc"
+    CLIENT_DELIVERY = "client_delivery"
+    ARCHIVE = "archive"
+
+
+class DocumentPackageStatus(str, enum.Enum):
+    DRAFT = "draft"
+    READY = "ready"
+    EXPORTED = "exported"
+    DELIVERED = "delivered"
+    ARCHIVED = "archived"
+
+
+# ==========================================
+# SPRINT 5 - DOCUMENT ENGINE MODELS
+# ==========================================
+
+class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "document_templates"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    document_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    current_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    replacement_template_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("document_templates.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    status: Mapped[DocumentTemplateStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DocumentTemplateStatus.DRAFT
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    replacement_template: Mapped[Optional["DocumentTemplate"]] = relationship(
+        "DocumentTemplate",
+        remote_side="DocumentTemplate.id",
+        foreign_keys=[replacement_template_id]
+    )
+
+
+class TemplateVersion(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "template_versions"
+
+    document_template_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_templates.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    version_number: Mapped[int] = mapped_column(nullable=False)
+    source_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    template_format: Mapped[str] = mapped_column(String(50), nullable=False)
+    placeholder_manifest: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    status: Mapped[TemplateVersionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=TemplateVersionStatus.DRAFT
+    )
+    deprecation_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    replacement_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("template_versions.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    document_template: Mapped["DocumentTemplate"] = relationship("DocumentTemplate", foreign_keys=[document_template_id])
+    replacement_version: Mapped[Optional["TemplateVersion"]] = relationship(
+        "TemplateVersion",
+        remote_side="TemplateVersion.id",
+        foreign_keys=[replacement_version_id]
+    )
+    approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
+
+    __table_args__ = (
+        UniqueConstraint("document_template_id", "version_number", name="uq_template_version_no"),
+    )
+
+
+class ComputedPlaceholderExpression(Base, UUIDMixin):
+    __tablename__ = "computed_placeholder_expressions"
+
+    placeholder_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    expression_type: Mapped[ComputedExpressionType] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ComputedExpressionType.VALORA_EXPR
+    )
+    inputs: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    expression: Mapped[str] = mapped_column(Text, nullable=False)
+    output_data_type: Mapped[PlaceholderDataType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    status: Mapped[ComputedExpressionStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ComputedExpressionStatus.DRAFT
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+
+    creator: Mapped["User"] = relationship("User")
+
+
+class TemplatePlaceholder(Base, UUIDMixin):
+    __tablename__ = "template_placeholders"
+
+    template_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("template_versions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    placeholder_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    label_vi: Mapped[str] = mapped_column(String(255), nullable=False)
+    data_type: Mapped[PlaceholderDataType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    source_context: Mapped[PlaceholderSourceContext] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    source_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    default_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    format_rule: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    validation_rule: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    computed_expression_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("computed_placeholder_expressions.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+
+    template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
+    computed_expression: Mapped[Optional["ComputedPlaceholderExpression"]] = relationship("ComputedPlaceholderExpression")
+
+
+class PlaceholderBinding(Base, UUIDMixin):
+    __tablename__ = "placeholder_bindings"
+
+    template_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("template_versions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    template_placeholder_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("template_placeholders.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    binding_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    binding_type: Mapped[PlaceholderBindingType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    fallback_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
+    template_placeholder: Mapped["TemplatePlaceholder"] = relationship("TemplatePlaceholder")
+
+
+class RenderJob(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "render_jobs"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    template_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("template_versions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    render_mode: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
+    output_formats: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    data_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    data_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[RenderJobStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=RenderJobStatus.QUEUED
+    )
+    error_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    failed_step: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    retry_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    timeout_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    project: Mapped["Project"] = relationship("Project")
+    template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
+    creator: Mapped["User"] = relationship("User")
+
+
+class GeneratedDocument(Base, UUIDMixin):
+    __tablename__ = "generated_documents"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    render_job_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("render_jobs.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    document_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    output_format: Mapped[str] = mapped_column(String(10), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(nullable=False)
+    template_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("template_versions.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    data_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[GeneratedDocumentStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=GeneratedDocumentStatus.DRAFT
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now()
+    )
+    archived_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True
+    )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    project: Mapped["Project"] = relationship("Project")
+    render_job: Mapped["RenderJob"] = relationship("RenderJob")
+    template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
+    archiver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[archived_by])
+
+
+class DocumentPackage(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+    __tablename__ = "document_packages"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    package_type: Mapped[DocumentPackageType] = mapped_column(
+        String(50),
+        nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[DocumentPackageStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=DocumentPackageStatus.DRAFT
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    project: Mapped["Project"] = relationship("Project")
+    creator: Mapped["User"] = relationship("User")
+
+
+class DocumentPackageItem(Base, UUIDMixin):
+    __tablename__ = "document_package_items"
+
+    document_package_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_packages.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    generated_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("generated_documents.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+    sort_order: Mapped[int] = mapped_column(nullable=False)
+
+    document_package: Mapped["DocumentPackage"] = relationship("DocumentPackage")
+    generated_document: Mapped["GeneratedDocument"] = relationship("GeneratedDocument")
+
+
+
 
 
 
