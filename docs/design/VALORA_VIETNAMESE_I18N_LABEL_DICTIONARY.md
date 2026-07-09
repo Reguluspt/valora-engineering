@@ -60,8 +60,8 @@ Suggested grouping pattern:
 ---
 
 ## 5. Adoption & Migration Plan
-- **S10-PR-004**: Creates the dictionary foundation only.
-- **S10-PR-005**: Handles full non-IT error message registry.
+- **S10-PR-004**: Creates the dictionary foundation only — completed.
+- **S10-PR-005**: Handles full non-IT error message registry — completed (see [VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/design/VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md)).
 - **S10-PR-006 & S11+**: Apply labels progressively during Astryx / App Shell / Workbench migrations.
 
 ---
