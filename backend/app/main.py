@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 from app.api.master_data import router as master_data_router
@@ -17,10 +18,24 @@ from app.core.logging import configure_logging
 settings = get_settings()
 configure_logging(settings.valora_log_level)
 
+# Handle Swagger/ReDoc and OpenAPI routes restriction in production env
+is_prod = settings.valora_env == "production"
+
 app = FastAPI(
     title="Valora API",
     version="0.0.1-sprint-0",
-    docs_url="/docs" if settings.valora_env != "production" else None,
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json",
+)
+
+# Configure CORS Middleware safely
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.parsed_cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(health_router)
@@ -43,4 +58,5 @@ def root() -> dict[str, str]:
         "status": "ok",
         "phase": "engineering-sprint-0",
     }
+
 
