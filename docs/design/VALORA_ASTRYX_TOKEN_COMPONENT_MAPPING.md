@@ -217,7 +217,7 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 
 ## 8. Proposed Migration Plan
 1. **S10-PR-003**: Astryx Official Integration Spike — completed.
-2. **S10-PR-004**: Vietnamese i18n Label Dictionary.
+2. **S10-PR-004**: Vietnamese i18n Label Dictionary — completed.
 3. **S10-PR-005**: Non-IT Error Message Registry.
 4. **S10-PR-006**: Astryx App Shell Alignment.
 5. **S11+**: Apply mappings across Workbench, Excel Import, Assistant, Review, and Report screens.
@@ -237,7 +237,9 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 
 ---
 
-## 10. Acceptance Criteria
+## 10. Historical Acceptance Criteria
+
+Note: This section records S10-PR-003 historical criteria. S10-PR-004 updates only the migration plan and i18n references.
 
 S10-PR-003 passes when:
 - Official Astryx packages are installed.
