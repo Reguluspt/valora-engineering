@@ -5,7 +5,7 @@ Revises: a87a9b6da9a1
 Create Date: 2026-07-08 21:40:00.000000
 
 """
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Union
 import sqlalchemy as sa
 from alembic import op
 
@@ -13,8 +13,8 @@ from alembic import op
 # revision identifiers, used by Alembic.
 revision: str = 'a87a9b6da9a2'
 down_revision: Optional[str] = 'a87a9b6da9a1'
-branch_labels: Optional[sa.Union[str, Sequence[str]]] = None
-depends_on: Optional[sa.Union[str, Sequence[str]]] = None
+branch_labels: Optional[Union[str, Sequence[str]]] = None
+depends_on: Optional[Union[str, Sequence[str]]] = None
 
 
 def upgrade() -> None:
