@@ -5,10 +5,12 @@ This document establishes the UI/UX design-system contract mapping for the Proje
 ---
 
 ## 1. Current Frontend UI Inventory
-- **Astryx Package Status**: **Not Installed**. Dependencies in `package.json` are limited to React 18, Vite 5, and TypeScript 5. 
-- **Styling Architecture**: Custom CSS defined in [index.css](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/index.css) utilizing custom CSS variables (`--bg-primary`, `--bg-secondary`, `--accent-cyan`, `--status-draft`).
-- **Component Implementations**: Custom vanilla React components located under `src/components/common` (e.g., `ApiErrorBanner`, `RbacLockNotice`, `StatusBadge`).
-- **Integration Plan**: In future sprints, the actual Astryx design tokens and components must be installed/configured. This mapping acts as the transition registry.
+- **Astryx Package Status**: Installed in S10-PR-003 integration spike.
+- **Installed Astryx Packages**:
+  - `@astryxdesign/core`
+  - `@astryxdesign/theme-neutral`
+  - `@astryxdesign/cli`
+- **Current UI Migration Status**: Existing Valora screens have not yet been refactored to Astryx. The current production-facing UI still uses custom CSS variables (defined in [index.css](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/index.css)) and custom React components (located under `src/components/common`) until future migration PRs.
 
 ---
 
@@ -214,22 +216,36 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 ---
 
 ## 8. Proposed Migration Plan
-1. **S10-PR-003**: Create localized `i18n` translations files setup.
-2. **S10-PR-004**: Build standard error translation utility wrappers masking HTTP status exceptions.
-3. **S10-PR-005**: Re-align the basic React App Shell layouts to inherit standard Astryx container structures.
-4. **S11+**: Inject mappings systematically across the Asset Grid, Excel Ingest forms, and AI drawer panels.
+1. **S10-PR-003**: Astryx Official Integration Spike — completed.
+2. **S10-PR-004**: Vietnamese i18n Label Dictionary.
+3. **S10-PR-005**: Non-IT Error Message Registry.
+4. **S10-PR-006**: Astryx App Shell Alignment.
+5. **S11+**: Apply mappings across Workbench, Excel Import, Assistant, Review, and Report screens.
 
 ---
 
-## 9. Acceptance Criteria
+## 9. Official Astryx Source Alignment
 
-S10-PR-002 passes when:
-- Current frontend UI inventory is documented.
-- Astryx library status (Not Installed) and the transition mapping plan are documented.
-- Astryx token mappings are declared with placeholder flags where exact package imports are pending.
-- Component mapping mappings exist for all MVP screen widgets.
-- Vietnamese labels dictionaries are declared.
-- Non-IT UX translated errors are cataloged.
-- Future implementation check rules are clear.
-- No runtime code is modified.
-- Existing tests compile and run without error.
+- **Official Source Confirmed**: `facebook/astryx`
+- **Installed Packages**:
+  - `@astryxdesign/core` (Vite UI components)
+  - `@astryxdesign/theme-neutral` (Theme and stylesheet layouts)
+  - `@astryxdesign/cli` (Local component creation utility)
+- **CLI Commands configured**:
+  `npm run astryx -- component --list` to print installed UI layouts.
+- **Wording note**: Prior maps remain as candidate patterns until real components are progressively adopted in Phase 2 feature sprints. No active user-facing UI is refactored during Sprint 10-PR-003.
+
+---
+
+## 10. Acceptance Criteria
+
+S10-PR-003 passes when:
+- Official Astryx packages are installed.
+- Astryx CLI script is added to `frontend/package.json`.
+- Astryx CLI component list command passes or documented limitation is provided.
+- Integration probe compiles without being mounted into user-facing MVP flows.
+- Existing Workbench/App Shell UI is not refactored in this PR.
+- No business logic is changed.
+- `npm run lint` passes.
+- `npm run build` passes.
+- Runtime/user-visible behavior remains unchanged.
