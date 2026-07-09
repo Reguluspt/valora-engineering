@@ -23,6 +23,15 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     headers.set("Content-Type", "application/json");
   }
 
+  // Attach local development auth headers when in local trials
+  const isDev = (import.meta as any).env?.DEV === true;
+  const enableDevAuth = (import.meta as any).env?.VITE_ENABLE_DEV_AUTH === "true";
+  const devUserId = (import.meta as any).env?.VITE_DEV_USER_ID;
+
+  if (isDev && enableDevAuth && devUserId) {
+    headers.set("X-User-Id", devUserId);
+  }
+
   const response = await fetch(url, {
     ...options,
     headers
