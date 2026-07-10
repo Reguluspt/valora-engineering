@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { StatusBadge } from "../common/StatusBadge";
 import { checkHealth } from "../../api/client";
+import { t } from "../../i18n";
 
 interface WorkbenchHeaderProps {
   projectTitle: string;
@@ -33,14 +34,14 @@ export function WorkbenchHeader({ projectTitle, status, statusLabel }: Workbench
             border: `1px solid ${apiReachable ? "var(--status-approved)" : "var(--status-error)"}`,
             borderRadius: "var(--radius-sm)"
           }}>
-            API: {apiReachable ? "Connected" : "Disconnected"}
+            {apiReachable ? t("nav.serverConnected") : t("nav.serverDisconnected")}
           </span>
         )}
         <div className="project-status-bar">
-          <span>Status:</span>
+          <span>{t("workbench.statusLabel")}</span>
           <StatusBadge status={status} label={statusLabel} />
           <button className="action-btn" disabled title="Requires backend session state">
-            Submit QC [Disabled]
+            {t("review.submitQc")} [{t("status.locked")}]
           </button>
         </div>
       </div>

@@ -70,7 +70,8 @@ export type FriendlyError = {
 
 ## 5. Adoption & Migration Plan
 - S10-PR-005 establishes the registry and safely adopts it in `ApiErrorBanner` only.
-- Future PRs should migrate `RbacLockNotice`, `ConflictWarning`, import validation, Workbench draft save, AI assistant errors, and report generation errors.
+- S10-PR-006 active progressive adoption is applied to `RbacLockNotice` and `WorkbenchSessionStatus` layouts.
+- Future PRs should migrate `ConflictWarning`, import validation, Workbench draft save, AI assistant errors, and report generation errors.
 - Any new MVP error display must use the registry.
 
 ---

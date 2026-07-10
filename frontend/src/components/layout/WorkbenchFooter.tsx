@@ -1,5 +1,6 @@
 import React from "react";
 import { AutosaveCheckpoint } from "../workbench/drafts/DraftStateTypes";
+import { t } from "../../i18n";
 
 interface WorkbenchFooterProps {
   issuesCount: number;
@@ -17,14 +18,14 @@ export function WorkbenchFooter({
   return (
     <footer className="workbench-footer">
       <div>
-        <span>Issues: </span>
+        <span>{t("workbench.issuesLabel")}</span>
         <span style={{ fontWeight: 600, color: issuesCount > 0 ? "var(--status-warning)" : "var(--status-approved)", marginRight: "var(--space-md)" }}>
           {issuesCount}
         </span>
 
         {draftsCount > 0 && (
           <span style={{ color: "var(--status-draft)", fontWeight: 600 }}>
-            ⚡ {draftsCount} draft change(s)
+            ⚡ {draftsCount} {t("workbench.unsavedChangesCount")}
           </span>
         )}
       </div>
@@ -33,15 +34,15 @@ export function WorkbenchFooter({
           className="action-btn"
           disabled={draftsCount === 0}
           style={{ marginRight: "var(--space-sm)" }}
-          title={draftsCount > 0 ? "Commit local edits to official records [Requires backend API]" : "No active drafts to commit"}
+          title={draftsCount > 0 ? "Lưu các chỉnh sửa cục bộ vào hồ sơ chính thức" : "Không có bản nháp nào cần lưu"}
         >
-          Commit Edits {draftsCount > 0 ? "[Disabled]" : ""}
+          {t("workbench.saveOfficial")} {draftsCount > 0 ? `[${t("status.locked")}]` : ""}
         </button>
         <button className="action-btn" disabled style={{ marginRight: "var(--space-sm)" }} title="Requires backend session state">
-          Preview Approve [Disabled]
+          Xem trước phê duyệt [{t("status.locked")}]
         </button>
         <button className="action-btn" disabled title="Requires backend session state">
-          Assign [Disabled]
+          Phân công [{t("status.locked")}]
         </button>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
@@ -52,11 +53,11 @@ export function WorkbenchFooter({
             onClick={onAutosaveMock}
             disabled={draftsCount === 0}
           >
-            Autosave Checkpoint
+            Điểm lưu nháp
           </button>
         )}
         <span>
-          Autosave Status:{" "}
+          Trạng thái lưu nháp:{" "}
           <strong style={{
             color: checkpoint.status === "checkpointed"
               ? "var(--status-approved)"
@@ -64,7 +65,7 @@ export function WorkbenchFooter({
               ? "var(--status-draft)"
               : "var(--text-muted)"
           }}>
-            {checkpoint.status.toUpperCase()}
+            {checkpoint.status === "checkpointed" ? "ĐÃ LƯU" : checkpoint.status === "dirty" ? "CHƯA LƯU" : "CHỜ"}
           </strong>{" "}
           ({checkpoint.timestamp})
         </span>

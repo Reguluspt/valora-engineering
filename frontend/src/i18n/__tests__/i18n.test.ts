@@ -9,6 +9,19 @@ describe("Vietnamese i18n label dictionary tests", () => {
     expect(t("action.saveDraft")).toBe("Lưu nháp");
     expect(t("nav.submitReview")).toBe("Gửi duyệt");
     expect(t("report.exportDraft")).toBe("Xuất báo cáo nháp");
+    expect(t("auth.roleLabel")).toBe("Vai trò");
+    expect(t("auth.orgLabel")).toBe("Đơn vị");
+    expect(t("auth.org.gialai")).toBe("Chi nhánh Gia Lai");
+    expect(t("workbench.statusLabel")).toBe("Trạng thái:");
+    expect(t("workbench.issuesLabel")).toBe("Số lỗi: ");
+    expect(t("workbench.unsavedChangesCount")).toBe("thay đổi chưa lưu");
+    expect(t("workbench.sessionActive")).toBe("ĐANG HOẠT ĐỘNG");
+    expect(t("workbench.sessionLocked")).toBe("Đã khóa");
+    expect(t("workbench.status.initializing")).toBe("Đang khởi tạo phiên làm việc...");
+    expect(t("workbench.status.stale")).toBe("Dữ liệu hồ sơ này đã được thay đổi bởi người dùng khác.");
+    expect(t("workbench.status.staleAction")).toBe("Cập nhật mới");
+    expect(t("workbench.status.retry")).toBe("Thử lại kết nối");
+    expect(t("workbench.status.connectionError")).toBe("Lỗi kết nối máy chủ");
   });
 
   it("handles fallback defaults safely", () => {

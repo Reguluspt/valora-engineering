@@ -219,7 +219,7 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 1. **S10-PR-003**: Astryx Official Integration Spike — completed.
 2. **S10-PR-004**: Vietnamese i18n Label Dictionary — completed.
 3. **S10-PR-005**: Non-IT Error Message Registry — completed.
-4. **S10-PR-006**: Astryx App Shell Alignment.
+4. **S10-PR-006**: Astryx App Shell Alignment — completed. App Shell is established as the first progressive Astryx adoption area, integrating `@astryxdesign/core` layout structures, i18n wrappers, and error shielding.
 5. **S11+**: Apply mappings across Workbench, Excel Import, Assistant, Review, and Report screens.
 
 ---

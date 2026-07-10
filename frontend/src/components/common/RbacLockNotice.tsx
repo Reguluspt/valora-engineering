@@ -1,10 +1,13 @@
 import React from "react";
+import { getFriendlyError } from "../../errors/errorRegistry";
 
 interface RbacLockNoticeProps {
-  permission: string;
+  permission?: string;
 }
 
 export function RbacLockNotice({ permission }: RbacLockNoticeProps) {
+  const friendly = getFriendlyError("forbidden");
+
   return (
     <div style={{
       backgroundColor: "rgba(220,53,69,0.15)",
@@ -13,10 +16,20 @@ export function RbacLockNotice({ permission }: RbacLockNoticeProps) {
       borderRadius: "var(--radius-md)",
       padding: "var(--space-md)",
       fontSize: "var(--font-size-sm)",
-      marginBottom: "var(--space-md)"
+      marginBottom: "var(--space-md)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "var(--space-xs)"
     }}>
-      🔒 <strong>Access Restrained:</strong> Your role lack the required scope (<code>{permission}</code>). 
-      Workbench saving and commit functions are locked. Action buttons remain disabled.
+      <div>
+        🔒 <strong>{friendly.title}</strong>
+      </div>
+      <div style={{ color: "var(--text-primary)" }}>
+        {friendly.message}
+      </div>
+      <div style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
+        {friendly.nextAction}
+      </div>
     </div>
   );
 }

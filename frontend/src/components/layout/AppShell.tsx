@@ -1,4 +1,7 @@
 import React from "react";
+import { AppShell as AstryxAppShell } from "@astryxdesign/core/AppShell";
+import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
+import { t } from "../../i18n";
 
 interface AppShellProps {
   currentPath: string;
@@ -7,60 +10,41 @@ interface AppShellProps {
 }
 
 export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
-  const getLinkClass = (path: string) => {
-    return currentPath.startsWith(path) ? "nav-link active" : "nav-link";
+  const getLinkActive = (path: string) => {
+    return currentPath.startsWith(path);
   };
 
   return (
-    <div className="app-container">
-      <nav className="sidebar">
-        <h2 style={{ color: "var(--accent-cyan)", margin: "0 0 var(--space-md) 0" }}>Valora</h2>
-        <ul className="nav-links">
-          <li className="nav-item">
-            <a
-              href="#/workbench"
-              className={getLinkClass("/workbench")}
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate("/workbench/projects/hd-98-gia-lai");
-              }}
-            >
-              Project Workbench
-            </a>
-          </li>
-          <li className="nav-item">
-            <a
-              href="#/queue"
-              className={getLinkClass("/queue")}
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate("/workbench/queue");
-              }}
-            >
-              Review Queue
-            </a>
-          </li>
-          <li className="nav-item">
-            <a
-              href="#/validation"
-              className={getLinkClass("/validation")}
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate("/workbench/validation");
-              }}
-            >
-              Validation Dashboard
-            </a>
-          </li>
-        </ul>
-        <div style={{ marginTop: "auto", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-          <p>User: Appraiser</p>
-          <p>Org: Gia Lai Division</p>
+    <AstryxAppShell>
+      <SideNav>
+        <div style={{ padding: "var(--space-md) var(--space-lg)" }}>
+          <h2 style={{ color: "var(--accent-cyan)", margin: 0 }}>Valora</h2>
         </div>
-      </nav>
-      <section className="main-content">
+        <SideNavSection title="Menu" isHeaderHidden={true}>
+          <SideNavItem
+            isSelected={getLinkActive("/workbench/projects/")}
+            label={t("nav.workbench")}
+            onClick={() => onNavigate("/workbench/projects/hd-98-gia-lai")}
+          />
+          <SideNavItem
+            isSelected={getLinkActive("/workbench/queue") || getLinkActive("/queue")}
+            label={t("review.queue")}
+            onClick={() => onNavigate("/workbench/queue")}
+          />
+          <SideNavItem
+            isSelected={getLinkActive("/workbench/validation") || getLinkActive("/validation")}
+            label={t("nav.errorDashboard")}
+            onClick={() => onNavigate("/workbench/validation")}
+          />
+        </SideNavSection>
+        <div style={{ marginTop: "auto", padding: "var(--space-md) var(--space-lg)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", borderTop: "1px solid var(--border-color)" }}>
+          <p style={{ margin: "0 0 var(--space-xs) 0" }}>{t("auth.roleLabel")}: {t("auth.role.appraiser")}</p>
+          <p style={{ margin: 0 }}>{t("auth.orgLabel")}: {t("auth.org.gialai")}</p>
+        </div>
+      </SideNav>
+      <section className="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {children}
       </section>
-    </div>
+    </AstryxAppShell>
   );
 }
