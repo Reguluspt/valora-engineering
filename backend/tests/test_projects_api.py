@@ -242,7 +242,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     # List lines
     resp = client.get("/api/v1/projects/{}/asset-lines".format(proj_id), headers=headers_viewer)
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
+    assert len(resp.json()["items"]) == 1
 
     # Update line (row_version match) -> 200
     resp = client.patch(
@@ -397,7 +397,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     )
     assert resp.status_code == 200
     assert resp.json()["quantity"] == 15.0
-    assert resp.json()["row_version"] == 2
+    assert resp.json()["version_token"] == "2"
 
     # 4. Verify status-only cancel/archive behavior
     # Archive Org 2 project
@@ -441,4 +441,156 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
         json={"asset_name": "Line 2"}
     )
     assert resp.status_code == 403
+
+
+def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_session: Session):
+    # Setup organization, project, unit, user, roles, permissions
+    org = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
+    db_session.add(org)
+    db_session.commit()
+
+    role_admin = Role(code="admin", display_name="Admin", permissions=["project:asset_line:read", "project:read"])
+    db_session.add(role_admin)
+    db_session.commit()
+
+    user = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
+    db_session.add(user)
+    db_session.commit()
+
+    ur = UserRole(user_id=user.id, role_id=role_admin.id, is_active=True)
+    db_session.add(ur)
+    db_session.commit()
+
+    cust = Customer(
+        organization_id=org.id,
+        legal_name="Cust 1",
+        status=CustomerStatus.ACTIVE,
+        created_by=user.id
+    )
+    db_session.add(cust)
+    db_session.commit()
+
+    proj = Project(
+        organization_id=org.id,
+        code="P1",
+        name="Project 1",
+        customer_id=cust.id,
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=user.id
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    unit = Unit(code="pcs", display_name="Cái", status=ReferenceStatus.ACTIVE)
+    db_session.add(unit)
+    db_session.commit()
+
+    # Create multiple asset lines with different name, spec, validation status and review status
+    line1 = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Máy phát điện ABB",
+        description="ABB 500kVA generator specification details",
+        quantity=1.0,
+        unit_id=unit.id,
+        validation_status="needs_review",
+        review_status="draft"
+    )
+    line2 = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Bơm ly tâm Ebara",
+        description="Ebara water pump model C",
+        quantity=3.0,
+        unit_id=unit.id,
+        validation_status="valid",
+        review_status="approved"
+    )
+    line3 = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Máy phát điện Cummins",
+        description="Cummins 250kVA generator spec sheet",
+        quantity=2.0,
+        unit_id=unit.id,
+        validation_status="needs_review",
+        review_status="approved"
+    )
+    db_session.add_all([line1, line2, line3])
+    db_session.commit()
+
+    headers = {"X-User-Id": str(user.id)}
+
+    # 1. Test pagination limit=2 -> returns 2 items
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?limit=2", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj.id)
+    assert data["total"] == 3
+    assert data["limit"] == 2
+    assert data["offset"] == 0
+    assert len(data["items"]) == 2
+    assert "version_token" in data["items"][0]
+    assert "row_version" not in data["items"][0]
+    assert isinstance(data["items"][0]["version_token"], str)
+
+    # 2. Test pagination offset=2 -> returns 1 item (Cummins)
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?limit=2&offset=2", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 3
+    assert len(data["items"]) == 1
+    assert data["items"][0]["asset_name"] == "Máy phát điện Cummins"
+
+    # 3. Test search query "phát điện" (ABB, Cummins)
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?search=ph%C3%A1t%20%C4%91i%E1%BB%87n", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+    assert any(x["asset_name"] == "Máy phát điện ABB" for x in data["items"])
+    assert any(x["asset_name"] == "Máy phát điện Cummins" for x in data["items"])
+
+    # 4. Test validation_status filter "valid"
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?validation_status=valid", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["asset_name"] == "Bơm ly tâm Ebara"
+
+    # 5. Test valuation_status (review_status) filter "approved"
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?valuation_status=approved", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+    assert all(x["review_status"] == "approved" for x in data["items"])
+
+    # 6. Test missing auth header -> 401
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines")
+    assert resp.status_code == 401
+
+    # 7. Test user with insufficient permission -> 403
+    role_empty = Role(code="empty", display_name="Empty", permissions=[])
+    db_session.add(role_empty)
+    db_session.commit()
+    user_noperm = User(organization_id=org.id, email="noperm@test.com", full_name="No Perm", status=UserStatus.ACTIVE)
+    db_session.add(user_noperm)
+    db_session.commit()
+    ur_noperm = UserRole(user_id=user_noperm.id, role_id=role_empty.id, is_active=True)
+    db_session.add(ur_noperm)
+    db_session.commit()
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user_noperm.id)})
+    assert resp.status_code == 403
+
+    # 8. Test cross-organization scoping -> 404
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
+    db_session.add(org2)
+    db_session.commit()
+    user2 = User(organization_id=org2.id, email="org2@test.com", full_name="Org 2 User", status=UserStatus.ACTIVE)
+    db_session.add(user2)
+    db_session.commit()
+    ur2 = UserRole(user_id=user2.id, role_id=role_admin.id, is_active=True)
+    db_session.add(ur2)
+    db_session.commit()
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user2.id)})
+    assert resp.status_code == 404
 

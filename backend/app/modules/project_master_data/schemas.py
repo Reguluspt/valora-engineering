@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
@@ -292,7 +292,22 @@ class ProjectAssetLineResponse(BaseSchema):
     validation_status: str
     brand_id: Optional[uuid.UUID]
     manufacturer_id: Optional[uuid.UUID]
-    row_version: int
+    version_token: str = Field(..., serialization_alias="version_token", validation_alias="row_version")
+
+    @field_validator("version_token", mode="before")
+    @classmethod
+    def convert_version_to_str(cls, v):
+        if v is not None:
+            return str(v)
+        return v
+
+
+class ProjectAssetLinePaginationResponse(BaseSchema):
+    project_id: uuid.UUID
+    items: List[ProjectAssetLineResponse]
+    total: int
+    limit: int
+    offset: int
 
 
 # ProjectFile Schemas (Metadata only)

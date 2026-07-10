@@ -27,6 +27,7 @@ from app.modules.project_master_data.models import (
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     ProjectAssetLineCreate, ProjectAssetLineUpdate, ProjectAssetLineResponse,
+    ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse
 )
 
@@ -344,11 +345,16 @@ def create_project_asset_line(
     return line
 
 
-@router.get("/{project_id}/asset-lines", response_model=List[ProjectAssetLineResponse])
+@router.get("/{project_id}/asset-lines", response_model=ProjectAssetLinePaginationResponse)
 def list_project_asset_lines(
     project_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    search: Optional[str] = None,
+    validation_status: Optional[str] = None,
+    valuation_status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:asset_line:read"))
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
     project = db.query(Project).filter(
@@ -358,7 +364,30 @@ def list_project_asset_lines(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return db.query(ProjectAssetLine).filter(ProjectAssetLine.project_id == project_id).all()
+    query = db.query(ProjectAssetLine).filter(ProjectAssetLine.project_id == project_id)
+
+    if search:
+        query = query.filter(
+            or_(
+                ProjectAssetLine.asset_name.ilike(f"%{search}%"),
+                ProjectAssetLine.description.ilike(f"%{search}%")
+            )
+        )
+    if validation_status:
+        query = query.filter(ProjectAssetLine.validation_status == validation_status)
+    if valuation_status:
+        query = query.filter(ProjectAssetLine.review_status == valuation_status)
+
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+
+    return {
+        "project_id": project_id,
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
 
 
 @router.patch("/{project_id}/asset-lines/{line_id}", response_model=ProjectAssetLineResponse)
