@@ -178,3 +178,22 @@ class ProjectDraftStateResponse(BaseModel):
     project_id: uuid.UUID
     items: List[AssetLineDraftStateSchema]
     total: int
+
+
+class AssetLineDraftSaveRequest(BaseModel):
+    field_key: str
+    draft_value: Any
+    base_value: Optional[Any] = None
+    version_token: str
+
+
+class AssetLineDraftSaveResponse(BaseModel):
+    project_id: uuid.UUID
+    asset_line_id: uuid.UUID
+    draft_status: str
+    field_key: str
+    has_saved_draft: bool
+    has_unsaved_changes: bool
+    is_stale: bool
+    changed_fields: List[str]
+    saved_at: datetime

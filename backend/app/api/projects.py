@@ -26,7 +26,10 @@ from app.modules.project_master_data.models import (
     Unit,
     WorkbenchSession,
     WorkbenchSessionStatus,
-    InlineEditDraft
+    InlineEditDraft,
+    InlineEditDraftStatus,
+    UndoRedoStackEntry,
+    UndoRedoActionType
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -37,7 +40,9 @@ from app.modules.project_master_data.schemas import (
 )
 from app.modules.project_master_data.workbench_schemas import (
     ProjectDraftStateResponse,
-    AssetLineDraftStateSchema
+    AssetLineDraftStateSchema,
+    AssetLineDraftSaveRequest,
+    AssetLineDraftSaveResponse
 )
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
@@ -550,6 +555,122 @@ def get_project_asset_lines_draft_state(
         "project_id": project_id,
         "items": items,
         "total": len(items)
+    }
+
+
+@router.patch("/{project_id}/asset-lines/{line_id}/draft", response_model=AssetLineDraftSaveResponse)
+def save_asset_line_draft(
+    project_id: uuid.UUID,
+    line_id: uuid.UUID,
+    payload: AssetLineDraftSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit"))
+):
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    line = db.query(ProjectAssetLine).filter(
+        ProjectAssetLine.project_id == project_id,
+        ProjectAssetLine.id == line_id
+    ).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="Asset line not found")
+
+    # Validate field allowlist (minimal safe fields)
+    ALLOWED_FIELDS = {"description", "appraised_unit_price"}
+    if payload.field_key not in ALLOWED_FIELDS:
+        raise HTTPException(status_code=400, detail="Field not supported for draft editing")
+
+    try:
+        base_version = int(payload.version_token)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid version token format")
+
+    if base_version < (line.row_version or 1):
+        raise HTTPException(status_code=409, detail="Stale row version: Conflict detected")
+
+    session = db.query(WorkbenchSession).filter(
+        WorkbenchSession.project_id == project_id,
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
+
+    if not session:
+        session = WorkbenchSession(
+            user_id=current_user.id,
+            project_id=project_id,
+            status=WorkbenchSessionStatus.ACTIVE
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+
+    draft = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id,
+        InlineEditDraft.target_id == line_id,
+        InlineEditDraft.field_key == payload.field_key
+    ).first()
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
+    draft_val_dict = {"value": payload.draft_value}
+    base_val_dict = {"value": payload.base_value} if payload.base_value is not None else None
+
+    if draft:
+        draft.draft_value = draft_val_dict
+        draft.base_value = base_val_dict
+        draft.base_row_version = base_version
+        draft.updated_at = now
+    else:
+        draft = InlineEditDraft(
+            session_id=session.id,
+            target_type="ProjectAssetLine",
+            target_id=line_id,
+            field_key=payload.field_key,
+            draft_value=draft_val_dict,
+            base_value=base_val_dict,
+            base_row_version=base_version,
+            status=InlineEditDraftStatus.DRAFT,
+            updated_at=now
+        )
+        db.add(draft)
+
+    max_seq = db.query(func.max(UndoRedoStackEntry.sequence_no)).filter(UndoRedoStackEntry.session_id == session.id).scalar() or 0
+    stack = UndoRedoStackEntry(
+        session_id=session.id,
+        sequence_no=max_seq + 1,
+        target_type="ProjectAssetLine",
+        target_id=line_id,
+        field_key=payload.field_key,
+        after_value=draft_val_dict,
+        before_value=base_val_dict,
+        action_type=UndoRedoActionType.EDIT
+    )
+    db.add(stack)
+    db.commit()
+
+    all_drafts = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id,
+        InlineEditDraft.target_id == line_id
+    ).all()
+    changed_fields = [d.field_key for d in all_drafts]
+
+    return {
+        "project_id": project_id,
+        "asset_line_id": line_id,
+        "draft_status": "saved_draft",
+        "field_key": payload.field_key,
+        "has_saved_draft": True,
+        "has_unsaved_changes": False,
+        "is_stale": False,
+        "changed_fields": changed_fields,
+        "saved_at": now
     }
 
 

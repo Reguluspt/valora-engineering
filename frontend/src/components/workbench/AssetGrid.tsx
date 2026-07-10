@@ -239,15 +239,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                         {row.raw_name}
                       </td>
                       <td style={{ padding: "var(--space-sm)" }}>
-                        <InlineDraftCell
-                          value={nameValue}
-                          isDirty={isNameDirty}
-                          onSave={(newVal) => {
-                            if (onDraftChange) {
-                              onDraftChange(row.project_asset_line_id, "normalized_name", newVal, row.normalized_name, row.row_version);
-                            }
-                          }}
-                        />
+                        {nameValue}
                       </td>
                       <td style={{ padding: "var(--space-sm)", color: "var(--accent-cyan)" }}>
                         {row.canonical_asset.standard_name}

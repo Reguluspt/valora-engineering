@@ -87,7 +87,7 @@ This document establishes the backend-to-frontend schema and route structure for
 - **S11-PR-002A**: Workbench Route Project UUID Resolution (Completed — Resolves route slug to UUID via scoped backend endpoint).
 - **S11-PR-003**: Context Drawer Data Adapter — completed with limitation. Metadata is live from the selected asset row, while evidence/price/history/validation sections remain localized empty-state placeholders until supporting backend context domains are wired.
 - **S11-PR-004**: Draft State Read Model — completed. Adds read-only backend/frontend draft state indicators without draft save, inline editing, or official commit.
-- **S11-PR-005**: Inline Draft Editing Contract.
+- **S11-PR-005**: Inline Draft Editing Contract — completed. Enables saving draft edits for description and appraised unit price, displaying Vietnamese badges without mutating official asset line database fields.
 - **S11-PR-006**: Human Commit / Review Gate.
 
 ## 9. S11-PR-002A: Project Reference Resolution
@@ -142,7 +142,7 @@ Exposes a read-only view of current edit drafts across the project.
   ```
 - **Guardrails**:
   - No write behavior is introduced.
-  - No draft save endpoint is implemented.
+  - At S11-PR-004 scope, no draft save endpoint was implemented.
   - No official commit logic is executed.
   - No inline editing is enabled.
   - No `row_version`, `version_token`, or `session_id` fields are exposed in visible components.
@@ -151,6 +151,49 @@ Exposes a read-only view of current edit drafts across the project.
 - **Deferred Tasks**:
   - **S11-PR-005**: Inline draft editing.
   - **S11-PR-006**: Human commit / review gate.
+
+## 12. S11-PR-005: Inline Draft Editing Contract
+Allows authorized users to edit and save draft values directly in the live workbench.
+- **Route**: `PATCH /api/v1/projects/{project_id}/asset-lines/{line_id}/draft`
+- **Permission**: `workbench:edit`
+- **Editable Field Allowlist**:
+  - Backend contract allowlist: `description`, `appraised_unit_price`.
+  - Current frontend Workbench inline editing exposure: only `appraised_price -> appraised_unit_price`.
+  - `description` is reserved for a future explicit "Mô tả" field/column and must not be driven by `normalized_name`.
+  - `normalized_name` is read-only in this PR.
+- **Strategy**: Persisted via the existing `InlineEditDraft` and `WorkbenchSession` database models. Stores values as a draft without modifying the master table.
+- **Request Shape**:
+  ```json
+  {
+    "field_key": "appraised_unit_price",
+    "draft_value": 95000000,
+    "base_value": 100000000,
+    "version_token": "1"
+  }
+  ```
+- **Response Shape**:
+  ```json
+  {
+    "project_id": "uuid-string",
+    "asset_line_id": "uuid-string",
+    "draft_status": "saved_draft",
+    "field_key": "appraised_unit_price",
+    "has_saved_draft": true,
+    "has_unsaved_changes": false,
+    "is_stale": false,
+    "changed_fields": ["appraised_unit_price"],
+    "saved_at": "iso-datetime"
+  }
+  ```
+- **Concurrency Token Rule**: The `version_token` contains the base row version string to prevent overwriting updates. If the version is smaller than the current line `row_version`, the backend rejects the edit with `409 Conflict`.
+- **Official Value Immutability Rule**: Under no circumstances does this endpoint mutate columns in the official `ProjectAssetLine` table.
+- **Frontend UX Behavior**:
+  - Double clicking cells activates controlled inputs.
+  - While editing locally, shows `Chưa lưu`.
+  - Calling the draft save API on commit transitions the status to `Đang lưu nháp...` and then `Đã lưu nháp` or `Cần cập nhật mới` on version conflict.
+- **Deferred Tasks**:
+  - **S11-PR-006**: Human commit / review gate.
+
 
 
 

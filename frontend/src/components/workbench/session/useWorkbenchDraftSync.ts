@@ -5,10 +5,12 @@ import {
   executeUndo,
   executeRedo
 } from "../../../api/workbenchDrafts";
+import { saveAssetLineDraft } from "../../../api/projects";
 import { ApiError } from "../../../api/client";
 
 export function useWorkbenchDraftSync(
   sessionId: string | undefined,
+  projectId: string,
   onError?: (msg: string) => void,
   onConflict?: () => void
 ) {
@@ -22,14 +24,28 @@ export function useWorkbenchDraftSync(
   ) => {
     if (!sessionId) return;
     try {
-      await saveInlineEdit(sessionId, {
-        target_type: targetType,
-        target_id: targetId,
-        field_key: fieldKey,
-        draft_value: draftValue,
-        base_value: baseValue,
-        base_row_version: baseRowVersion
-      });
+      if (targetType === "ProjectAssetLine") {
+        if (fieldKey !== "appraised_price") {
+          if (onError) onError("Trường dữ liệu này chưa hỗ trợ chỉnh sửa");
+          return;
+        }
+
+        await saveAssetLineDraft(projectId, targetId, {
+          field_key: "appraised_unit_price",
+          draft_value: draftValue,
+          base_value: baseValue,
+          version_token: baseRowVersion.toString()
+        });
+      } else {
+        await saveInlineEdit(sessionId, {
+          target_type: targetType,
+          target_id: targetId,
+          field_key: fieldKey,
+          draft_value: draftValue,
+          base_value: baseValue,
+          base_row_version: baseRowVersion
+        });
+      }
     } catch (err: any) {
       if (err instanceof ApiError) {
         if (err.status === 409 && onConflict) {
@@ -39,7 +55,7 @@ export function useWorkbenchDraftSync(
         }
       }
     }
-  }, [sessionId, onError, onConflict]);
+  }, [sessionId, projectId, onError, onConflict]);
 
   const syncCheckpoint = useCallback(async (payload: any) => {
     if (!sessionId) return;

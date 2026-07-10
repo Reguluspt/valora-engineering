@@ -31,3 +31,36 @@ export interface ProjectDraftStateResponse {
 export async function fetchProjectDraftState(projectId: string): Promise<ProjectDraftStateResponse> {
   return request<ProjectDraftStateResponse>(`/api/v1/projects/${projectId}/asset-lines/draft-state`);
 }
+
+export interface AssetLineDraftSaveRequest {
+  field_key: string;
+  draft_value: any;
+  base_value?: any;
+  version_token: string;
+}
+
+export interface AssetLineDraftSaveResponse {
+  project_id: string;
+  asset_line_id: string;
+  draft_status: "saved_draft" | "stale" | "locked";
+  field_key: string;
+  has_saved_draft: boolean;
+  has_unsaved_changes: boolean;
+  is_stale: boolean;
+  changed_fields: string[];
+  saved_at?: string | null;
+}
+
+export async function saveAssetLineDraft(
+  projectId: string,
+  assetLineId: string,
+  payload: AssetLineDraftSaveRequest
+): Promise<AssetLineDraftSaveResponse> {
+  return request<AssetLineDraftSaveResponse>(
+    `/api/v1/projects/${projectId}/asset-lines/${assetLineId}/draft`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }
+  );
+}

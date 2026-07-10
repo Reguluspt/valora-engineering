@@ -66,6 +66,7 @@ export function WorkbenchLayout({
     syncRedo
   } = useWorkbenchDraftSync(
     session?.id,
+    "hd-98-gia-lai",
     (msg) => setSyncError(msg),
     () => setSyncConflict(true)
   );
@@ -88,10 +89,11 @@ export function WorkbenchLayout({
     triggerAutosaveMock
   } = useDraftSession();
 
-  const handleDraftChange = (id: string, field: string, value: any, baseValue: any, rowVersion: number) => {
+  const handleDraftChange = async (id: string, field: string, value: any, baseValue: any, rowVersion: number) => {
     if (conflictError || syncConflict || rbacError) return; // Prevent edits when locked
     updateDraft(id, field, value, baseValue, rowVersion);
-    syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
+    await syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
+    reloadDrafts();
   };
 
   const handleUndo = () => {
@@ -118,7 +120,7 @@ export function WorkbenchLayout({
 
   const { contextData: resolvedContextData } = useAssetLineContext("hd-98-gia-lai", activeRow);
 
-  const { draftStates } = useWorkbenchDraftState("hd-98-gia-lai");
+  const { draftStates, reload: reloadDrafts } = useWorkbenchDraftState("hd-98-gia-lai");
 
   const draftsCount = Object.keys(drafts).length;
 
