@@ -3,7 +3,7 @@ import { WorkbenchHeader } from "./WorkbenchHeader";
 import { WorkbenchFooter } from "./WorkbenchFooter";
 import { WorkbenchRightPanelShell } from "./WorkbenchRightPanelShell";
 import { AssetGrid } from "../workbench/AssetGrid";
-import { generateLargeMockSet } from "../workbench/mockAssetRows";
+import { useProjectAssetLines } from "../workbench/hooks/useProjectAssetLines";
 import { MOCK_CONTEXT_DATA } from "../workbench/panels/mockContextData";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
@@ -35,7 +35,12 @@ export function WorkbenchLayout({
   issuesCount,
   children
 }: WorkbenchLayoutProps) {
-  const largeMockData = React.useMemo(() => generateLargeMockSet(), []);
+  const {
+    rows,
+    loading: gridLoading,
+    friendlyError: gridFriendlyError,
+    retry: retryGrid
+  } = useProjectAssetLines("hd-98-gia-lai");
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
 
   const {
@@ -206,12 +211,27 @@ export function WorkbenchLayout({
       <div className="workbench-body">
         <main className="workbench-grid-pane" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {children || (
-            <AssetGrid
-              rows={largeMockData}
-              onActiveRowChange={handleActiveRowChange}
-              drafts={drafts}
-              onDraftChange={handleDraftChange}
-            />
+            gridLoading ? (
+              <div style={{ padding: "var(--space-lg)", color: "var(--text-muted)", textAlign: "center" }}>
+                Đang tải danh sách tài sản...
+              </div>
+            ) : gridFriendlyError ? (
+              <div className="state-container" style={{ padding: "var(--space-xl)", textAlign: "center" }}>
+                <h2 className="state-title" style={{ color: "var(--color-danger)" }}>{gridFriendlyError.title}</h2>
+                <p className="state-message" style={{ margin: "var(--space-md) 0" }}>{gridFriendlyError.message}</p>
+                <p className="state-message" style={{ fontSize: "var(--font-size-sm)", color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>{gridFriendlyError.nextAction}</p>
+                <button className="action-btn" onClick={retryGrid}>
+                  Tải lại dữ liệu
+                </button>
+              </div>
+            ) : (
+              <AssetGrid
+                rows={rows}
+                onActiveRowChange={handleActiveRowChange}
+                drafts={drafts}
+                onDraftChange={handleDraftChange}
+              />
+            )
           )}
         </main>
         <WorkbenchRightPanelShell contextData={selectedContextData} />

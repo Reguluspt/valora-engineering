@@ -83,7 +83,7 @@ This document establishes the backend-to-frontend schema and route structure for
 
 ## 8. Progressive Adoption Plan
 - **S11-PR-001**: API Contract and Backend Endpoint (this PR).
-- **S11-PR-002**: Workbench Asset Grid Read Adapter (binds real data to the grid).
+- **S11-PR-002**: Workbench Asset Grid Read Adapter — completed with limitation. The adapter and grid binding are implemented, but live loading from slug routes is gated by route slug → project UUID resolution.
 - **S11-PR-003**: Context Drawer Data Adapter.
 - **S11-PR-004**: Draft State Read Model.
 - **S11-PR-005**: Inline Draft Editing Contract.

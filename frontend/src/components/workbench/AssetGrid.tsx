@@ -115,7 +115,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange 
   const offsetY = startIndex * rowHeight;
 
   if (rows.length === 0) {
-    return <EmptyState title="No assets configured" message="Upload project files to begin." />;
+    return <EmptyState title="Chưa có tài sản nào" message="Hãy nhập dữ liệu hoặc kiểm tra lại hồ sơ để bắt đầu." />;
   }
 
   return (
