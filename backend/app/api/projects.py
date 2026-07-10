@@ -23,7 +23,10 @@ from app.modules.project_master_data.models import (
     ProjectFile,
     FileProcessingStatus,
     ProjectFileCategory,
-    Unit
+    Unit,
+    WorkbenchSession,
+    WorkbenchSessionStatus,
+    InlineEditDraft
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -31,6 +34,10 @@ from app.modules.project_master_data.schemas import (
     ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse,
     ProjectResolutionResponse
+)
+from app.modules.project_master_data.workbench_schemas import (
+    ProjectDraftStateResponse,
+    AssetLineDraftStateSchema
 )
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
@@ -471,6 +478,78 @@ def list_project_asset_lines(
         "total": total,
         "limit": limit,
         "offset": offset
+    }
+
+
+@router.get("/{project_id}/asset-lines/draft-state", response_model=ProjectDraftStateResponse)
+def get_project_asset_lines_draft_state(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read"))
+):
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    session = db.query(WorkbenchSession).filter(
+        WorkbenchSession.project_id == project_id,
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
+
+    if not session:
+        return {
+            "project_id": project_id,
+            "items": [],
+            "total": 0
+        }
+
+    drafts = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id
+    ).all()
+
+    from collections import defaultdict
+    drafts_by_line = defaultdict(list)
+    for d in drafts:
+        if d.target_type == "ProjectAssetLine":
+            drafts_by_line[d.target_id].append(d)
+
+    items = []
+    for line_id, d_list in drafts_by_line.items():
+        line = db.query(ProjectAssetLine).filter(
+            ProjectAssetLine.project_id == project_id,
+            ProjectAssetLine.id == line_id
+        ).first()
+        if not line:
+            continue
+
+        changed_fields = [d.field_key for d in d_list]
+        is_stale = any(d.base_row_version is not None and d.base_row_version < line.row_version for d in d_list)
+        draft_status = "stale" if is_stale else "saved_draft"
+        last_saved = max(d.updated_at for d in d_list) if d_list else None
+
+        items.append(
+            AssetLineDraftStateSchema(
+                asset_line_id=line_id,
+                has_saved_draft=True,
+                has_unsaved_changes=False,
+                is_locked=False,
+                is_stale=is_stale,
+                draft_status=draft_status,
+                changed_fields=changed_fields,
+                last_saved_at=last_saved,
+                last_saved_by=current_user.id
+            )
+        )
+
+    return {
+        "project_id": project_id,
+        "items": items,
+        "total": len(items)
     }
 
 

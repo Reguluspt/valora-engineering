@@ -86,7 +86,7 @@ This document establishes the backend-to-frontend schema and route structure for
 - **S11-PR-002**: Workbench Asset Grid Read Adapter — completed with limitation. The adapter and grid binding are implemented, but live loading from slug routes is gated by route slug → project UUID resolution.
 - **S11-PR-002A**: Workbench Route Project UUID Resolution (Completed — Resolves route slug to UUID via scoped backend endpoint).
 - **S11-PR-003**: Context Drawer Data Adapter — completed with limitation. Metadata is live from the selected asset row, while evidence/price/history/validation sections remain localized empty-state placeholders until supporting backend context domains are wired.
-- **S11-PR-004**: Draft State Read Model.
+- **S11-PR-004**: Draft State Read Model — completed. Adds read-only backend/frontend draft state indicators without draft save, inline editing, or official commit.
 - **S11-PR-005**: Inline Draft Editing Contract.
 - **S11-PR-006**: Human Commit / Review Gate.
 
@@ -114,5 +114,43 @@ To bind selected real asset rows to the right context panel, a frontend data ada
   - Translates empty fallback states into clean Vietnamese using the error and i18n dictionary.
   - Ensures raw ORM fields such as `row_version` or `version_token` are kept hidden.
   - Returns structured sub-panel data objects consumed by the drawer view panes.
+
+## 11. S11-PR-004: Draft State Read Model
+Exposes a read-only view of current edit drafts across the project.
+- **Route**: `GET /api/v1/projects/{project_id}/asset-lines/draft-state`
+- **Permission**: `project:read`
+- **Strategy**: Backend read-only draft state endpoint backed by existing `InlineEditDraft` and `WorkbenchSession` database models.
+- **Response Shape**:
+  ```json
+  {
+    "project_id": "uuid-string",
+    "items": [
+      {
+        "asset_line_id": "uuid-string",
+        "has_saved_draft": false,
+        "has_unsaved_changes": false,
+        "is_locked": false,
+        "is_stale": false,
+        "draft_status": "clean",
+        "changed_fields": [],
+        "last_saved_at": null,
+        "last_saved_by": null
+      }
+    ],
+    "total": 0
+  }
+  ```
+- **Guardrails**:
+  - No write behavior is introduced.
+  - No draft save endpoint is implemented.
+  - No official commit logic is executed.
+  - No inline editing is enabled.
+  - No `row_version`, `version_token`, or `session_id` fields are exposed in visible components.
+- **Frontend Adoption**:
+  - Workbench rows display read-only Vietnamese draft state indicators under the "Trạng thái nháp" column (e.g. `Cần cập nhật mới`, `Đang khóa`, `Chưa lưu`, `Đã lưu nháp`, `Không có thay đổi`).
+- **Deferred Tasks**:
+  - **S11-PR-005**: Inline draft editing.
+  - **S11-PR-006**: Human commit / review gate.
+
 
 

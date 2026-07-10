@@ -5,6 +5,7 @@ import { WorkbenchRightPanelShell } from "./WorkbenchRightPanelShell";
 import { AssetGrid } from "../workbench/AssetGrid";
 import { useProjectAssetLines } from "../workbench/hooks/useProjectAssetLines";
 import { useAssetLineContext } from "../workbench/hooks/useAssetLineContext";
+import { useWorkbenchDraftState } from "../workbench/hooks/useWorkbenchDraftState";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -117,6 +118,8 @@ export function WorkbenchLayout({
 
   const { contextData: resolvedContextData } = useAssetLineContext("hd-98-gia-lai", activeRow);
 
+  const { draftStates } = useWorkbenchDraftState("hd-98-gia-lai");
+
   const draftsCount = Object.keys(drafts).length;
 
   return (
@@ -197,6 +200,7 @@ export function WorkbenchLayout({
                 onActiveRowChange={handleActiveRowChange}
                 drafts={drafts}
                 onDraftChange={handleDraftChange}
+                draftStates={draftStates}
               />
             )
           )}

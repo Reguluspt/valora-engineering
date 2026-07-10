@@ -725,3 +725,115 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     
     resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai-slug", headers=headers_user1)
     assert resp.status_code == 409
+
+
+def test_project_asset_lines_draft_state(client: TestClient, db_session: Session):
+    from app.modules.project_master_data.models import (
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
+        Customer, CustomerStatus, Project, ProjectAssetLine, WorkbenchSession,
+        WorkbenchSessionStatus, InlineEditDraft, InlineEditDraftStatus
+    )
+    # 1. Setup Organizations, Users, Roles
+    org1 = OrganizationProfile(legal_name="Org 1 Drafts", organization_slug="org-1-drafts", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2 Drafts", organization_slug="org-2-drafts", status=OrganizationStatus.ACTIVE)
+    db_session.add_all([org1, org2])
+    db_session.commit()
+
+    role_read = Role(code="reader", display_name="Reader", permissions=["project:read"])
+    role_none = Role(code="empty", display_name="Empty", permissions=[])
+    db_session.add_all([role_read, role_none])
+    db_session.commit()
+
+    user1 = User(organization_id=org1.id, email="u1_drafts@test.com", full_name="User 1 Drafts", status=UserStatus.ACTIVE)
+    user2 = User(organization_id=org2.id, email="u2_drafts@test.com", full_name="User 2 Drafts", status=UserStatus.ACTIVE)
+    user_noperm = User(organization_id=org1.id, email="u_noperm_drafts@test.com", full_name="No Perm Drafts", status=UserStatus.ACTIVE)
+    db_session.add_all([user1, user2, user_noperm])
+    db_session.commit()
+
+    db_session.add_all([
+        UserRole(user_id=user1.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user2.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user_noperm.id, role_id=role_none.id, is_active=True)
+    ])
+    db_session.commit()
+
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1 Drafts", status=CustomerStatus.ACTIVE, created_by=user1.id)
+    db_session.add(cust1)
+    db_session.commit()
+
+    proj1 = Project(organization_id=org1.id, customer_id=cust1.id, code="PRJ-DRF-1", name="Project Draft 1", created_by=user1.id)
+    db_session.add(proj1)
+    db_session.commit()
+
+    line1 = ProjectAssetLine(project_id=proj1.id, asset_name="Line 1", quantity=1.0, review_status="raw", validation_status="valid")
+    db_session.add(line1)
+    db_session.commit()
+
+    headers_user1 = {"X-User-Id": str(user1.id)}
+    headers_user2 = {"X-User-Id": str(user2.id)}
+    headers_noperm = {"X-User-Id": str(user_noperm.id)}
+
+    # A. Scoping / Org 2 user resolving yields 404
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_user2)
+    assert resp.status_code == 404
+
+    # B. Missing / Forbidden permissions
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state")
+    assert resp.status_code == 401
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_noperm)
+    assert resp.status_code == 403
+
+    # C. Empty/Clean state when no session exists
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj1.id)
+    assert len(data["items"]) == 0
+    assert data["total"] == 0
+
+    # D. Active session with no drafts yields clean
+    sess = WorkbenchSession(user_id=user1.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE)
+    db_session.add(sess)
+    db_session.commit()
+
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_user1)
+    assert resp.status_code == 200
+    assert len(resp.json()["items"]) == 0
+
+    # E. Adding a draft edit
+    draft = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line1.id,
+        field_key="normalized_name",
+        draft_value={"value": "New Name"},
+        base_value={"value": "Line 1"},
+        base_row_version=line1.row_version,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft)
+    db_session.commit()
+
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert item["asset_line_id"] == str(line1.id)
+    assert item["has_saved_draft"] is True
+    assert item["is_stale"] is False
+    assert item["draft_status"] == "saved_draft"
+    assert "normalized_name" in item["changed_fields"]
+
+    # F. Test stale detection when base_row_version < current line version
+    line1.row_version = (line1.row_version or 1) + 1
+    db_session.add(line1)
+    db_session.commit()
+
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert item["is_stale"] is True
+    assert item["draft_status"] == "stale"

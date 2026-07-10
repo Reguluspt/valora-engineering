@@ -6,15 +6,17 @@ import { InlineDraftCell } from "./drafts/InlineDraftCell";
 import { EmptyState } from "../common/EmptyState";
 
 import { InlineEditDraft } from "./drafts/DraftStateTypes";
+import { getDraftStatusLabelVi, getDraftStatusBadge } from "./hooks/useWorkbenchDraftState";
 
 interface AssetGridProps {
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
   drafts?: Record<string, InlineEditDraft>;
   onDraftChange?: (id: string, field: string, value: any, baseValue: any, rowVersion: number) => void;
+  draftStates?: Record<string, any>;
 }
 
-export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange }: AssetGridProps) {
+export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {} }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [validationFilter, setValidationFilter] = useState("All");
@@ -177,6 +179,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange 
                 <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
                   Price {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
                 </th>
+                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
                 <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Validation</th>
                 <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Review</th>
               </tr>
@@ -279,6 +282,12 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange 
                               onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price, row.row_version);
                             }
                           }}
+                        />
+                      </td>
+                      <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
+                        <StatusBadge
+                          status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
+                          label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                         />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>

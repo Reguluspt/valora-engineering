@@ -160,3 +160,21 @@ class WorkbenchNotificationSchema(SchemaBase):
     message: str
     is_read: bool
     created_at: datetime
+
+
+class AssetLineDraftStateSchema(BaseModel):
+    asset_line_id: uuid.UUID
+    has_saved_draft: bool = False
+    has_unsaved_changes: bool = False
+    is_locked: bool = False
+    is_stale: bool = False
+    draft_status: str = "clean"
+    changed_fields: List[str] = []
+    last_saved_at: Optional[datetime] = None
+    last_saved_by: Optional[uuid.UUID] = None
+
+
+class ProjectDraftStateResponse(BaseModel):
+    project_id: uuid.UUID
+    items: List[AssetLineDraftStateSchema]
+    total: int
