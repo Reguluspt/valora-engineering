@@ -64,3 +64,33 @@ export async function saveAssetLineDraft(
     }
   );
 }
+
+export interface AssetLineDraftCommitRequest {
+  field_keys: string[];
+  confirm: boolean;
+}
+
+export interface AssetLineDraftCommitResponse {
+  project_id: string;
+  asset_line_id: string;
+  committed_fields: string[];
+  draft_status: "clean";
+  has_saved_draft: boolean;
+  has_unsaved_changes: boolean;
+  is_stale: boolean;
+  committed_at?: string | null;
+}
+
+export async function commitAssetLineDraft(
+  projectId: string,
+  assetLineId: string,
+  payload: AssetLineDraftCommitRequest
+): Promise<AssetLineDraftCommitResponse> {
+  return request<AssetLineDraftCommitResponse>(
+    `/api/v1/projects/${projectId}/asset-lines/${assetLineId}/draft/commit`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }
+  );
+}

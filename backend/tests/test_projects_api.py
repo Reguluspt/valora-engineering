@@ -934,3 +934,100 @@ def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session)
     }
     resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=stale_payload, headers=headers_editor)
     assert resp.status_code == 409
+
+
+def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Session):
+    from app.modules.project_master_data.models import (
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
+        Customer, CustomerStatus, Project, ProjectAssetLine, WorkbenchSession,
+        WorkbenchSessionStatus, InlineEditDraft, InlineEditDraftStatus
+    )
+    # 1. Setup Organizations, Users, Roles
+    org1 = OrganizationProfile(legal_name="Org 1 Commit", organization_slug="org-1-commit", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2 Commit", organization_slug="org-2-commit", status=OrganizationStatus.ACTIVE)
+    db_session.add_all([org1, org2])
+    db_session.commit()
+
+    role_edit = Role(code="editor", display_name="Editor", permissions=["project:read", "workbench:edit"])
+    role_read = Role(code="reader", display_name="Reader", permissions=["project:read"])
+    db_session.add_all([role_edit, role_read])
+    db_session.commit()
+
+    user_editor = User(organization_id=org1.id, email="u_editor_commit@test.com", full_name="Editor User", status=UserStatus.ACTIVE)
+    user_reader = User(organization_id=org1.id, email="u_reader_commit@test.com", full_name="Reader User", status=UserStatus.ACTIVE)
+    user_other = User(organization_id=org2.id, email="u_other_commit@test.com", full_name="Other User", status=UserStatus.ACTIVE)
+    db_session.add_all([user_editor, user_reader, user_other])
+    db_session.commit()
+
+    db_session.add_all([
+        UserRole(user_id=user_editor.id, role_id=role_edit.id, is_active=True),
+        UserRole(user_id=user_reader.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user_other.id, role_id=role_edit.id, is_active=True)
+    ])
+    db_session.commit()
+
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1 Commit", status=CustomerStatus.ACTIVE, created_by=user_editor.id)
+    db_session.add(cust1)
+    db_session.commit()
+
+    proj1 = Project(organization_id=org1.id, customer_id=cust1.id, code="PRJ-CMT-1", name="Project Commit 1", created_by=user_editor.id)
+    db_session.add(proj1)
+    db_session.commit()
+
+    line1 = ProjectAssetLine(project_id=proj1.id, asset_name="Line 1", quantity=1.0, review_status="raw", validation_status="valid", appraised_unit_price=100.0, row_version=1)
+    db_session.add(line1)
+    db_session.commit()
+
+    headers_editor = {"X-User-Id": str(user_editor.id)}
+    headers_reader = {"X-User-Id": str(user_reader.id)}
+    headers_other = {"X-User-Id": str(user_other.id)}
+
+    # A. Seed active user session and inline drafts
+    sess = WorkbenchSession(user_id=user_editor.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE)
+    db_session.add(sess)
+    db_session.commit()
+
+    draft = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line1.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": 150.0},
+        base_value={"value": 100.0},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft)
+    db_session.commit()
+
+    # B. Unauthorized / Forbidden permissions
+    payload = {"field_keys": ["appraised_unit_price"], "confirm": True}
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload)
+    assert resp.status_code == 401
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_reader)
+    assert resp.status_code == 403
+
+    # C. Cross-org / Scoping checks (Org 2 editor calls Org 1 project commit)
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_other)
+    assert resp.status_code == 404
+
+    # D. Missing confirm = True fails with 400
+    noconfirm_payload = {"field_keys": ["appraised_unit_price"], "confirm": False}
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=noconfirm_payload, headers=headers_editor)
+    assert resp.status_code == 400
+
+    # E. Successful commit of allowed fields
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_editor)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["committed_fields"] == ["appraised_unit_price"]
+    assert data["draft_status"] == "clean"
+
+    # Verify official line values are mutated AFTER commit
+    db_session.refresh(line1)
+    assert line1.appraised_unit_price == 150.0
+    assert line1.row_version == 2
+
+    # Verify draft is deleted/cleared
+    leftovers = db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == sess.id).all()
+    assert len(leftovers) == 0

@@ -6,6 +6,7 @@ import { AssetGrid } from "../workbench/AssetGrid";
 import { useProjectAssetLines } from "../workbench/hooks/useProjectAssetLines";
 import { useAssetLineContext } from "../workbench/hooks/useAssetLineContext";
 import { useWorkbenchDraftState } from "../workbench/hooks/useWorkbenchDraftState";
+import { commitAssetLineDraft } from "../../api/projects";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -94,6 +95,19 @@ export function WorkbenchLayout({
     updateDraft(id, field, value, baseValue, rowVersion);
     await syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
     reloadDrafts();
+  };
+
+  const handleCommitDraft = async (id: string, fields: string[]) => {
+    try {
+      await commitAssetLineDraft("hd-98-gia-lai", id, {
+        field_keys: fields,
+        confirm: true
+      });
+      retryGrid();
+      reloadDrafts();
+    } catch (err: any) {
+      alert("Không thể áp dụng nháp\n" + (err.message || ""));
+    }
   };
 
   const handleUndo = () => {
@@ -203,6 +217,7 @@ export function WorkbenchLayout({
                 drafts={drafts}
                 onDraftChange={handleDraftChange}
                 draftStates={draftStates}
+                onCommitDraft={handleCommitDraft}
               />
             )
           )}

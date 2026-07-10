@@ -197,3 +197,19 @@ class AssetLineDraftSaveResponse(BaseModel):
     is_stale: bool
     changed_fields: List[str]
     saved_at: datetime
+
+
+class AssetLineDraftCommitRequest(BaseModel):
+    field_keys: List[str]
+    confirm: bool
+
+
+class AssetLineDraftCommitResponse(BaseModel):
+    project_id: uuid.UUID
+    asset_line_id: uuid.UUID
+    committed_fields: List[str]
+    draft_status: str
+    has_saved_draft: bool
+    has_unsaved_changes: bool
+    is_stale: bool
+    committed_at: datetime

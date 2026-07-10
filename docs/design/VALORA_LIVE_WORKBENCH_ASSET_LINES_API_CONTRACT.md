@@ -88,7 +88,7 @@ This document establishes the backend-to-frontend schema and route structure for
 - **S11-PR-003**: Context Drawer Data Adapter — completed with limitation. Metadata is live from the selected asset row, while evidence/price/history/validation sections remain localized empty-state placeholders until supporting backend context domains are wired.
 - **S11-PR-004**: Draft State Read Model — completed. Adds read-only backend/frontend draft state indicators without draft save, inline editing, or official commit.
 - **S11-PR-005**: Inline Draft Editing Contract — completed. Enables saving draft edits for description and appraised unit price, displaying Vietnamese badges without mutating official asset line database fields.
-- **S11-PR-006**: Human Commit / Review Gate.
+- **S11-PR-006**: Human Commit / Review Gate — completed. Allows review of draft changes and explicitly applying them to official database fields after human confirmation.
 
 ## 9. S11-PR-002A: Project Reference Resolution
 To resolve route slugs (e.g. `hd-98-gia-lai`) safely to project UUIDs, a resolution endpoint is provided:
@@ -193,6 +193,40 @@ Allows authorized users to edit and save draft values directly in the live workb
   - Calling the draft save API on commit transitions the status to `Đang lưu nháp...` and then `Đã lưu nháp` or `Cần cập nhật mới` on version conflict.
 - **Deferred Tasks**:
   - **S11-PR-006**: Human commit / review gate.
+
+## 13. S11-PR-006: Human Commit / Review Gate
+Enables authorized users to review and explicitly apply draft edits to official project asset line database fields.
+- **Route**: `POST /api/v1/projects/{project_id}/asset-lines/{line_id}/draft/commit`
+- **Permission**: `workbench:edit`
+- **Request Shape**:
+  ```json
+  {
+    "field_keys": ["appraised_unit_price"],
+    "confirm": true
+  }
+  ```
+- **Response Shape**:
+  ```json
+  {
+    "project_id": "uuid-string",
+    "asset_line_id": "uuid-string",
+    "committed_fields": ["appraised_unit_price"],
+    "draft_status": "clean",
+    "has_saved_draft": false,
+    "has_unsaved_changes": false,
+    "is_stale": false,
+    "committed_at": "iso-datetime"
+  }
+  ```
+- **Human Confirmation Requirement**: `confirm` must be set explicitly to `true` inside the POST payload.
+- **Official Value Mutation Rule**: Applies only supported draft fields (description, appraised_unit_price) to the master record, increments its row version, and purges the draft row.
+- **Stale Conflict Rule**: Rejects execution with `409 Conflict` if the draft was based on a stale row version.
+- **AI Prohibition**: AI is strictly prohibited from invoking this endpoint or approving draft modifications.
+- **Frontend UX Behavior**:
+  - A button labeled **Áp dụng nháp** appears only for rows containing saved drafts.
+  - Prompts a localized Vietnamese confirmation window: *“Xác nhận áp dụng nháp. Thao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu.”*
+  - Re-fetches the grid and draft states upon successful execution.
+
 
 
 

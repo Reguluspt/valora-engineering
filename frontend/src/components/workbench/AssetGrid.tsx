@@ -14,9 +14,10 @@ interface AssetGridProps {
   drafts?: Record<string, InlineEditDraft>;
   onDraftChange?: (id: string, field: string, value: any, baseValue: any, rowVersion: number) => void;
   draftStates?: Record<string, any>;
+  onCommitDraft?: (id: string, fields: string[]) => void;
 }
 
-export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {} }: AssetGridProps) {
+export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {}, onCommitDraft }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [validationFilter, setValidationFilter] = useState("All");
@@ -277,10 +278,34 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                         />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
-                        <StatusBadge
-                          status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
-                          label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
-                        />
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                          <StatusBadge
+                            status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
+                            label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
+                          />
+                          {draftStates[row.project_asset_line_id]?.has_saved_draft && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm("Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu.")) {
+                                  if (onCommitDraft) {
+                                    onCommitDraft(row.project_asset_line_id, ["appraised_unit_price"]);
+                                  }
+                                }
+                              }}
+                              style={{
+                                fontSize: "10px",
+                                padding: "2px 6px",
+                                backgroundColor: "var(--status-review)",
+                                border: "none",
+                                borderRadius: "3px",
+                                color: "#fff",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Áp dụng nháp
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <StatusBadge

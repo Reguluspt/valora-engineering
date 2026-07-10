@@ -8,7 +8,8 @@ vi.mock("react", () => ({
 }));
 
 vi.mock("../../../../api/projects", () => ({
-  saveAssetLineDraft: vi.fn()
+  saveAssetLineDraft: vi.fn(),
+  commitAssetLineDraft: vi.fn()
 }));
 
 vi.mock("../../../../api/workbenchDrafts", () => ({
@@ -44,5 +45,29 @@ describe("useWorkbenchDraftSync Hook", () => {
       base_value: 90000,
       version_token: "3"
     });
+  });
+
+  it("verifies commitAssetLineDraft API client can be invoked with confirmation parameters", async () => {
+    const commitSpy = vi.spyOn(projectsApi, "commitAssetLineDraft").mockResolvedValue({
+      project_id: "p1",
+      asset_line_id: "l1",
+      committed_fields: ["appraised_unit_price"],
+      draft_status: "clean",
+      has_saved_draft: false,
+      has_unsaved_changes: false,
+      is_stale: false,
+      committed_at: "2026-07-10T16:00:00Z"
+    });
+
+    const res = await projectsApi.commitAssetLineDraft("p1", "l1", {
+      field_keys: ["appraised_unit_price"],
+      confirm: true
+    });
+
+    expect(commitSpy).toHaveBeenCalledWith("p1", "l1", {
+      field_keys: ["appraised_unit_price"],
+      confirm: true
+    });
+    expect(res.draft_status).toBe("clean");
   });
 });
