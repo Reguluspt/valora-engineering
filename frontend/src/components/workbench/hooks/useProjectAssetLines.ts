@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchProjectAssetLines, ProjectAssetLineResponse } from "../../../api/assetLines";
+import { resolveProjectReference } from "../../../api/projects";
 import { AssetLineGridRow } from "../AssetGridTypes";
 import { getFriendlyErrorFromUnknown } from "../../../errors/errorRegistry";
 
@@ -47,37 +48,82 @@ export function useProjectAssetLines(projectId: string) {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [friendlyError, setFriendlyError] = useState<{ title: string; message: string; nextAction: string } | null>(null);
+  const [resolvedUuid, setResolvedUuid] = useState<string | null>(null);
+
+  // Validate and resolve project ID
+  useEffect(() => {
+    let active = true;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (uuidRegex.test(projectId)) {
+      setResolvedUuid(projectId);
+      return;
+    }
+
+    async function resolve() {
+      try {
+        setLoading(true);
+        setErrorMsg(null);
+        setFriendlyError(null);
+
+        const res = await resolveProjectReference(projectId);
+        if (active) {
+          setResolvedUuid(res.project_id);
+        }
+      } catch (err: any) {
+        if (!active) return;
+        setErrorMsg(err.message || "Failed to resolve project reference");
+        
+        if (err.status === 404) {
+          setFriendlyError({
+            title: "Không tìm thấy hồ sơ",
+            message: "Không tìm thấy hồ sơ tương ứng với mã cung cấp.",
+            nextAction: "Vui lòng mở hồ sơ từ danh sách hồ sơ hoặc thử tải lại."
+          });
+        } else if (err.status === 409) {
+          setFriendlyError({
+            title: "Trùng lặp hồ sơ",
+            message: "Có nhiều hồ sơ trùng thông tin, vui lòng chọn từ danh sách hồ sơ.",
+            nextAction: "Vui lòng liên hệ quản trị viên hoặc chọn chính xác mã ID."
+          });
+        } else if (err.status === 403) {
+          setFriendlyError({
+            title: "Không có quyền truy cập",
+            message: "Hồ sơ không thuộc phạm vi truy cập của tài khoản này.",
+            nextAction: "Vui lòng liên hệ quản trị viên để đăng ký vai trò phù hợp."
+          });
+        } else {
+          setFriendlyError(getFriendlyErrorFromUnknown(err));
+        }
+        setLoading(false);
+      }
+    }
+
+    resolve();
+
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
 
   const loadAssetLines = useCallback(async () => {
+    if (!resolvedUuid) return;
+
     try {
       setLoading(true);
       setErrorMsg(null);
       setFriendlyError(null);
 
-      // Validate project UUID format (do not use hardcoded dummy fallbacks)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(projectId)) {
-        setRows([]);
-        setFriendlyError({
-          title: "Chưa xác định được mã hồ sơ",
-          message: "Chưa xác định được mã hồ sơ để tải danh sách tài sản.",
-          nextAction: "Vui lòng mở hồ sơ từ danh sách hồ sơ hoặc thử tải lại."
-        });
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetchProjectAssetLines(projectId);
+      const res = await fetchProjectAssetLines(resolvedUuid);
       const mappedRows = mapAssetLinesToGridRows(res.items);
       setRows(mappedRows);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load asset lines");
-      const friendly = getFriendlyErrorFromUnknown(err);
-      setFriendlyError(friendly);
+      setFriendlyError(getFriendlyErrorFromUnknown(err));
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [resolvedUuid]);
 
   useEffect(() => {
     loadAssetLines();
@@ -88,6 +134,10 @@ export function useProjectAssetLines(projectId: string) {
     loading,
     errorMsg,
     friendlyError,
-    retry: loadAssetLines,
+    retry: resolvedUuid ? loadAssetLines : () => {
+      // Re-trigger resolution
+      setResolvedUuid(null);
+      setLoading(true);
+    },
   };
 }

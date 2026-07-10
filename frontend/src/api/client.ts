@@ -69,3 +69,4 @@ export async function getOpenApiSpec(): Promise<any> {
 }
 
 export * from "./assetLines";
+export * from "./projects";

@@ -1,8 +1,9 @@
 import uuid
+import re
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, text
+from sqlalchemy import or_, text, func
 
 from app.db import get_db
 from app.core.rbac import require_permission, get_current_user
@@ -28,7 +29,8 @@ from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     ProjectAssetLineCreate, ProjectAssetLineUpdate, ProjectAssetLineResponse,
     ProjectAssetLinePaginationResponse,
-    ProjectFileCreate, ProjectFileResponse
+    ProjectFileCreate, ProjectFileResponse,
+    ProjectResolutionResponse
 )
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
@@ -111,6 +113,88 @@ def create_project(
     db.commit()
 
     return project
+
+
+def slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r'[^a-z0-9\-]+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-')
+
+
+@router.get("/resolve", response_model=ProjectResolutionResponse)
+def resolve_project(
+    ref: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read"))
+):
+    org_id = current_user.organization_id
+
+    # 1. Check if ref is a valid UUID
+    try:
+        ref_uuid = uuid.UUID(ref)
+        project = db.query(Project).filter(
+            Project.organization_id == org_id,
+            Project.id == ref_uuid
+        ).first()
+        if project:
+            return {
+                "project_id": project.id,
+                "display_name": project.name,
+                "matched_by": "id"
+            }
+    except ValueError:
+        pass
+
+    # 2. Try exact match on code (case-insensitive)
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        func.lower(Project.code) == ref.lower()
+    ).first()
+    if project:
+        return {
+            "project_id": project.id,
+            "display_name": project.name,
+            "matched_by": "code"
+        }
+
+    # 3. Try exact match on name (case-insensitive)
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        func.lower(Project.name) == ref.lower()
+    ).first()
+    if project:
+        return {
+            "project_id": project.id,
+            "display_name": project.name,
+            "matched_by": "name"
+        }
+
+    # 4. Try slugified comparison in Python on all org projects
+    projects = db.query(Project).filter(Project.organization_id == org_id).all()
+    target_slug = slugify(ref)
+    
+    matches = []
+    for p in projects:
+        if slugify(p.code) == target_slug:
+            matches.append((p, "code_slug"))
+        elif slugify(p.name) == target_slug:
+            matches.append((p, "name_slug"))
+            
+    if len(matches) == 1:
+        p, match_type = matches[0]
+        return {
+            "project_id": p.id,
+            "display_name": p.name,
+            "matched_by": match_type
+        }
+    elif len(matches) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail="Multiple projects matched this reference. Please specify exact project ID."
+        )
+
+    raise HTTPException(status_code=404, detail="Project not found")
 
 
 @router.get("", response_model=List[ProjectResponse])

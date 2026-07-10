@@ -335,3 +335,10 @@ class ProjectFileResponse(BaseSchema):
     uploaded_by: uuid.UUID
     created_at: datetime
 
+
+class ProjectResolutionResponse(BaseSchema):
+    project_id: uuid.UUID
+    display_name: str
+    matched_by: str
+
+

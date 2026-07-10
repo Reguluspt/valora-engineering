@@ -594,3 +594,134 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
     resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user2.id)})
     assert resp.status_code == 404
 
+
+def test_project_reference_resolution(client: TestClient, db_session: Session) -> None:
+    # 1. Setup Orgs, Users, Roles
+    org1 = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
+    db_session.add_all([org1, org2])
+    db_session.commit()
+
+    role_reader = Role(code="reader", display_name="Reader", permissions=["project:read"])
+    role_empty = Role(code="empty", display_name="Empty", permissions=[])
+    db_session.add_all([role_reader, role_empty])
+    db_session.commit()
+
+    user1 = User(organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE)
+    user2 = User(organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE)
+    user_noperm = User(organization_id=org1.id, email="noperm@test.com", full_name="No Perm", status=UserStatus.ACTIVE)
+    db_session.add_all([user1, user2, user_noperm])
+    db_session.commit()
+
+    ur1 = UserRole(user_id=user1.id, role_id=role_reader.id, is_active=True)
+    ur2 = UserRole(user_id=user2.id, role_id=role_reader.id, is_active=True)
+    ur_noperm = UserRole(user_id=user_noperm.id, role_id=role_empty.id, is_active=True)
+    db_session.add_all([ur1, ur2, ur_noperm])
+    db_session.commit()
+
+    # Seed customers
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1", status=CustomerStatus.ACTIVE, created_by=user1.id)
+    cust2 = Customer(organization_id=org2.id, legal_name="Cust 2", status=CustomerStatus.ACTIVE, created_by=user2.id)
+    db_session.add_all([cust1, cust2])
+    db_session.commit()
+
+    # Seed projects
+    proj1 = Project(
+        organization_id=org1.id,
+        customer_id=cust1.id,
+        code="HD-98-GIA-LAI",
+        name="Hồ sơ Gia Lai Số 98",
+        created_by=user1.id
+    )
+    proj2 = Project(
+        organization_id=org2.id,
+        customer_id=cust2.id,
+        code="HD-98-GIA-LAI",
+        name="Hồ sơ Gia Lai Số 98 (Org 2)",
+        created_by=user2.id
+    )
+    proj3 = Project(
+        organization_id=org1.id,
+        customer_id=cust1.id,
+        code="HD-99-KONTUM",
+        name="Hồ sơ Kon Tum Số 99",
+        created_by=user1.id
+    )
+    db_session.add_all([proj1, proj2, proj3])
+    db_session.commit()
+
+    headers_user1 = {"X-User-Id": str(user1.id)}
+    headers_user2 = {"X-User-Id": str(user2.id)}
+    headers_noperm = {"X-User-Id": str(user_noperm.id)}
+
+    # A. Resolve by direct UUID
+    resp = client.get(f"/api/v1/projects/resolve?ref={proj1.id}", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj1.id)
+    assert data["display_name"] == proj1.name
+    assert data["matched_by"] == "id"
+
+    # B. Resolve by exact case code
+    resp = client.get(f"/api/v1/projects/resolve?ref=HD-98-GIA-LAI", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj1.id)
+    assert data["matched_by"] == "code"
+
+    # C. Resolve by exact case name
+    resp = client.get(f"/api/v1/projects/resolve?ref=Hồ sơ Kon Tum Số 99", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj3.id)
+    assert data["matched_by"] == "name"
+
+    # D. Resolve by slugified matching
+    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == str(proj1.id)
+    assert data["matched_by"] in ("code", "code_slug")
+
+    # E. Scoping: Org 1 user resolves code to Org 1 project. Org 2 user resolves same code to Org 2 project.
+    resp1 = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
+    assert resp1.json()["project_id"] == str(proj1.id)
+
+    resp2 = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user2)
+    assert resp2.json()["project_id"] == str(proj2.id)
+
+    # F. Cross-org resolving via direct UUID yields 404 (prevent ID harvesting)
+    resp = client.get(f"/api/v1/projects/resolve?ref={proj2.id}", headers=headers_user1)
+    assert resp.status_code == 404
+
+    # G. Missing/Unauthorized/Forbidden permissions
+    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai")
+    assert resp.status_code == 401
+    
+    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_noperm)
+    assert resp.status_code == 403
+
+    # H. Safe 404 for unknown ref
+    resp = client.get(f"/api/v1/projects/resolve?ref=nonexistent-ref", headers=headers_user1)
+    assert resp.status_code == 404
+
+    # I. Ambiguity: insert duplicate matching slugified codes to trigger 409
+    dup_proj1 = Project(
+        organization_id=org1.id,
+        customer_id=cust1.id,
+        code="HD 98 GIA LAI SLUG",
+        name="Hồ sơ Gia Lai Số 98 Slug A",
+        created_by=user1.id
+    )
+    dup_proj2 = Project(
+        organization_id=org1.id,
+        customer_id=cust1.id,
+        code="HD_98_GIA_LAI_SLUG",
+        name="Hồ sơ Gia Lai Số 98 Slug B",
+        created_by=user1.id
+    )
+    db_session.add_all([dup_proj1, dup_proj2])
+    db_session.commit()
+    
+    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai-slug", headers=headers_user1)
+    assert resp.status_code == 409

@@ -84,7 +84,25 @@ This document establishes the backend-to-frontend schema and route structure for
 ## 8. Progressive Adoption Plan
 - **S11-PR-001**: API Contract and Backend Endpoint (this PR).
 - **S11-PR-002**: Workbench Asset Grid Read Adapter — completed with limitation. The adapter and grid binding are implemented, but live loading from slug routes is gated by route slug → project UUID resolution.
+- **S11-PR-002A**: Workbench Route Project UUID Resolution (Completed — Resolves route slug to UUID via scoped backend endpoint).
 - **S11-PR-003**: Context Drawer Data Adapter.
 - **S11-PR-004**: Draft State Read Model.
 - **S11-PR-005**: Inline Draft Editing Contract.
 - **S11-PR-006**: Human Commit / Review Gate.
+
+## 9. S11-PR-002A: Project Reference Resolution
+To resolve route slugs (e.g. `hd-98-gia-lai`) safely to project UUIDs, a resolution endpoint is provided:
+- **Route**: `GET /api/v1/projects/resolve?ref={project_ref}`
+- **Permission**: `project:read`
+- **Response Shape**:
+  ```json
+  {
+    "project_id": "033781ee-adca-4af2-a58b-43e7e43823b8",
+    "display_name": "Hồ sơ Gia Lai Số 98",
+    "matched_by": "id|code|name|code_slug|name_slug"
+  }
+  ```
+- **Scoping Behavior**: Multi-tenant scoping filters by the authenticated user's `organization_id`. Projects outside the organization yield `404 Not Found` (no ID harvesting).
+- **Ambiguous Match**: Multiple matches slugifying to the same value return `409 Conflict`.
+- **Bypass**: If the provided `ref` is already a valid UUID, the resolver is bypassed on the frontend, and the UUID is used directly.
+

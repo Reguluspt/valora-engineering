@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mapAssetLinesToGridRows, useProjectAssetLines } from "../useProjectAssetLines";
 import { ProjectAssetLineResponse } from "../../../../api/assetLines";
 import * as api from "../../../../api/assetLines";
+import * as projectsApi from "../../../../api/projects";
 
-// Mock the API client
+// Mock the API clients
 vi.mock("../../../../api/assetLines", () => ({
   fetchProjectAssetLines: vi.fn()
+}));
+
+vi.mock("../../../../api/projects", () => ({
+  resolveProjectReference: vi.fn()
 }));
 
 // Dynamic mocks for React hooks
@@ -38,7 +43,7 @@ vi.mock("react", async () => {
 
 describe("useProjectAssetLines read adapter helper tests", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     mockStateValues = [];
     mockStateSetters = [];
     mockStateIndex = 0;
@@ -96,34 +101,12 @@ describe("useProjectAssetLines read adapter helper tests", () => {
     expect(gridRows).toHaveLength(0);
   });
 
-  it("blocks non-UUID slugs and returns friendly limitation state", async () => {
-    const fetchSpy = vi.spyOn(api, "fetchProjectAssetLines");
-
-    const setRows = vi.fn();
-    const setLoading = vi.fn();
-    const setErrorMsg = vi.fn();
-    const setFriendlyError = vi.fn();
-
-    // Map the dynamic state setters to tracking spies
-    mockStateSetters = [setRows, setLoading, setErrorMsg, setFriendlyError];
-
-    // Invoke hook with non-UUID slug
-    useProjectAssetLines("hd-98-gia-lai");
-
-    // Verify fetch API is NOT called
-    expect(fetchSpy).not.toHaveBeenCalled();
-
-    // Verify rows are cleared and friendly error set
-    expect(setRows).toHaveBeenCalledWith([]);
-    expect(setFriendlyError).toHaveBeenCalledWith({
-      title: "Chưa xác định được mã hồ sơ",
-      message: "Chưa xác định được mã hồ sơ để tải danh sách tài sản.",
-      nextAction: "Vui lòng mở hồ sơ từ danh sách hồ sơ hoặc thử tải lại."
+  it("triggers resolver on slug route params and calls asset lines only after resolution", async () => {
+    const resolveSpy = vi.spyOn(projectsApi, "resolveProjectReference").mockResolvedValue({
+      project_id: "033781ee-adca-4af2-a58b-43e7e43823b8",
+      display_name: "Gia Lai 98",
+      matched_by: "code_slug"
     });
-    expect(setLoading).toHaveBeenCalledWith(false);
-  });
-
-  it("allows valid UUID project IDs to execute the API fetch call", async () => {
     const fetchSpy = vi.spyOn(api, "fetchProjectAssetLines").mockResolvedValue({
       project_id: "033781ee-adca-4af2-a58b-43e7e43823b8",
       items: [],
@@ -136,13 +119,90 @@ describe("useProjectAssetLines read adapter helper tests", () => {
     const setLoading = vi.fn();
     const setErrorMsg = vi.fn();
     const setFriendlyError = vi.fn();
+    const setResolvedUuid = vi.fn();
 
-    mockStateSetters = [setRows, setLoading, setErrorMsg, setFriendlyError];
+    mockStateSetters = [setRows, setLoading, setErrorMsg, setFriendlyError, setResolvedUuid];
+
+    // Mock initial value for resolvedUuid inside the state flow to simulate useEffect dependency updates
+    mockStateValues[4] = "033781ee-adca-4af2-a58b-43e7e43823b8";
+
+    // Invoke hook with non-UUID slug
+    useProjectAssetLines("hd-98-gia-lai");
+
+    // Wait for resolve promise to settle
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Verify resolve endpoint was called first
+    expect(resolveSpy).toHaveBeenCalledWith("hd-98-gia-lai");
+    // Verify fetch endpoint was called with the resolved UUID
+    expect(fetchSpy).toHaveBeenCalledWith("033781ee-adca-4af2-a58b-43e7e43823b8");
+  });
+
+  it("handles resolver failure showing friendly Vietnamese state", async () => {
+    const resolveSpy = vi.spyOn(projectsApi, "resolveProjectReference").mockRejectedValue({
+      status: 404,
+      message: "Project not found"
+    });
+    const fetchSpy = vi.spyOn(api, "fetchProjectAssetLines");
+
+    const setRows = vi.fn();
+    const setLoading = vi.fn();
+    const setErrorMsg = vi.fn();
+    const setFriendlyError = vi.fn();
+    const setResolvedUuid = vi.fn();
+
+    mockStateSetters = [setRows, setLoading, setErrorMsg, setFriendlyError, setResolvedUuid];
+
+    // Invoke hook with non-UUID slug
+    useProjectAssetLines("hd-98-invalid-slug");
+
+    // Wait for the promise rejection and state updates to settle
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Verify resolve was triggered
+    expect(resolveSpy).toHaveBeenCalledWith("hd-98-invalid-slug");
+    // Verify fetch was NOT triggered since resolution failed
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    // Verify friendly error matches Vietnamese dictionary limits
+    expect(setFriendlyError).toHaveBeenCalledWith({
+      title: "Không tìm thấy hồ sơ",
+      message: "Không tìm thấy hồ sơ tương ứng với mã cung cấp.",
+      nextAction: "Vui lòng mở hồ sơ từ danh sách hồ sơ hoặc thử tải lại."
+    });
+  });
+
+  it("allows valid UUID project IDs to bypass resolver and fetch asset lines directly", async () => {
+    const resolveSpy = vi.spyOn(projectsApi, "resolveProjectReference");
+    const fetchSpy = vi.spyOn(api, "fetchProjectAssetLines").mockResolvedValue({
+      project_id: "033781ee-adca-4af2-a58b-43e7e43823b8",
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0
+    });
+
+    const setRows = vi.fn();
+    const setLoading = vi.fn();
+    const setErrorMsg = vi.fn();
+    const setFriendlyError = vi.fn();
+    const setResolvedUuid = vi.fn();
+
+    mockStateSetters = [setRows, setLoading, setErrorMsg, setFriendlyError, setResolvedUuid];
+
+    // Simulating UUID resolution mapping
+    mockStateValues[4] = "033781ee-adca-4af2-a58b-43e7e43823b8";
 
     // Invoke hook with a valid UUID
     const uuidVal = "033781ee-adca-4af2-a58b-43e7e43823b8";
     useProjectAssetLines(uuidVal);
 
+    // Wait for any async effects to drain
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Verify resolver was bypassed
+    expect(resolveSpy).not.toHaveBeenCalled();
+    // Verify fetch was executed directly
     expect(fetchSpy).toHaveBeenCalledWith(uuidVal);
   });
 });
