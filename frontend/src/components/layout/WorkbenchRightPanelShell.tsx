@@ -4,6 +4,7 @@ import { KnowledgePanel } from "../workbench/panels/KnowledgePanel";
 import { PriceEvidencePanel } from "../workbench/panels/PriceEvidencePanel";
 import { LineagePanel } from "../workbench/panels/LineagePanel";
 import { ValidationPanel } from "../workbench/panels/ValidationPanel";
+import { t } from "../../i18n";
 
 interface WorkbenchRightPanelShellProps {
   contextData?: AssetLineContext;
@@ -32,7 +33,7 @@ export function WorkbenchRightPanelShell({ contextData }: WorkbenchRightPanelShe
     if (!contextData) {
       return (
         <div style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--text-muted)" }}>
-          Select a row in the Asset Grid to load context spec panel data.
+          {t("empty.selectAssetDesc")}
         </div>
       );
     }
@@ -56,16 +57,16 @@ export function WorkbenchRightPanelShell({ contextData }: WorkbenchRightPanelShe
       {/* Tabs list container */}
       <div style={{ display: "flex", borderBottom: "1px solid var(--border-color)", marginBottom: "var(--space-md)" }}>
         <button style={tabStyle("knowledge")} onClick={() => setActiveTab("knowledge")}>
-          Knowledge
+          {t("context.assetInfo")}
         </button>
         <button style={tabStyle("price")} onClick={() => setActiveTab("price")}>
-          Price Evidence
+          {t("context.evidence")}
         </button>
         <button style={tabStyle("lineage")} onClick={() => setActiveTab("lineage")}>
-          Lineage
+          {t("context.similarAssets")}
         </button>
         <button style={tabStyle("validation")} onClick={() => setActiveTab("validation")}>
-          Validation
+          {t("validation.checkError")}
         </button>
       </div>
 

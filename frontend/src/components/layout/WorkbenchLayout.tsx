@@ -4,7 +4,7 @@ import { WorkbenchFooter } from "./WorkbenchFooter";
 import { WorkbenchRightPanelShell } from "./WorkbenchRightPanelShell";
 import { AssetGrid } from "../workbench/AssetGrid";
 import { useProjectAssetLines } from "../workbench/hooks/useProjectAssetLines";
-import { MOCK_CONTEXT_DATA } from "../workbench/panels/mockContextData";
+import { useAssetLineContext } from "../workbench/hooks/useAssetLineContext";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -111,44 +111,11 @@ export function WorkbenchLayout({
     syncCheckpoint(drafts);
   };
 
-  const selectedContextData = React.useMemo(() => {
-    if (!activeRowId) return undefined;
-    return MOCK_CONTEXT_DATA[activeRowId] || {
-      project_asset_line_id: activeRowId,
-      knowledge_panel: {
-        current_spec: {
-          technical_specification_id: `spec-${activeRowId}`,
-          version_id: "v-1",
-          status: "active",
-          attribute_values: { info: "Auto-generated dummy spec info" }
-        },
-        suggestions: [],
-        conflicts: []
-      },
-      price_evidence_panel: {
-        quote_batch: {
-          id: "qb-auto",
-          display_name: "Mock Auto Batch",
-          status: "active",
-          conflict_status: "valid",
-          spread_percent: 0
-        },
-        quote_lines: [],
-        appraised_price_decision: {
-          id: "apd-auto",
-          selected_unit_price: 0,
-          rationale: "Default rationales.",
-          status: "draft"
-        }
-      },
-      lineage: {
-        original_source_project: { id: "p-auto-org", project_code: "PRJ-AUTO" },
-        direct_source_project: { id: "p-auto-dir", project_code: "PRJ-AUTO" },
-        lineage_path: ["p-auto-org", "current-proj"]
-      },
-      validation_issues: []
-    };
-  }, [activeRowId]);
+  const activeRow = React.useMemo(() => {
+    return rows.find((r) => r.project_asset_line_id === activeRowId) || null;
+  }, [rows, activeRowId]);
+
+  const { contextData: resolvedContextData } = useAssetLineContext("hd-98-gia-lai", activeRow);
 
   const draftsCount = Object.keys(drafts).length;
 
@@ -234,7 +201,7 @@ export function WorkbenchLayout({
             )
           )}
         </main>
-        <WorkbenchRightPanelShell contextData={selectedContextData} />
+        <WorkbenchRightPanelShell contextData={resolvedContextData} />
       </div>
       <WorkbenchFooter
         issuesCount={issuesCount}

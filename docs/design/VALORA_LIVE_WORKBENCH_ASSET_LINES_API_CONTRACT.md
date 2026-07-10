@@ -85,7 +85,7 @@ This document establishes the backend-to-frontend schema and route structure for
 - **S11-PR-001**: API Contract and Backend Endpoint (this PR).
 - **S11-PR-002**: Workbench Asset Grid Read Adapter — completed with limitation. The adapter and grid binding are implemented, but live loading from slug routes is gated by route slug → project UUID resolution.
 - **S11-PR-002A**: Workbench Route Project UUID Resolution (Completed — Resolves route slug to UUID via scoped backend endpoint).
-- **S11-PR-003**: Context Drawer Data Adapter.
+- **S11-PR-003**: Context Drawer Data Adapter — completed with limitation. Metadata is live from the selected asset row, while evidence/price/history/validation sections remain localized empty-state placeholders until supporting backend context domains are wired.
 - **S11-PR-004**: Draft State Read Model.
 - **S11-PR-005**: Inline Draft Editing Contract.
 - **S11-PR-006**: Human Commit / Review Gate.
@@ -105,4 +105,14 @@ To resolve route slugs (e.g. `hd-98-gia-lai`) safely to project UUIDs, a resolut
 - **Scoping Behavior**: Multi-tenant scoping filters by the authenticated user's `organization_id`. Projects outside the organization yield `404 Not Found` (no ID harvesting).
 - **Ambiguous Match**: Multiple matches slugifying to the same value return `409 Conflict`.
 - **Bypass**: If the provided `ref` is already a valid UUID, the resolver is bypassed on the frontend, and the UUID is used directly.
+
+## 10. S11-PR-003: Context Drawer Data Adapter
+To bind selected real asset rows to the right context panel, a frontend data adapter hook is provided:
+- **Location**: [useAssetLineContext.ts](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/components/workbench/hooks/useAssetLineContext.ts).
+- **Behavior**:
+  - Dynamically extracts properties (`normalized_name`, `canonical_asset`, `asset_variant`, `supplier_quote_1`, `appraised_price`, `currency.code`, `review_status`) from the active selected grid row.
+  - Translates empty fallback states into clean Vietnamese using the error and i18n dictionary.
+  - Ensures raw ORM fields such as `row_version` or `version_token` are kept hidden.
+  - Returns structured sub-panel data objects consumed by the drawer view panes.
+
 
