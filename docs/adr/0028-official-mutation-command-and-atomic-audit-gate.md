@@ -1,9 +1,10 @@
 # ADR 0028: Official Mutation Command and Atomic Audit Gate
 
 ## Status
-Accepted
+Proposed — awaiting workflow-state approval
 
 ## Context
+This documents a proposed policy awaiting official workflow-state approval.
 During Phase S12-R-004, the application required introducing strict security and integrity controls over mutations of project asset line fields (such as `description` and `appraised_unit_price`). Prior to S12-R-004, users could potentially bypass the live workbench validation and audit logging flows by issuing direct `PATCH` requests to the resource endpoints. Furthermore, we needed a robust transaction safety mechanism (optimistic version locking and atomic rollbacks) and validation layers.
 
 ## Decision
