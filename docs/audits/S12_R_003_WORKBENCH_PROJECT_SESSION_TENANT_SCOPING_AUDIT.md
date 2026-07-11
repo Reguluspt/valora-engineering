@@ -7,7 +7,7 @@
 
 - **Task ID**: S12-R-003
 - **Title**: Workbench Project & Session Tenant Scoping
-- **Final Status**: **LOCAL IMPLEMENTATION COMPLETE — FINAL CI CORRECTION APPLIED — AWAITING USER GIT DELIVERY AND CI**
+- **Final Status**: **PASS — CODE-BEARING HEAD VALIDATED — READY FOR REVIEW AFTER DOCUMENTATION-ONLY CI**
 
 ---
 
@@ -108,7 +108,7 @@ The active session boundary and permissions are enforced across all workbench ac
 
 ```
 Command : python -m pytest backend/tests -rs
-Result  : 265 passed, 3 skipped, 0 failed  (26.80s)
+Result  : 265 passed, 3 skipped, 0 failed  (26.98s)
 ```
 
 **Skipped tests (local — no PostgreSQL configured):**
@@ -116,8 +116,8 @@ Result  : 265 passed, 3 skipped, 0 failed  (26.80s)
 | # | File | Line | Reason |
 |---|------|------|--------|
 | 1 | `test_auth_endpoints.py` | 737 | `PostgreSQL not available. Skipping integration test.` |
-| 2 | `test_workbench_api.py` | 694 | `PostgreSQL not configured (TEST_DATABASE_URL/DATABASE_URL absent or not postgres). Skipping concurrent integration test — awaiting CI with PostgreSQL service.` |
-| 3 | `test_workbench_api.py` | 979 | `PostgreSQL not configured (TEST_DATABASE_URL/DATABASE_URL absent or not postgres). Skipping PostgreSQL unexpected-error rollback test — awaiting CI with PostgreSQL service.` |
+| 2 | `test_workbench_api.py` | 696 | `PostgreSQL not configured (TEST_DATABASE_URL/DATABASE_URL absent or not postgres). Skipping concurrent integration test — awaiting CI with PostgreSQL service.` |
+| 3 | `test_workbench_api.py` | 980 | `PostgreSQL not configured (TEST_DATABASE_URL/DATABASE_URL absent or not postgres). Skipping PostgreSQL unexpected-error rollback test — awaiting CI with PostgreSQL service.` |
 
 All three skipped tests are PostgreSQL-gated: they `pytest.fail` (not skip) when `CI=true` and the database URL is absent.
 
@@ -175,13 +175,26 @@ The following test cases are in `backend/tests/test_workbench_api.py`:
 
 ---
 
-### F4. Pending CI / Git Delivery Metadata
+### F4. Validated CI / Git Delivery Evidence
 
 | Item | Value |
 |------|-------|
-| Corrective commit SHA | **PENDING USER GIT DELIVERY** |
-| Current PR head SHA | **PENDING USER GIT DELIVERY** |
-| CI run ID | **PENDING USER GIT DELIVERY** |
-| PostgreSQL concurrent-create CI result | **PENDING USER GIT DELIVERY** |
-| PostgreSQL unexpected-error rollback CI result | **PENDING USER GIT DELIVERY** |
+| Validated code-bearing head SHA | `5a05988e83bedca1e58100971fcf243c490f448e` |
+| PR | `#3` |
+| Validated CI run ID | `29157970074` |
+| Backend pytest | **PASS — 268 passed, 0 skipped, 14 warnings in 21.87s** |
+| PostgreSQL auth integration | **PASS** |
+| PostgreSQL concurrent session creation | **PASS** |
+| PostgreSQL unexpected-error rollback | **PASS** |
+| Ruff | **PASS** |
+| Alembic migration smoke test | **PASS** |
+| Single migration head | **PASS — db5977424e7b** |
+| Python dependency vulnerability scan | **PASS** |
+| Security policy and secret scan | **PASS** |
+| Worker CI | **PASS** |
+| Frontend CI | **PASS** |
+
+The SHA above is the final code-bearing implementation head validated by CI.
+Any subsequent commit for this audit evidence must be documentation-only and
+must pass the repository CI before the pull request is marked ready for review.
 
