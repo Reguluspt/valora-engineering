@@ -59,7 +59,16 @@ jobs:
           fi
           echo "Migration graph verified: single head exists."
       - name: Run backend tests
-        run: pytest
+        env:
+          CI: "true"
+          VALORA_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: valora
+          POSTGRES_USER: valora
+          POSTGRES_PASSWORD: valora_local_password
+          TEST_DATABASE_URL: postgresql+psycopg://valora:valora_local_password@localhost:5432/valora
+        run: pytest -rs
       - name: Run Python dependency vulnerability scan
         run: |
           pip install pip-audit
