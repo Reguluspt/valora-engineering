@@ -10,7 +10,7 @@ from app.db import Base, get_db
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
     ProjectWorkflowStatus, Customer, ReviewDecision, ReviewDecisionChoice,
-    ReviewDecisionReversal
+    ReviewDecisionReversal, ProjectAssetLine
 )
 
 @pytest.fixture
@@ -118,11 +118,22 @@ def setup_acceptance_data(db_session: Session):
     db_session.add(orig_dec)
     db_session.commit()
 
+    # Seed an asset line for validation checks
+    line = ProjectAssetLine(
+        id=uuid.uuid4(),
+        project_id=proj.id,
+        asset_name="Acceptance Asset",
+        quantity=1.0
+    )
+    db_session.add(line)
+    db_session.commit()
+
     return {
         "admin_id": str(user_admin.id),
         "viewer_id": str(user_viewer.id),
         "project_id": str(proj.id),
-        "original_decision_id": str(orig_dec.id)
+        "original_decision_id": str(orig_dec.id),
+        "line_id": str(line.id)
     }
 
 
@@ -196,7 +207,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
         f"/api/v1/workbench/sessions/{session_id}/selection",
         json={
             "selected_target_type": "project_asset_line",
-            "selected_target_ids": [str(uuid.uuid4())]
+            "selected_target_ids": [setup_acceptance_data["line_id"]]
         },
         headers=headers_admin
     )
@@ -210,7 +221,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
         f"/api/v1/workbench/sessions/{session_id}/inline-edit",
         json={
             "target_type": "project_asset_line",
-            "target_id": str(uuid.uuid4()),
+            "target_id": setup_acceptance_data["line_id"],
             "field_key": "standard_name",
             "draft_value": {"val": "Delta transformer"}
         },
