@@ -1,8 +1,5 @@
-import uuid
 import pytest
-from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.main import app

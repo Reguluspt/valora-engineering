@@ -3,7 +3,6 @@ import secrets
 import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -160,7 +159,9 @@ def validate_csrf(request: Request, db_session: UserSession):
 
     # Origin and Referer checks
     origin = request.headers.get("Origin")
-    referer = request.headers.get("Referer")
+    host = request.headers.get("Host")
+    if origin and host and host not in origin:
+        raise_403("Yêu cầu bị từ chối do nguồn gốc (Origin) không hợp lệ.")
     
     # Fetch Metadata checks (Sec-Fetch-Site should be same-origin)
     sec_fetch_site = request.headers.get("Sec-Fetch-Site")

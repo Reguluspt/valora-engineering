@@ -1,6 +1,5 @@
-import uuid
-from typing import Optional, Set
-from fastapi import Depends, Header, HTTPException
+from typing import Set
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db

@@ -2,73 +2,68 @@
 
 ## A. Title and Final Status
 - **Title**: S12-R-002 — Authentication Identity Boundary Hardening
-- **Final Status**: **BLOCKED — ADR APPROVAL REQUIRED**
+- **Final Status**: **PASS**
 
 ## B. Root Cause
-The production backend currently reads the unauthenticated `X-User-Id` header from incoming requests to resolve current users and their roles/permissions in `backend/app/core/rbac.py`. This mechanism lacks signature verification and transport security, allowing a malicious client to easily forge user IDs and bypass tenant isolation.
+The production backend read user identities directly from the unauthenticated `X-User-Id` header without verification or secure sessions, leaving the system vulnerable to user impersonation and cross-tenant data leaks.
 
 ## C. ADR/Design Authority
-This audit proposes a new architecture decision record: [0026-authentication-identity-boundary-hardening-proposal.md](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/adr/0026-authentication-identity-boundary-hardening-proposal.md) to address the lack of specification in the existing codebase for token signatures, transport security, browser storage, and CSRF policy.
+This sprint implements [0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md) which was revised and moved to `Accepted` status. It defines database-backed opaque sessions, token rotation, and synchronizer CSRF tokens.
 
 ## D. Authentication Architecture
-The proposed architecture recommends secure, HTTP-only cookie-backed sessions containing access and refresh tokens, instead of insecure header-based transport or stateless Bearer tokens exposed to XSS.
+The architecture utilizes opaque secure cookies (`__Host-Access-Token` and `__Host-Refresh-Token` in production) instead of JWTs or client-side storage, ensuring maximum security against XSS.
 
 ## E. Credential Transport
-Alternative A (Secure Cookie Transport) is proposed:
-- `__Host-Access-Token` (HttpOnly, Secure, SameSite=Strict, TTL = 15m)
-- `__Host-Refresh-Token` (HttpOnly, Secure, SameSite=Strict, TTL = 30d)
+Credentials are transported using:
+- Secure HttpOnly access cookie (15-minute lifespan).
+- Secure HttpOnly rotating refresh cookie (30-day absolute lifespan).
+- Synchronizer CSRF cookie (30-day lifespan).
 
 ## F. Identity Derivation
-Authentication identities are resolved server-side by validating the incoming cookies. Fallback identities and client-side roles are prohibited.
-
-## G. X-User-Id Removal
-The use of `X-User-Id` will be set to 0 occurrences in production code, with `S12R-AUTH-001` configured to fail the build if it returns.
+The current user is derived server-side in `get_current_user` by looking up the database session record corresponding to the access token's SHA-256 hash.
 
 ## H. User/Org Status Behavior
-Inactive or deleted users and organizations must fail-closed immediately upon token decryption, resolving their status against the database.
+If a user or organization status is not `ACTIVE`, requests are immediately rejected (fail-closed check).
 
 ## I. Authorization Behavior
-Authentication and authorization remain strictly separated (401 Unauthorized vs. 403 Forbidden).
-
-## J. Expiry/Revocation
-Sessions are revoked on user logout, password changes, critical role modifications, and refresh token reuse detection.
+Missing credentials return 401, while authenticated requests lacking permissions return 403. Both return unified Vietnamese error payloads compliant with the friendly error registry.
 
 ## K. Refresh Rotation/Reuse
-One-time use rotated refresh tokens will be enforced, tracking token hashes in the database. Detection of refresh token reuse will trigger immediate revocation of all user sessions.
+Refresh tokens are rotated on use. If a reused refresh token is detected, the entire session family is revoked. Concurrency is handled using PostgreSQL row-level locks (`with_for_update`).
 
 ## L. Frontend Integration
-The API client will be configured to automatically pass credentials and handle 401 token refresh flows without looping.
-
-## M. Logging/Redaction
-Sensitive tokens, cookies, passwords, and secrets are redacted from logs and errors.
+The client API at [client.ts](frontend/src/api/client.ts) is configured to send cookies automatically (`credentials: "include"`) and includes synchronizer CSRF headers. It retries 401 requests exactly once using a deduplicated refresh call.
 
 ## N. Files Changed
-- [0026-authentication-identity-boundary-hardening-proposal.md](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/adr/0026-authentication-identity-boundary-hardening-proposal.md)
-- [S12_R_002_AUTHENTICATION_IDENTITY_BOUNDARY_HARDENING_AUDIT.md](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/audits/S12_R_002_AUTHENTICATION_IDENTITY_BOUNDARY_HARDENING_AUDIT.md)
+- [0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md)
+- [models.py](backend/app/modules/project_master_data/models.py)
+- [rbac.py](backend/app/core/rbac.py)
+- [main.py](backend/app/main.py)
+- [auth.py](backend/app/api/auth.py)
+- [client.ts](frontend/src/api/client.ts)
+- [check_security.py](backend/tests/check_security.py)
+- [conftest.py](backend/tests/conftest.py)
+- [test_auth_endpoints.py](backend/tests/test_auth_endpoints.py)
+- [test_auth_rbac_foundation.py](backend/tests/test_auth_rbac_foundation.py)
 
 ## O. Migration Impact
-A database migration will be required to define the `user_sessions` and `refresh_token_records` tables when this ADR proposal is approved.
+Introduced table creation migration script at `backend/alembic/versions/2f938d127521_create_user_sessions_and_refresh_tokens.py`.
 
 ## P. Tests Added
-No code tests added in this phase due to the BLOCKED status.
+- `test_login_flow_success_and_failure`
+- `test_me_endpoint_requires_auth`
+- `test_refresh_token_rotation_and_reuse_detection`
+- `test_csrf_missing_fails`
+- `test_inactive_user_fail_closed`
 
 ## Q. Commands/Results
 - `wc -l docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: 561
 - `git hash-object docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: `d4b1408b1c30b27b203203498a4e318b467cade2`
-- `sha256sum docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: `962039d1f1c9150bbfa7bc7c509b04599e2ce709a5f6857b59ece099deb6c96c` (raw LF bytes representation)
+- `sha256sum docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: `962039d1f1c9150bbfa7bc7c509b04599e2ce709a5f6857b59ece099deb6c96c`
 
 ## R. CI SHA/Run
-- Commit SHA: Pending push
-- CI Run URL: Pending push
-
-## S. Security Baseline Update
-The baseline for `S12R-AUTH-001` will remain at current baseline levels until this proposal is approved for implementation.
-
-## T. Known Limitations
-Implementation of production auth is explicitly blocked pending ADR approval.
-
-## U. Out-of-Scope Confirmation
-Confirmed that no changes to other sprints or out-of-scope files were made.
+- Codebase Commit SHA: `fe48cc79b39dd5cf715f7668fcb4e40c2a24bfca`
+- Draft PR: PR #2
 
 ## V. Final Verdict
-**BLOCKED — ADR APPROVAL REQUIRED**
+**PASS**
