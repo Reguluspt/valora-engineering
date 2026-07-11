@@ -1,6 +1,5 @@
 import uuid
 import pytest
-from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -9,12 +8,10 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, AuditEvent,
-    EvidenceSource, EvidenceSourceType, EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
-    EvidenceLink, EvidenceAccessLog, EvidenceAccessType,
+    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, EvidenceSource, EvidenceSourceType, EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
+    EvidenceAccessLog, EvidenceAccessType,
     TechnicalSpecification, TechnicalSpecificationVersion, TechnicalSpecificationVersionStatus,
-    QuoteBatch, QuoteBatchStatus, QuoteLine, QuoteLineStatus,
-    AppraisedPriceDecision, AppraisedPriceDecisionStatus,
+    QuoteBatch, QuoteBatchStatus, AppraisedPriceDecision, AppraisedPriceDecisionStatus,
     KnowledgeQueueItem, KnowledgeQueueItemStatus,
     KnowledgeConflict, KnowledgeConflictStatus, KnowledgeConflictSeverity
 )

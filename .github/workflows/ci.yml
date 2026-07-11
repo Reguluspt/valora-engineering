@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "s12-*"
 
 jobs:
   backend:
@@ -11,6 +13,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: valora
+          POSTGRES_USER: valora
+          POSTGRES_PASSWORD: valora_local_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,8 +36,36 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+      - name: Run static checks and linting
+        run: |
+          ruff check .
+      - name: Run Alembic migration smoke tests
+        env:
+          VALORA_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: valora
+          POSTGRES_USER: valora
+          POSTGRES_PASSWORD: valora_local_password
+        run: |
+          alembic upgrade head
+      - name: Verify single migration head
+        run: |
+          HEADS_COUNT=$(alembic heads | wc -l)
+          if [ "$HEADS_COUNT" -ne 1 ]; then
+            echo "Error: Migration graph has multiple heads ($HEADS_COUNT)!"
+            alembic heads
+            exit 1
+          fi
+          echo "Migration graph verified: single head exists."
       - name: Run backend tests
         run: pytest
+      - name: Run Python dependency vulnerability scan
+        run: |
+          pip install pip-audit
+          pip-audit
+      - name: Run security policy and secret scan
+        run: python tests/check_security.py
 
   worker:
     runs-on: ubuntu-latest
@@ -37,8 +81,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+      - name: Run static checks and linting
+        run: |
+          ruff check .
       - name: Run worker tests
         run: pytest
+      - name: Run Python dependency vulnerability scan
+        run: |
+          pip install pip-audit
+          pip-audit
 
   frontend:
     runs-on: ubuntu-latest
@@ -51,8 +102,12 @@ jobs:
         with:
           node-version: "22"
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci --legacy-peer-deps
       - name: Lint frontend
         run: npm run lint
       - name: Build frontend
         run: npm run build
+      - name: Run frontend unit tests
+        run: npm run test
+      - name: Run Node dependency vulnerability scan
+        run: npm audit --audit-level=high

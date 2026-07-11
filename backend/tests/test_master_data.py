@@ -14,13 +14,8 @@ from app.modules.project_master_data.models import (
     CustomerAlias,
     Supplier,
     SupplierStatus,
-    SupplierAlias,
     Brand,
     BrandStatus,
-    Manufacturer,
-    ManufacturerStatus,
-    SignerProfile,
-    SignerStatus,
 )
 
 

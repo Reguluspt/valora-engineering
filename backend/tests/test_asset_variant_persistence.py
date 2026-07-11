@@ -1,6 +1,5 @@
-import uuid
 import pytest
-from sqlalchemy import create_engine, exc, inspect, event
+from sqlalchemy import create_engine, exc, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -12,8 +11,7 @@ from app.modules.project_master_data.models import (
     AssetFamily, AssetFamilyStatus,
     AssetDNA, AssetDNAStatus,
     AssetAttributeDefinition, AssetAttributeDataType, AssetAttributeScope,
-    CanonicalAsset, CanonicalAssetStatus, CanonicalAssetMaturity,
-    AssetVariant, AssetVariantStatus,
+    CanonicalAsset, CanonicalAssetStatus, AssetVariant, AssetVariantStatus,
     AssetVariantAttributeValue, AttributeValueSource
 )
 

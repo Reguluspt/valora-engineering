@@ -1,6 +1,5 @@
 import uuid
 import pytest
-from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -11,7 +10,6 @@ from app.db import Base, get_db
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
     ProjectWorkflowStatus, Customer, ReviewDecision, ReviewDecisionChoice,
-    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ChangeRequestPriority,
     ReviewDecisionReversal
 )
 

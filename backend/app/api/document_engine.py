@@ -2,19 +2,19 @@ import uuid
 import json
 import hashlib
 from datetime import datetime, timezone
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Security
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User, DocumentTemplate, DocumentTemplateStatus, TemplateVersion,
+    User, DocumentTemplate, TemplateVersion,
     TemplateVersionStatus, TemplatePlaceholder, PlaceholderBinding,
     ComputedPlaceholderExpression, RenderJob, RenderJobStatus,
     GeneratedDocument, GeneratedDocumentStatus, DocumentPackage,
-    DocumentPackageStatus, DocumentPackageItem, Project, UserActionLog
+    DocumentPackageItem, Project, UserActionLog
 )
 from app.api.document_schemas import (
     DocumentTemplateCreate, DocumentTemplateUpdate, DocumentTemplateSchema,

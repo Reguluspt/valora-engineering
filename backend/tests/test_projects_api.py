@@ -21,7 +21,6 @@ from app.modules.project_master_data.models import (
     Project,
     ProjectWorkflowStatus,
     ProjectAssetLine,
-    ProjectFile,
     AuditEvent,
     Unit
 )
@@ -663,31 +662,31 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     assert data["matched_by"] == "id"
 
     # B. Resolve by exact case code
-    resp = client.get(f"/api/v1/projects/resolve?ref=HD-98-GIA-LAI", headers=headers_user1)
+    resp = client.get("/api/v1/projects/resolve?ref=HD-98-GIA-LAI", headers=headers_user1)
     assert resp.status_code == 200
     data = resp.json()
     assert data["project_id"] == str(proj1.id)
     assert data["matched_by"] == "code"
 
     # C. Resolve by exact case name
-    resp = client.get(f"/api/v1/projects/resolve?ref=Hồ sơ Kon Tum Số 99", headers=headers_user1)
+    resp = client.get("/api/v1/projects/resolve?ref=Hồ sơ Kon Tum Số 99", headers=headers_user1)
     assert resp.status_code == 200
     data = resp.json()
     assert data["project_id"] == str(proj3.id)
     assert data["matched_by"] == "name"
 
     # D. Resolve by slugified matching
-    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
+    resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
     assert resp.status_code == 200
     data = resp.json()
     assert data["project_id"] == str(proj1.id)
     assert data["matched_by"] in ("code", "code_slug")
 
     # E. Scoping: Org 1 user resolves code to Org 1 project. Org 2 user resolves same code to Org 2 project.
-    resp1 = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
+    resp1 = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user1)
     assert resp1.json()["project_id"] == str(proj1.id)
 
-    resp2 = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user2)
+    resp2 = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_user2)
     assert resp2.json()["project_id"] == str(proj2.id)
 
     # F. Cross-org resolving via direct UUID yields 404 (prevent ID harvesting)
@@ -695,14 +694,14 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     assert resp.status_code == 404
 
     # G. Missing/Unauthorized/Forbidden permissions
-    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai")
+    resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai")
     assert resp.status_code == 401
     
-    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_noperm)
+    resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_noperm)
     assert resp.status_code == 403
 
     # H. Safe 404 for unknown ref
-    resp = client.get(f"/api/v1/projects/resolve?ref=nonexistent-ref", headers=headers_user1)
+    resp = client.get("/api/v1/projects/resolve?ref=nonexistent-ref", headers=headers_user1)
     assert resp.status_code == 404
 
     # I. Ambiguity: insert duplicate matching slugified codes to trigger 409
@@ -723,7 +722,7 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     db_session.add_all([dup_proj1, dup_proj2])
     db_session.commit()
     
-    resp = client.get(f"/api/v1/projects/resolve?ref=hd-98-gia-lai-slug", headers=headers_user1)
+    resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai-slug", headers=headers_user1)
     assert resp.status_code == 409
 
 
@@ -842,9 +841,7 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
 def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session):
     from app.modules.project_master_data.models import (
         OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
-        Customer, CustomerStatus, Project, ProjectAssetLine, WorkbenchSession,
-        WorkbenchSessionStatus, InlineEditDraft, InlineEditDraftStatus,
-        UndoRedoStackEntry, UndoRedoActionType
+        Customer, CustomerStatus, Project, ProjectAssetLine
     )
     # 1. Setup Organizations, Users, Roles
     org1 = OrganizationProfile(legal_name="Org 1 Save Draft", organization_slug="org-1-save-draft", status=OrganizationStatus.ACTIVE)

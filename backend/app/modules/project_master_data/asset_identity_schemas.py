@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.modules.project_master_data.models import (
     CanonicalAssetMaturity, CanonicalAssetStatus,

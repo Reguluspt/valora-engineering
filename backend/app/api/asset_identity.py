@@ -1,21 +1,19 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
 
 from app.db import get_db
-from app.core.rbac import require_permission, get_current_user
+from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
     User, CanonicalAsset, AssetVariant, AssetAlias,
     AssetFamily, TaxonomyNode, CanonicalAssetStatus,
     AssetVariantStatus, AssetAliasStatus, AssetAliasScope,
     normalize_alias_helper,
-    IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog,
-    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType,
-    DuplicateCandidate, MergeDecision, DuplicateCandidateStatus, MergeDecisionStatus
+    IdentityCandidate, IdentityReviewItem, IdentityDecisionLog,
+    DuplicateCandidate, MergeDecision, MergeDecisionStatus
 )
 from app.modules.project_master_data.asset_identity_schemas import (
     CanonicalAssetCreate, CanonicalAssetUpdate, CanonicalAssetResponse,
@@ -25,7 +23,6 @@ from app.modules.project_master_data.asset_identity_schemas import (
 from app.modules.project_master_data.candidate_review_schemas import (
     IdentityCandidateResponse, IdentityCandidateUpdate,
     IdentityReviewItemResponse, IdentityReviewItemUpdate, IdentityReviewItemResolve,
-    IdentityDecisionLogResponse,
     DuplicateCandidateResponse, DuplicateCandidateUpdate,
     MergeDecisionCreate, MergeDecisionResponse
 )

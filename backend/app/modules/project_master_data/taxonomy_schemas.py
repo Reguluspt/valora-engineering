@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.modules.project_master_data.models import (
     TaxonomyNodeLevel, TaxonomyStatus, AssetFamilyStatus,

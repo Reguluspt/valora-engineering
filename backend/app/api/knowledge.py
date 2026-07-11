@@ -1,9 +1,8 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 
 from app.db import get_db
 from app.core.rbac import require_permission
@@ -17,8 +16,7 @@ from app.modules.project_master_data.models import (
 )
 from app.modules.project_master_data.knowledge_schemas import (
     TechnicalSpecificationResponse, TechnicalSpecificationVersionResponse, TechnicalSpecificationVersionUpdate,
-    QuoteBatchResponse, QuoteBatchUpdate, QuoteLineResponse,
-    AppraisedPriceDecisionResponse, AppraisedPriceDecisionUpdate,
+    QuoteBatchResponse, QuoteBatchUpdate, AppraisedPriceDecisionResponse, AppraisedPriceDecisionUpdate,
     KnowledgeQueueItemResponse, KnowledgeConflictResponse
 )
 

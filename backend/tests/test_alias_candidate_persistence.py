@@ -1,6 +1,5 @@
-import uuid
 import pytest
-from sqlalchemy import create_engine, exc, inspect, event
+from sqlalchemy import create_engine, exc, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -11,7 +10,6 @@ from app.modules.project_master_data.models import (
     TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
     AssetFamily, AssetFamilyStatus,
     CanonicalAsset, CanonicalAssetStatus,
-    AssetVariant, AssetVariantStatus,
     AssetAlias, AssetAliasScope, AssetAliasStatus, normalize_alias_helper,
     IdentityCandidate, IdentityCandidateStatus,
     SimilarityScore,

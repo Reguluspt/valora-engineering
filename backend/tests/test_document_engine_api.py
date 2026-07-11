@@ -1,6 +1,5 @@
 import uuid
 import pytest
-from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -10,11 +9,8 @@ from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
-    ProjectWorkflowStatus, Customer, DocumentTemplate, DocumentTemplateStatus,
-    TemplateVersion, TemplateVersionStatus, TemplatePlaceholder, PlaceholderBinding,
-    ComputedPlaceholderExpression, RenderJob, RenderJobStatus, GeneratedDocument,
-    GeneratedDocumentStatus, DocumentPackage, DocumentPackageStatus,
-    DocumentPackageItem, UserActionLog, AuditEvent
+    ProjectWorkflowStatus, Customer, DocumentTemplate, TemplateVersion, TemplateVersionStatus, GeneratedDocument,
+    UserActionLog, AuditEvent
 )
 
 @pytest.fixture

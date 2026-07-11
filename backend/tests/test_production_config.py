@@ -66,7 +66,6 @@ def test_production_and_dev_docs_routing(monkeypatch):
     # mimicking main.py's initialization routing behavior)
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
-    from app.core.config import get_settings
     
     settings = get_settings()
     is_prod = settings.valora_env == "production"

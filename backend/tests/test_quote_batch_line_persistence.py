@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime, timezone
 import pytest
 from sqlalchemy import create_engine, exc, event
@@ -12,7 +11,7 @@ from app.modules.project_master_data.models import (
     TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
     AssetFamily, AssetFamilyStatus,
     CanonicalAsset, CanonicalAssetStatus,
-    EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
+    EvidenceFile, EvidenceSensitivityLevel,
     QuoteBatch, QuoteBatchStatus, QuoteLine, QuoteLineStatus
 )
 
