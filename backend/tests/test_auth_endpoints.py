@@ -293,7 +293,9 @@ def test_postgres_concurrent_refresh_locking():
 
     # Run migrations on pg database to ensure clean schema
     import subprocess
-    subprocess.run(["alembic", "upgrade", "head"], cwd="backend", check=True)
+    import os
+    cwd = "backend" if os.path.exists("backend") else "."
+    subprocess.run(["alembic", "upgrade", "head"], cwd=cwd, check=True)
     
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
