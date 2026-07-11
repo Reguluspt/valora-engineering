@@ -10,55 +10,26 @@ from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User,
-    DocumentTemplate,
-    TemplateVersion,
-    TemplateVersionStatus,
-    TemplatePlaceholder,
-    PlaceholderBinding,
-    ComputedPlaceholderExpression,
-    RenderJob,
-    RenderJobStatus,
-    GeneratedDocument,
-    GeneratedDocumentStatus,
-    DocumentPackage,
-    DocumentPackageItem,
-    Project,
-    UserActionLog,
+    User, DocumentTemplate, TemplateVersion,
+    TemplateVersionStatus, TemplatePlaceholder, PlaceholderBinding,
+    ComputedPlaceholderExpression, RenderJob, RenderJobStatus,
+    GeneratedDocument, GeneratedDocumentStatus, DocumentPackage,
+    DocumentPackageItem, Project, UserActionLog
 )
 from app.api.document_schemas import (
-    DocumentTemplateCreate,
-    DocumentTemplateUpdate,
-    DocumentTemplateSchema,
-    TemplateVersionCreate,
-    TemplateVersionDeprecate,
-    TemplateVersionSchema,
-    ComputedPlaceholderExpressionCreate,
-    ComputedPlaceholderExpressionSchema,
-    TemplatePlaceholderCreate,
-    TemplatePlaceholderSchema,
-    PlaceholderBindingCreate,
-    PlaceholderBindingSchema,
-    RenderJobCreate,
-    RenderJobSchema,
-    GeneratedDocumentSchema,
-    DocumentPackageCreate,
-    DocumentPackageSchema,
-    DocumentPackageItemCreate,
-    DocumentPackageItemSchema,
+    DocumentTemplateCreate, DocumentTemplateUpdate, DocumentTemplateSchema,
+    TemplateVersionCreate, TemplateVersionDeprecate, TemplateVersionSchema,
+    ComputedPlaceholderExpressionCreate, ComputedPlaceholderExpressionSchema,
+    TemplatePlaceholderCreate, TemplatePlaceholderSchema,
+    PlaceholderBindingCreate, PlaceholderBindingSchema,
+    RenderJobCreate, RenderJobSchema, GeneratedDocumentSchema,
+    DocumentPackageCreate, DocumentPackageSchema,
+    DocumentPackageItemCreate, DocumentPackageItemSchema
 )
 
 router = APIRouter(prefix="/api/v1/document-engine", tags=["Document Engine"])
 
-
-def log_action(
-    db: Session,
-    user_id: uuid.UUID,
-    action_type: str,
-    target_type: str,
-    target_id: uuid.UUID,
-    payload: dict,
-):
+def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: str, target_id: uuid.UUID, payload: dict):
     serialized = {}
     for k, v in payload.items():
         if isinstance(v, uuid.UUID):
@@ -70,19 +41,17 @@ def log_action(
         action_type=action_type,
         target_type=target_type,
         target_id=target_id,
-        action_payload=serialized,
+        action_payload=serialized
     )
     db.add(log)
 
-
 # ----------------- DocumentTemplate Endpoints -----------------
-
 
 @router.post("/templates", response_model=DocumentTemplateSchema, status_code=201)
 def create_template(
     data: DocumentTemplateCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:create")),
+    current_user: User = Depends(require_permission("document_engine:template:create"))
 ):
     # Check code uniqueness
     existing = db.query(DocumentTemplate).filter(DocumentTemplate.code == data.code).first()
@@ -96,7 +65,7 @@ def create_template(
         name=data.name,
         description=data.description,
         status=data.status,
-        created_by=current_user.id,
+        created_by=current_user.id
     )
     db.add(tpl)
     db.commit()
@@ -108,11 +77,9 @@ def create_template(
         entity_type="document_template",
         entity_id=tpl.id,
         organization_id=tpl.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db, current_user.id, "create_template", "document_template", tpl.id, {"code": tpl.code}
-    )
+    log_action(db, current_user.id, "create_template", "document_template", tpl.id, {"code": tpl.code})
     db.commit()
     return tpl
 
@@ -120,7 +87,7 @@ def create_template(
 @router.get("/templates", response_model=List[DocumentTemplateSchema])
 def list_templates(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     return db.query(DocumentTemplate).all()
 
@@ -129,7 +96,7 @@ def list_templates(
 def get_template(
     template_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
     if not tpl:
@@ -142,7 +109,7 @@ def update_template(
     template_id: uuid.UUID,
     data: DocumentTemplateUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:update")),
+    current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
     tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
     if not tpl:
@@ -160,9 +127,7 @@ def update_template(
     if data.status is not None:
         tpl.status = data.status
     if data.current_version_id is not None:
-        ver = (
-            db.query(TemplateVersion).filter(TemplateVersion.id == data.current_version_id).first()
-        )
+        ver = db.query(TemplateVersion).filter(TemplateVersion.id == data.current_version_id).first()
         if not ver:
             raise HTTPException(status_code=404, detail="Version not found")
         tpl.current_version_id = data.current_version_id
@@ -178,7 +143,7 @@ def update_template(
         entity_type="document_template",
         entity_id=tpl.id,
         organization_id=tpl.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "update_template", "document_template", tpl.id, {})
     db.commit()
@@ -187,32 +152,23 @@ def update_template(
 
 # ----------------- TemplateVersion Endpoints -----------------
 
-
-@router.post(
-    "/templates/{template_id}/versions", response_model=TemplateVersionSchema, status_code=201
-)
+@router.post("/templates/{template_id}/versions", response_model=TemplateVersionSchema, status_code=201)
 def create_version(
     template_id: uuid.UUID,
     data: TemplateVersionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:create")),
+    current_user: User = Depends(require_permission("document_engine:template:create"))
 ):
     tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    existing = (
-        db.query(TemplateVersion)
-        .filter(
-            TemplateVersion.document_template_id == template_id,
-            TemplateVersion.version_number == data.version_number,
-        )
-        .first()
-    )
+    existing = db.query(TemplateVersion).filter(
+        TemplateVersion.document_template_id == template_id,
+        TemplateVersion.version_number == data.version_number
+    ).first()
     if existing:
-        raise HTTPException(
-            status_code=400, detail="Version number already exists for this template"
-        )
+        raise HTTPException(status_code=400, detail="Version number already exists for this template")
 
     ver = TemplateVersion(
         document_template_id=template_id,
@@ -220,7 +176,7 @@ def create_version(
         source_file_id=data.source_file_id,
         template_format=data.template_format,
         placeholder_manifest=data.placeholder_manifest,
-        status=data.status,
+        status=data.status
     )
     db.add(ver)
     db.commit()
@@ -232,16 +188,9 @@ def create_version(
         entity_type="template_version",
         entity_id=ver.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db,
-        current_user.id,
-        "create_version",
-        "template_version",
-        ver.id,
-        {"version_number": ver.version_number},
-    )
+    log_action(db, current_user.id, "create_version", "template_version", ver.id, {"version_number": ver.version_number})
     db.commit()
     return ver
 
@@ -250,7 +199,7 @@ def create_version(
 def get_version(
     version_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
     if not ver:
@@ -263,7 +212,7 @@ def deprecate_version(
     version_id: uuid.UUID,
     data: TemplateVersionDeprecate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:deprecate")),
+    current_user: User = Depends(require_permission("document_engine:template:deprecate"))
 ):
     ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
     if not ver:
@@ -286,7 +235,7 @@ def deprecate_version(
         entity_type="template_version",
         entity_id=ver.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "deprecate_version", "template_version", ver.id, {})
     db.commit()
@@ -295,32 +244,21 @@ def deprecate_version(
 
 # ----------------- TemplatePlaceholder Endpoints -----------------
 
-
-@router.get(
-    "/template-versions/{version_id}/placeholders", response_model=List[TemplatePlaceholderSchema]
-)
+@router.get("/template-versions/{version_id}/placeholders", response_model=List[TemplatePlaceholderSchema])
 def list_placeholders(
     version_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    return (
-        db.query(TemplatePlaceholder)
-        .filter(TemplatePlaceholder.template_version_id == version_id)
-        .all()
-    )
+    return db.query(TemplatePlaceholder).filter(TemplatePlaceholder.template_version_id == version_id).all()
 
 
-@router.post(
-    "/template-versions/{version_id}/placeholders",
-    response_model=TemplatePlaceholderSchema,
-    status_code=201,
-)
+@router.post("/template-versions/{version_id}/placeholders", response_model=TemplatePlaceholderSchema, status_code=201)
 def create_placeholder(
     version_id: uuid.UUID,
     data: TemplatePlaceholderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:update")),
+    current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
     ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
     if not ver:
@@ -338,7 +276,7 @@ def create_placeholder(
         format_rule=data.format_rule,
         validation_rule=data.validation_rule,
         computed_expression_id=data.computed_expression_id,
-        status=data.status,
+        status=data.status
     )
     db.add(pl)
     db.commit()
@@ -350,33 +288,21 @@ def create_placeholder(
         entity_type="template_placeholder",
         entity_id=pl.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db,
-        current_user.id,
-        "create_placeholder",
-        "template_placeholder",
-        pl.id,
-        {"key": pl.placeholder_key},
-    )
+    log_action(db, current_user.id, "create_placeholder", "template_placeholder", pl.id, {"key": pl.placeholder_key})
     db.commit()
     return pl
 
 
 # ----------------- PlaceholderBinding Endpoints -----------------
 
-
-@router.post(
-    "/template-versions/{version_id}/bindings",
-    response_model=PlaceholderBindingSchema,
-    status_code=201,
-)
+@router.post("/template-versions/{version_id}/bindings", response_model=PlaceholderBindingSchema, status_code=201)
 def create_binding(
     version_id: uuid.UUID,
     data: PlaceholderBindingCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:update")),
+    current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
     ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
     if not ver:
@@ -388,7 +314,7 @@ def create_binding(
         binding_path=data.binding_path,
         binding_type=data.binding_type,
         fallback_value=data.fallback_value,
-        is_required=data.is_required,
+        is_required=data.is_required
     )
     db.add(bind)
     db.commit()
@@ -400,7 +326,7 @@ def create_binding(
         entity_type="placeholder_binding",
         entity_id=bind.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "create_binding", "placeholder_binding", bind.id, {})
     db.commit()
@@ -409,17 +335,12 @@ def create_binding(
 
 # ----------------- ComputedPlaceholderExpression Endpoints -----------------
 
-
-@router.post(
-    "/template-versions/{version_id}/computed-expressions",
-    response_model=ComputedPlaceholderExpressionSchema,
-    status_code=201,
-)
+@router.post("/template-versions/{version_id}/computed-expressions", response_model=ComputedPlaceholderExpressionSchema, status_code=201)
 def create_computed_expression(
     version_id: uuid.UUID,
     data: ComputedPlaceholderExpressionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:template:update")),
+    current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
     ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
     if not ver:
@@ -431,7 +352,7 @@ def create_computed_expression(
         inputs=data.inputs,
         expression=data.expression,
         output_data_type=data.output_data_type,
-        created_by=current_user.id,
+        created_by=current_user.id
     )
     db.add(expr)
     db.commit()
@@ -443,28 +364,20 @@ def create_computed_expression(
         entity_type="computed_expression",
         entity_id=expr.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db,
-        current_user.id,
-        "create_expression",
-        "computed_expression",
-        expr.id,
-        {"key": expr.placeholder_key},
-    )
+    log_action(db, current_user.id, "create_expression", "computed_expression", expr.id, {"key": expr.placeholder_key})
     db.commit()
     return expr
 
 
 # ----------------- RenderJob & GeneratedDocument Endpoints -----------------
 
-
 @router.post("/render-jobs", response_model=RenderJobSchema, status_code=201)
 def create_render_job(
     data: RenderJobCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:render:create")),
+    current_user: User = Depends(require_permission("document_engine:render:create"))
 ):
     proj = db.query(Project).filter(Project.id == data.project_id).first()
     if not proj:
@@ -487,7 +400,7 @@ def create_render_job(
         status=RenderJobStatus.COMPLETED,
         created_by=current_user.id,
         started_at=datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc)
     )
     db.add(job)
     db.commit()
@@ -505,7 +418,7 @@ def create_render_job(
             file_size_bytes=4096,
             template_version_id=ver.id,
             data_snapshot_hash=snapshot_hash,
-            status=GeneratedDocumentStatus.DRAFT,
+            status=GeneratedDocumentStatus.DRAFT
         )
         db.add(doc)
 
@@ -517,11 +430,9 @@ def create_render_job(
         entity_type="render_job",
         entity_id=job.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db, current_user.id, "create_render_job", "render_job", job.id, {"hash": snapshot_hash}
-    )
+    log_action(db, current_user.id, "create_render_job", "render_job", job.id, {"hash": snapshot_hash})
     db.commit()
     return job
 
@@ -530,7 +441,7 @@ def create_render_job(
 def get_render_job(
     render_job_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     job = db.query(RenderJob).filter(RenderJob.id == render_job_id).first()
     if not job:
@@ -542,7 +453,7 @@ def get_render_job(
 def get_generated_document(
     generated_document_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     doc = db.query(GeneratedDocument).filter(GeneratedDocument.id == generated_document_id).first()
     if not doc:
@@ -552,12 +463,11 @@ def get_generated_document(
 
 # ----------------- DocumentPackage Endpoints -----------------
 
-
 @router.post("/packages", response_model=DocumentPackageSchema, status_code=201)
 def create_package(
     data: DocumentPackageCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:package:create")),
+    current_user: User = Depends(require_permission("document_engine:package:create"))
 ):
     proj = db.query(Project).filter(Project.id == data.project_id).first()
     if not proj:
@@ -568,7 +478,7 @@ def create_package(
         package_type=data.package_type,
         name=data.name,
         status=data.status,
-        created_by=current_user.id,
+        created_by=current_user.id
     )
     db.add(pkg)
     db.commit()
@@ -580,11 +490,9 @@ def create_package(
         entity_type="document_package",
         entity_id=pkg.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db, current_user.id, "create_package", "document_package", pkg.id, {"name": pkg.name}
-    )
+    log_action(db, current_user.id, "create_package", "document_package", pkg.id, {"name": pkg.name})
     db.commit()
     return pkg
 
@@ -593,7 +501,7 @@ def create_package(
 def get_package(
     package_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:read")),
+    current_user: User = Depends(require_permission("document_engine:read"))
 ):
     pkg = db.query(DocumentPackage).filter(DocumentPackage.id == package_id).first()
     if not pkg:
@@ -601,31 +509,25 @@ def get_package(
     return pkg
 
 
-@router.post(
-    "/packages/{package_id}/items", response_model=DocumentPackageItemSchema, status_code=201
-)
+@router.post("/packages/{package_id}/items", response_model=DocumentPackageItemSchema, status_code=201)
 def add_package_item(
     package_id: uuid.UUID,
     data: DocumentPackageItemCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_engine:package:update")),
+    current_user: User = Depends(require_permission("document_engine:package:update"))
 ):
     pkg = db.query(DocumentPackage).filter(DocumentPackage.id == package_id).first()
     if not pkg:
         raise HTTPException(status_code=404, detail="Package not found")
 
-    doc = (
-        db.query(GeneratedDocument)
-        .filter(GeneratedDocument.id == data.generated_document_id)
-        .first()
-    )
+    doc = db.query(GeneratedDocument).filter(GeneratedDocument.id == data.generated_document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Generated document not found")
 
     item = DocumentPackageItem(
         document_package_id=package_id,
         generated_document_id=data.generated_document_id,
-        sort_order=data.sort_order,
+        sort_order=data.sort_order
     )
     db.add(item)
     db.commit()
@@ -637,15 +539,8 @@ def add_package_item(
         entity_type="document_package_item",
         entity_id=item.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db,
-        current_user.id,
-        "add_package_item",
-        "document_package_item",
-        item.id,
-        {"sort_order": item.sort_order},
-    )
+    log_action(db, current_user.id, "add_package_item", "document_package_item", item.id, {"sort_order": item.sort_order})
     db.commit()
     return item

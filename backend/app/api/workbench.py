@@ -10,59 +10,29 @@ from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User,
-    WorkbenchSession,
-    WorkbenchSessionStatus,
-    WorkbenchLayout,
-    AssetGridView,
-    WorkbenchSelection,
-    InlineEditDraft,
-    InlineEditDraftStatus,
-    AutosaveCheckpoint,
-    UndoRedoStackEntry,
-    UndoRedoActionType,
-    PanelState,
-    WorkbenchNotification,
-    Project,
-    UserActionLog,
+    User, WorkbenchSession, WorkbenchSessionStatus, WorkbenchLayout,
+    AssetGridView, WorkbenchSelection, InlineEditDraft, InlineEditDraftStatus,
+    AutosaveCheckpoint, UndoRedoStackEntry, UndoRedoActionType, PanelState,
+    WorkbenchNotification, Project, UserActionLog
 )
 from app.modules.project_master_data.workbench_schemas import (
-    WorkbenchSessionCreate,
-    WorkbenchSessionSchema,
-    WorkbenchSessionHeartbeatRequest,
-    WorkbenchLayoutSave,
-    WorkbenchLayoutSchema,
-    AssetGridViewSave,
-    AssetGridViewSchema,
-    WorkbenchSelectionSave,
-    WorkbenchSelectionSchema,
-    InlineEditDraftCreate,
-    InlineEditDraftSchema,
-    AutosaveCheckpointCreate,
-    AutosaveCheckpointSchema,
-    UndoRedoStackEntrySchema,
-    PanelStateSave,
-    PanelStateSchema,
-    WorkbenchNotificationSchema,
+    WorkbenchSessionCreate, WorkbenchSessionSchema, WorkbenchSessionHeartbeatRequest,
+    WorkbenchLayoutSave, WorkbenchLayoutSchema, AssetGridViewSave, AssetGridViewSchema,
+    WorkbenchSelectionSave, WorkbenchSelectionSchema, InlineEditDraftCreate, InlineEditDraftSchema,
+    AutosaveCheckpointCreate, AutosaveCheckpointSchema, UndoRedoStackEntrySchema,
+    PanelStateSave, PanelStateSchema, WorkbenchNotificationSchema
 )
 from app.modules.workflow_workbench import (
     require_owned_workbench_session,
     resolve_workbench_target,
-    raise_safe_404,
+    raise_safe_404
 )
 
 router = APIRouter(prefix="/api/v1/workbench", tags=["Workbench"])
 
 
 # Helper to log user action
-def log_action(
-    db: Session,
-    user_id: uuid.UUID,
-    action_type: str,
-    target_type: str,
-    target_id: uuid.UUID,
-    payload: dict,
-):
+def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: str, target_id: uuid.UUID, payload: dict):
     serialized_payload = {}
     for k, v in payload.items():
         if isinstance(v, uuid.UUID):
@@ -75,7 +45,7 @@ def log_action(
         action_type=action_type,
         target_type=target_type,
         target_id=target_id,
-        action_payload=serialized_payload,
+        action_payload=serialized_payload
     )
     db.add(log)
 
@@ -85,28 +55,21 @@ def create_session(
     data: WorkbenchSessionCreate,
     response: Response,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:open")),
+    current_user: User = Depends(require_permission("workbench:open"))
 ):
-    proj = (
-        db.query(Project)
-        .filter(
-            Project.id == data.project_id, Project.organization_id == current_user.organization_id
-        )
-        .first()
-    )
+    proj = db.query(Project).filter(
+        Project.id == data.project_id,
+        Project.organization_id == current_user.organization_id
+    ).first()
     if not proj:
         raise_safe_404()
 
     # Enforce active session policy: resume if exists
-    existing = (
-        db.query(WorkbenchSession)
-        .filter(
-            WorkbenchSession.user_id == current_user.id,
-            WorkbenchSession.project_id == data.project_id,
-            WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE,
-        )
-        .first()
-    )
+    existing = db.query(WorkbenchSession).filter(
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.project_id == data.project_id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
     if existing:
         response.status_code = 200
         return existing
@@ -117,7 +80,7 @@ def create_session(
             session = WorkbenchSession(
                 user_id=current_user.id,
                 project_id=data.project_id,
-                status=WorkbenchSessionStatus.ACTIVE,
+                status=WorkbenchSessionStatus.ACTIVE
             )
             db.add(session)
             db.flush()
@@ -132,10 +95,7 @@ def create_session(
             err_msg = str(e)
             if "uq_active_session_per_user_project" in err_msg:
                 is_expected_constraint = True
-            elif (
-                "workbench_sessions.user_id" in err_msg
-                and "workbench_sessions.project_id" in err_msg
-            ):
+            elif "workbench_sessions.user_id" in err_msg and "workbench_sessions.project_id" in err_msg:
                 is_expected_constraint = True
 
         if not is_expected_constraint:
@@ -144,15 +104,11 @@ def create_session(
 
         db.rollback()
         # Retrieve the session that won the concurrency race
-        existing_concurrent = (
-            db.query(WorkbenchSession)
-            .filter(
-                WorkbenchSession.user_id == current_user.id,
-                WorkbenchSession.project_id == data.project_id,
-                WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE,
-            )
-            .first()
-        )
+        existing_concurrent = db.query(WorkbenchSession).filter(
+            WorkbenchSession.user_id == current_user.id,
+            WorkbenchSession.project_id == data.project_id,
+            WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+        ).first()
         if existing_concurrent is None:
             raise e
 
@@ -171,8 +127,8 @@ def create_session(
                 "session_id": str(session.id),
                 "project_id": str(proj.id),
                 "before_status": None,
-                "after_status": "active",
-            },
+                "after_status": "active"
+            }
         )
         log_action(db, current_user.id, "session_start", "workbench_session", session.id, {})
         db.commit()
@@ -189,10 +145,13 @@ def create_session(
 def get_session(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     return require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
 
@@ -201,10 +160,13 @@ def session_heartbeat(
     session_id: uuid.UUID,
     req: WorkbenchSessionHeartbeatRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     if session.row_version != req.expected_row_version:
@@ -215,8 +177,8 @@ def session_heartbeat(
                 "message": "Dữ liệu phiên làm việc đã bị thay đổi ở nơi khác.",
                 "nextAction": "Vui lòng tải lại trang để đồng bộ dữ liệu mới nhất.",
                 "severity": "warning",
-                "retryable": True,
-            },
+                "retryable": True
+            }
         )
 
     try:
@@ -237,10 +199,13 @@ def session_heartbeat(
 def close_session(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=False
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
     )
 
     allowed_statuses = [WorkbenchSessionStatus.ACTIVE, WorkbenchSessionStatus.CLOSED]
@@ -249,9 +214,7 @@ def close_session(
 
     if session.status == WorkbenchSessionStatus.ACTIVE:
         try:
-            before_status = (
-                session.status.value if hasattr(session.status, "value") else session.status
-            )
+            before_status = session.status.value if hasattr(session.status, "value") else session.status
             session.status = WorkbenchSessionStatus.CLOSED
             log_audit_event(
                 db=db,
@@ -265,8 +228,8 @@ def close_session(
                     "project_id": str(session.project_id),
                     "before_status": before_status,
                     "after_status": "closed",
-                    "reason": "user_closed",
-                },
+                    "reason": "user_closed"
+                }
             )
             log_action(db, current_user.id, "session_close", "workbench_session", session.id, {})
             db.commit()
@@ -283,20 +246,19 @@ def save_layout(
     session_id: uuid.UUID,
     layout_data: WorkbenchLayoutSave,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    layout = (
-        db.query(WorkbenchLayout)
-        .filter(
-            WorkbenchLayout.user_id == current_user.id,
-            WorkbenchLayout.layout_name == layout_data.layout_name,
-        )
-        .first()
-    )
+    layout = db.query(WorkbenchLayout).filter(
+        WorkbenchLayout.user_id == current_user.id,
+        WorkbenchLayout.layout_name == layout_data.layout_name
+    ).first()
 
     try:
         if layout:
@@ -307,7 +269,7 @@ def save_layout(
                 user_id=current_user.id,
                 layout_name=layout_data.layout_name,
                 layout_payload=layout_data.layout_payload,
-                is_default=layout_data.is_default,
+                is_default=layout_data.is_default
             )
             db.add(layout)
         db.flush()
@@ -317,7 +279,7 @@ def save_layout(
             event_name="WORKBENCH_LAYOUT_SAVE",
             entity_type="workbench_layout",
             entity_id=layout.id,
-            actor_user_id=current_user.id,
+            actor_user_id=current_user.id
         )
         log_action(db, current_user.id, "layout_save", "workbench_layout", layout.id, {})
         db.commit()
@@ -333,19 +295,19 @@ def save_layout(
 def list_grid_views(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    return (
-        db.query(AssetGridView)
-        .filter(
-            AssetGridView.user_id == current_user.id, AssetGridView.project_id == session.project_id
-        )
-        .all()
-    )
+    return db.query(AssetGridView).filter(
+        AssetGridView.user_id == current_user.id,
+        AssetGridView.project_id == session.project_id
+    ).all()
 
 
 @router.post("/sessions/{session_id}/grid-view", response_model=AssetGridViewSchema)
@@ -353,21 +315,20 @@ def save_grid_view(
     session_id: uuid.UUID,
     grid_data: AssetGridViewSave,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    view = (
-        db.query(AssetGridView)
-        .filter(
-            AssetGridView.user_id == current_user.id,
-            AssetGridView.project_id == session.project_id,
-            AssetGridView.view_name == grid_data.view_name,
-        )
-        .first()
-    )
+    view = db.query(AssetGridView).filter(
+        AssetGridView.user_id == current_user.id,
+        AssetGridView.project_id == session.project_id,
+        AssetGridView.view_name == grid_data.view_name
+    ).first()
 
     try:
         if view:
@@ -383,7 +344,7 @@ def save_grid_view(
                 columns=grid_data.columns,
                 filters=grid_data.filters,
                 sort=grid_data.sort,
-                is_default=grid_data.is_default,
+                is_default=grid_data.is_default
             )
             db.add(view)
         db.commit()
@@ -399,10 +360,13 @@ def save_selection(
     session_id: uuid.UUID,
     data: WorkbenchSelectionSave,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     # Validate target type
@@ -415,8 +379,8 @@ def save_selection(
                 "message": "Loại đối tượng được chọn không được hỗ trợ.",
                 "nextAction": "Vui lòng kiểm tra lại yêu cầu.",
                 "severity": "error",
-                "retryable": False,
-            },
+                "retryable": False
+            }
         )
 
     # Validate target IDs
@@ -432,19 +396,15 @@ def save_selection(
                         "message": "Mã đối tượng không đúng định dạng UUID.",
                         "nextAction": "Vui lòng kiểm tra lại yêu cầu.",
                         "severity": "error",
-                        "retryable": False,
-                    },
+                        "retryable": False
+                    }
                 )
             resolve_workbench_target(data.selected_target_type, tid, session.project_id, db)
 
-    sel = (
-        db.query(WorkbenchSelection)
-        .filter(
-            WorkbenchSelection.session_id == session_id,
-            WorkbenchSelection.selected_target_type == data.selected_target_type,
-        )
-        .first()
-    )
+    sel = db.query(WorkbenchSelection).filter(
+        WorkbenchSelection.session_id == session_id,
+        WorkbenchSelection.selected_target_type == data.selected_target_type
+    ).first()
 
     try:
         if sel:
@@ -454,24 +414,14 @@ def save_selection(
             sel = WorkbenchSelection(
                 session_id=session_id,
                 selected_target_type=data.selected_target_type,
-                selected_target_ids=data.selected_target_ids,
+                selected_target_ids=data.selected_target_ids
             )
             db.add(sel)
 
-        session.current_selection = {
-            "target_type": data.selected_target_type,
-            "target_ids": data.selected_target_ids,
-        }
+        session.current_selection = {"target_type": data.selected_target_type, "target_ids": data.selected_target_ids}
         db.flush()
 
-        log_action(
-            db,
-            current_user.id,
-            "selection_update",
-            "workbench_selection",
-            sel.id,
-            {"target_type": data.selected_target_type},
-        )
+        log_action(db, current_user.id, "selection_update", "workbench_selection", sel.id, {"target_type": data.selected_target_type})
         db.commit()
     except Exception:
         db.rollback()
@@ -485,10 +435,13 @@ def save_selection(
 def get_selection(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     return db.query(WorkbenchSelection).filter(WorkbenchSelection.session_id == session_id).all()
@@ -499,10 +452,13 @@ def save_inline_edit(
     session_id: uuid.UUID,
     data: InlineEditDraftCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     session = require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     resolve_workbench_target(data.target_type, data.target_id, session.project_id, db)
@@ -515,17 +471,12 @@ def save_inline_edit(
         draft_value=data.draft_value,
         base_value=data.base_value,
         base_row_version=data.base_row_version,
-        status=InlineEditDraftStatus.DRAFT,
+        status=InlineEditDraftStatus.DRAFT
     )
 
     try:
         db.add(draft)
-        max_seq = (
-            db.query(func.max(UndoRedoStackEntry.sequence_no))
-            .filter(UndoRedoStackEntry.session_id == session_id)
-            .scalar()
-            or 0
-        )
+        max_seq = db.query(func.max(UndoRedoStackEntry.sequence_no)).filter(UndoRedoStackEntry.session_id == session_id).scalar() or 0
         stack = UndoRedoStackEntry(
             session_id=session_id,
             sequence_no=max_seq + 1,
@@ -534,19 +485,12 @@ def save_inline_edit(
             field_key=data.field_key,
             after_value=data.draft_value,
             before_value=data.base_value,
-            action_type=UndoRedoActionType.EDIT,
+            action_type=UndoRedoActionType.EDIT
         )
         db.add(stack)
         db.flush()
 
-        log_action(
-            db,
-            current_user.id,
-            "inline_draft_creation",
-            "inline_edit_draft",
-            draft.id,
-            {"field_key": data.field_key},
-        )
+        log_action(db, current_user.id, "inline_draft_creation", "inline_edit_draft", draft.id, {"field_key": data.field_key})
         db.commit()
     except Exception:
         db.rollback()
@@ -560,10 +504,13 @@ def save_inline_edit(
 def list_inline_edits(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     return db.query(InlineEditDraft).filter(InlineEditDraft.session_id == session_id).all()
@@ -574,22 +521,24 @@ def save_checkpoint(
     session_id: uuid.UUID,
     data: AutosaveCheckpointCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     checkpoint = AutosaveCheckpoint(
-        session_id=session_id, checkpoint_payload=data.checkpoint_payload
+        session_id=session_id,
+        checkpoint_payload=data.checkpoint_payload
     )
 
     try:
         db.add(checkpoint)
         db.flush()
-        log_action(
-            db, current_user.id, "checkpoint_creation", "autosave_checkpoint", checkpoint.id, {}
-        )
+        log_action(db, current_user.id, "checkpoint_creation", "autosave_checkpoint", checkpoint.id, {})
         db.commit()
     except Exception:
         db.rollback()
@@ -603,18 +552,19 @@ def save_checkpoint(
 def execute_undo(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:undo_redo")),
+    current_user: User = Depends(require_permission("workbench:undo_redo"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    entry = (
-        db.query(UndoRedoStackEntry)
-        .filter(UndoRedoStackEntry.session_id == session_id, UndoRedoStackEntry.is_undone == False)
-        .order_by(UndoRedoStackEntry.sequence_no.desc())
-        .first()
-    )
+    entry = db.query(UndoRedoStackEntry).filter(
+        UndoRedoStackEntry.session_id == session_id,
+        UndoRedoStackEntry.is_undone == False
+    ).order_by(UndoRedoStackEntry.sequence_no.desc()).first()
 
     if not entry:
         raise HTTPException(status_code=400, detail="Nothing to undo")
@@ -622,14 +572,7 @@ def execute_undo(
     try:
         entry.is_undone = True
         db.flush()
-        log_action(
-            db,
-            current_user.id,
-            "undo",
-            "undo_redo_stack_entry",
-            entry.id,
-            {"sequence_no": entry.sequence_no},
-        )
+        log_action(db, current_user.id, "undo", "undo_redo_stack_entry", entry.id, {"sequence_no": entry.sequence_no})
         db.commit()
     except Exception:
         db.rollback()
@@ -643,18 +586,19 @@ def execute_undo(
 def execute_redo(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:undo_redo")),
+    current_user: User = Depends(require_permission("workbench:undo_redo"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    entry = (
-        db.query(UndoRedoStackEntry)
-        .filter(UndoRedoStackEntry.session_id == session_id, UndoRedoStackEntry.is_undone == True)
-        .order_by(UndoRedoStackEntry.sequence_no.asc())
-        .first()
-    )
+    entry = db.query(UndoRedoStackEntry).filter(
+        UndoRedoStackEntry.session_id == session_id,
+        UndoRedoStackEntry.is_undone == True
+    ).order_by(UndoRedoStackEntry.sequence_no.asc()).first()
 
     if not entry:
         raise HTTPException(status_code=400, detail="Nothing to redo")
@@ -662,14 +606,7 @@ def execute_redo(
     try:
         entry.is_undone = False
         db.flush()
-        log_action(
-            db,
-            current_user.id,
-            "redo",
-            "undo_redo_stack_entry",
-            entry.id,
-            {"sequence_no": entry.sequence_no},
-        )
+        log_action(db, current_user.id, "redo", "undo_redo_stack_entry", entry.id, {"sequence_no": entry.sequence_no})
         db.commit()
     except Exception:
         db.rollback()
@@ -684,17 +621,19 @@ def save_panel_state(
     session_id: uuid.UUID,
     data: PanelStateSave,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    panel = (
-        db.query(PanelState)
-        .filter(PanelState.session_id == session_id, PanelState.panel_type == data.panel_type)
-        .first()
-    )
+    panel = db.query(PanelState).filter(
+        PanelState.session_id == session_id,
+        PanelState.panel_type == data.panel_type
+    ).first()
 
     try:
         if panel:
@@ -706,7 +645,7 @@ def save_panel_state(
                 session_id=session_id,
                 panel_type=data.panel_type,
                 is_expanded=data.is_expanded,
-                width=data.width,
+                width=data.width
             )
             db.add(panel)
         db.commit()
@@ -721,32 +660,32 @@ def save_panel_state(
 def list_panel_states(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
     return db.query(PanelState).filter(PanelState.session_id == session_id).all()
 
 
-@router.get(
-    "/sessions/{session_id}/notifications", response_model=List[WorkbenchNotificationSchema]
-)
+@router.get("/sessions/{session_id}/notifications", response_model=List[WorkbenchNotificationSchema])
 def list_notifications(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:read")),
+    current_user: User = Depends(require_permission("workbench:read"))
 ):
     require_owned_workbench_session(
-        session_id=session_id, db=db, current_user=current_user, require_active=True
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
     )
 
-    return (
-        db.query(WorkbenchNotification)
-        .filter(
-            WorkbenchNotification.user_id == current_user.id,
-            WorkbenchNotification.session_id == session_id,
-        )
-        .all()
-    )
+    return db.query(WorkbenchNotification).filter(
+        WorkbenchNotification.user_id == current_user.id,
+        WorkbenchNotification.session_id == session_id
+    ).all()

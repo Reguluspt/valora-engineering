@@ -7,25 +7,19 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    EvidenceSource,
-    EvidenceSourceType,
-    EvidenceFile,
-    EvidenceFileStatus,
-    EvidenceSensitivityLevel,
-    EvidenceLink,
-    EvidenceAccessLog,
-    EvidenceAccessType,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus,
+    EvidenceSource, EvidenceSourceType,
+    EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
+    EvidenceLink, EvidenceAccessLog, EvidenceAccessType
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -55,15 +49,13 @@ def test_evidence_source_persistence(db_session: Session) -> None:
     source = EvidenceSource(
         name="Vendor Portal v1",
         source_type=EvidenceSourceType.SUPPLIER,
-        description="Core supplier quote intake portal",
+        description="Core supplier quote intake portal"
     )
     db_session.add(source)
     db_session.commit()
 
     db_session.expire_all()
-    queried = (
-        db_session.query(EvidenceSource).filter(EvidenceSource.name == "Vendor Portal v1").one()
-    )
+    queried = db_session.query(EvidenceSource).filter(EvidenceSource.name == "Vendor Portal v1").one()
     assert queried.source_type == EvidenceSourceType.SUPPLIER
     assert queried.id is not None
     assert queried.created_at is not None
@@ -71,17 +63,10 @@ def test_evidence_source_persistence(db_session: Session) -> None:
 
 def test_evidence_file_immutability_and_enums(db_session: Session) -> None:
     # Seed uploader user
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
-    user = User(
-        organization_id=org.id,
-        email="uploader@test.com",
-        full_name="Uploader User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="uploader@test.com", full_name="Uploader User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -94,7 +79,7 @@ def test_evidence_file_immutability_and_enums(db_session: Session) -> None:
         checksum="sha256:d57b1f3c306",
         sensitivity_level=EvidenceSensitivityLevel.RESTRICTED,
         status=EvidenceFileStatus.ACTIVE,
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -111,17 +96,10 @@ def test_evidence_file_immutability_and_enums(db_session: Session) -> None:
 
 
 def test_evidence_link_soft_delete(db_session: Session) -> None:
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
-    user = User(
-        organization_id=org.id,
-        email="creator@test.com",
-        full_name="Creator User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="creator@test.com", full_name="Creator User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -132,7 +110,7 @@ def test_evidence_link_soft_delete(db_session: Session) -> None:
         object_key="uploads/specs.xlsx",
         checksum="md5:a1b2c3d4",
         sensitivity_level=EvidenceSensitivityLevel.NORMAL,
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -143,7 +121,7 @@ def test_evidence_link_soft_delete(db_session: Session) -> None:
         evidence_file_id=ev_file.id,
         target_type="technical_specification_version",
         target_id=target_uuid,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(link)
     db_session.commit()
@@ -172,17 +150,10 @@ def test_evidence_link_soft_delete(db_session: Session) -> None:
 
 
 def test_evidence_access_log_fields(db_session: Session) -> None:
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
-    user = User(
-        organization_id=org.id,
-        email="accessor@test.com",
-        full_name="Accessor User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="accessor@test.com", full_name="Accessor User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -193,7 +164,7 @@ def test_evidence_access_log_fields(db_session: Session) -> None:
         object_key="uploads/sensitive.pdf",
         checksum="hash123",
         sensitivity_level=EvidenceSensitivityLevel.SENSITIVE,
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -204,17 +175,13 @@ def test_evidence_access_log_fields(db_session: Session) -> None:
         access_type=EvidenceAccessType.DOWNLOAD,
         access_reason="Audit request verification",
         ip_address="192.168.1.100",
-        user_agent="Mozilla/5.0",
+        user_agent="Mozilla/5.0"
     )
     db_session.add(log)
     db_session.commit()
 
     db_session.expire_all()
-    q_log = (
-        db_session.query(EvidenceAccessLog)
-        .filter(EvidenceAccessLog.evidence_file_id == ev_file.id)
-        .one()
-    )
+    q_log = db_session.query(EvidenceAccessLog).filter(EvidenceAccessLog.evidence_file_id == ev_file.id).one()
     assert q_log.access_type == EvidenceAccessType.DOWNLOAD
     assert q_log.access_reason == "Audit request verification"
     assert q_log.ip_address == "192.168.1.100"
@@ -223,17 +190,10 @@ def test_evidence_access_log_fields(db_session: Session) -> None:
 
 
 def test_parent_deletion_restrict_constraints(db_session: Session) -> None:
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
-    user = User(
-        organization_id=org.id,
-        email="audit@test.com",
-        full_name="Audit User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="audit@test.com", full_name="Audit User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -243,13 +203,16 @@ def test_parent_deletion_restrict_constraints(db_session: Session) -> None:
         file_size=123,
         object_key="uploads/restrict.pdf",
         checksum="hashrestrict",
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
 
     link = EvidenceLink(
-        evidence_file_id=ev_file.id, target_type="test", target_id=uuid.uuid4(), created_by=user.id
+        evidence_file_id=ev_file.id,
+        target_type="test",
+        target_id=uuid.uuid4(),
+        created_by=user.id
     )
     db_session.add(link)
     db_session.commit()
@@ -264,14 +227,12 @@ def test_parent_deletion_restrict_constraints(db_session: Session) -> None:
 def test_migration_chain() -> None:
     import importlib.util
     import os
-
+    
     # Load migration file dynamically to prevent ModuleNotFoundError in test environment path
-    filepath = os.path.join(
-        os.path.dirname(__file__), "../alembic/versions/a87a9b6da999_create_evidence_core_tables.py"
-    )
+    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da999_create_evidence_core_tables.py")
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da999", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-
+    
     assert migration.revision == "a87a9b6da999"
     assert migration.down_revision == "a87a9b6da998"

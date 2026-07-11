@@ -3,19 +3,12 @@ from datetime import datetime
 from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, Field
 from app.modules.project_master_data.models import (
-    DocumentTemplateStatus,
-    TemplateVersionStatus,
-    PlaceholderDataType,
-    PlaceholderSourceContext,
-    PlaceholderBindingType,
-    RenderJobStatus,
-    GeneratedDocumentStatus,
-    DocumentPackageType,
-    DocumentPackageStatus,
+    DocumentTemplateStatus, TemplateVersionStatus, PlaceholderDataType,
+    PlaceholderSourceContext, PlaceholderBindingType, RenderJobStatus,
+    GeneratedDocumentStatus, DocumentPackageType, DocumentPackageStatus
 )
 
 # ----------------- DocumentTemplate -----------------
-
 
 class DocumentTemplateCreate(BaseModel):
     organization_id: uuid.UUID
@@ -25,7 +18,6 @@ class DocumentTemplateCreate(BaseModel):
     description: Optional[str] = None
     status: DocumentTemplateStatus = DocumentTemplateStatus.DRAFT
 
-
 class DocumentTemplateUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
@@ -33,7 +25,6 @@ class DocumentTemplateUpdate(BaseModel):
     current_version_id: Optional[uuid.UUID] = None
     replacement_template_id: Optional[uuid.UUID] = None
     expected_row_version: Optional[int] = None
-
 
 class DocumentTemplateSchema(BaseModel):
     id: uuid.UUID
@@ -56,7 +47,6 @@ class DocumentTemplateSchema(BaseModel):
 
 # ----------------- TemplateVersion -----------------
 
-
 class TemplateVersionCreate(BaseModel):
     version_number: int
     source_file_id: Optional[uuid.UUID] = None
@@ -64,12 +54,10 @@ class TemplateVersionCreate(BaseModel):
     placeholder_manifest: Optional[Dict[str, Any]] = None
     status: TemplateVersionStatus = TemplateVersionStatus.DRAFT
 
-
 class TemplateVersionDeprecate(BaseModel):
     deprecation_reason: str
     replacement_version_id: Optional[uuid.UUID] = None
     expected_row_version: int
-
 
 class TemplateVersionSchema(BaseModel):
     id: uuid.UUID
@@ -93,14 +81,12 @@ class TemplateVersionSchema(BaseModel):
 
 # ----------------- ComputedPlaceholderExpression -----------------
 
-
 class ComputedPlaceholderExpressionCreate(BaseModel):
     placeholder_key: str = Field(..., max_length=255)
     expression_type: str = Field("valora_expr", max_length=50)
     inputs: Dict[str, Any] = Field(default_factory=dict)
     expression: str
     output_data_type: PlaceholderDataType
-
 
 class ComputedPlaceholderExpressionSchema(BaseModel):
     id: uuid.UUID
@@ -119,7 +105,6 @@ class ComputedPlaceholderExpressionSchema(BaseModel):
 
 # ----------------- TemplatePlaceholder -----------------
 
-
 class TemplatePlaceholderCreate(BaseModel):
     placeholder_key: str = Field(..., max_length=255)
     label_vi: str = Field(..., max_length=255)
@@ -132,7 +117,6 @@ class TemplatePlaceholderCreate(BaseModel):
     validation_rule: Optional[Dict[str, Any]] = None
     computed_expression_id: Optional[uuid.UUID] = None
     status: str = "active"
-
 
 class TemplatePlaceholderSchema(BaseModel):
     id: uuid.UUID
@@ -155,14 +139,12 @@ class TemplatePlaceholderSchema(BaseModel):
 
 # ----------------- PlaceholderBinding -----------------
 
-
 class PlaceholderBindingCreate(BaseModel):
     template_placeholder_id: uuid.UUID
     binding_path: str = Field(..., max_length=255)
     binding_type: PlaceholderBindingType
     fallback_value: Optional[Dict[str, Any]] = None
     is_required: bool = True
-
 
 class PlaceholderBindingSchema(BaseModel):
     id: uuid.UUID
@@ -179,14 +161,12 @@ class PlaceholderBindingSchema(BaseModel):
 
 # ----------------- RenderJob -----------------
 
-
 class RenderJobCreate(BaseModel):
     project_id: uuid.UUID
     template_version_id: uuid.UUID
     render_mode: str = Field("draft", max_length=50)
     output_formats: List[str] = Field(default_factory=lambda: ["docx", "pdf"])
     data_snapshot: Dict[str, Any]
-
 
 class RenderJobSchema(BaseModel):
     id: uuid.UUID
@@ -215,7 +195,6 @@ class RenderJobSchema(BaseModel):
 
 # ----------------- GeneratedDocument -----------------
 
-
 class GeneratedDocumentSchema(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
@@ -239,13 +218,11 @@ class GeneratedDocumentSchema(BaseModel):
 
 # ----------------- DocumentPackage -----------------
 
-
 class DocumentPackageCreate(BaseModel):
     project_id: uuid.UUID
     package_type: DocumentPackageType
     name: str = Field(..., max_length=255)
     status: DocumentPackageStatus = DocumentPackageStatus.DRAFT
-
 
 class DocumentPackageSchema(BaseModel):
     id: uuid.UUID
@@ -264,11 +241,9 @@ class DocumentPackageSchema(BaseModel):
 
 # ----------------- DocumentPackageItem -----------------
 
-
 class DocumentPackageItemCreate(BaseModel):
     generated_document_id: uuid.UUID
     sort_order: int
-
 
 class DocumentPackageItemSchema(BaseModel):
     id: uuid.UUID

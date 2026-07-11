@@ -8,46 +8,24 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    Role,
-    UserRole,
-    AuditEvent,
-    TaxonomyNode,
-    TaxonomyNodeLevel,
-    TaxonomyStatus,
-    AssetFamily,
-    AssetFamilyStatus,
-    Project,
-    ProjectWorkflowStatus,
-    ProjectAssetLine,
-    IdentityCandidate,
-    IdentityCandidateStatus,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus, Role, UserRole, AuditEvent,
+    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
+    AssetFamily, AssetFamilyStatus,
+    Project, ProjectWorkflowStatus, ProjectAssetLine,
+    IdentityCandidate, IdentityCandidateStatus,
     SimilarityScore,
-    IdentityReviewItem,
-    IdentityReviewStatus,
-    IdentityDecisionLog,
-    CanonicalAsset,
-    CanonicalAssetStatus,
-    CanonicalAssetMaturity,
-    AssetVariant,
-    AssetVariantStatus,
-    DuplicateCandidate,
-    DuplicateCandidateStatus,
-    MergeDecision,
-    MergeDecisionStatus,
-    AssetAlias,
-    AssetAliasScope,
-    AssetAliasStatus,
+    IdentityReviewItem, IdentityReviewStatus, IdentityDecisionLog, CanonicalAsset, CanonicalAssetStatus, CanonicalAssetMaturity, AssetVariant, AssetVariantStatus,
+    DuplicateCandidate, DuplicateCandidateStatus, MergeDecision, MergeDecisionStatus,
+    AssetAlias, AssetAliasScope, AssetAliasStatus
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
     Base.metadata.create_all(bind=engine)
     session = Session(bind=engine)
@@ -74,9 +52,7 @@ def client(db_session: Session) -> TestClient:
 @pytest.fixture
 def setup_data(db_session: Session):
     # 1. Seed Org, Users, Roles
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
@@ -91,8 +67,8 @@ def setup_data(db_session: Session):
             "asset_identity:duplicate:read",
             "asset_identity:duplicate:update",
             "asset_identity:merge:create",
-            "asset_identity:merge:read",
-        ],
+            "asset_identity:merge:read"
+        ]
     )
     role_viewer = Role(
         code="viewer",
@@ -101,31 +77,16 @@ def setup_data(db_session: Session):
             "asset_identity:candidate:read",
             "asset_identity:review:read",
             "asset_identity:duplicate:read",
-            "asset_identity:merge:read",
-        ],
+            "asset_identity:merge:read"
+        ]
     )
     role_empty = Role(code="empty", display_name="Empty", permissions=[])
     db_session.add_all([role_admin, role_viewer, role_empty])
     db_session.commit()
 
-    user_admin = User(
-        organization_id=org.id,
-        email="admin@test.com",
-        full_name="Admin User",
-        status=UserStatus.ACTIVE,
-    )
-    user_viewer = User(
-        organization_id=org.id,
-        email="viewer@test.com",
-        full_name="Viewer User",
-        status=UserStatus.ACTIVE,
-    )
-    user_unauth = User(
-        organization_id=org.id,
-        email="unauth@test.com",
-        full_name="Unauth User",
-        status=UserStatus.ACTIVE,
-    )
+    user_admin = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
+    user_viewer = User(organization_id=org.id, email="viewer@test.com", full_name="Viewer User", status=UserStatus.ACTIVE)
+    user_unauth = User(organization_id=org.id, email="unauth@test.com", full_name="Unauth User", status=UserStatus.ACTIVE)
     db_session.add_all([user_admin, user_viewer, user_unauth])
     db_session.commit()
 
@@ -140,7 +101,7 @@ def setup_data(db_session: Session):
         code="TRANS",
         name_vi="Transformers",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user_admin.id,
+        created_by=user_admin.id
     )
     db_session.add(tax_node)
     db_session.commit()
@@ -149,7 +110,7 @@ def setup_data(db_session: Session):
         taxonomy_node_id=tax_node.id,
         code="TRANSFORMER",
         name_vi="Transformer Family",
-        status=AssetFamilyStatus.ACTIVE,
+        status=AssetFamilyStatus.ACTIVE
     )
     db_session.add(family)
     db_session.commit()
@@ -159,14 +120,14 @@ def setup_data(db_session: Session):
         primary_taxonomy_node_id=tax_node.id,
         standard_name="ABB Transformer 110kV Standard",
         maturity_level=CanonicalAssetMaturity.DRAFT,
-        status=CanonicalAssetStatus.DRAFT,
+        status=CanonicalAssetStatus.DRAFT
     )
     canon_asset2 = CanonicalAsset(
         asset_family_id=family.id,
         primary_taxonomy_node_id=tax_node.id,
         standard_name="ABB Transformer 110kV Alternate Standard",
         maturity_level=CanonicalAssetMaturity.DRAFT,
-        status=CanonicalAssetStatus.DRAFT,
+        status=CanonicalAssetStatus.DRAFT
     )
     db_session.add_all([canon_asset, canon_asset2])
     db_session.commit()
@@ -176,7 +137,7 @@ def setup_data(db_session: Session):
         asset_family_id=family.id,
         code="ABB-110KV-VAR",
         display_name="ABB 110kV Variant",
-        status=AssetVariantStatus.DRAFT,
+        status=AssetVariantStatus.DRAFT
     )
     db_session.add(variant)
     db_session.commit()
@@ -187,7 +148,7 @@ def setup_data(db_session: Session):
         alias_scope=AssetAliasScope.CANONICAL,
         raw_alias="ABB Trafo",
         normalized_alias="abb trafo",
-        status=AssetAliasStatus.ACTIVE,
+        status=AssetAliasStatus.ACTIVE
     )
     db_session.add(alias)
     db_session.commit()
@@ -199,7 +160,7 @@ def setup_data(db_session: Session):
         name="Project 01",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=uuid.uuid4(),
-        created_by=user_admin.id,
+        created_by=user_admin.id
     )
     db_session.add(proj)
     db_session.commit()
@@ -208,7 +169,7 @@ def setup_data(db_session: Session):
         project_id=proj.id,
         asset_name="ABB Transformer 110kV",
         quantity=5.0,
-        description="ABB Transformer 110kV",
+        description="ABB Transformer 110kV"
     )
     db_session.add(line)
     db_session.commit()
@@ -221,7 +182,7 @@ def setup_data(db_session: Session):
         proposed_taxonomy_node_id=tax_node.id,
         status=IdentityCandidateStatus.PENDING,
         confidence_score=0.95,
-        match_method="deterministic",
+        match_method="deterministic"
     )
     db_session.add(candidate)
     db_session.commit()
@@ -230,7 +191,7 @@ def setup_data(db_session: Session):
         identity_candidate_id=candidate.id,
         component="model_code_match",
         score=0.98,
-        metadata_info={"matched_string": "110kV"},
+        metadata_info={"matched_string": "110kV"}
     )
     db_session.add(score)
     db_session.commit()
@@ -239,7 +200,7 @@ def setup_data(db_session: Session):
     review_item = IdentityReviewItem(
         project_asset_line_id=line.id,
         identity_candidate_id=candidate.id,
-        review_status=IdentityReviewStatus.PENDING,
+        review_status=IdentityReviewStatus.PENDING
     )
     db_session.add(review_item)
     db_session.commit()
@@ -250,7 +211,7 @@ def setup_data(db_session: Session):
         target_asset_id=canon_asset2.id,
         confidence_score=0.9200,
         status=DuplicateCandidateStatus.PENDING,
-        metadata_info={"matched_by": "deterministic"},
+        metadata_info={"matched_by": "deterministic"}
     )
     db_session.add(dup)
     db_session.commit()
@@ -260,7 +221,7 @@ def setup_data(db_session: Session):
         source_asset_id=canon_asset.id,
         target_asset_id=canon_asset2.id,
         reason="Initial Seeded Merge Decision",
-        status=MergeDecisionStatus.PROPOSED,
+        status=MergeDecisionStatus.PROPOSED
     )
     db_session.add(merge_dec)
     db_session.commit()
@@ -278,7 +239,7 @@ def setup_data(db_session: Session):
         "score_id": score.id,
         "duplicate_id": dup.id,
         "merge_decision_id": merge_dec.id,
-        "alias_id": alias.id,
+        "alias_id": alias.id
     }
 
 
@@ -292,120 +253,36 @@ def test_rbac_deny_by_default(client: TestClient, setup_data) -> None:
     # 1. Unauthenticated (no user headers) -> 401 Unauthorized
     assert client.get("/api/v1/asset-identity/candidates").status_code == 401
     assert client.get(f"/api/v1/asset-identity/candidates/{cand_id}").status_code == 401
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/candidates/{cand_id}", json={"status": "ignored"}
-        ).status_code
-        == 401
-    )
+    assert client.patch(f"/api/v1/asset-identity/candidates/{cand_id}", json={"status": "ignored"}).status_code == 401
 
     assert client.get("/api/v1/asset-identity/review-items").status_code == 401
     assert client.get(f"/api/v1/asset-identity/review-items/{review_id}").status_code == 401
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/review-items/{review_id}", json={"reviewer_note": "No"}
-        ).status_code
-        == 401
-    )
-    assert (
-        client.post(
-            f"/api/v1/asset-identity/review-items/{review_id}/resolve",
-            json={"review_status": "reviewed"},
-        ).status_code
-        == 401
-    )
+    assert client.patch(f"/api/v1/asset-identity/review-items/{review_id}", json={"reviewer_note": "No"}).status_code == 401
+    assert client.post(f"/api/v1/asset-identity/review-items/{review_id}/resolve", json={"review_status": "reviewed"}).status_code == 401
 
     assert client.get("/api/v1/asset-identity/duplicates").status_code == 401
     assert client.get(f"/api/v1/asset-identity/duplicates/{dup_id}").status_code == 401
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/duplicates/{dup_id}", json={"status": "ignored"}
-        ).status_code
-        == 401
-    )
+    assert client.patch(f"/api/v1/asset-identity/duplicates/{dup_id}", json={"status": "ignored"}).status_code == 401
     assert client.get("/api/v1/asset-identity/merge-decisions").status_code == 401
     assert client.get(f"/api/v1/asset-identity/merge-decisions/{merge_id}").status_code == 401
-    assert (
-        client.post(
-            "/api/v1/asset-identity/merge-decisions",
-            json={
-                "source_asset_id": str(uuid.uuid4()),
-                "target_asset_id": str(uuid.uuid4()),
-                "reason": "test",
-            },
-        ).status_code
-        == 401
-    )
+    assert client.post("/api/v1/asset-identity/merge-decisions", json={"source_asset_id": str(uuid.uuid4()), "target_asset_id": str(uuid.uuid4()), "reason": "test"}).status_code == 401
 
     # 2. Authenticated but unauthorized (headers present but no permissions) -> 403 Forbidden
     assert client.get("/api/v1/asset-identity/candidates", headers=h_unauth).status_code == 403
-    assert (
-        client.get(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_unauth).status_code
-        == 403
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/candidates/{cand_id}",
-            headers=h_unauth,
-            json={"status": "ignored"},
-        ).status_code
-        == 403
-    )
+    assert client.get(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_unauth).status_code == 403
+    assert client.patch(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_unauth, json={"status": "ignored"}).status_code == 403
 
     assert client.get("/api/v1/asset-identity/review-items", headers=h_unauth).status_code == 403
-    assert (
-        client.get(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_unauth).status_code
-        == 403
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/review-items/{review_id}",
-            headers=h_unauth,
-            json={"reviewer_note": "No"},
-        ).status_code
-        == 403
-    )
-    assert (
-        client.post(
-            f"/api/v1/asset-identity/review-items/{review_id}/resolve",
-            headers=h_unauth,
-            json={"review_status": "reviewed"},
-        ).status_code
-        == 403
-    )
+    assert client.get(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_unauth).status_code == 403
+    assert client.patch(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_unauth, json={"reviewer_note": "No"}).status_code == 403
+    assert client.post(f"/api/v1/asset-identity/review-items/{review_id}/resolve", headers=h_unauth, json={"review_status": "reviewed"}).status_code == 403
 
     assert client.get("/api/v1/asset-identity/duplicates", headers=h_unauth).status_code == 403
-    assert (
-        client.get(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_unauth).status_code
-        == 403
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/duplicates/{dup_id}",
-            headers=h_unauth,
-            json={"status": "ignored"},
-        ).status_code
-        == 403
-    )
+    assert client.get(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_unauth).status_code == 403
+    assert client.patch(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_unauth, json={"status": "ignored"}).status_code == 403
     assert client.get("/api/v1/asset-identity/merge-decisions", headers=h_unauth).status_code == 403
-    assert (
-        client.get(
-            f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_unauth
-        ).status_code
-        == 403
-    )
-    assert (
-        client.post(
-            "/api/v1/asset-identity/merge-decisions",
-            headers=h_unauth,
-            json={
-                "source_asset_id": str(uuid.uuid4()),
-                "target_asset_id": str(uuid.uuid4()),
-                "reason": "test",
-            },
-        ).status_code
-        == 403
-    )
+    assert client.get(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_unauth).status_code == 403
+    assert client.post("/api/v1/asset-identity/merge-decisions", headers=h_unauth, json={"source_asset_id": str(uuid.uuid4()), "target_asset_id": str(uuid.uuid4()), "reason": "test"}).status_code == 403
 
 
 def test_viewer_role_read_only(client: TestClient, setup_data) -> None:
@@ -417,73 +294,20 @@ def test_viewer_role_read_only(client: TestClient, setup_data) -> None:
 
     # Allowed reads
     assert client.get("/api/v1/asset-identity/candidates", headers=h_viewer).status_code == 200
-    assert (
-        client.get(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_viewer).status_code
-        == 200
-    )
+    assert client.get(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_viewer).status_code == 200
     assert client.get("/api/v1/asset-identity/review-items", headers=h_viewer).status_code == 200
-    assert (
-        client.get(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_viewer).status_code
-        == 200
-    )
+    assert client.get(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_viewer).status_code == 200
     assert client.get("/api/v1/asset-identity/duplicates", headers=h_viewer).status_code == 200
-    assert (
-        client.get(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_viewer).status_code
-        == 200
-    )
+    assert client.get(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_viewer).status_code == 200
     assert client.get("/api/v1/asset-identity/merge-decisions", headers=h_viewer).status_code == 200
-    assert (
-        client.get(
-            f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_viewer
-        ).status_code
-        == 200
-    )
+    assert client.get(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_viewer).status_code == 200
 
     # Denied mutations
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/candidates/{cand_id}",
-            headers=h_viewer,
-            json={"status": "ignored"},
-        ).status_code
-        == 403
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/review-items/{review_id}",
-            headers=h_viewer,
-            json={"reviewer_note": "Note"},
-        ).status_code
-        == 403
-    )
-    assert (
-        client.post(
-            f"/api/v1/asset-identity/review-items/{review_id}/resolve",
-            headers=h_viewer,
-            json={"review_status": "reviewed"},
-        ).status_code
-        == 403
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/duplicates/{dup_id}",
-            headers=h_viewer,
-            json={"status": "ignored"},
-        ).status_code
-        == 403
-    )
-    assert (
-        client.post(
-            "/api/v1/asset-identity/merge-decisions",
-            headers=h_viewer,
-            json={
-                "source_asset_id": str(uuid.uuid4()),
-                "target_asset_id": str(uuid.uuid4()),
-                "reason": "test",
-            },
-        ).status_code
-        == 403
-    )
+    assert client.patch(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_viewer, json={"status": "ignored"}).status_code == 403
+    assert client.patch(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_viewer, json={"reviewer_note": "Note"}).status_code == 403
+    assert client.post(f"/api/v1/asset-identity/review-items/{review_id}/resolve", headers=h_viewer, json={"review_status": "reviewed"}).status_code == 403
+    assert client.patch(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_viewer, json={"status": "ignored"}).status_code == 403
+    assert client.post("/api/v1/asset-identity/merge-decisions", headers=h_viewer, json={"source_asset_id": str(uuid.uuid4()), "target_asset_id": str(uuid.uuid4()), "reason": "test"}).status_code == 403
 
 
 def test_candidate_patch_validation(client: TestClient, db_session: Session, setup_data) -> None:
@@ -492,26 +316,22 @@ def test_candidate_patch_validation(client: TestClient, db_session: Session, set
     line_id = setup_data["line_id"]
 
     # 1. Invalid status value rejected
-    resp = client.patch(
-        f"/api/v1/asset-identity/candidates/{cand_id}",
-        headers=h_admin,
-        json={"status": "invalid_status"},
-    )
+    resp = client.patch(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_admin, json={"status": "invalid_status"})
     assert resp.status_code == 422
 
     # 2. Stale row version rejected (409)
-    resp = client.patch(
-        f"/api/v1/asset-identity/candidates/{cand_id}",
-        headers=h_admin,
-        json={"status": "ignored", "row_version": 999},
-    )
+    resp = client.patch(f"/api/v1/asset-identity/candidates/{cand_id}", headers=h_admin, json={"status": "ignored", "row_version": 999})
     assert resp.status_code == 409
 
     # 3. Extra fields are ignored (status / row_version only allowed)
     resp = client.patch(
         f"/api/v1/asset-identity/candidates/{cand_id}",
         headers=h_admin,
-        json={"status": "ignored", "confidence_score": 0.1, "match_method": "hacked"},
+        json={
+            "status": "ignored",
+            "confidence_score": 0.1,
+            "match_method": "hacked"
+        }
     )
     assert resp.status_code == 200
     db_session.expire_all()
@@ -522,11 +342,7 @@ def test_candidate_patch_validation(client: TestClient, db_session: Session, set
     assert cand.match_method == "deterministic"
 
     # 4. Does not create or update SimilarityScore
-    scores = (
-        db_session.query(SimilarityScore)
-        .filter(SimilarityScore.identity_candidate_id == cand_id)
-        .all()
-    )
+    scores = db_session.query(SimilarityScore).filter(SimilarityScore.identity_candidate_id == cand_id).all()
     assert len(scores) == 1
     assert float(scores[0].score) == 0.98
 
@@ -536,9 +352,7 @@ def test_candidate_patch_validation(client: TestClient, db_session: Session, set
     assert line.suggested_canonical_asset_id is None
 
 
-def test_candidate_detail_read_only_similarity_scores(
-    client: TestClient, db_session: Session, setup_data
-) -> None:
+def test_candidate_detail_read_only_similarity_scores(client: TestClient, db_session: Session, setup_data) -> None:
     cand_id = setup_data["candidate_id"]
     h_viewer = setup_data["headers_viewer"]
 
@@ -551,11 +365,7 @@ def test_candidate_detail_read_only_similarity_scores(
     assert data["similarity_scores"][0]["score"] == 0.98
 
     # Verify score value in database is not changed and matches expectations (no score recomputation)
-    db_score = (
-        db_session.query(SimilarityScore)
-        .filter(SimilarityScore.identity_candidate_id == cand_id)
-        .one()
-    )
+    db_score = db_session.query(SimilarityScore).filter(SimilarityScore.identity_candidate_id == cand_id).one()
     assert float(db_score.score) == 0.98
 
 
@@ -565,18 +375,17 @@ def test_review_item_patch_validation(client: TestClient, db_session: Session, s
     line_id = setup_data["line_id"]
 
     # 1. Stale row version rejected (409)
-    resp = client.patch(
-        f"/api/v1/asset-identity/review-items/{review_id}",
-        headers=h_admin,
-        json={"reviewer_note": "stale", "row_version": 999},
-    )
+    resp = client.patch(f"/api/v1/asset-identity/review-items/{review_id}", headers=h_admin, json={"reviewer_note": "stale", "row_version": 999})
     assert resp.status_code == 409
 
     # 2. Extra fields are ignored
     resp = client.patch(
         f"/api/v1/asset-identity/review-items/{review_id}",
         headers=h_admin,
-        json={"reviewer_note": "Valid Note", "reviewed_by": str(uuid.uuid4())},
+        json={
+            "reviewer_note": "Valid Note",
+            "reviewed_by": str(uuid.uuid4())
+        }
     )
     assert resp.status_code == 200
     db_session.expire_all()
@@ -589,9 +398,7 @@ def test_review_item_patch_validation(client: TestClient, db_session: Session, s
     assert line.approved_canonical_asset_id is None
 
 
-def test_review_item_resolve_verification(
-    client: TestClient, db_session: Session, setup_data
-) -> None:
+def test_review_item_resolve_verification(client: TestClient, db_session: Session, setup_data) -> None:
     review_id = setup_data["review_item_id"]
     h_admin = setup_data["headers_admin"]
     line_id = setup_data["line_id"]
@@ -606,28 +413,20 @@ def test_review_item_resolve_verification(
             "review_status": "reviewed",
             "reviewer_note": "Resolved and Approved",
             "decision_type": "approve_candidate",
-            "details": {"approved_name": "ABB Standard"},
-        },
+            "details": {"approved_name": "ABB Standard"}
+        }
     )
     assert resp.status_code == 200
     assert resp.json()["review_status"] == "reviewed"
 
     # 2. Verify decision log appended
-    dec_log = (
-        db_session.query(IdentityDecisionLog)
-        .filter(IdentityDecisionLog.project_asset_line_id == line_id)
-        .all()
-    )
+    dec_log = db_session.query(IdentityDecisionLog).filter(IdentityDecisionLog.project_asset_line_id == line_id).all()
     assert len(dec_log) == 1
     assert dec_log[0].decision_type == "approve_candidate"
     assert dec_log[0].details == {"approved_name": "ABB Standard"}
 
     # 3. Verify audit event logged
-    audit = (
-        db_session.query(AuditEvent)
-        .filter(AuditEvent.event_name == "IDENTITY_REVIEW_ITEM_RESOLVE")
-        .first()
-    )
+    audit = db_session.query(AuditEvent).filter(AuditEvent.event_name == "IDENTITY_REVIEW_ITEM_RESOLVE").first()
     assert audit is not None
     assert audit.entity_id == review_id
 
@@ -666,26 +465,21 @@ def test_duplicate_candidate_endpoints(client: TestClient, db_session: Session, 
     assert resp.json()["confidence_score"] == 0.92
 
     # 2. PATCH invalid status rejected
-    resp = client.patch(
-        f"/api/v1/asset-identity/duplicates/{dup_id}",
-        headers=h_admin,
-        json={"status": "invalid_status"},
-    )
+    resp = client.patch(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_admin, json={"status": "invalid_status"})
     assert resp.status_code == 422
 
     # 3. PATCH stale row version (409)
-    resp = client.patch(
-        f"/api/v1/asset-identity/duplicates/{dup_id}",
-        headers=h_admin,
-        json={"status": "ignored", "row_version": 999},
-    )
+    resp = client.patch(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_admin, json={"status": "ignored", "row_version": 999})
     assert resp.status_code == 409
 
     # 4. PATCH extra fields ignored
     resp = client.patch(
         f"/api/v1/asset-identity/duplicates/{dup_id}",
         headers=h_admin,
-        json={"status": "ignored", "confidence_score": 0.05},
+        json={
+            "status": "ignored",
+            "confidence_score": 0.05
+        }
     )
     assert resp.status_code == 200
     db_session.expire_all()
@@ -694,29 +488,20 @@ def test_duplicate_candidate_endpoints(client: TestClient, db_session: Session, 
     assert float(dup.confidence_score) == 0.92
 
     # 5. Verify audit event logged
-    audit = (
-        db_session.query(AuditEvent)
-        .filter(AuditEvent.event_name == "DUPLICATE_CANDIDATE_UPDATE")
-        .first()
-    )
+    audit = db_session.query(AuditEvent).filter(AuditEvent.event_name == "DUPLICATE_CANDIDATE_UPDATE").first()
     assert audit is not None
     assert audit.entity_id == dup_id
 
     # 6. Verify duplicate constraint (source != target)
     asset_id = setup_data["canon_asset_id"]
-    invalid_dup = DuplicateCandidate(
-        source_asset_id=asset_id, target_asset_id=asset_id, confidence_score=0.99
-    )
+    invalid_dup = DuplicateCandidate(source_asset_id=asset_id, target_asset_id=asset_id, confidence_score=0.99)
     db_session.add(invalid_dup)
     with pytest.raises(Exception):
         db_session.commit()
     db_session.rollback()
 
     # 7. DELETE returns 405 Method Not Allowed
-    assert (
-        client.delete(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_admin).status_code
-        == 405
-    )
+    assert client.delete(f"/api/v1/asset-identity/duplicates/{dup_id}", headers=h_admin).status_code == 405
 
 
 def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup_data) -> None:
@@ -741,19 +526,14 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
         json={
             "source_asset_id": str(asset_id),
             "target_asset_id": str(asset2_id),
-            "reason": "Requesting consolidation of duplicates",
-        },
+            "reason": "Requesting consolidation of duplicates"
+        }
     )
     assert resp.status_code == 201
     created_id = resp.json()["id"]
 
     # 3. Verify audit event logged
-    audit = (
-        db_session.query(AuditEvent)
-        .filter(AuditEvent.event_name == "MERGE_DECISION_CREATE")
-        .filter(AuditEvent.entity_id == uuid.UUID(created_id))
-        .first()
-    )
+    audit = db_session.query(AuditEvent).filter(AuditEvent.event_name == "MERGE_DECISION_CREATE").filter(AuditEvent.entity_id == uuid.UUID(created_id)).first()
     assert audit is not None
 
     # 4. Verify POST reject source == target
@@ -763,8 +543,8 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
         json={
             "source_asset_id": str(asset_id),
             "target_asset_id": str(asset_id),
-            "reason": "invalid merge",
-        },
+            "reason": "invalid merge"
+        }
     )
     assert resp.status_code == 422
 
@@ -775,8 +555,8 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
         json={
             "source_asset_id": str(uuid.uuid4()),
             "target_asset_id": str(asset2_id),
-            "reason": "missing source",
-        },
+            "reason": "missing source"
+        }
     )
     assert resp.status_code == 422
 
@@ -784,7 +564,11 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
     resp = client.post(
         "/api/v1/asset-identity/merge-decisions",
         headers=h_admin,
-        json={"source_asset_id": str(asset_id), "target_asset_id": str(asset2_id), "reason": ""},
+        json={
+            "source_asset_id": str(asset_id),
+            "target_asset_id": str(asset2_id),
+            "reason": ""
+        }
     )
     assert resp.status_code == 422
 
@@ -792,7 +576,10 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
     resp = client.post(
         "/api/v1/asset-identity/merge-decisions",
         headers=h_admin,
-        json={"source_asset_id": str(asset_id), "target_asset_id": str(asset2_id)},
+        json={
+            "source_asset_id": str(asset_id),
+            "target_asset_id": str(asset2_id)
+        }
     )
     assert resp.status_code == 422
 
@@ -813,20 +600,8 @@ def test_merge_decision_endpoints(client: TestClient, db_session: Session, setup
     assert variant.canonical_asset_id == asset_id
 
     # 10. No direct mutation endpoints or hard deletes exist for decisions (they return 405 Method Not Allowed since path parameter matches GET)
-    assert (
-        client.delete(
-            f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_admin
-        ).status_code
-        == 405
-    )
-    assert (
-        client.patch(
-            f"/api/v1/asset-identity/merge-decisions/{merge_id}",
-            headers=h_admin,
-            json={"reason": "edited"},
-        ).status_code
-        == 405
-    )
+    assert client.delete(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_admin).status_code == 405
+    assert client.patch(f"/api/v1/asset-identity/merge-decisions/{merge_id}", headers=h_admin, json={"reason": "edited"}).status_code == 405
 
 
 def test_forbidden_routes(client: TestClient) -> None:

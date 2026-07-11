@@ -14,7 +14,7 @@ interface AssetGridProps {
   drafts?: Record<string, InlineEditDraft>;
   onDraftChange?: (id: string, field: string, value: any, baseValue: any, rowVersion: number) => void;
   draftStates?: Record<string, any>;
-  onCommitDraft?: (id: string, fields: string[], versionToken: string) => void;
+  onCommitDraft?: (id: string, fields: string[]) => void;
 }
 
 export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {}, onCommitDraft }: AssetGridProps) {
@@ -288,7 +288,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                               onClick={() => {
                                 if (window.confirm("Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu.")) {
                                   if (onCommitDraft) {
-                                    onCommitDraft(row.project_asset_line_id, ["appraised_unit_price"], String(row.row_version));
+                                    onCommitDraft(row.project_asset_line_id, ["appraised_unit_price"]);
                                   }
                                 }
                               }}

@@ -6,28 +6,20 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    EvidenceFile,
-    EvidenceSensitivityLevel,
-    SupplierQuoteEvidence,
-    CatalogueEvidence,
-    InternetEvidence,
-    ImageEvidence,
-    EmailEvidence,
-    EvidenceExtractionResult,
-    EvidenceExtractionStatus,
-    EvidenceReviewDecision,
-    EvidenceReviewDecisionStatus,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus,
+    EvidenceFile, EvidenceSensitivityLevel,
+    SupplierQuoteEvidence, CatalogueEvidence, InternetEvidence, ImageEvidence, EmailEvidence,
+    EvidenceExtractionResult, EvidenceExtractionStatus,
+    EvidenceReviewDecision, EvidenceReviewDecisionStatus
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -58,17 +50,10 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_uploader(db_session: Session):
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
-    user = User(
-        organization_id=org.id,
-        email="uploader@test.com",
-        full_name="Uploader User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="uploader@test.com", full_name="Uploader User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
     return user
@@ -82,7 +67,7 @@ def create_mock_evidence_file(db_session: Session, user: User, filename: str) ->
         object_key=f"uploads/{filename}",
         checksum="dummyhash",
         sensitivity_level=EvidenceSensitivityLevel.NORMAL,
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -97,15 +82,13 @@ def test_supplier_quote_evidence(db_session: Session, setup_uploader) -> None:
         quote_number="Q-2026-001",
         quote_date=datetime.now(timezone.utc),
         total_amount=54000.50,
-        currency="USD",
+        currency="USD"
     )
     db_session.add(quote)
     db_session.commit()
 
     db_session.expire_all()
-    q_quote = (
-        db_session.query(SupplierQuoteEvidence).filter(SupplierQuoteEvidence.id == quote.id).one()
-    )
+    q_quote = db_session.query(SupplierQuoteEvidence).filter(SupplierQuoteEvidence.id == quote.id).one()
     assert q_quote.supplier_name == "ABB Vietnam"
     assert q_quote.quote_number == "Q-2026-001"
     assert q_quote.total_amount == 54000.50
@@ -120,7 +103,7 @@ def test_catalogue_evidence(db_session: Session, setup_uploader) -> None:
         manufacturer_name="Schneider Electric",
         catalogue_name="LV Switchboards Catalogue 2026",
         page_number="P-124",
-        product_code="MVS-1600",
+        product_code="MVS-1600"
     )
     db_session.add(cat)
     db_session.commit()
@@ -139,7 +122,7 @@ def test_internet_evidence(db_session: Session, setup_uploader) -> None:
         evidence_file_id=f.id,
         url="https://mpec.com.vn/product/123",
         captured_at=datetime.now(timezone.utc),
-        site_name="MPEC Product Catalog",
+        site_name="MPEC Product Catalog"
     )
     db_session.add(net)
     db_session.commit()
@@ -156,7 +139,7 @@ def test_image_evidence(db_session: Session, setup_uploader) -> None:
         evidence_file_id=f.id,
         resolution="4032x3024",
         captured_at=datetime.now(timezone.utc),
-        camera_metadata={"make": "Apple", "model": "iPhone 15 Pro"},
+        camera_metadata={"make": "Apple", "model": "iPhone 15 Pro"}
     )
     db_session.add(img)
     db_session.commit()
@@ -174,7 +157,7 @@ def test_email_evidence(db_session: Session, setup_uploader) -> None:
         sender="sales@abb.com",
         recipient="purchasing@valora.com",
         subject="FW: Pricing Quote 110kV Transformer",
-        sent_at=datetime.now(timezone.utc),
+        sent_at=datetime.now(timezone.utc)
     )
     db_session.add(email)
     db_session.commit()
@@ -192,17 +175,13 @@ def test_evidence_extraction_result(db_session: Session, setup_uploader) -> None
         evidence_file_id=f.id,
         status=EvidenceExtractionStatus.COMPLETED,
         confidence_score=0.9400,
-        extracted_payload={"model": "ABB-110", "price": 54000.0},
+        extracted_payload={"model": "ABB-110", "price": 54000.0}
     )
     db_session.add(ext)
     db_session.commit()
 
     db_session.expire_all()
-    q_ext = (
-        db_session.query(EvidenceExtractionResult)
-        .filter(EvidenceExtractionResult.id == ext.id)
-        .one()
-    )
+    q_ext = db_session.query(EvidenceExtractionResult).filter(EvidenceExtractionResult.id == ext.id).one()
     assert q_ext.status == EvidenceExtractionStatus.COMPLETED
     assert q_ext.confidence_score == 0.9400
     assert q_ext.extracted_payload == {"model": "ABB-110", "price": 54000.0}
@@ -216,15 +195,13 @@ def test_evidence_review_decision(db_session: Session, setup_uploader) -> None:
         status=EvidenceReviewDecisionStatus.ACCEPTED,
         reviewer_id=setup_uploader.id,
         reviewed_at=datetime.now(timezone.utc),
-        review_notes="Valid quote matching technical limits.",
+        review_notes="Valid quote matching technical limits."
     )
     db_session.add(dec)
     db_session.commit()
 
     db_session.expire_all()
-    q_dec = (
-        db_session.query(EvidenceReviewDecision).filter(EvidenceReviewDecision.id == dec.id).one()
-    )
+    q_dec = db_session.query(EvidenceReviewDecision).filter(EvidenceReviewDecision.id == dec.id).one()
     assert q_dec.status == EvidenceReviewDecisionStatus.ACCEPTED
     assert q_dec.reviewer_id == setup_uploader.id
     assert q_dec.review_notes == "Valid quote matching technical limits."
@@ -233,7 +210,10 @@ def test_evidence_review_decision(db_session: Session, setup_uploader) -> None:
 
 def test_specialized_evidence_deletion_restrict(db_session: Session, setup_uploader) -> None:
     f = create_mock_evidence_file(db_session, setup_uploader, "restrict.pdf")
-    quote = SupplierQuoteEvidence(evidence_file_id=f.id, supplier_name="Siemens")
+    quote = SupplierQuoteEvidence(
+        evidence_file_id=f.id,
+        supplier_name="Siemens"
+    )
     db_session.add(quote)
     db_session.commit()
 
@@ -247,14 +227,11 @@ def test_specialized_evidence_deletion_restrict(db_session: Session, setup_uploa
 def test_migration_chain() -> None:
     import importlib.util
     import os
-
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "../alembic/versions/a87a9b6da99a_create_specialized_evidence_tables.py",
-    )
+    
+    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da99a_create_specialized_evidence_tables.py")
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da99a", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-
+    
     assert migration.revision == "a87a9b6da99a"
     assert migration.down_revision == "a87a9b6da999"

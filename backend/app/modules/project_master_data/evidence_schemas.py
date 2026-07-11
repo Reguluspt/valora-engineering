@@ -3,12 +3,8 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.modules.project_master_data.models import (
-    EvidenceSourceType,
-    EvidenceFileStatus,
-    EvidenceSensitivityLevel,
-    EvidenceAccessType,
+    EvidenceSourceType, EvidenceFileStatus, EvidenceSensitivityLevel, EvidenceAccessType
 )
-
 
 class BaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)

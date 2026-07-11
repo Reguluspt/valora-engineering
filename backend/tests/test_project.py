@@ -92,7 +92,9 @@ def setup_data(db_session: Session):
     }
 
 
-def test_project_code_uniqueness_per_organization(db_session: Session, setup_data) -> None:
+def test_project_code_uniqueness_per_organization(
+    db_session: Session, setup_data
+) -> None:
     """Verifies uq_project_code_org unique constraint."""
     # 1. Create project in Org A
     p1 = Project(
@@ -135,7 +137,9 @@ def test_project_code_uniqueness_per_organization(db_session: Session, setup_dat
         db_session.commit()
 
 
-def test_project_fee_amount_non_negative_constraint(db_session: Session, setup_data) -> None:
+def test_project_fee_amount_non_negative_constraint(
+    db_session: Session, setup_data
+) -> None:
     """Verifies fee_amount CheckConstraint chk_project_fee_positive."""
     p = Project(
         organization_id=setup_data["org_a_id"],
@@ -152,7 +156,9 @@ def test_project_fee_amount_non_negative_constraint(db_session: Session, setup_d
         db_session.commit()
 
 
-def test_asset_line_constraints_and_cascade(db_session: Session, setup_data) -> None:
+def test_asset_line_constraints_and_cascade(
+    db_session: Session, setup_data
+) -> None:
     """Verifies non-negative value constraints and cascade deletes on ProjectAssetLines."""
     p = Project(
         organization_id=setup_data["org_a_id"],
@@ -216,7 +222,9 @@ def test_asset_line_constraints_and_cascade(db_session: Session, setup_data) -> 
     assert len(lines) == 0
 
 
-def test_project_file_constraints_and_cascade(db_session: Session, setup_data) -> None:
+def test_project_file_constraints_and_cascade(
+    db_session: Session, setup_data
+) -> None:
     """Verifies file size check constraint and cascade delete on ProjectFiles."""
     p = Project(
         organization_id=setup_data["org_a_id"],

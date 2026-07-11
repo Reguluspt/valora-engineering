@@ -7,23 +7,19 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    KnowledgeQueueItem,
-    KnowledgeQueueItemStatus,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus,
+    KnowledgeQueueItem, KnowledgeQueueItemStatus,
     KnowledgeConfidence,
-    KnowledgeConflict,
-    KnowledgeConflictStatus,
-    KnowledgeConflictSeverity,
+    KnowledgeConflict, KnowledgeConflictStatus, KnowledgeConflictSeverity
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -49,22 +45,17 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
-    user = User(
-        organization_id=org.id,
-        email="auditor@test.com",
-        full_name="Auditor User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="auditor@test.com", full_name="Auditor User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
-    return {"user_id": user.id}
+    return {
+        "user_id": user.id
+    }
 
 
 def test_knowledge_queue_item_persistence(db_session: Session, setup_seed_data) -> None:
@@ -76,7 +67,7 @@ def test_knowledge_queue_item_persistence(db_session: Session, setup_seed_data) 
         status=KnowledgeQueueItemStatus.PENDING,
         confidence_score=0.8800,
         is_manual=False,
-        is_pinned=False,
+        is_pinned=False
     )
     db_session.add(item)
     db_session.commit()
@@ -106,7 +97,7 @@ def test_knowledge_queue_auto_reject_logic(db_session: Session, setup_seed_data)
         status=KnowledgeQueueItemStatus.PENDING,
         confidence_score=0.4500,
         is_manual=False,
-        is_pinned=False,
+        is_pinned=False
     )
     assert should_auto_reject(item_low) is True
 
@@ -125,7 +116,7 @@ def test_knowledge_queue_auto_reject_logic(db_session: Session, setup_seed_data)
         status=KnowledgeQueueItemStatus.PENDING,
         confidence_score=0.4500,
         is_manual=False,
-        is_pinned=True,
+        is_pinned=True
     )
     assert should_auto_reject(item_pinned) is False
 
@@ -137,7 +128,7 @@ def test_knowledge_confidence_persistence(db_session: Session) -> None:
         target_id=target_uuid,
         confidence_score=0.9250,
         confidence_source="ai_extraction",
-        source_metadata={"model_name": "ValoraExtractor-v2", "tokens_processed": 540},
+        source_metadata={"model_name": "ValoraExtractor-v2", "tokens_processed": 540}
     )
     db_session.add(conf)
     db_session.commit()
@@ -156,13 +147,13 @@ def calculate_quote_conflict(prices: list[float]) -> tuple[float, float, str]:
         return 0.0, 0.0, "warning"
     min_price = min(prices)
     max_price = max(prices)
-
+    
     if min_price == 0.0:
         # Undefined percent spread, triggers blocking manual review
         return 999.0, 999.0, "blocking"
-
+        
     spread_percent = ((max_price - min_price) / min_price) * 100
-
+    
     # Calculate median deviation
     sorted_prices = sorted(prices)
     n = len(prices)
@@ -170,13 +161,13 @@ def calculate_quote_conflict(prices: list[float]) -> tuple[float, float, str]:
         median_price = sorted_prices[n // 2]
     else:
         median_price = (sorted_prices[n // 2 - 1] + sorted_prices[n // 2]) / 2.0
-
+        
     max_median_deviation_percent = max(abs(p - median_price) / median_price for p in prices) * 100
-
+    
     severity = "warning"
     if spread_percent >= 35.0 or max_median_deviation_percent >= 35.0:
         severity = "blocking"
-
+        
     return spread_percent, max_median_deviation_percent, severity
 
 
@@ -197,20 +188,16 @@ def test_knowledge_conflict_formula_and_persistence(db_session: Session, setup_s
         target_type="quote_batch",
         target_id=target_uuid,
         conflict_type="quote_price_variance",
-        severity=KnowledgeConflictSeverity.BLOCKING
-        if severity == "blocking"
-        else KnowledgeConflictSeverity.WARNING,
+        severity=KnowledgeConflictSeverity.BLOCKING if severity == "blocking" else KnowledgeConflictSeverity.WARNING,
         status=KnowledgeConflictStatus.OPEN,
         calculated_value=spread,
-        threshold_value=35.0,
+        threshold_value=35.0
     )
     db_session.add(conflict)
     db_session.commit()
 
     db_session.expire_all()
-    q_conflict = (
-        db_session.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict.id).one()
-    )
+    q_conflict = db_session.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict.id).one()
     assert q_conflict.target_id == target_uuid
     assert q_conflict.severity == KnowledgeConflictSeverity.BLOCKING
     assert q_conflict.calculated_value == spread
@@ -220,14 +207,11 @@ def test_knowledge_conflict_formula_and_persistence(db_session: Session, setup_s
 def test_migration_chain() -> None:
     import importlib.util
     import os
-
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "../alembic/versions/a87a9b6da99e_create_queue_conflict_tables.py",
-    )
+    
+    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da99e_create_queue_conflict_tables.py")
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da99e", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-
+    
     assert migration.revision == "a87a9b6da99e"
     assert migration.down_revision == "a87a9b6da99d"

@@ -3,15 +3,9 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from app.modules.project_master_data.models import (
-    TechnicalSpecificationVersionStatus,
-    QuoteBatchStatus,
-    QuoteLineStatus,
-    AppraisedPriceDecisionStatus,
-    KnowledgeQueueItemStatus,
-    KnowledgeConflictSeverity,
-    KnowledgeConflictStatus,
+    TechnicalSpecificationVersionStatus, QuoteBatchStatus, QuoteLineStatus,
+    AppraisedPriceDecisionStatus, KnowledgeQueueItemStatus, KnowledgeConflictSeverity, KnowledgeConflictStatus
 )
-
 
 class BaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)

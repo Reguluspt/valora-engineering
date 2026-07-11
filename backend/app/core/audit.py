@@ -11,9 +11,8 @@ SENSITIVE_KEY_SUBSTRINGS = {
     "key",
     "credential",
     "hash",
-    "passphrase",
+    "passphrase"
 }
-
 
 def sanitize_payload(payload: Any) -> Any:
     """
@@ -42,7 +41,7 @@ def log_audit_event(
     actor_user_id: Optional[uuid.UUID] = None,
     command_name: Optional[str] = None,
     correlation_id: Optional[str] = None,
-    payload: Optional[dict] = None,
+    payload: Optional[dict] = None
 ) -> AuditEvent:
     """
     Creates and persists an AuditEvent record inside the existing DB transaction.
@@ -62,7 +61,7 @@ def log_audit_event(
         entity_type=entity_type,
         entity_id=entity_id,
         correlation_id=correlation_id,
-        payload=sanitized_payload,
+        payload=sanitized_payload
     )
 
     db.add(audit_event)

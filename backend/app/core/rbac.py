@@ -3,9 +3,13 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.modules.project_master_data.models import User, OrganizationStatus, UserStatus, UserSession
+from app.modules.project_master_data.models import (
+    User,
+    OrganizationStatus,
+    UserStatus,
+    UserSession
+)
 from app.api.auth import get_current_session
-
 
 def derive_effective_permissions(user: User, db: Session) -> Set[str]:
     """
@@ -37,7 +41,8 @@ def derive_effective_permissions(user: User, db: Session) -> Set[str]:
 
 
 def get_current_user(
-    db: Session = Depends(get_db), session: UserSession = Depends(get_current_session)
+    db: Session = Depends(get_db),
+    session: UserSession = Depends(get_current_session)
 ) -> User:
     """
     Dependency to resolve the current active user from session cookie.
@@ -52,8 +57,8 @@ def get_current_user(
                 "message": "Không tìm thấy thông tin tài khoản đăng nhập.",
                 "nextAction": "Vui lòng đăng nhập lại.",
                 "severity": "blocking",
-                "retryable": False,
-            },
+                "retryable": False
+            }
         )
     return user
 
@@ -63,9 +68,9 @@ def require_permission(permission_code: str):
     FastAPI dependency builder to enforce a specific permission.
     Returns a dependency function that raises HTTP 403 if the user lacks the permission.
     """
-
     def dependency(
-        current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
     ) -> User:
         perms = derive_effective_permissions(current_user, db)
         if permission_code not in perms:
@@ -76,8 +81,8 @@ def require_permission(permission_code: str):
                     "message": "Tài khoản của bạn không được cấp quyền thực hiện thao tác này.",
                     "nextAction": "Vui lòng liên hệ với Quản trị viên để được hỗ trợ.",
                     "severity": "error",
-                    "retryable": False,
-                },
+                    "retryable": False
+                }
             )
         return current_user
 

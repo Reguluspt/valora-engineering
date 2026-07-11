@@ -40,9 +40,7 @@ class Settings(BaseSettings):
         origins = [o.strip() for o in self.backend_cors_origins.split(",") if o.strip()]
         # Empty wildcard security scanner check: block "*" in production env
         if self.valora_env == "production" and "*" in origins:
-            raise ValueError(
-                "Wildcard '*' is forbidden for CORS_ALLOWED_ORIGINS in production mode."
-            )
+            raise ValueError("Wildcard '*' is forbidden for CORS_ALLOWED_ORIGINS in production mode.")
         return origins
 
     model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
@@ -51,3 +49,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+

@@ -5,7 +5,6 @@ Revises: 8779d8e2f490
 Create Date: 2026-07-06 22:55:50.271645
 
 """
-
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "85f658678b7d"
-down_revision: Union[str, Sequence[str], None] = "8779d8e2f490"
+revision: str = '85f658678b7d'
+down_revision: Union[str, Sequence[str], None] = '8779d8e2f490'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,18 +24,8 @@ def upgrade() -> None:
     op.create_table(
         "projects",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("row_version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("customer_id", sa.Uuid(), nullable=False),
@@ -45,9 +34,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=50), nullable=False),
         sa.Column("knowledge_status", sa.String(length=50), nullable=False),
-        sa.Column(
-            "fee_amount", sa.Numeric(precision=15, scale=2), nullable=False, server_default="0.00"
-        ),
+        sa.Column("fee_amount", sa.Numeric(precision=15, scale=2), nullable=False, server_default="0.00"),
         sa.Column("fee_currency_id", sa.Uuid(), nullable=True),
         sa.Column("signer_profile_id", sa.Uuid(), nullable=True),
         sa.Column("created_by", sa.Uuid(), nullable=False),
@@ -56,38 +43,24 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["customer_id"], ["customers.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["fee_currency_id"], ["currencies.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organization_profiles.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organization_profiles.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["signer_profile_id"], ["signer_profiles.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["updated_by"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("organization_id", "code", name="uq_project_code_org"),
+        sa.UniqueConstraint("organization_id", "code", name="uq_project_code_org")
     )
 
     # 2. Create project_asset_lines table
     op.create_table(
         "project_asset_lines",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("row_version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("asset_name", sa.String(length=255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column(
-            "quantity", sa.Numeric(precision=15, scale=4), nullable=False, server_default="1.0000"
-        ),
+        sa.Column("quantity", sa.Numeric(precision=15, scale=4), nullable=False, server_default="1.0000"),
         sa.Column("unit_id", sa.Uuid(), nullable=True),
         sa.Column("raw_price", sa.Numeric(precision=15, scale=2), nullable=True),
         sa.Column("raw_price_currency_id", sa.Uuid(), nullable=True),
@@ -109,25 +82,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["raw_price_currency_id"], ["currencies.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["unit_id"], ["units.id"], ondelete="SET NULL"),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("id")
     )
 
     # 3. Create project_files table
     op.create_table(
         "project_files",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("row_version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("file_name", sa.String(length=255), nullable=False),
@@ -142,7 +105,7 @@ def upgrade() -> None:
         sa.CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["uploaded_by"], ["users.id"], ondelete="RESTRICT"),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("id")
     )
 
 

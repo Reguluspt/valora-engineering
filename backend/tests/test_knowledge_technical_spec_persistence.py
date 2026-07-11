@@ -6,36 +6,23 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    Customer,
-    TaxonomyNode,
-    TaxonomyNodeLevel,
-    TaxonomyStatus,
-    AssetFamily,
-    AssetFamilyStatus,
-    CanonicalAsset,
-    CanonicalAssetStatus,
-    Project,
-    ProjectWorkflowStatus,
-    EvidenceFile,
-    EvidenceSensitivityLevel,
-    TechnicalSpecification,
-    TechnicalSpecificationVersion,
-    TechnicalSpecificationVersionStatus,
-    KnowledgeVersion,
-    KnowledgeVersionStatus,
-    KnowledgeType,
-    KnowledgeLineage,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus, Customer,
+    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
+    AssetFamily, AssetFamilyStatus,
+    CanonicalAsset, CanonicalAssetStatus,
+    Project, ProjectWorkflowStatus,
+    EvidenceFile, EvidenceSensitivityLevel,
+    TechnicalSpecification, TechnicalSpecificationVersion, TechnicalSpecificationVersionStatus,
+    KnowledgeVersion, KnowledgeVersionStatus, KnowledgeType, KnowledgeLineage
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -62,24 +49,15 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
-    user = User(
-        organization_id=org.id,
-        email="curator@test.com",
-        full_name="Curator User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="curator@test.com", full_name="Curator User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
-    customer = Customer(
-        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id
-    )
+    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id)
     db_session.add(customer)
     db_session.commit()
 
@@ -88,7 +66,7 @@ def setup_seed_data(db_session: Session):
         code="TRANS",
         name_vi="Transformers",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(tax)
     db_session.commit()
@@ -97,7 +75,7 @@ def setup_seed_data(db_session: Session):
         taxonomy_node_id=tax.id,
         code="TRANSFORMER",
         name_vi="Transformer Family",
-        status=AssetFamilyStatus.ACTIVE,
+        status=AssetFamilyStatus.ACTIVE
     )
     db_session.add(family)
     db_session.commit()
@@ -106,7 +84,7 @@ def setup_seed_data(db_session: Session):
         asset_family_id=family.id,
         primary_taxonomy_node_id=tax.id,
         standard_name="ABB Transformer 110kV Standard",
-        status=CanonicalAssetStatus.ACTIVE,
+        status=CanonicalAssetStatus.ACTIVE
     )
     db_session.add(canon)
     db_session.commit()
@@ -117,7 +95,7 @@ def setup_seed_data(db_session: Session):
         name="Project 2026",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(proj)
     db_session.commit()
@@ -129,7 +107,7 @@ def setup_seed_data(db_session: Session):
         object_key="uploads/datasheet.pdf",
         checksum="datasheethash",
         sensitivity_level=EvidenceSensitivityLevel.NORMAL,
-        uploaded_by=user.id,
+        uploaded_by=user.id
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -138,13 +116,14 @@ def setup_seed_data(db_session: Session):
         "user_id": user.id,
         "canon_id": canon.id,
         "project_id": proj.id,
-        "evidence_id": ev_file.id,
+        "evidence_id": ev_file.id
     }
 
 
 def test_technical_specification_persistence(db_session: Session, setup_seed_data) -> None:
     spec = TechnicalSpecification(
-        canonical_asset_id=setup_seed_data["canon_id"], created_by=setup_seed_data["user_id"]
+        canonical_asset_id=setup_seed_data["canon_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(spec)
     db_session.commit()
@@ -158,7 +137,7 @@ def test_technical_specification_persistence(db_session: Session, setup_seed_dat
         source_project_id=setup_seed_data["project_id"],
         confidence_score=0.9500,
         status=TechnicalSpecificationVersionStatus.ACTIVE,
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(v1)
     db_session.commit()
@@ -169,7 +148,7 @@ def test_technical_specification_persistence(db_session: Session, setup_seed_dat
         version_number=1,
         attribute_values={"power_rating_kva": 63000},
         status=TechnicalSpecificationVersionStatus.DRAFT,
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(v1_dup)
     with pytest.raises(exc.IntegrityError):
@@ -185,29 +164,21 @@ def test_technical_specification_persistence(db_session: Session, setup_seed_dat
         source_project_id=setup_seed_data["project_id"],
         confidence_score=0.9000,
         status=TechnicalSpecificationVersionStatus.DRAFT,
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(v2)
     db_session.commit()
 
     db_session.expire_all()
-    q_spec = (
-        db_session.query(TechnicalSpecification).filter(TechnicalSpecification.id == spec.id).one()
-    )
-    assert (
-        len(
-            db_session.query(TechnicalSpecificationVersion)
-            .filter(TechnicalSpecificationVersion.technical_specification_id == spec.id)
-            .all()
-        )
-        == 2
-    )
+    q_spec = db_session.query(TechnicalSpecification).filter(TechnicalSpecification.id == spec.id).one()
+    assert len(db_session.query(TechnicalSpecificationVersion).filter(TechnicalSpecificationVersion.technical_specification_id == spec.id).all()) == 2
     assert q_spec.canonical_asset_id == setup_seed_data["canon_id"]
 
 
 def test_knowledge_version_registry(db_session: Session, setup_seed_data) -> None:
     spec = TechnicalSpecification(
-        canonical_asset_id=setup_seed_data["canon_id"], created_by=setup_seed_data["user_id"]
+        canonical_asset_id=setup_seed_data["canon_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(spec)
     db_session.commit()
@@ -216,7 +187,7 @@ def test_knowledge_version_registry(db_session: Session, setup_seed_data) -> Non
         technical_specification_id=spec.id,
         version_number=1,
         attribute_values={"power": "63kVA"},
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(v1)
     db_session.commit()
@@ -231,17 +202,13 @@ def test_knowledge_version_registry(db_session: Session, setup_seed_data) -> Non
         source_project_id=setup_seed_data["project_id"],
         source_evidence_ids=[str(setup_seed_data["evidence_id"])],
         status=KnowledgeVersionStatus.ACTIVE,
-        confidence_score=0.9800,
+        confidence_score=0.9800
     )
     db_session.add(kv)
     db_session.commit()
 
     db_session.expire_all()
-    q_kv = (
-        db_session.query(KnowledgeVersion)
-        .filter(KnowledgeVersion.concrete_version_id == v1.id)
-        .one()
-    )
+    q_kv = db_session.query(KnowledgeVersion).filter(KnowledgeVersion.concrete_version_id == v1.id).one()
     assert q_kv.knowledge_type == KnowledgeType.TECHNICAL_SPEC
     assert q_kv.version_number == 1
     assert q_kv.canonical_asset_id == setup_seed_data["canon_id"]
@@ -258,7 +225,7 @@ def test_knowledge_lineage_append_only(db_session: Session, setup_seed_data) -> 
         source_project_id=setup_seed_data["project_id"],
         source_evidence_ids=[str(setup_seed_data["evidence_id"])],
         actor_user_id=setup_seed_data["user_id"],
-        notes="Imported from verified vendor datasheets.",
+        notes="Imported from verified vendor datasheets."
     )
     db_session.add(lineage)
     db_session.commit()
@@ -272,7 +239,8 @@ def test_knowledge_lineage_append_only(db_session: Session, setup_seed_data) -> 
 
 def test_knowledge_parent_deletion_restrict(db_session: Session, setup_seed_data) -> None:
     spec = TechnicalSpecification(
-        canonical_asset_id=setup_seed_data["canon_id"], created_by=setup_seed_data["user_id"]
+        canonical_asset_id=setup_seed_data["canon_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(spec)
     db_session.commit()
@@ -281,7 +249,7 @@ def test_knowledge_parent_deletion_restrict(db_session: Session, setup_seed_data
         technical_specification_id=spec.id,
         version_number=1,
         attribute_values={"power": "63kVA"},
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(v1)
     db_session.commit()
@@ -296,14 +264,11 @@ def test_knowledge_parent_deletion_restrict(db_session: Session, setup_seed_data
 def test_migration_chain() -> None:
     import importlib.util
     import os
-
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "../alembic/versions/a87a9b6da99b_create_technical_specification_knowledge_tables.py",
-    )
+    
+    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da99b_create_technical_specification_knowledge_tables.py")
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da99b", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-
+    
     assert migration.revision == "a87a9b6da99b"
     assert migration.down_revision == "a87a9b6da99a"

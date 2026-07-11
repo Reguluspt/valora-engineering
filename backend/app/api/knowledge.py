@@ -8,31 +8,16 @@ from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User,
-    TechnicalSpecification,
-    TechnicalSpecificationVersion,
-    TechnicalSpecificationVersionStatus,
-    QuoteBatch,
-    QuoteBatchStatus,
-    QuoteLine,
-    QuoteLineStatus,
-    AppraisedPriceDecision,
-    AppraisedPriceDecisionStatus,
-    KnowledgeQueueItem,
-    KnowledgeQueueItemStatus,
-    KnowledgeConflict,
-    KnowledgeConflictStatus,
+    User, TechnicalSpecification, TechnicalSpecificationVersion, TechnicalSpecificationVersionStatus,
+    QuoteBatch, QuoteBatchStatus, QuoteLine, QuoteLineStatus,
+    AppraisedPriceDecision, AppraisedPriceDecisionStatus,
+    KnowledgeQueueItem, KnowledgeQueueItemStatus,
+    KnowledgeConflict, KnowledgeConflictStatus
 )
 from app.modules.project_master_data.knowledge_schemas import (
-    TechnicalSpecificationResponse,
-    TechnicalSpecificationVersionResponse,
-    TechnicalSpecificationVersionUpdate,
-    QuoteBatchResponse,
-    QuoteBatchUpdate,
-    AppraisedPriceDecisionResponse,
-    AppraisedPriceDecisionUpdate,
-    KnowledgeQueueItemResponse,
-    KnowledgeConflictResponse,
+    TechnicalSpecificationResponse, TechnicalSpecificationVersionResponse, TechnicalSpecificationVersionUpdate,
+    QuoteBatchResponse, QuoteBatchUpdate, AppraisedPriceDecisionResponse, AppraisedPriceDecisionUpdate,
+    KnowledgeQueueItemResponse, KnowledgeConflictResponse
 )
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["knowledge"])
@@ -51,12 +36,7 @@ def sanitize_audit_payload(d: dict) -> dict:
         elif isinstance(v, dict):
             res[k] = sanitize_audit_payload(v)
         elif isinstance(v, list):
-            res[k] = [
-                str(x)
-                if isinstance(x, uuid.UUID)
-                else (sanitize_audit_payload(x) if isinstance(x, dict) else x)
-                for x in v
-            ]
+            res[k] = [str(x) if isinstance(x, uuid.UUID) else (sanitize_audit_payload(x) if isinstance(x, dict) else x) for x in v]
         else:
             res[k] = v
     return res
@@ -66,11 +46,10 @@ def sanitize_audit_payload(d: dict) -> dict:
 # TECHNICAL SPECIFICATIONS
 # ==========================================
 
-
 @router.get("/technical-specifications", response_model=List[TechnicalSpecificationResponse])
 def list_technical_specifications(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     return db.query(TechnicalSpecification).all()
 
@@ -79,7 +58,7 @@ def list_technical_specifications(
 def get_technical_specification(
     id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     spec = db.query(TechnicalSpecification).filter(TechnicalSpecification.id == id).first()
     if not spec:
@@ -87,29 +66,19 @@ def get_technical_specification(
     return spec
 
 
-@router.patch(
-    "/technical-specifications/versions/{version_id}",
-    response_model=TechnicalSpecificationVersionResponse,
-)
+@router.patch("/technical-specifications/versions/{version_id}", response_model=TechnicalSpecificationVersionResponse)
 def update_technical_specification_version(
     version_id: uuid.UUID,
     payload: TechnicalSpecificationVersionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
-    ver = (
-        db.query(TechnicalSpecificationVersion)
-        .filter(TechnicalSpecificationVersion.id == version_id)
-        .first()
-    )
+    ver = db.query(TechnicalSpecificationVersion).filter(TechnicalSpecificationVersion.id == version_id).first()
     if not ver:
         raise HTTPException(status_code=404, detail="TechnicalSpecificationVersion not found")
 
     # Immutable active/approved versions check
-    if ver.status in [
-        TechnicalSpecificationVersionStatus.ACTIVE,
-        TechnicalSpecificationVersionStatus.SUPERSEDED,
-    ]:
+    if ver.status in [TechnicalSpecificationVersionStatus.ACTIVE, TechnicalSpecificationVersionStatus.SUPERSEDED]:
         raise HTTPException(status_code=422, detail="VAL_KNOW_PATCH_001")
 
     # Optimistic locking check
@@ -130,7 +99,7 @@ def update_technical_specification_version(
         event_name="TECHNICAL_SPECIFICATION_VERSION_UPDATE",
         entity_type="TechnicalSpecificationVersion",
         entity_id=ver.id,
-        payload=sanitize_audit_payload(update_dict),
+        payload=sanitize_audit_payload(update_dict)
     )
     return ver
 
@@ -139,11 +108,10 @@ def update_technical_specification_version(
 # QUOTE BATCHES
 # ==========================================
 
-
 @router.get("/quote-batches", response_model=List[QuoteBatchResponse])
 def list_quote_batches(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     return db.query(QuoteBatch).all()
 
@@ -152,7 +120,7 @@ def list_quote_batches(
 def get_quote_batch(
     quote_batch_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     batch = db.query(QuoteBatch).filter(QuoteBatch.id == quote_batch_id).first()
     if not batch:
@@ -165,7 +133,7 @@ def update_quote_batch(
     quote_batch_id: uuid.UUID,
     payload: QuoteBatchUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
     batch = db.query(QuoteBatch).filter(QuoteBatch.id == quote_batch_id).first()
     if not batch:
@@ -193,18 +161,16 @@ def update_quote_batch(
         event_name="QUOTE_BATCH_UPDATE",
         entity_type="QuoteBatch",
         entity_id=batch.id,
-        payload=sanitize_audit_payload(update_dict),
+        payload=sanitize_audit_payload(update_dict)
     )
     return batch
 
 
-@router.post(
-    "/quote-batches/{quote_batch_id}/revise", response_model=QuoteBatchResponse, status_code=201
-)
+@router.post("/quote-batches/{quote_batch_id}/revise", response_model=QuoteBatchResponse, status_code=201)
 def revise_quote_batch(
     quote_batch_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
     batch = db.query(QuoteBatch).filter(QuoteBatch.id == quote_batch_id).first()
     if not batch:
@@ -217,7 +183,7 @@ def revise_quote_batch(
         created_by=current_user.id,
         status=QuoteBatchStatus.DRAFT,
         revision_number=batch.revision_number + 1,
-        previous_quote_batch_id=batch.id,
+        previous_quote_batch_id=batch.id
     )
     db.add(rev_batch)
     db.commit()
@@ -235,7 +201,7 @@ def revise_quote_batch(
             unit_of_measure=line.unit_of_measure,
             quote_label=line.quote_label,
             quote_date=line.quote_date,
-            status=QuoteLineStatus.DRAFT,
+            status=QuoteLineStatus.DRAFT
         )
         db.add(rev_line)
     db.commit()
@@ -248,10 +214,7 @@ def revise_quote_batch(
         event_name="QUOTE_BATCH_REVISE",
         entity_type="QuoteBatch",
         entity_id=rev_batch.id,
-        payload={
-            "previous_quote_batch_id": str(batch.id),
-            "revision_number": rev_batch.revision_number,
-        },
+        payload={"previous_quote_batch_id": str(batch.id), "revision_number": rev_batch.revision_number}
     )
     return rev_batch
 
@@ -260,22 +223,19 @@ def revise_quote_batch(
 # APPRAISED PRICE DECISIONS
 # ==========================================
 
-
 @router.get("/appraised-price-decisions", response_model=List[AppraisedPriceDecisionResponse])
 def list_appraised_price_decisions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     return db.query(AppraisedPriceDecision).all()
 
 
-@router.get(
-    "/appraised-price-decisions/{decision_id}", response_model=AppraisedPriceDecisionResponse
-)
+@router.get("/appraised-price-decisions/{decision_id}", response_model=AppraisedPriceDecisionResponse)
 def get_appraised_price_decision(
     decision_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     dec = db.query(AppraisedPriceDecision).filter(AppraisedPriceDecision.id == decision_id).first()
     if not dec:
@@ -283,14 +243,12 @@ def get_appraised_price_decision(
     return dec
 
 
-@router.patch(
-    "/appraised-price-decisions/{decision_id}", response_model=AppraisedPriceDecisionResponse
-)
+@router.patch("/appraised-price-decisions/{decision_id}", response_model=AppraisedPriceDecisionResponse)
 def update_appraised_price_decision(
     decision_id: uuid.UUID,
     payload: AppraisedPriceDecisionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
     dec = db.query(AppraisedPriceDecision).filter(AppraisedPriceDecision.id == decision_id).first()
     if not dec:
@@ -318,7 +276,7 @@ def update_appraised_price_decision(
         event_name="APPRAISED_PRICE_DECISION_UPDATE",
         entity_type="AppraisedPriceDecision",
         entity_id=dec.id,
-        payload=sanitize_audit_payload(update_dict),
+        payload=sanitize_audit_payload(update_dict)
     )
     return dec
 
@@ -327,11 +285,10 @@ def update_appraised_price_decision(
 # KNOWLEDGE QUEUE
 # ==========================================
 
-
 @router.get("/queue", response_model=List[KnowledgeQueueItemResponse])
 def list_knowledge_queue(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     return db.query(KnowledgeQueueItem).all()
 
@@ -340,7 +297,7 @@ def list_knowledge_queue(
 def get_knowledge_queue_item(
     queue_item_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     item = db.query(KnowledgeQueueItem).filter(KnowledgeQueueItem.id == queue_item_id).first()
     if not item:
@@ -353,7 +310,7 @@ def claim_knowledge_queue_item(
     queue_item_id: uuid.UUID,
     expected_row_version: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
     item = db.query(KnowledgeQueueItem).filter(KnowledgeQueueItem.id == queue_item_id).first()
     if not item:
@@ -376,7 +333,7 @@ def claim_knowledge_queue_item(
         event_name="KNOWLEDGE_QUEUE_CLAIM",
         entity_type="KnowledgeQueueItem",
         entity_id=item.id,
-        payload={"status": "claimed"},
+        payload={"status": "claimed"}
     )
     return item
 
@@ -386,7 +343,7 @@ def release_knowledge_queue_item(
     queue_item_id: uuid.UUID,
     expected_row_version: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:update")),
+    current_user: User = Depends(require_permission("knowledge:update"))
 ):
     item = db.query(KnowledgeQueueItem).filter(KnowledgeQueueItem.id == queue_item_id).first()
     if not item:
@@ -409,7 +366,7 @@ def release_knowledge_queue_item(
         event_name="KNOWLEDGE_QUEUE_RELEASE",
         entity_type="KnowledgeQueueItem",
         entity_id=item.id,
-        payload={"status": "pending"},
+        payload={"status": "pending"}
     )
     return item
 
@@ -421,7 +378,7 @@ def review_knowledge_queue_item(
     expected_row_version: int,
     reject_reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:approve")),
+    current_user: User = Depends(require_permission("knowledge:approve"))
 ):
     item = db.query(KnowledgeQueueItem).filter(KnowledgeQueueItem.id == queue_item_id).first()
     if not item:
@@ -446,7 +403,7 @@ def review_knowledge_queue_item(
         event_name="KNOWLEDGE_QUEUE_REVIEW",
         entity_type="KnowledgeQueueItem",
         entity_id=item.id,
-        payload={"status": status_choice},
+        payload={"status": status_choice}
     )
     return item
 
@@ -455,11 +412,10 @@ def review_knowledge_queue_item(
 # KNOWLEDGE CONFLICTS
 # ==========================================
 
-
 @router.get("/conflicts", response_model=List[KnowledgeConflictResponse])
 def list_knowledge_conflicts(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     return db.query(KnowledgeConflict).all()
 
@@ -468,7 +424,7 @@ def list_knowledge_conflicts(
 def get_knowledge_conflict(
     conflict_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:read")),
+    current_user: User = Depends(require_permission("knowledge:read"))
 ):
     conflict = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id).first()
     if not conflict:
@@ -482,7 +438,7 @@ def resolve_knowledge_conflict(
     resolution_notes: str,
     expected_row_version: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("knowledge:approve")),
+    current_user: User = Depends(require_permission("knowledge:approve"))
 ):
     conflict = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id).first()
     if not conflict:
@@ -506,6 +462,6 @@ def resolve_knowledge_conflict(
         event_name="KNOWLEDGE_CONFLICT_RESOLVE",
         entity_type="KnowledgeConflict",
         entity_id=conflict.id,
-        payload={"status": "resolved"},
+        payload={"status": "resolved"}
     )
     return conflict

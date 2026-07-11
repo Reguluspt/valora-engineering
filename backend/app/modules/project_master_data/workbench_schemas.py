@@ -3,13 +3,9 @@ from datetime import datetime
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, ConfigDict
 from app.modules.project_master_data.models import (
-    WorkbenchSessionStatus,
-    InlineEditDraftStatus,
-    UndoRedoActionType,
-    WorkbenchPanelType,
-    WorkbenchNotificationType,
+    WorkbenchSessionStatus, InlineEditDraftStatus, UndoRedoActionType,
+    WorkbenchPanelType, WorkbenchNotificationType
 )
-
 
 class SchemaBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -206,7 +202,6 @@ class AssetLineDraftSaveResponse(BaseModel):
 class AssetLineDraftCommitRequest(BaseModel):
     field_keys: List[str]
     confirm: bool
-    version_token: str
 
 
 class AssetLineDraftCommitResponse(BaseModel):
@@ -271,3 +266,4 @@ class ProjectAssetImportStagingRowPaginationResponse(BaseModel):
     total: int
     limit: int
     offset: int
+

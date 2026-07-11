@@ -8,36 +8,20 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    Role,
-    UserRole,
-    EvidenceFile,
-    EvidenceFileStatus,
-    EvidenceSensitivityLevel,
-    TechnicalSpecification,
-    TechnicalSpecificationVersion,
-    TechnicalSpecificationVersionStatus,
-    QuoteBatch,
-    QuoteBatchStatus,
-    AppraisedPriceDecision,
-    AppraisedPriceDecisionStatus,
-    KnowledgeQueueItem,
-    KnowledgeQueueItemStatus,
-    KnowledgeConflict,
-    KnowledgeConflictStatus,
-    KnowledgeConflictSeverity,
+    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
+    TechnicalSpecification, TechnicalSpecificationVersion, TechnicalSpecificationVersionStatus,
+    QuoteBatch, QuoteBatchStatus, AppraisedPriceDecision, AppraisedPriceDecisionStatus,
+    KnowledgeQueueItem, KnowledgeQueueItemStatus,
+    KnowledgeConflict, KnowledgeConflictStatus, KnowledgeConflictSeverity
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
-
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
@@ -67,9 +51,7 @@ def client(db_session: Session) -> TestClient:
 
 @pytest.fixture
 def setup_rbac_users(db_session: Session):
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
@@ -88,25 +70,21 @@ def setup_rbac_users(db_session: Session):
             "evidence:link:create",
             "evidence:link:delete",
             "evidence:source:update",
-            "evidence:cleanup",
-        ],
+            "evidence:cleanup"
+        ]
     )
-    role_viewer = Role(code="viewer", display_name="Viewer", permissions=["knowledge:read"])
+    role_viewer = Role(
+        code="viewer",
+        display_name="Viewer",
+        permissions=[
+            "knowledge:read"
+        ]
+    )
     db_session.add_all([role_admin, role_viewer])
     db_session.commit()
 
-    user_admin = User(
-        organization_id=org.id,
-        email="admin@test.com",
-        full_name="Admin User",
-        status=UserStatus.ACTIVE,
-    )
-    user_viewer = User(
-        organization_id=org.id,
-        email="viewer@test.com",
-        full_name="Viewer User",
-        status=UserStatus.ACTIVE,
-    )
+    user_admin = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
+    user_viewer = User(organization_id=org.id, email="viewer@test.com", full_name="Viewer User", status=UserStatus.ACTIVE)
     db_session.add_all([user_admin, user_viewer])
     db_session.commit()
 
@@ -114,7 +92,11 @@ def setup_rbac_users(db_session: Session):
     db_session.add(UserRole(user_id=user_viewer.id, role_id=role_viewer.id, is_active=True))
     db_session.commit()
 
-    return {"admin_id": str(user_admin.id), "viewer_id": str(user_viewer.id), "org_id": org.id}
+    return {
+        "admin_id": str(user_admin.id),
+        "viewer_id": str(user_viewer.id),
+        "org_id": org.id
+    }
 
 
 def test_rbac_deny_by_default(client: TestClient, setup_rbac_users) -> None:
@@ -125,14 +107,14 @@ def test_rbac_deny_by_default(client: TestClient, setup_rbac_users) -> None:
     # 2. Viewer lacks update permission -> 403 Forbidden
     headers_viewer = {"X-User-Id": setup_rbac_users["viewer_id"]}
     resp = client.patch(
-        f"/api/v1/evidence/sources/{uuid.uuid4()}", json={"name": "New"}, headers=headers_viewer
+        f"/api/v1/evidence/sources/{uuid.uuid4()}",
+        json={"name": "New"},
+        headers=headers_viewer
     )
     assert resp.status_code == 403
 
 
-def test_evidence_file_immutability(
-    client: TestClient, db_session: Session, setup_rbac_users
-) -> None:
+def test_evidence_file_immutability(client: TestClient, db_session: Session, setup_rbac_users) -> None:
     headers_admin = {"X-User-Id": setup_rbac_users["admin_id"]}
 
     ev_file = EvidenceFile(
@@ -143,7 +125,7 @@ def test_evidence_file_immutability(
         checksum="hash1",
         sensitivity_level=EvidenceSensitivityLevel.NORMAL,
         status=EvidenceFileStatus.ACTIVE,
-        uploaded_by=uuid.UUID(setup_rbac_users["admin_id"]),
+        uploaded_by=uuid.UUID(setup_rbac_users["admin_id"])
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -157,9 +139,9 @@ def test_evidence_file_immutability(
             "object_key": "hacked_key",
             "checksum": "hacked_checksum",
             "file_size": 999999,
-            "expected_row_version": 1,
+            "expected_row_version": 1
         },
-        headers=headers_admin,
+        headers=headers_admin
     )
     assert resp.status_code == 200
     res_data = resp.json()
@@ -169,9 +151,7 @@ def test_evidence_file_immutability(
     assert res_data["file_size"] == 1024
 
 
-def test_concurrency_failures_returning_409(
-    client: TestClient, db_session: Session, setup_rbac_users
-) -> None:
+def test_concurrency_failures_returning_409(client: TestClient, db_session: Session, setup_rbac_users) -> None:
     headers_admin = {"X-User-Id": setup_rbac_users["admin_id"]}
 
     # 1. TechnicalSpecificationVersion Stale version check
@@ -184,7 +164,7 @@ def test_concurrency_failures_returning_409(
         version_number=1,
         attribute_values={"power": "110kV"},
         status=TechnicalSpecificationVersionStatus.DRAFT,
-        created_by=uuid.UUID(setup_rbac_users["admin_id"]),
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
     )
     db_session.add(v_draft)
     db_session.commit()
@@ -192,7 +172,7 @@ def test_concurrency_failures_returning_409(
     resp = client.patch(
         f"/api/v1/knowledge/technical-specifications/versions/{v_draft.id}",
         json={"attribute_values": {"power": "stale"}, "expected_row_version": 0},
-        headers=headers_admin,
+        headers=headers_admin
     )
     assert resp.status_code == 409
 
@@ -200,7 +180,7 @@ def test_concurrency_failures_returning_409(
     batch = QuoteBatch(
         created_by=uuid.UUID(setup_rbac_users["admin_id"]),
         status=QuoteBatchStatus.DRAFT,
-        revision_number=1,
+        revision_number=1
     )
     db_session.add(batch)
     db_session.commit()
@@ -208,7 +188,7 @@ def test_concurrency_failures_returning_409(
     resp = client.patch(
         f"/api/v1/knowledge/quote-batches/{batch.id}",
         json={"override_blocking_conflict_reason": "stale reason", "expected_row_version": 0},
-        headers=headers_admin,
+        headers=headers_admin
     )
     assert resp.status_code == 409
 
@@ -218,7 +198,7 @@ def test_concurrency_failures_returning_409(
         currency="USD",
         rationale="Draft pricing entry",
         status=AppraisedPriceDecisionStatus.DRAFT,
-        created_by=uuid.UUID(setup_rbac_users["admin_id"]),
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
     )
     db_session.add(dec)
     db_session.commit()
@@ -226,7 +206,7 @@ def test_concurrency_failures_returning_409(
     resp = client.patch(
         f"/api/v1/knowledge/appraised-price-decisions/{dec.id}",
         json={"final_unit_price": 48000.0, "expected_row_version": 0},
-        headers=headers_admin,
+        headers=headers_admin
     )
     assert resp.status_code == 409
 
@@ -235,13 +215,14 @@ def test_concurrency_failures_returning_409(
         target_type="technical_specification_version",
         target_id=uuid.uuid4(),
         status=KnowledgeQueueItemStatus.PENDING,
-        confidence_score=0.7500,
+        confidence_score=0.7500
     )
     db_session.add(item)
     db_session.commit()
 
     resp = client.post(
-        f"/api/v1/knowledge/queue/{item.id}/claim?expected_row_version=0", headers=headers_admin
+        f"/api/v1/knowledge/queue/{item.id}/claim?expected_row_version=0",
+        headers=headers_admin
     )
     assert resp.status_code == 409
 
@@ -253,14 +234,14 @@ def test_concurrency_failures_returning_409(
         severity=KnowledgeConflictSeverity.WARNING,
         status=KnowledgeConflictStatus.OPEN,
         calculated_value=25.0,
-        threshold_value=20.0,
+        threshold_value=20.0
     )
     db_session.add(conflict)
     db_session.commit()
 
     resp = client.post(
         f"/api/v1/knowledge/conflicts/{conflict.id}/resolve?resolution_notes=stale&expected_row_version=0",
-        headers=headers_admin,
+        headers=headers_admin
     )
     assert resp.status_code == 409
 

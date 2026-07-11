@@ -6,28 +6,20 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile,
-    OrganizationStatus,
-    User,
-    UserStatus,
-    TaxonomyNode,
-    TaxonomyNodeLevel,
-    TaxonomyStatus,
-    AssetFamily,
-    AssetFamilyStatus,
-    CanonicalAsset,
-    CanonicalAssetStatus,
-    QuoteBatch,
-    QuoteBatchStatus,
-    AppraisedPriceDecision,
-    AppraisedPriceDecisionStatus,
+    OrganizationProfile, OrganizationStatus,
+    User, UserStatus,
+    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
+    AssetFamily, AssetFamilyStatus,
+    CanonicalAsset, CanonicalAssetStatus,
+    QuoteBatch, QuoteBatchStatus, AppraisedPriceDecision, AppraisedPriceDecisionStatus
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -51,18 +43,11 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):
-    org = OrganizationProfile(
-        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
-    user = User(
-        organization_id=org.id,
-        email="curator@test.com",
-        full_name="Curator User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="curator@test.com", full_name="Curator User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -71,7 +56,7 @@ def setup_seed_data(db_session: Session):
         code="TRANS",
         name_vi="Transformers",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(tax)
     db_session.commit()
@@ -80,7 +65,7 @@ def setup_seed_data(db_session: Session):
         taxonomy_node_id=tax.id,
         code="TRANSFORMER",
         name_vi="Transformer Family",
-        status=AssetFamilyStatus.ACTIVE,
+        status=AssetFamilyStatus.ACTIVE
     )
     db_session.add(family)
     db_session.commit()
@@ -89,18 +74,24 @@ def setup_seed_data(db_session: Session):
         asset_family_id=family.id,
         primary_taxonomy_node_id=tax.id,
         standard_name="ABB Transformer 110kV Standard",
-        status=CanonicalAssetStatus.ACTIVE,
+        status=CanonicalAssetStatus.ACTIVE
     )
     db_session.add(canon)
     db_session.commit()
 
     batch = QuoteBatch(
-        canonical_asset_id=canon.id, created_by=user.id, status=QuoteBatchStatus.ACTIVE
+        canonical_asset_id=canon.id,
+        created_by=user.id,
+        status=QuoteBatchStatus.ACTIVE
     )
     db_session.add(batch)
     db_session.commit()
 
-    return {"user_id": user.id, "canon_id": canon.id, "batch_id": batch.id}
+    return {
+        "user_id": user.id,
+        "canon_id": canon.id,
+        "batch_id": batch.id
+    }
 
 
 def test_appraised_price_decision_persistence(db_session: Session, setup_seed_data) -> None:
@@ -114,17 +105,13 @@ def test_appraised_price_decision_persistence(db_session: Session, setup_seed_da
         status=AppraisedPriceDecisionStatus.ACTIVE,
         created_by=setup_seed_data["user_id"],
         approved_by=setup_seed_data["user_id"],
-        approved_at=datetime.now(timezone.utc),
+        approved_at=datetime.now(timezone.utc)
     )
     db_session.add(decision)
     db_session.commit()
 
     db_session.expire_all()
-    q_dec = (
-        db_session.query(AppraisedPriceDecision)
-        .filter(AppraisedPriceDecision.id == decision.id)
-        .one()
-    )
+    q_dec = db_session.query(AppraisedPriceDecision).filter(AppraisedPriceDecision.id == decision.id).one()
     assert q_dec.final_unit_price == 55000.0
     assert q_dec.currency == "USD"
     assert q_dec.rationale == "Median price from competitive active vendor quotes."
@@ -140,7 +127,7 @@ def test_appraised_price_decision_immutability(db_session: Session, setup_seed_d
         currency="USD",
         rationale="Median price",
         status=AppraisedPriceDecisionStatus.ACTIVE,
-        created_by=setup_seed_data["user_id"],
+        created_by=setup_seed_data["user_id"]
     )
     db_session.add(decision)
     db_session.commit()
@@ -156,14 +143,11 @@ def test_appraised_price_decision_immutability(db_session: Session, setup_seed_d
 def test_migration_chain() -> None:
     import importlib.util
     import os
-
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "../alembic/versions/a87a9b6da99d_create_appraised_price_decisions.py",
-    )
+    
+    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da99d_create_appraised_price_decisions.py")
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da99d", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-
+    
     assert migration.revision == "a87a9b6da99d"
     assert migration.down_revision == "a87a9b6da99c"

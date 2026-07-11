@@ -97,12 +97,11 @@ export function WorkbenchLayout({
     reloadDrafts();
   };
 
-  const handleCommitDraft = async (id: string, fields: string[], versionToken: string) => {
+  const handleCommitDraft = async (id: string, fields: string[]) => {
     try {
       await commitAssetLineDraft("hd-98-gia-lai", id, {
         field_keys: fields,
-        confirm: true,
-        version_token: versionToken
+        confirm: true
       });
       retryGrid();
       reloadDrafts();

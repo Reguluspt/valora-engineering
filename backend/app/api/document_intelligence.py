@@ -7,40 +7,19 @@ from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User,
-    ParsedDocument,
-    ExtractedField,
-    DocumentDiff,
-    DocumentCorrection,
-    EvidenceFile,
-    GeneratedDocument,
-    UserActionLog,
+    User, ParsedDocument, ExtractedField, DocumentDiff, DocumentCorrection,
+    EvidenceFile, GeneratedDocument, UserActionLog
 )
 from app.api.intelligence_schemas import (
-    ParsedDocumentCreate,
-    ParsedDocumentUpdate,
-    ParsedDocumentSchema,
-    ExtractedFieldCreate,
-    ExtractedFieldUpdate,
-    ExtractedFieldSchema,
-    DocumentDiffCreate,
-    DocumentDiffSchema,
-    DocumentCorrectionCreate,
-    DocumentCorrectionReview,
-    DocumentCorrectionSchema,
+    ParsedDocumentCreate, ParsedDocumentUpdate, ParsedDocumentSchema,
+    ExtractedFieldCreate, ExtractedFieldUpdate, ExtractedFieldSchema,
+    DocumentDiffCreate, DocumentDiffSchema,
+    DocumentCorrectionCreate, DocumentCorrectionReview, DocumentCorrectionSchema
 )
 
 router = APIRouter(prefix="/api/v1/document-intelligence", tags=["Document Intelligence"])
 
-
-def log_action(
-    db: Session,
-    user_id: uuid.UUID,
-    action_type: str,
-    target_type: str,
-    target_id: uuid.UUID,
-    payload: dict,
-):
+def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: str, target_id: uuid.UUID, payload: dict):
     serialized = {}
     for k, v in payload.items():
         if isinstance(v, uuid.UUID):
@@ -52,19 +31,18 @@ def log_action(
         action_type=action_type,
         target_type=target_type,
         target_id=target_id,
-        action_payload=serialized,
+        action_payload=serialized
     )
     db.add(log)
 
 
 # ----------------- ParsedDocument Endpoints -----------------
 
-
 @router.post("/parsed-documents", response_model=ParsedDocumentSchema, status_code=201)
 def create_parsed_document(
     data: ParsedDocumentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:parse:create")),
+    current_user: User = Depends(require_permission("document_intelligence:parse:create"))
 ):
     ev = db.query(EvidenceFile).filter(EvidenceFile.id == data.evidence_file_id).first()
     if not ev:
@@ -76,7 +54,7 @@ def create_parsed_document(
         page_count=data.page_count,
         text_content_hash=data.text_content_hash,
         parse_status=data.parse_status,
-        confidence_score=data.confidence_score,
+        confidence_score=data.confidence_score
     )
     db.add(doc)
     db.commit()
@@ -88,7 +66,7 @@ def create_parsed_document(
         entity_type="parsed_document",
         entity_id=doc.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "create_parsed_document", "parsed_document", doc.id, {})
     db.commit()
@@ -98,7 +76,7 @@ def create_parsed_document(
 @router.get("/parsed-documents", response_model=List[ParsedDocumentSchema])
 def list_parsed_documents(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:read")),
+    current_user: User = Depends(require_permission("document_intelligence:read"))
 ):
     return db.query(ParsedDocument).all()
 
@@ -107,7 +85,7 @@ def list_parsed_documents(
 def get_parsed_document(
     parsed_document_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:read")),
+    current_user: User = Depends(require_permission("document_intelligence:read"))
 ):
     doc = db.query(ParsedDocument).filter(ParsedDocument.id == parsed_document_id).first()
     if not doc:
@@ -120,7 +98,7 @@ def update_parsed_document(
     parsed_document_id: uuid.UUID,
     data: ParsedDocumentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:parse:create")),
+    current_user: User = Depends(require_permission("document_intelligence:parse:create"))
 ):
     doc = db.query(ParsedDocument).filter(ParsedDocument.id == parsed_document_id).first()
     if not doc:
@@ -150,7 +128,7 @@ def update_parsed_document(
         entity_type="parsed_document",
         entity_id=doc.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "update_parsed_document", "parsed_document", doc.id, {})
     db.commit()
@@ -159,17 +137,12 @@ def update_parsed_document(
 
 # ----------------- ExtractedField Endpoints -----------------
 
-
-@router.post(
-    "/parsed-documents/{parsed_document_id}/fields",
-    response_model=ExtractedFieldSchema,
-    status_code=201,
-)
+@router.post("/parsed-documents/{parsed_document_id}/fields", response_model=ExtractedFieldSchema, status_code=201)
 def create_extracted_field(
     parsed_document_id: uuid.UUID,
     data: ExtractedFieldCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:parse:create")),
+    current_user: User = Depends(require_permission("document_intelligence:parse:create"))
 ):
     doc = db.query(ParsedDocument).filter(ParsedDocument.id == parsed_document_id).first()
     if not doc:
@@ -183,7 +156,7 @@ def create_extracted_field(
         normalized_value=data.normalized_value,
         confidence_score=data.confidence_score,
         source_page_number=data.source_page_number,
-        status=data.status,
+        status=data.status
     )
     db.add(field)
     db.commit()
@@ -195,36 +168,23 @@ def create_extracted_field(
         entity_type="extracted_field",
         entity_id=field.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
-    log_action(
-        db,
-        current_user.id,
-        "create_extracted_field",
-        "extracted_field",
-        field.id,
-        {"key": field.field_key},
-    )
+    log_action(db, current_user.id, "create_extracted_field", "extracted_field", field.id, {"key": field.field_key})
     db.commit()
     return field
 
 
-@router.get(
-    "/parsed-documents/{parsed_document_id}/fields", response_model=List[ExtractedFieldSchema]
-)
+@router.get("/parsed-documents/{parsed_document_id}/fields", response_model=List[ExtractedFieldSchema])
 def list_extracted_fields(
     parsed_document_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:read")),
+    current_user: User = Depends(require_permission("document_intelligence:read"))
 ):
     doc = db.query(ParsedDocument).filter(ParsedDocument.id == parsed_document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Parsed document not found")
-    return (
-        db.query(ExtractedField)
-        .filter(ExtractedField.parsed_document_id == parsed_document_id)
-        .all()
-    )
+    return db.query(ExtractedField).filter(ExtractedField.parsed_document_id == parsed_document_id).all()
 
 
 @router.patch("/fields/{field_id}", response_model=ExtractedFieldSchema)
@@ -232,7 +192,7 @@ def update_extracted_field(
     field_id: uuid.UUID,
     data: ExtractedFieldUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:field:update")),
+    current_user: User = Depends(require_permission("document_intelligence:field:update"))
 ):
     field = db.query(ExtractedField).filter(ExtractedField.id == field_id).first()
     if not field:
@@ -262,7 +222,7 @@ def update_extracted_field(
         entity_type="extracted_field",
         entity_id=field.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "update_extracted_field", "extracted_field", field.id, {})
     db.commit()
@@ -271,16 +231,13 @@ def update_extracted_field(
 
 # ----------------- DocumentDiff Endpoints -----------------
 
-
 @router.post("/diffs", response_model=DocumentDiffSchema, status_code=201)
 def create_diff(
     data: DocumentDiffCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:diff:create")),
+    current_user: User = Depends(require_permission("document_intelligence:diff:create"))
 ):
-    src = (
-        db.query(GeneratedDocument).filter(GeneratedDocument.id == data.source_document_id).first()
-    )
+    src = db.query(GeneratedDocument).filter(GeneratedDocument.id == data.source_document_id).first()
     if not src:
         raise HTTPException(status_code=404, detail="Source generated document not found")
 
@@ -293,7 +250,7 @@ def create_diff(
         target_document_id=data.target_document_id,
         diff_type=data.diff_type,
         status=data.status,
-        diff_payload=data.diff_payload,
+        diff_payload=data.diff_payload
     )
     db.add(diff)
     db.commit()
@@ -305,7 +262,7 @@ def create_diff(
         entity_type="document_diff",
         entity_id=diff.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "create_diff", "document_diff", diff.id, {})
     db.commit()
@@ -316,7 +273,7 @@ def create_diff(
 def get_diff(
     diff_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:read")),
+    current_user: User = Depends(require_permission("document_intelligence:read"))
 ):
     diff = db.query(DocumentDiff).filter(DocumentDiff.id == diff_id).first()
     if not diff:
@@ -326,17 +283,12 @@ def get_diff(
 
 # ----------------- DocumentCorrection Endpoints -----------------
 
-
-@router.post(
-    "/parsed-documents/{parsed_document_id}/corrections",
-    response_model=DocumentCorrectionSchema,
-    status_code=201,
-)
+@router.post("/parsed-documents/{parsed_document_id}/corrections", response_model=DocumentCorrectionSchema, status_code=201)
 def create_correction(
     parsed_document_id: uuid.UUID,
     data: DocumentCorrectionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:correction:create")),
+    current_user: User = Depends(require_permission("document_intelligence:correction:create"))
 ):
     doc = db.query(ParsedDocument).filter(ParsedDocument.id == parsed_document_id).first()
     if not doc:
@@ -350,7 +302,7 @@ def create_correction(
         correction_payload=data.correction_payload,
         decision=data.decision,
         decided_by=data.decided_by,
-        status=data.status,
+        status=data.status
     )
     db.add(corr)
     db.commit()
@@ -362,7 +314,7 @@ def create_correction(
         entity_type="document_correction",
         entity_id=corr.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "create_correction", "document_correction", corr.id, {})
     db.commit()
@@ -373,7 +325,7 @@ def create_correction(
 def get_correction(
     correction_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:read")),
+    current_user: User = Depends(require_permission("document_intelligence:read"))
 ):
     corr = db.query(DocumentCorrection).filter(DocumentCorrection.id == correction_id).first()
     if not corr:
@@ -386,7 +338,7 @@ def review_correction(
     correction_id: uuid.UUID,
     data: DocumentCorrectionReview,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("document_intelligence:correction:review")),
+    current_user: User = Depends(require_permission("document_intelligence:correction:review"))
 ):
     corr = db.query(DocumentCorrection).filter(DocumentCorrection.id == correction_id).first()
     if not corr:
@@ -407,7 +359,7 @@ def review_correction(
         entity_type="document_correction",
         entity_id=corr.id,
         organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "review_correction", "document_correction", corr.id, {})
     db.commit()

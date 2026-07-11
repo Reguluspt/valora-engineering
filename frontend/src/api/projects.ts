@@ -68,7 +68,6 @@ export async function saveAssetLineDraft(
 export interface AssetLineDraftCommitRequest {
   field_keys: string[];
   confirm: boolean;
-  version_token: string;
 }
 
 export interface AssetLineDraftCommitResponse {
