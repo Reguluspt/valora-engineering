@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
+from app.core.security import hash_password
+
 
 from app.main import app
 from app.db import Base, get_db
@@ -740,7 +742,6 @@ def test_postgres_concurrent_session_create():
         OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
         ProjectWorkflowStatus, Customer, AuditEvent, WorkbenchSession, WorkbenchSessionStatus, UserActionLog
     )
-    from app.api.auth import hash_password
     import threading
 
     PGSession = sm(bind=pg_engine)
@@ -1024,7 +1025,6 @@ def test_postgres_create_session_unexpected_error_rolls_back():
         OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
         ProjectWorkflowStatus, Customer, AuditEvent, WorkbenchSession, WorkbenchSessionStatus, UserActionLog
     )
-    from app.api.auth import hash_password
     import app.api.workbench as wb_module
 
     PGSession = sm(bind=pg_engine)
