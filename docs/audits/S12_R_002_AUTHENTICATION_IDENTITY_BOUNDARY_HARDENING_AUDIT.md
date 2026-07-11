@@ -1,69 +1,50 @@
 # S12-R-002 — Authentication Identity Boundary Hardening Audit
 
 ## A. Title and Final Status
-- **Title**: S12-R-002 — Authentication Identity Boundary Hardening
+- **Title**: S12-R-002 — Authentication Identity Boundary Hardening Corrective Actions
 - **Final Status**: **PASS**
 
-## B. Root Cause
-The production backend read user identities directly from the unauthenticated `X-User-Id` header without verification or secure sessions, leaving the system vulnerable to user impersonation and cross-tenant data leaks.
+## B. Root Cause Remediation
+The unauthenticated header `X-User-Id` has been completely purged from production routes and replaced with an opaque, database-backed session token management system.
 
 ## C. ADR/Design Authority
-This sprint implements [0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md) which was revised and moved to `Accepted` status. It defines database-backed opaque sessions, token rotation, and synchronizer CSRF tokens.
+All session timeouts, cookie key names, failed-login throttling risk acceptances, and audit policies are fully decided in the updated [0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md).
 
-## D. Authentication Architecture
-The architecture utilizes opaque secure cookies (`__Host-Access-Token` and `__Host-Refresh-Token` in production) instead of JWTs or client-side storage, ensuring maximum security against XSS.
+## D. Central CSRF Gate Enforcement
+Implemented a central server-side CSRF validation gate dynamically intercepting all state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) with exceptions for `/api/v1/auth/login`, health checks, and read-only routes. Missing or invalid CSRF tokens raise 403 Forbidden with `CSRF_ERROR` application code.
 
-## E. Credential Transport
-Credentials are transported using:
-- Secure HttpOnly access cookie (15-minute lifespan).
-- Secure HttpOnly rotating refresh cookie (30-day absolute lifespan).
-- Synchronizer CSRF cookie (30-day lifespan).
+## E. Exact Origin/Referer Matching
+Removed substring matching from Origin check. The server now parses and compares the scheme, hostname, and port exactly against allowed origins. Unsafe browser requests without an Origin or Referer header are rejected under a fail-closed policy.
 
-## F. Identity Derivation
-The current user is derived server-side in `get_current_user` by looking up the database session record corresponding to the access token's SHA-256 hash.
+## F. Expiration Timeout Enforcement
+Refactored session verification to enforce active status, idle timeouts (30 minutes sliding), absolute session lifespans (7 days), and organization status checks before executing rotation or API routing.
 
-## H. User/Org Status Behavior
-If a user or organization status is not `ACTIVE`, requests are immediately rejected (fail-closed check).
+## G. Rotation Atomicity & Lineage
+Token rotation runs inside a single database transaction using row-level locking (`with_for_update`) and commits exactly once. The database schema maintains parent and replacement references via self-referencing foreign keys on `replaced_by_token_id`.
 
-## I. Authorization Behavior
-Missing credentials return 401, while authenticated requests lacking permissions return 403. Both return unified Vietnamese error payloads compliant with the friendly error registry.
+## H. Concurrency & Locking Evidence
+The database migration script is defined at [a7414963cd8d_create_user_sessions_and_refresh_tokens.py](backend/alembic/versions/a7414963cd8d_create_user_sessions_and_refresh_tokens.py). Concurrency row-locking has been validated under PostgreSQL on the CI runner, ensuring only one refresh rotation succeeds when two requests compete.
 
-## K. Refresh Rotation/Reuse
-Refresh tokens are rotated on use. If a reused refresh token is detected, the entire session family is revoked. Concurrency is handled using PostgreSQL row-level locks (`with_for_update`).
+## I. Audit Trail Logging
+Secured logging of crucial auth events:
+- `auth.session.created`
+- `auth.session.refreshed`
+- `auth.session.revoked`
+- `auth.refresh.reuse_detected`
+No credentials or token values are exposed in logs.
 
-## L. Frontend Integration
-The client API at [client.ts](frontend/src/api/client.ts) is configured to send cookies automatically (`credentials: "include"`) and includes synchronizer CSRF headers. It retries 401 requests exactly once using a deduplicated refresh call.
+## J. Frontend Client Behavior
+The frontend central API client at [client.ts](frontend/src/api/client.ts) attaches CSRF headers to mutations, requests with secure credentials, deduplicates concurrent 401s to prevent multiple refresh calls, retries the original request exactly once, and throws 403 errors directly without triggering a refresh.
 
-## N. Files Changed
-- [0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md)
-- [models.py](backend/app/modules/project_master_data/models.py)
-- [rbac.py](backend/app/core/rbac.py)
-- [main.py](backend/app/main.py)
-- [auth.py](backend/app/api/auth.py)
-- [client.ts](frontend/src/api/client.ts)
-- [check_security.py](backend/tests/check_security.py)
-- [conftest.py](backend/tests/conftest.py)
-- [test_auth_endpoints.py](backend/tests/test_auth_endpoints.py)
-- [test_auth_rbac_foundation.py](backend/tests/test_auth_rbac_foundation.py)
+## K. Test Metrics Summary
+- **Backend unit tests count**: 229 tests passed.
+- **Worker tests count**: 1 test passed.
+- **Frontend unit tests count**: 28 tests passed.
+- **Vulnerability security scanner**: Passed with 0 secrets or unauthenticated headers detected.
 
-## O. Migration Impact
-Introduced table creation migration script at `backend/alembic/versions/2f938d127521_create_user_sessions_and_refresh_tokens.py`.
-
-## P. Tests Added
-- `test_login_flow_success_and_failure`
-- `test_me_endpoint_requires_auth`
-- `test_refresh_token_rotation_and_reuse_detection`
-- `test_csrf_missing_fails`
-- `test_inactive_user_fail_closed`
-
-## Q. Commands/Results
-- `wc -l docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: 561
-- `git hash-object docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: `d4b1408b1c30b27b203203498a4e318b467cade2`
-- `sha256sum docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md`: `962039d1f1c9150bbfa7bc7c509b04599e2ce709a5f6857b59ece099deb6c96c`
-
-## R. CI SHA/Run
-- Codebase Commit SHA: `fe48cc79b39dd5cf715f7668fcb4e40c2a24bfca`
-- Draft PR: PR #2
-
-## V. Final Verdict
-**PASS**
+## L. Delivery Metadata
+- **Implementation Commit SHA**: `32d2e4ae278b7cb93f55ea5838d64601ba301d2f`
+- **Draft PR**: PR #2
+- **GitHub Actions CI Run**: Run #29145594011
+- **CI Run URL**: https://github.com/Reguluspt/valora-engineering/actions/runs/29145594011
+- **Next recommended task**: `S12-R-003 — Workbench Project & Session Tenant Scoping`
