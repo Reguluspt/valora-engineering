@@ -4,6 +4,7 @@ import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
+from typing import Optional
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -79,6 +80,45 @@ def raise_403(message: str = "Tài khoản của bạn không được cấp quy
             "nextAction": "Vui lòng liên hệ với Quản trị viên để được hỗ trợ.",
             "severity": "error",
             "retryable": False
+        }
+    )
+
+def terminate_session_safely(
+    db: Session,
+    session: UserSession,
+    status: str,
+    reason: str,
+    correlation_id: Optional[str] = None
+):
+    """
+    Centralized helper to safely terminate a user session and revoke all its refresh tokens.
+    Does NOT commit the transaction; caller must commit.
+    """
+    now = datetime.now(timezone.utc)
+    session.status = status
+    session.revoked_at = now
+    session.revoked_reason = reason
+
+    # Revoke all refresh token records belonging to this session
+    db.query(RefreshTokenRecord).filter(
+        RefreshTokenRecord.user_session_id == session.id
+    ).update({
+        "status": "revoked",
+        "revoked_at": now
+    }, synchronize_session=False)
+
+    # Emit audit event auth.session.revoked
+    log_audit_event(
+        db=db,
+        event_name="auth.session.revoked",
+        entity_type="UserSession",
+        entity_id=session.id,
+        organization_id=session.organization_id,
+        actor_user_id=session.user_id,
+        correlation_id=correlation_id,
+        payload={
+            "session_id": str(session.id),
+            "reason": reason
         }
     )
 
@@ -241,6 +281,7 @@ def get_current_session(
     request: Request,
     db: Session = Depends(get_db)
 ) -> UserSession:
+    correlation_id = get_correlation_id(request)
     acc_key, _ = get_cookie_keys()
     access_token = request.cookies.get(acc_key)
 
@@ -262,31 +303,66 @@ def get_current_session(
         raise_401("Phiên đăng nhập đã hết hạn.")
 
     if session.idle_expires_at.replace(tzinfo=timezone.utc) < now:
-        session.status = "expired"
+        terminate_session_safely(
+            db=db,
+            session=session,
+            status="expired",
+            reason="Phiên làm việc đã hết hạn do không hoạt động (idle timeout).",
+            correlation_id=correlation_id
+        )
         db.commit()
         raise_401("Phiên làm việc đã hết hạn do không hoạt động.")
 
     if session.absolute_expires_at.replace(tzinfo=timezone.utc) < now:
-        session.status = "expired"
+        terminate_session_safely(
+            db=db,
+            session=session,
+            status="expired",
+            reason="Thời gian phiên làm việc tối đa đã hết (absolute timeout).",
+            correlation_id=correlation_id
+        )
         db.commit()
         raise_401("Thời gian phiên làm việc tối đa đã hết hạn.")
 
     # Validate active user & organization status
     user = db.query(User).filter(User.id == session.user_id).first()
     if not user or user.status != UserStatus.ACTIVE:
-        raise_401("Tài khoản của bạn đã bị vô hiệu hóa hoặc không tồn tại.")
+        reason = "Tài khoản của bạn đã bị vô hiệu hóa hoặc không tồn tại."
+        terminate_session_safely(
+            db=db,
+            session=session,
+            status="revoked",
+            reason=reason,
+            correlation_id=correlation_id
+        )
+        db.commit()
+        raise_401(reason)
 
     # Enforce session/org consistency: user.organization_id must match session.organization_id
     if user.organization_id != session.organization_id:
-        session.status = "revoked"
-        session.revoked_reason = "Session organization mismatch — security fail-closed."
-        session.revoked_at = datetime.now(timezone.utc)
+        reason = "Session organization mismatch — security fail-closed."
+        terminate_session_safely(
+            db=db,
+            session=session,
+            status="revoked",
+            reason=reason,
+            correlation_id=correlation_id
+        )
         db.commit()
         raise_401("Phiên làm việc không hợp lệ — không khớp tổ chức.")
 
     org = user.organization
     if not org or org.status != OrganizationStatus.ACTIVE:
-        raise_401("Tổ chức của bạn đã bị vô hiệu hóa.")
+        reason = "Tổ chức của bạn đã bị vô hiệu hóa."
+        terminate_session_safely(
+            db=db,
+            session=session,
+            status="revoked",
+            reason=reason,
+            correlation_id=correlation_id
+        )
+        db.commit()
+        raise_401(reason)
 
     # Update last_seen_at and idle_expires_at (sliding window)
     session.last_seen_at = now
@@ -457,24 +533,20 @@ def refresh(
         # Check reuse detection
         if ref_record.status != "active":
             # REUSE DETECTED!
-            # Revoke correct token_family_id and session
+            # Revoke correct token_family_id and session using helper
             session = db.query(UserSession).filter(
                 UserSession.id == ref_record.user_session_id
             ).with_for_update().first()
             if session:
-                session.status = "revoked"
-                session.revoked_reason = "Phát hiện sử dụng lại token làm mới phiên cũ."
-                session.revoked_at = datetime.now(timezone.utc)
+                terminate_session_safely(
+                    db=db,
+                    session=session,
+                    status="revoked",
+                    reason="Phát hiện sử dụng lại token làm mới phiên cũ.",
+                    correlation_id=get_correlation_id(request)
+                )
                 
-            db.query(RefreshTokenRecord).filter(
-                RefreshTokenRecord.user_session_id == ref_record.user_session_id,
-                RefreshTokenRecord.token_family_id == ref_record.token_family_id
-            ).update({
-                "status": "revoked",
-                "revoked_at": datetime.now(timezone.utc)
-            })
-            
-            # Set reuse detected at
+            # Set reuse detected status on this specific token record
             ref_record.reuse_detected_at = datetime.now(timezone.utc)
             ref_record.status = "reused_detected"
             
@@ -500,6 +572,7 @@ def refresh(
         now = datetime.now(timezone.utc)
         is_expired = False
         expire_reason = ""
+        status_to_set = "revoked"
         
         if not session:
             is_expired = True
@@ -507,16 +580,16 @@ def refresh(
         elif session.idle_expires_at.replace(tzinfo=timezone.utc) < now:
             is_expired = True
             expire_reason = "Phiên làm việc đã hết hạn do không hoạt động (idle timeout)."
-            session.status = "expired"
+            status_to_set = "expired"
         elif session.absolute_expires_at.replace(tzinfo=timezone.utc) < now:
             is_expired = True
             expire_reason = "Thời gian phiên làm việc tối đa đã hết (absolute timeout)."
-            session.status = "expired"
+            status_to_set = "expired"
             
         if ref_record.expires_at.replace(tzinfo=timezone.utc) < now:
             is_expired = True
             expire_reason = "Token làm mới phiên đã hết hạn."
-            ref_record.status = "revoked"
+            status_to_set = "revoked"
             
         user = None
         if session:
@@ -524,47 +597,39 @@ def refresh(
             if not user or user.status != UserStatus.ACTIVE:
                 is_expired = True
                 expire_reason = "Tài khoản của bạn đã bị vô hiệu hóa."
+                status_to_set = "revoked"
             else:
                 org = user.organization
                 if not org or org.status != OrganizationStatus.ACTIVE:
                     is_expired = True
                     expire_reason = "Tổ chức của bạn đã bị vô hiệu hóa."
+                    status_to_set = "revoked"
                     
         # Enforce session/org consistency during refresh
         if session and user and user.organization_id != session.organization_id:
             is_expired = True
             expire_reason = "Session organization mismatch — security fail-closed."
+            status_to_set = "revoked"
 
         if is_expired:
             if session:
-                session.status = "revoked"
-                session.revoked_at = now
-                session.revoked_reason = expire_reason
-            ref_record.status = "revoked"
-            ref_record.revoked_at = now
-
-            db.query(RefreshTokenRecord).filter(
-                RefreshTokenRecord.user_session_id == ref_record.user_session_id,
-                RefreshTokenRecord.token_family_id == ref_record.token_family_id
-            ).update({
-                "status": "revoked",
-                "revoked_at": now
-            })
-
-            # Emit lifecycle audit event in the same transaction
-            if session:
-                log_audit_event(
+                terminate_session_safely(
                     db=db,
-                    event_name="auth.session.revoked",
-                    entity_type="UserSession",
-                    entity_id=session.id,
-                    organization_id=session.organization_id,
-                    actor_user_id=session.user_id,
-                    payload={
-                        "session_id": str(session.id),
-                        "reason": expire_reason
-                    }
+                    session=session,
+                    status=status_to_set,
+                    reason=expire_reason,
+                    correlation_id=get_correlation_id(request)
                 )
+            else:
+                ref_record.status = "revoked"
+                ref_record.revoked_at = now
+                db.query(RefreshTokenRecord).filter(
+                    RefreshTokenRecord.user_session_id == ref_record.user_session_id,
+                    RefreshTokenRecord.token_family_id == ref_record.token_family_id
+                ).update({
+                    "status": "revoked",
+                    "revoked_at": now
+                }, synchronize_session=False)
 
             db.commit()
             return make_cookie_clearing_response(expire_reason)
@@ -577,6 +642,7 @@ def refresh(
         new_refresh_token = secrets.token_hex(32)
         new_csrf_token = generate_csrf_token()
         
+        now = datetime.now(timezone.utc)
         new_acc_hash = hash_token(new_access_token)
         new_ref_hash = hash_token(new_refresh_token)
         new_csrf_hash = hash_token(new_csrf_token)
@@ -642,25 +708,12 @@ def logout(
 ):
     validate_csrf(request, session)
 
-    session.status = "revoked"
-    session.revoked_at = datetime.now(timezone.utc)
-    session.revoked_reason = "Người dùng đăng xuất."
-    
-    db.query(RefreshTokenRecord).filter(
-        RefreshTokenRecord.user_session_id == session.id
-    ).update({
-        "status": "revoked",
-        "revoked_at": datetime.now(timezone.utc)
-    })
-    
-    log_audit_event(
+    terminate_session_safely(
         db=db,
-        event_name="auth.session.revoked",
-        entity_type="UserSession",
-        entity_id=session.id,
-        organization_id=session.organization_id,
-        actor_user_id=session.user_id,
-        payload={"session_id": str(session.id), "reason": "User logged out"}
+        session=session,
+        status="revoked",
+        reason="Người dùng đăng xuất.",
+        correlation_id=get_correlation_id(request)
     )
     
     db.commit()

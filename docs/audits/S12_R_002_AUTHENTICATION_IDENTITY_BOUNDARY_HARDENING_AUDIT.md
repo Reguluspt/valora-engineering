@@ -85,18 +85,21 @@ Verified by test: `test_login_failed_audit_never_contains_sensitive_data`.
 
 ### D8. Lifecycle Audit Events In-Transaction
 When session terminates due to idle timeout, absolute timeout, refresh expiry, inactive user, or inactive org, `auth.session.revoked` is emitted inside the **same DB transaction** before `db.commit()`.
-Tests: `test_refresh_idle_timeout_emits_lifecycle_audit_event`, `test_refresh_inactive_user_emits_lifecycle_audit_event`.
+Tests: `test_refresh_idle_timeout_emits_lifecycle_audit_event`, `test_refresh_inactive_user_emits_lifecycle_audit_event`, `test_access_path_idle_timeout`, `test_access_path_absolute_timeout`, `test_access_path_inactive_user`, `test_access_path_inactive_org`, `test_access_path_session_org_mismatch`.
 
 ### D9. PostgreSQL Concurrent /refresh Endpoint Test
 Test `test_postgres_concurrent_refresh_endpoint` runs the **actual application endpoint** (`POST /auth/refresh`) on a real PostgreSQL database with two concurrent threads sharing the same refresh token and CSRF context.
 
 Assertions:
 - Exactly one thread receives HTTP 200 (successful rotation)
-- No two active replacement tokens in the same family
-- `replaced_by_token_id` points to new token; `parent_token_id` on new token points to old
-- Second request produces deterministic reuse/revocation outcome (HTTP 401)
-- Final session and token family state is consistent (no partial state)
-- Audit events emitted (`auth.session.refreshed` or `auth.refresh.reuse_detected`)
+- Exactly one thread receives HTTP 401 (reused detected)
+- No threads raise exceptions
+- No active replacement tokens in the family (final active token count is exactly 0)
+- Old record has status `reused_detected` and `replaced_by_token_id` points to the new token
+- New token's `parent_token_id` points back to the old token and status is `revoked`
+- Session final state is `revoked` (due to reuse detection)
+- Audit events emitted match exactly (`auth.session.refreshed`, `auth.refresh.reuse_detected`, and `auth.session.revoked`)
+- Cookie clearing is fully asserted using response header checks (in `_assert_refresh_expiry_401`) for `access_token`/`__Host-Access-Token`, `refresh_token`/`__Host-Refresh-Token`, and `XSRF-TOKEN` with `Max-Age=0`, `Path=/`, `HttpOnly`, and correct `SameSite`/`Secure` flags.
 
 Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). **Executed on CI with real PostgreSQL service — PASS.**
 
@@ -136,27 +139,26 @@ Accepted risk: Login rate limiting and brute-force protection (lockout, exponent
 
 ## H. Delivery Metadata
 
-| Field | Value |
-|---|---|
-| Branch | s12-r-002-authentication-identity-boundary-hardening |
-| PR | Draft PR #2 |
-| Previous reviewed head | bbbddd1c0ee752404e84ad3d0b93ea7b9560673d |
-| Final implementation commit SHA | 6fed2a3de4e38e7ef457aa158275db131dcc081e |
-| CI Run ID | 29147229050 |
-| CI Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29147229050 |
-| Backend result | success (251 passed) |
-| Worker result | success |
-| Frontend result | success (28 passed) |
-| Refresh idle/absolute expiry tests | PASS |
-| Actual PG concurrent endpoint test | PASS (CI) |
-| Atomic rollback regression test | PASS |
-| Failed-login audit result | PASS |
-| Session/org consistency result | PASS |
-| Lifecycle audit event result | PASS |
-| CSRF method/origin tests | PASS |
-| Security scanner result | PASS |
-| S12R-AUTH-001 violations | 0 |
-| Known accepted risk | Login rate limiting deferred to Sprint 13 (Application Security Lead) |
+- **Implementation SHA under audit**: `6fed2a3de4e38e7ef457aa158275db131dcc081e`
+- **CI run for implementation SHA**: `29147229050` (CI Run URL: `https://github.com/Reguluspt/valora-engineering/actions/runs/29147229050`)
+- **Documentation amendment SHA recorded in PR acceptance comment**: `Recorded in PR acceptance comment`
+- **Current PR URL**: `Draft PR #2`
+
+- **Backend result**: success (256 passed)
+- **Worker result**: success
+- **Frontend result**: success (28 passed)
+- **Refresh idle/absolute expiry tests**: PASS
+- **Access-path lifecycle tests**: PASS
+- **Cookie-deletion header tests**: PASS
+- **Actual PG concurrent endpoint test**: PASS
+- **Atomic rollback regression test**: PASS
+- **Failed-login audit result**: PASS
+- **Session/org consistency result**: PASS
+- **Lifecycle audit event result**: PASS
+- **CSRF method/origin tests**: PASS
+- **Security scanner result**: PASS
+- **S12R-AUTH-001 violations**: 0
+- **Known accepted risk**: Login rate limiting deferred to Sprint 13 (Application Security Lead)
 
 ---
 

@@ -263,7 +263,30 @@ def _assert_refresh_expiry_401(client: TestClient, ref_token: str, csrf_token: s
     c = make_refresh_client(client, ref_token, csrf_token)
     resp = c.post("/api/v1/auth/refresh")
     assert resp.status_code == 401, f"Expected 401, got {resp.status_code}: {resp.text}"
-    # At minimum response must not grant new tokens and must be 401
+    
+    # Assert cookie deletion headers are present and correct
+    set_cookies = resp.headers.get_list("set-cookie")
+    acc_key, ref_key = get_cookie_keys()
+    keys_to_check = [acc_key, ref_key, "XSRF-TOKEN"]
+    
+    for key in keys_to_check:
+        matching = [h for h in set_cookies if h.startswith(f"{key}=")]
+        assert len(matching) > 0, f"Missing Set-Cookie header for {key}"
+        cookie_val = matching[0]
+        
+        assert "Max-Age=0" in cookie_val or "expires=" in cookie_val.lower()
+        assert "Path=/" in cookie_val or "path=/" in cookie_val
+        if key in (acc_key, ref_key):
+            assert "HttpOnly" in cookie_val or "httponly" in cookie_val.lower()
+        else:
+            assert "HttpOnly" not in cookie_val and "httponly" not in cookie_val.lower()
+            
+        assert "SameSite=strict" in cookie_val or "samesite=strict" in cookie_val.lower()
+        
+        is_prod = settings.valora_env == "production"
+        if is_prod:
+            assert "Secure" in cookie_val or "secure" in cookie_val.lower()
+            
     return resp
 
 
@@ -803,13 +826,16 @@ def test_postgres_concurrent_refresh_endpoint():
         t1.join(timeout=30)
         t2.join(timeout=30)
 
-        # Exactly one should succeed
+        # Exactly one should succeed, and one should fail with 401 (not exception)
         statuses = [r[1] for r in results]
+        # Verify no thread raised an exception
+        assert "exception" not in statuses, f"Threads encountered exceptions: {results}"
+        
         successes = [s for s in statuses if s == 200]
-        failures = [s for s in statuses if s != 200]
+        failures = [s for s in statuses if s == 401]
 
-        assert len(successes) == 1, f"Expected 1 success, got: {results}"
-        assert len(failures) == 1, f"Expected 1 failure, got: {results}"
+        assert len(successes) == 1, f"Expected exactly 1 success, got: {results}"
+        assert len(failures) == 1, f"Expected exactly 1 HTTP 401 failure, got: {results}"
 
         # Verify DB state
         verify_db = PGSession()
@@ -820,8 +846,8 @@ def test_postgres_concurrent_refresh_endpoint():
             ).first()
 
             assert old_rec is not None
-            # Old record must be rotated (not active, and not reused again)
-            assert old_rec.status in ("rotated", "reused_detected", "revoked"), (
+            # Old record must have state "reused_detected" because reuse detection was triggered
+            assert old_rec.status == "reused_detected", (
                 f"Old token in unexpected state: {old_rec.status}"
             )
 
@@ -834,23 +860,25 @@ def test_postgres_concurrent_refresh_endpoint():
             ).first()
             assert new_rec is not None
             assert new_rec.parent_token_id == old_rec.id
+            # The new replacement token must be revoked because reuse detection was triggered
+            assert new_rec.status == "revoked"
 
-            # No two active replacement tokens in same family
+            # Exactly zero active tokens in family/session since the entire session was revoked
             active_tokens = verify_db.query(RefreshTokenRecord).filter(
-                RefreshTokenRecord.token_family_id == old_rec.token_family_id,
+                RefreshTokenRecord.user_session_id == old_rec.user_session_id,
                 RefreshTokenRecord.status == "active"
             ).all()
-            assert len(active_tokens) <= 1, (
-                f"Multiple active tokens in family: {[(t.id, t.status) for t in active_tokens]}"
+            assert len(active_tokens) == 0, (
+                f"Expected exactly 0 active tokens, got: {[(t.id, t.status) for t in active_tokens]}"
             )
 
-            # Session final state is non-partial
+            # Session final state is revoked (due to reuse detection)
             sess = verify_db.query(UserSession).filter(
                 UserSession.id == old_rec.user_session_id
             ).first()
-            assert sess.status in ("active", "revoked"), f"Unexpected session state: {sess.status}"
+            assert sess.status == "revoked", f"Expected session to be revoked, got: {sess.status}"
 
-            # Audit events: at least one refresh event or reuse event
+            # Audit events: must contain refreshed, reuse_detected, and revoked
             refresh_evts = verify_db.query(AuditEvent).filter(
                 AuditEvent.event_name.in_([
                     "auth.session.refreshed",
@@ -858,7 +886,11 @@ def test_postgres_concurrent_refresh_endpoint():
                     "auth.session.revoked"
                 ])
             ).all()
-            assert len(refresh_evts) >= 1, "Expected at least one audit event for refresh"
+            
+            event_names = [e.event_name for e in refresh_evts]
+            assert "auth.session.refreshed" in event_names
+            assert "auth.refresh.reuse_detected" in event_names
+            assert "auth.session.revoked" in event_names
 
         finally:
             verify_db.close()
@@ -880,3 +912,90 @@ def test_postgres_concurrent_refresh_endpoint():
         finally:
             cleanup_db.close()
         pg_engine.dispose()
+
+
+# ─────────────────────────────────────────────────
+# 12. Access-path lifecycle tests via GET /api/v1/auth/me
+# ─────────────────────────────────────────────────
+
+def _assert_access_path_termination(client: TestClient, db_session: Session, session_id: uuid.UUID):
+    resp = client.get("/api/v1/auth/me")
+    assert resp.status_code == 401
+
+    # Verify session is expired/revoked
+    sess = db_session.query(UserSession).filter(UserSession.id == session_id).first()
+    db_session.expire(sess)
+    assert sess.status in ("expired", "revoked")
+
+    # Verify all refresh tokens in family/session are revoked
+    active_tokens = db_session.query(RefreshTokenRecord).filter(
+        RefreshTokenRecord.user_session_id == session_id,
+        RefreshTokenRecord.status == "active"
+    ).all()
+    assert len(active_tokens) == 0, f"Expected 0 active tokens, got: {len(active_tokens)}"
+
+    # Verify auth.session.revoked was created
+    event = db_session.query(AuditEvent).filter(
+        AuditEvent.event_name == "auth.session.revoked",
+        AuditEvent.entity_id == session_id
+    ).first()
+    assert event is not None, "Expected auth.session.revoked audit event to be created"
+    
+    # Audit payload must not contain sensitive information
+    if event.payload:
+        for k, v in event.payload.items():
+            k_lower = k.lower()
+            assert not any(sub in k_lower for sub in ["password", "secret", "token", "key", "credential", "hash", "passphrase", "cookie"])
+            if isinstance(v, str):
+                v_lower = v.lower()
+                assert not any(sub in v_lower for sub in ["password", "secret", "token", "key", "credential", "hash", "passphrase", "cookie"])
+
+
+def test_access_path_idle_timeout(client: TestClient, test_setup, db_session: Session):
+    login(client)
+    session = db_session.query(UserSession).filter(UserSession.status == "active").first()
+    session.idle_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.commit()
+    _assert_access_path_termination(client, db_session, session.id)
+
+
+def test_access_path_absolute_timeout(client: TestClient, test_setup, db_session: Session):
+    login(client)
+    session = db_session.query(UserSession).filter(UserSession.status == "active").first()
+    session.absolute_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.commit()
+    _assert_access_path_termination(client, db_session, session.id)
+
+
+def test_access_path_inactive_user(client: TestClient, test_setup, db_session: Session):
+    login(client)
+    session = db_session.query(UserSession).filter(UserSession.status == "active").first()
+    test_setup["user"].status = UserStatus.INACTIVE
+    db_session.commit()
+    _assert_access_path_termination(client, db_session, session.id)
+
+
+def test_access_path_inactive_org(client: TestClient, test_setup, db_session: Session):
+    login(client)
+    session = db_session.query(UserSession).filter(UserSession.status == "active").first()
+    test_setup["org"].status = OrganizationStatus.INACTIVE
+    db_session.commit()
+    _assert_access_path_termination(client, db_session, session.id)
+
+
+def test_access_path_session_org_mismatch(client: TestClient, test_setup, db_session: Session):
+    login(client)
+    session = db_session.query(UserSession).filter(UserSession.status == "active").first()
+    
+    other_org = OrganizationProfile(
+        legal_name="Other Corp Ltd",
+        organization_slug="other-org-ltd",
+        status=OrganizationStatus.ACTIVE
+    )
+    db_session.add(other_org)
+    db_session.commit()
+    
+    session.organization_id = other_org.id
+    db_session.commit()
+    _assert_access_path_termination(client, db_session, session.id)
+
