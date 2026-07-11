@@ -21,6 +21,11 @@ from app.modules.project_master_data.workbench_schemas import (
     AutosaveCheckpointCreate, AutosaveCheckpointSchema, UndoRedoStackEntrySchema,
     PanelStateSave, PanelStateSchema, WorkbenchNotificationSchema
 )
+from app.modules.workflow_workbench import (
+    require_owned_workbench_session,
+    resolve_workbench_target,
+    raise_safe_404
+)
 
 router = APIRouter(prefix="/api/v1/workbench", tags=["Workbench"])
 
@@ -50,9 +55,21 @@ def create_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:open"))
 ):
-    proj = db.query(Project).filter(Project.id == data.project_id).first()
+    proj = db.query(Project).filter(
+        Project.id == data.project_id,
+        Project.organization_id == current_user.organization_id
+    ).first()
     if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise_safe_404()
+
+    # Enforce active session policy: resume if exists
+    existing = db.query(WorkbenchSession).filter(
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.project_id == data.project_id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
+    if existing:
+        return existing
 
     session = WorkbenchSession(
         user_id=current_user.id,
@@ -60,18 +77,26 @@ def create_session(
         status=WorkbenchSessionStatus.ACTIVE
     )
     db.add(session)
-    db.commit()
-    db.refresh(session)
+    db.flush()
 
+    # Log audit event and action in the same transaction
     log_audit_event(
         db=db,
-        event_name="WORKBENCH_SESSION_START",
-        entity_type="workbench_session",
+        event_name="workbench.session.started",
+        entity_type="WorkbenchSession",
         entity_id=session.id,
-        actor_user_id=current_user.id
+        organization_id=proj.organization_id,
+        actor_user_id=current_user.id,
+        payload={
+            "session_id": str(session.id),
+            "project_id": str(proj.id),
+            "before_status": None,
+            "after_status": "active"
+        }
     )
     log_action(db, current_user.id, "session_start", "workbench_session", session.id, {})
     db.commit()
+    db.refresh(session)
 
     return session
 
@@ -82,10 +107,12 @@ def get_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return session
+    return require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
 
 @router.post("/sessions/{session_id}/heartbeat", response_model=WorkbenchSessionSchema)
@@ -95,12 +122,24 @@ def session_heartbeat(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     if session.row_version != req.expected_row_version:
-        raise HTTPException(status_code=409, detail="Stale row version")
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "title": "Xung đột phiên bản",
+                "message": "Dữ liệu phiên làm việc đã bị thay đổi ở nơi khác.",
+                "nextAction": "Vui lòng tải lại trang để đồng bộ dữ liệu mới nhất.",
+                "severity": "warning",
+                "retryable": True
+            }
+        )
 
     session.last_active_at = datetime.now(timezone.utc)
     session.row_version += 1
@@ -113,6 +152,44 @@ def session_heartbeat(
     return session
 
 
+@router.post("/sessions/{session_id}/close", response_model=WorkbenchSessionSchema)
+def close_session(
+    session_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit"))
+):
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
+
+    if session.status != WorkbenchSessionStatus.CLOSED:
+        before_status = session.status.value if hasattr(session.status, "value") else session.status
+        session.status = WorkbenchSessionStatus.CLOSED
+
+        log_audit_event(
+            db=db,
+            event_name="workbench.session.ended",
+            entity_type="WorkbenchSession",
+            entity_id=session.id,
+            organization_id=session.project.organization_id,
+            actor_user_id=current_user.id,
+            payload={
+                "session_id": str(session.id),
+                "project_id": str(session.project_id),
+                "before_status": before_status,
+                "after_status": "closed",
+                "reason": "User closed session"
+            }
+        )
+        db.commit()
+        db.refresh(session)
+
+    return session
+
+
 @router.post("/sessions/{session_id}/layout", response_model=WorkbenchLayoutSchema)
 def save_layout(
     session_id: uuid.UUID,
@@ -120,9 +197,12 @@ def save_layout(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     layout = db.query(WorkbenchLayout).filter(
         WorkbenchLayout.user_id == current_user.id,
@@ -163,11 +243,17 @@ def list_grid_views(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
-    return db.query(AssetGridView).filter(AssetGridView.user_id == current_user.id).all()
+    return db.query(AssetGridView).filter(
+        AssetGridView.user_id == current_user.id,
+        AssetGridView.project_id == session.project_id
+    ).all()
 
 
 @router.post("/sessions/{session_id}/grid-view", response_model=AssetGridViewSchema)
@@ -177,12 +263,16 @@ def save_grid_view(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     view = db.query(AssetGridView).filter(
         AssetGridView.user_id == current_user.id,
+        AssetGridView.project_id == session.project_id,
         AssetGridView.view_name == grid_data.view_name
     ).first()
 
@@ -215,9 +305,12 @@ def save_selection(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     sel = db.query(WorkbenchSelection).filter(
         WorkbenchSelection.session_id == session_id,
@@ -252,9 +345,12 @@ def get_selection(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
     return db.query(WorkbenchSelection).filter(WorkbenchSelection.session_id == session_id).all()
 
@@ -266,9 +362,15 @@ def save_inline_edit(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session or session.status != WorkbenchSessionStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Invalid or inactive session")
+    session = require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
+
+    # Validate target belongs to session's project and tenant
+    resolve_workbench_target(data.target_type, data.target_id, session.project_id, db)
 
     # Save to draft only (does not mutate ProjectAssetLine official table)
     draft = InlineEditDraft(
@@ -312,9 +414,12 @@ def list_inline_edits(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
     return db.query(InlineEditDraft).filter(InlineEditDraft.session_id == session_id).all()
 
@@ -326,9 +431,12 @@ def save_checkpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     checkpoint = AutosaveCheckpoint(
         session_id=session_id,
@@ -350,9 +458,12 @@ def execute_undo(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:undo_redo"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     entry = db.query(UndoRedoStackEntry).filter(
         UndoRedoStackEntry.session_id == session_id,
@@ -378,9 +489,12 @@ def execute_redo(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:undo_redo"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     entry = db.query(UndoRedoStackEntry).filter(
         UndoRedoStackEntry.session_id == session_id,
@@ -407,9 +521,12 @@ def save_panel_state(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=True
+    )
 
     panel = db.query(PanelState).filter(
         PanelState.session_id == session_id,
@@ -440,9 +557,12 @@ def list_panel_states(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
     return db.query(PanelState).filter(PanelState.session_id == session_id).all()
 
@@ -453,10 +573,14 @@ def list_notifications(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:read"))
 ):
-    session = db.query(WorkbenchSession).filter(WorkbenchSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    require_owned_workbench_session(
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+        require_active=False
+    )
 
     return db.query(WorkbenchNotification).filter(
-        WorkbenchNotification.user_id == current_user.id
+        WorkbenchNotification.user_id == current_user.id,
+        WorkbenchNotification.session_id == session_id
     ).all()

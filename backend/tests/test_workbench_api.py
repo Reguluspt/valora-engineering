@@ -147,7 +147,7 @@ def test_workbench_sessions_endpoints(client: TestClient, db_session: Session, s
     assert resp_view.status_code == 403
 
     # 2. GET /api/v1/workbench/sessions/{session_id}
-    resp = client.get(f"/api/v1/workbench/sessions/{session_id}", headers=headers_viewer)
+    resp = client.get(f"/api/v1/workbench/sessions/{session_id}", headers=headers_admin)
     assert resp.status_code == 200
 
     # 3. POST /api/v1/workbench/sessions/{session_id}/heartbeat
@@ -209,8 +209,20 @@ def test_layouts_and_grid_views(client: TestClient, db_session: Session, setup_r
 
 
 def test_selections_and_drafts(client: TestClient, db_session: Session, setup_rbac_users) -> None:
+    from app.modules.project_master_data.models import ProjectAssetLine
     headers_admin = {"X-User-Id": setup_rbac_users["admin_id"]}
     headers_viewer = {"X-User-Id": setup_rbac_users["viewer_id"]}
+
+    # Seed an asset line for validation
+    line = ProjectAssetLine(
+        id=uuid.uuid4(),
+        project_id=uuid.UUID(setup_rbac_users["project_id"]),
+        asset_name="Test Asset",
+        quantity=1.0
+    )
+    db_session.add(line)
+    db_session.commit()
+    line_id = str(line.id)
 
     # Create session
     resp = client.post(
@@ -221,7 +233,7 @@ def test_selections_and_drafts(client: TestClient, db_session: Session, setup_rb
     session_id = resp.json()["id"]
 
     # 1. POST /api/v1/workbench/sessions/{session_id}/selection (Save selection)
-    target_ids = [str(uuid.uuid4())]
+    target_ids = [line_id]
     resp = client.post(
         f"/api/v1/workbench/sessions/{session_id}/selection",
         json={
@@ -233,7 +245,7 @@ def test_selections_and_drafts(client: TestClient, db_session: Session, setup_rb
     assert resp.status_code == 200
 
     # 2. GET /api/v1/workbench/sessions/{session_id}/selection
-    resp = client.get(f"/api/v1/workbench/sessions/{session_id}/selection", headers=headers_viewer)
+    resp = client.get(f"/api/v1/workbench/sessions/{session_id}/selection", headers=headers_admin)
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
@@ -242,9 +254,11 @@ def test_selections_and_drafts(client: TestClient, db_session: Session, setup_rb
         f"/api/v1/workbench/sessions/{session_id}/inline-edit",
         json={
             "target_type": "project_asset_line",
-            "target_id": str(uuid.uuid4()),
-            "field_key": "standard_name",
-            "draft_value": {"val": "New Transformer Name"}
+            "target_id": line_id,
+            "field_key": "appraised_unit_price",
+            "draft_value": {"val": 150.0},
+            "base_value": {"val": 100.0},
+            "base_row_version": 1
         },
         headers=headers_admin
     )
@@ -252,14 +266,26 @@ def test_selections_and_drafts(client: TestClient, db_session: Session, setup_rb
     assert resp.json()["status"] == "draft"
 
     # 4. GET /api/v1/workbench/sessions/{session_id}/inline-edits
-    resp = client.get(f"/api/v1/workbench/sessions/{session_id}/inline-edits", headers=headers_viewer)
+    resp = client.get(f"/api/v1/workbench/sessions/{session_id}/inline-edits", headers=headers_admin)
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
 
 def test_autosave_checkpoints_and_stack(client: TestClient, db_session: Session, setup_rbac_users) -> None:
+    from app.modules.project_master_data.models import ProjectAssetLine
     headers_admin = {"X-User-Id": setup_rbac_users["admin_id"]}
     headers_viewer = {"X-User-Id": setup_rbac_users["viewer_id"]}
+
+    # Seed an asset line for validation
+    line = ProjectAssetLine(
+        id=uuid.uuid4(),
+        project_id=uuid.UUID(setup_rbac_users["project_id"]),
+        asset_name="Test Asset 2",
+        quantity=1.0
+    )
+    db_session.add(line)
+    db_session.commit()
+    line_id = str(line.id)
 
     # Create session
     resp = client.post(
@@ -272,7 +298,7 @@ def test_autosave_checkpoints_and_stack(client: TestClient, db_session: Session,
     # 1. POST /api/v1/workbench/sessions/{session_id}/checkpoint (Create checkpoint)
     resp = client.post(
         f"/api/v1/workbench/sessions/{session_id}/checkpoint",
-        json={"checkpoint_payload": {"drafts": [{"field": "standard_name"}]}},
+        json={"checkpoint_payload": {"drafts": [{"field": "appraised_unit_price"}]}},
         headers=headers_admin
     )
     assert resp.status_code == 200
@@ -282,9 +308,11 @@ def test_autosave_checkpoints_and_stack(client: TestClient, db_session: Session,
         f"/api/v1/workbench/sessions/{session_id}/inline-edit",
         json={
             "target_type": "project_asset_line",
-            "target_id": str(uuid.uuid4()),
-            "field_key": "standard_name",
-            "draft_value": {"val": "New Transformer Name"}
+            "target_id": line_id,
+            "field_key": "appraised_unit_price",
+            "draft_value": {"val": 150.0},
+            "base_value": {"val": 100.0},
+            "base_row_version": 1
         },
         headers=headers_admin
     )
@@ -346,4 +374,249 @@ def test_panel_states_and_notifications(client: TestClient, db_session: Session,
     assert len(resp.json()) == 1
 
 
-# ChangeRequest is now in scope
+def login_user_in_test(client: TestClient, db_session: Session, user_id: uuid.UUID, org_id: uuid.UUID):
+    from app.api.auth import get_cookie_keys, hash_token
+    import secrets
+    from app.modules.project_master_data.models import UserSession
+    from datetime import datetime, timedelta, timezone
+
+    token = secrets.token_hex(32)
+    token_hash = hash_token(token)
+
+    csrf_token = secrets.token_hex(32)
+    csrf_hash = hash_token(csrf_token)
+
+    session = UserSession(
+        user_id=user_id,
+        organization_id=org_id,
+        access_token_hash=token_hash,
+        csrf_token_hash=csrf_hash,
+        status="active",
+        access_expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+        idle_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        absolute_expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+    )
+    db_session.add(session)
+    db_session.commit()
+
+    acc_key, _ = get_cookie_keys()
+    client.cookies.set(acc_key, token)
+    client.cookies.set("XSRF-TOKEN", csrf_token)
+    client.headers["X-CSRF-Token"] = csrf_token
+    client.headers["Origin"] = "http://localhost:5173"
+    return {"token": token, "csrf_token": csrf_token}
+
+
+def test_workbench_tenant_and_user_isolation(client: TestClient, db_session: Session, setup_rbac_users) -> None:
+    from app.modules.project_master_data.models import (
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
+        ProjectWorkflowStatus, Customer
+    )
+    from app.api.auth import get_cookie_keys
+
+    # 1. Tenant Isolation: Create Org B, User B, Project B
+    org_b = OrganizationProfile(
+        id=uuid.uuid4(),
+        legal_name="Org B",
+        organization_slug="org_b",
+        status=OrganizationStatus.ACTIVE
+    )
+    db_session.add(org_b)
+    db_session.commit()
+
+    user_b = User(
+        id=uuid.uuid4(),
+        email="user_b@valora.com",
+        full_name="User B",
+        password_hash="...",
+        status=UserStatus.ACTIVE,
+        organization_id=org_b.id
+    )
+    db_session.add(user_b)
+    db_session.commit()
+
+    # Add role to User B so they have workbench open/edit permissions
+    role_edit = db_session.query(Role).filter(Role.code == "admin").first()
+
+    ur_b = UserRole(user_id=user_b.id, role_id=role_edit.id, is_active=True)
+    db_session.add(ur_b)
+
+    customer_b = Customer(
+        id=uuid.uuid4(),
+        organization_id=org_b.id,
+        legal_name="Customer B",
+        tax_code="0987654321",
+        status="active",
+        created_by=user_b.id
+    )
+    db_session.add(customer_b)
+    db_session.commit()
+
+    project_b = Project(
+        id=uuid.uuid4(),
+        organization_id=org_b.id,
+        customer_id=customer_b.id,
+        code="PROJ-B",
+        name="Project B",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=user_b.id
+    )
+    db_session.add(project_b)
+    db_session.commit()
+
+    # User A tries to create session in Project B -> 404 (safe 404)
+    auth_a = login_user_in_test(client, db_session, uuid.UUID(setup_rbac_users["admin_id"]), setup_rbac_users["org_id"])
+    resp = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": str(project_b.id)}
+    )
+    assert resp.status_code == 404
+
+    # User B creates session in Project B successfully
+    auth_b = login_user_in_test(client, db_session, user_b.id, org_b.id)
+    resp = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": str(project_b.id)}
+    )
+    assert resp.status_code == 201
+    session_b_id = resp.json()["id"]
+
+    # User A tries to get/heartbeat/close User B's session -> 404
+    acc_key, _ = get_cookie_keys()
+    client.cookies.set(acc_key, auth_a["token"])
+    client.cookies.set("XSRF-TOKEN", auth_a["csrf_token"])
+    client.headers["X-CSRF-Token"] = auth_a["csrf_token"]
+    resp = client.get(f"/api/v1/workbench/sessions/{session_b_id}")
+    assert resp.status_code == 404
+
+    resp = client.post(f"/api/v1/workbench/sessions/{session_b_id}/heartbeat", json={"expected_row_version": 1})
+    assert resp.status_code == 404
+
+    resp = client.post(f"/api/v1/workbench/sessions/{session_b_id}/close")
+    assert resp.status_code == 404
+
+    # User B (different tenant) tries to close User A's session -> 404
+    client.cookies.set(acc_key, auth_a["token"])
+    client.cookies.set("XSRF-TOKEN", auth_a["csrf_token"])
+    client.headers["X-CSRF-Token"] = auth_a["csrf_token"]
+    resp = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": setup_rbac_users["project_id"]}
+    )
+    session_a_id = resp.json()["id"]
+
+    client.cookies.set(acc_key, auth_b["token"])
+    client.cookies.set("XSRF-TOKEN", auth_b["csrf_token"])
+    client.headers["X-CSRF-Token"] = auth_b["csrf_token"]
+    resp = client.post(f"/api/v1/workbench/sessions/{session_a_id}/close")
+    assert resp.status_code == 404
+
+
+def test_active_session_policy_resume(client: TestClient, db_session: Session, setup_rbac_users) -> None:
+    login_user_in_test(client, db_session, uuid.UUID(setup_rbac_users["admin_id"]), setup_rbac_users["org_id"])
+
+    # Create first session
+    resp1 = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": setup_rbac_users["project_id"]}
+    )
+    assert resp1.status_code == 201
+    sid1 = resp1.json()["id"]
+
+    # Create session again for same project -> returns same session (resumes)
+    resp2 = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": setup_rbac_users["project_id"]}
+    )
+    assert resp2.status_code == 201
+    assert resp2.json()["id"] == sid1
+
+    # Close session
+    resp_close = client.post(f"/api/v1/workbench/sessions/{sid1}/close")
+    assert resp_close.status_code == 200
+    assert resp_close.json()["status"] == "closed"
+
+    # Mutating action on closed session fails with 404
+    resp_hb = client.post(f"/api/v1/workbench/sessions/{sid1}/heartbeat", json={"expected_row_version": 1})
+    assert resp_hb.status_code == 404
+
+    # Create session again -> gets a NEW active session
+    resp3 = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": setup_rbac_users["project_id"]}
+    )
+    assert resp3.status_code == 201
+    assert resp3.json()["id"] != sid1
+
+
+def test_explicit_target_validation(client: TestClient, db_session: Session, setup_rbac_users) -> None:
+    from app.modules.project_master_data.models import ProjectAssetLine, Customer, Project, ProjectWorkflowStatus
+    login_user_in_test(client, db_session, uuid.UUID(setup_rbac_users["admin_id"]), setup_rbac_users["org_id"])
+
+    # Create session
+    resp = client.post(
+        "/api/v1/workbench/sessions",
+        json={"project_id": setup_rbac_users["project_id"]}
+    )
+    sid = resp.json()["id"]
+
+    # Create asset line in project A
+    line_a = ProjectAssetLine(
+        id=uuid.uuid4(),
+        project_id=uuid.UUID(setup_rbac_users["project_id"]),
+        asset_name="Asset A",
+        quantity=1.0
+    )
+    db_session.add(line_a)
+    db_session.commit()
+
+    # Create asset line not in project A (different project/tenant)
+    cust = db_session.query(Customer).first()
+    proj_other = Project(
+        id=uuid.uuid4(),
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PROJ-OTHER",
+        name="Project Other",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj_other)
+    db_session.commit()
+
+    line_other = ProjectAssetLine(
+        id=uuid.uuid4(),
+        project_id=proj_other.id,
+        asset_name="Asset Other",
+        quantity=1.0
+    )
+    db_session.add(line_other)
+    db_session.commit()
+
+    # Inline edit with correct target -> 200
+    resp_edit = client.post(
+        f"/api/v1/workbench/sessions/{sid}/inline-edit",
+        json={
+            "target_type": "project_asset_line",
+            "target_id": str(line_a.id),
+            "field_key": "appraised_unit_price",
+            "draft_value": {"val": 100.0},
+            "base_value": {"val": 90.0},
+            "base_row_version": 1
+        }
+    )
+    assert resp_edit.status_code == 200
+
+    # Inline edit with invalid target ID -> 404
+    resp_edit_invalid = client.post(
+        f"/api/v1/workbench/sessions/{sid}/inline-edit",
+        json={
+            "target_type": "project_asset_line",
+            "target_id": str(line_other.id),
+            "field_key": "appraised_unit_price",
+            "draft_value": {"val": 100.0},
+            "base_value": {"val": 90.0},
+            "base_row_version": 1
+        }
+    )
+    assert resp_edit_invalid.status_code == 404
