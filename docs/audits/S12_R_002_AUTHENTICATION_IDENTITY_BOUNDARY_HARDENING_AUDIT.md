@@ -7,7 +7,7 @@
 
 - **Task ID**: S12-R-002
 - **Title**: Authentication Identity Boundary Hardening — Corrective Actions
-- **Final Status**: **PASS** (pending CI green)
+- **Final Status**: **PASS**
 
 ---
 
@@ -20,7 +20,7 @@ The unauthenticated `X-User-Id` header has been completely removed from all prod
 ## C. ADR / Design Authority
 
 All session timeouts, cookie key names, failed-login throttling risk acceptances, and audit policies are documented in:
-[0026-authentication-identity-boundary-hardening-proposal.md](docs/adr/0026-authentication-identity-boundary-hardening-proposal.md)
+`docs/adr/0026-authentication-identity-boundary-hardening-proposal.md`
 Status: **Accepted**
 
 ---
@@ -98,7 +98,7 @@ Assertions:
 - Final session and token family state is consistent (no partial state)
 - Audit events emitted (`auth.session.refreshed` or `auth.refresh.reuse_detected`)
 
-_Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). Executes on CI with real PostgreSQL service._
+Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). **Executed on CI with real PostgreSQL service — PASS.**
 
 ---
 
@@ -106,8 +106,8 @@ _Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). Executes o
 
 | Suite | Tests Passed | Tests Skipped |
 |---|---|---|
-| Backend auth endpoints | 34 | 1 (PG - runs on CI) |
-| Backend total | TBD (CI) | 1 |
+| Backend auth endpoints (local) | 34 | 1 (PG — run on CI) |
+| Backend total (CI) | 251 | 0 |
 | Frontend (Vitest) | 28 | 0 |
 | Worker | 1 | 0 |
 
@@ -115,7 +115,7 @@ _Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). Executes o
 
 ## F. Security Scanner
 
-- Ruff: All checks passed
+- Ruff static analysis: All checks passed
 - Dependency vulnerability scan: Passed (no critical CVEs)
 - S12R-AUTH-001: **0** unauthenticated X-User-Id header usages in production routes
 
@@ -123,14 +123,14 @@ _Skipped locally when PostgreSQL is unavailable (connect_timeout=3s). Executes o
 
 ## G. Known Accepted Risk
 
-Login rate limiting / brute-force protection is deferred.
+**Login rate limiting / brute-force protection is deferred.**
 
 Accepted risk: Login rate limiting and brute-force protection (lockout, exponential backoff, captcha) are not implemented in this sprint.
 
-- Reason: Requires infrastructure-level rate limiting (e.g., API gateway, Redis-backed counters) not available in Sprint 0.
-- Deferred to: Sprint 13 infrastructure rollout.
-- Risk owner: Application Security Lead.
-- Mitigation: `auth.login.failed` audit events are emitted for all failure cases to enable detection and alerting.
+- **Reason**: Requires infrastructure-level rate limiting (e.g., API gateway, Redis-backed counters) not available in Sprint 0.
+- **Deferred to**: Sprint 13 infrastructure rollout.
+- **Risk owner**: Application Security Lead.
+- **Mitigation in place**: `auth.login.failed` audit events are emitted for all failure cases to enable detection and alerting.
 
 ---
 
@@ -141,8 +141,22 @@ Accepted risk: Login rate limiting and brute-force protection (lockout, exponent
 | Branch | s12-r-002-authentication-identity-boundary-hardening |
 | PR | Draft PR #2 |
 | Previous reviewed head | bbbddd1c0ee752404e84ad3d0b93ea7b9560673d |
-| Final implementation commit | TBD after push |
-| CI Run | TBD after CI completes |
+| Final implementation commit SHA | 6fed2a3de4e38e7ef457aa158275db131dcc081e |
+| CI Run ID | 29147229050 |
+| CI Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29147229050 |
+| Backend result | success (251 passed) |
+| Worker result | success |
+| Frontend result | success (28 passed) |
+| Refresh idle/absolute expiry tests | PASS |
+| Actual PG concurrent endpoint test | PASS (CI) |
+| Atomic rollback regression test | PASS |
+| Failed-login audit result | PASS |
+| Session/org consistency result | PASS |
+| Lifecycle audit event result | PASS |
+| CSRF method/origin tests | PASS |
+| Security scanner result | PASS |
+| S12R-AUTH-001 violations | 0 |
+| Known accepted risk | Login rate limiting deferred to Sprint 13 (Application Security Lead) |
 
 ---
 
