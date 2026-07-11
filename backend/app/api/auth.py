@@ -25,6 +25,15 @@ from app.modules.project_master_data.models import (
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 settings = get_settings()
 
+
+def get_correlation_id(request: Request) -> str:
+    """Extract or generate a request correlation ID for audit traceability."""
+    return (
+        request.headers.get("X-Request-Id")
+        or request.headers.get("X-Correlation-Id")
+        or str(uuid.uuid4())
+    )
+
 class LoginRequest(BaseModel):
     organization_slug: str
     email: str
@@ -234,29 +243,29 @@ def get_current_session(
 ) -> UserSession:
     acc_key, _ = get_cookie_keys()
     access_token = request.cookies.get(acc_key)
-    
+
     if not access_token:
         raise_401("Không tìm thấy thông tin đăng nhập.")
-        
+
     acc_hash = hash_token(access_token)
-    
+
     session = db.query(UserSession).filter(
         UserSession.access_token_hash == acc_hash,
         UserSession.status == "active"
     ).first()
-    
+
     if not session:
         raise_401("Phiên làm việc không tồn tại hoặc đã bị thu hồi.")
-        
+
     now = datetime.now(timezone.utc)
     if session.access_expires_at.replace(tzinfo=timezone.utc) < now:
         raise_401("Phiên đăng nhập đã hết hạn.")
-        
+
     if session.idle_expires_at.replace(tzinfo=timezone.utc) < now:
         session.status = "expired"
         db.commit()
         raise_401("Phiên làm việc đã hết hạn do không hoạt động.")
-        
+
     if session.absolute_expires_at.replace(tzinfo=timezone.utc) < now:
         session.status = "expired"
         db.commit()
@@ -266,7 +275,15 @@ def get_current_session(
     user = db.query(User).filter(User.id == session.user_id).first()
     if not user or user.status != UserStatus.ACTIVE:
         raise_401("Tài khoản của bạn đã bị vô hiệu hóa hoặc không tồn tại.")
-        
+
+    # Enforce session/org consistency: user.organization_id must match session.organization_id
+    if user.organization_id != session.organization_id:
+        session.status = "revoked"
+        session.revoked_reason = "Session organization mismatch — security fail-closed."
+        session.revoked_at = datetime.now(timezone.utc)
+        db.commit()
+        raise_401("Phiên làm việc không hợp lệ — không khớp tổ chức.")
+
     org = user.organization
     if not org or org.status != OrganizationStatus.ACTIVE:
         raise_401("Tổ chức của bạn đã bị vô hiệu hóa.")
@@ -275,7 +292,7 @@ def get_current_session(
     session.last_seen_at = now
     session.idle_expires_at = now + timedelta(minutes=30)
     db.commit()
-    
+
     return session
 
 
@@ -286,38 +303,84 @@ def login(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    # Lookup org
+    correlation_id = get_correlation_id(request)
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("User-Agent")
+
+    # Lookup org — do not reveal whether org exists to prevent enumeration
     org = db.query(OrganizationProfile).filter(
         OrganizationProfile.organization_slug == payload.organization_slug,
-        OrganizationProfile.status == OrganizationStatus.ACTIVE
     ).first()
-    if not org:
+
+    if not org or org.status != OrganizationStatus.ACTIVE:
+        log_audit_event(
+            db=db,
+            event_name="auth.login.failed",
+            entity_type="OrganizationProfile",
+            entity_id=org.id if org else None,
+            organization_id=org.id if org else None,
+            correlation_id=correlation_id,
+            payload={
+                "reason_category": "UNKNOWN_ORG_OR_INACTIVE",
+                "ip_address": client_ip,
+                "user_agent": user_agent,
+            }
+        )
+        db.commit()
         raise_401("Tên tổ chức hoặc thông tin đăng nhập không chính xác.")
-        
-    # Lookup user
+
+    # Lookup user — generic error to prevent account enumeration
     user = db.query(User).filter(
         User.organization_id == org.id,
         User.email == payload.email,
-        User.status == UserStatus.ACTIVE
     ).first()
-    if not user:
+
+    if not user or user.status != UserStatus.ACTIVE:
+        log_audit_event(
+            db=db,
+            event_name="auth.login.failed",
+            entity_type="User",
+            entity_id=user.id if user else None,
+            organization_id=org.id,
+            correlation_id=correlation_id,
+            payload={
+                "reason_category": "UNKNOWN_USER_OR_INACTIVE",
+                "ip_address": client_ip,
+                "user_agent": user_agent,
+            }
+        )
+        db.commit()
         raise_401("Tên tổ chức hoặc thông tin đăng nhập không chính xác.")
-        
+
     # Verify password
     if not verify_password(payload.password, user.password_hash):
+        log_audit_event(
+            db=db,
+            event_name="auth.login.failed",
+            entity_type="User",
+            entity_id=user.id,
+            organization_id=org.id,
+            correlation_id=correlation_id,
+            payload={
+                "reason_category": "INVALID_CREDENTIALS",
+                "ip_address": client_ip,
+                "user_agent": user_agent,
+            }
+        )
+        db.commit()
         raise_401("Tên tổ chức hoặc thông tin đăng nhập không chính xác.")
-        
+
     # User authenticated. Generate tokens
     access_token = secrets.token_hex(32)
     refresh_token = secrets.token_hex(32)
     csrf_token = generate_csrf_token()
-    
+
     acc_hash = hash_token(access_token)
     ref_hash = hash_token(refresh_token)
     csrf_hash = hash_token(csrf_token)
-    
+
     now = datetime.now(timezone.utc)
-    
+
     # Create UserSession
     user_session = UserSession(
         user_id=user.id,
@@ -330,12 +393,12 @@ def login(
         access_expires_at=now + timedelta(minutes=15),
         idle_expires_at=now + timedelta(minutes=30),
         absolute_expires_at=now + timedelta(days=7),
-        user_agent=request.headers.get("User-Agent"),
-        ip_address=request.client.host if request.client else None
+        user_agent=user_agent,
+        ip_address=client_ip
     )
     db.add(user_session)
     db.flush()
-    
+
     # Create RefreshTokenRecord
     ref_record = RefreshTokenRecord(
         user_session_id=user_session.id,
@@ -346,10 +409,10 @@ def login(
         expires_at=now + timedelta(days=30)
     )
     db.add(ref_record)
-    
+
     # Update user last_login_at
     user.last_login_at = now
-    
+
     # Audit log session creation
     log_audit_event(
         db=db,
@@ -358,11 +421,12 @@ def login(
         entity_id=user_session.id,
         organization_id=org.id,
         actor_user_id=user.id,
+        correlation_id=correlation_id,
         payload={"session_id": str(user_session.id)}
     )
-    
+
     db.commit()
-    
+
     set_auth_cookies(response, access_token, refresh_token, csrf_token)
     return {"status": "ok", "message": "Đăng nhập thành công."}
 
@@ -466,6 +530,11 @@ def refresh(
                     is_expired = True
                     expire_reason = "Tổ chức của bạn đã bị vô hiệu hóa."
                     
+        # Enforce session/org consistency during refresh
+        if session and user and user.organization_id != session.organization_id:
+            is_expired = True
+            expire_reason = "Session organization mismatch — security fail-closed."
+
         if is_expired:
             if session:
                 session.status = "revoked"
@@ -473,7 +542,7 @@ def refresh(
                 session.revoked_reason = expire_reason
             ref_record.status = "revoked"
             ref_record.revoked_at = now
-            
+
             db.query(RefreshTokenRecord).filter(
                 RefreshTokenRecord.user_session_id == ref_record.user_session_id,
                 RefreshTokenRecord.token_family_id == ref_record.token_family_id
@@ -481,6 +550,22 @@ def refresh(
                 "status": "revoked",
                 "revoked_at": now
             })
+
+            # Emit lifecycle audit event in the same transaction
+            if session:
+                log_audit_event(
+                    db=db,
+                    event_name="auth.session.revoked",
+                    entity_type="UserSession",
+                    entity_id=session.id,
+                    organization_id=session.organization_id,
+                    actor_user_id=session.user_id,
+                    payload={
+                        "session_id": str(session.id),
+                        "reason": expire_reason
+                    }
+                )
+
             db.commit()
             return make_cookie_clearing_response(expire_reason)
 
