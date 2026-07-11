@@ -220,12 +220,21 @@ Enables authorized users to review and explicitly apply draft edits to official 
   ```
 - **Human Confirmation Requirement**: `confirm` must be set explicitly to `true` inside the POST payload.
 - **Official Value Mutation Rule**: Applies only supported draft fields (description, appraised_unit_price) to the master record, increments its row version, and purges the draft row.
-- **Stale Conflict Rule**: Rejects execution with `409 Conflict` if the draft was based on a stale row version.
+- **Stale Conflict Rule**: Rejects execution with `409 Conflict` if the draft base version is not exactly equal to the current row version (`draft.base_row_version == official_line.row_version`).
 - **AI Prohibition**: AI is strictly prohibited from invoking this endpoint or approving draft modifications.
 - **Frontend UX Behavior**:
   - A button labeled **Áp dụng nháp** appears only for rows containing saved drafts.
   - Prompts a localized Vietnamese confirmation window: *“Xác nhận áp dụng nháp. Thao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu.”*
   - Re-fetches the grid and draft states upon successful execution.
+
+## 14. S12-R-004: Guardrails and Bypass Prevention
+- **Direct Mutation Bypass Protection**: Direct updates to `description`, `appraised_unit_price`, `review_status`, and `validation_status` via the standard `PATCH /api/v1/projects/{project_id}/asset-lines/{line_id}` route are explicitly rejected with `400 Bad Request`. Users must use the Workbench draft and commit flow.
+- **Exact Optimistic Version Lock**: Commits require exact version equality (`base_row_version == row_version`). Deviations (stale or future versions) trigger a `409 Conflict`.
+- **Strict Typed Validation**:
+  - `description`: Must be a string (rejects nested JSON objects, boolean, lists, float/int).
+  - `appraised_unit_price`: Must parse to a positive number (rejects non-numeric formats, negative values, NaN, and Infinity).
+- **Atomic Rollback**: If logging the audit event fails or any exception occurs during commit, the entire database transaction is rolled back.
+
 
 
 

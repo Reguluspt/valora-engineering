@@ -3,13 +3,15 @@ import re
 import io
 import openpyxl
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 
 from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
+from app.api.auth import get_correlation_id
+from app.modules.project_master_data.commands import execute_commit_asset_line_draft
 from app.modules.project_master_data.models import (
     User,
     Customer,
@@ -986,81 +988,26 @@ def commit_asset_line_draft(
     project_id: uuid.UUID,
     line_id: uuid.UUID,
     payload: AssetLineDraftCommitRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
-    org_id = current_user.organization_id
-    project = db.query(Project).filter(
-        Project.organization_id == org_id,
-        Project.id == project_id
-    ).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    line = db.query(ProjectAssetLine).filter(
-        ProjectAssetLine.project_id == project_id,
-        ProjectAssetLine.id == line_id
-    ).first()
-    if not line:
-        raise HTTPException(status_code=404, detail="Asset line not found")
-
-    if not payload.confirm:
-        raise HTTPException(status_code=400, detail="Confirm must be set to true to apply draft changes")
-
-    session = db.query(WorkbenchSession).filter(
-        WorkbenchSession.project_id == project_id,
-        WorkbenchSession.user_id == current_user.id,
-        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
-    ).first()
-
-    if not session:
-        raise HTTPException(status_code=400, detail="No active session found to apply drafts")
-
-    drafts = db.query(InlineEditDraft).filter(
-        InlineEditDraft.session_id == session.id,
-        InlineEditDraft.target_id == line_id
-    ).all()
-
-    if not drafts:
-        raise HTTPException(status_code=400, detail="No saved drafts found for this asset line")
-
-    ALLOWED_COMMIT_FIELDS = {"description", "appraised_unit_price"}
-    drafts_to_commit = []
-    for d in drafts:
-        if d.field_key in payload.field_keys:
-            if d.field_key not in ALLOWED_COMMIT_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Field {d.field_key} is not supported for commit")
-            if d.base_row_version is not None and d.base_row_version < (line.row_version or 1):
-                raise HTTPException(status_code=409, detail="Cannot commit: Stale draft detected")
-            drafts_to_commit.append(d)
-
-    if not drafts_to_commit:
-        raise HTTPException(status_code=400, detail="No matching allowed drafts found to commit")
-
-    committed_fields = []
-    for d in drafts_to_commit:
-        val = d.draft_value.get("value") if isinstance(d.draft_value, dict) else d.draft_value
-        setattr(line, d.field_key, val)
-        committed_fields.append(d.field_key)
-
-    line.row_version = (line.row_version or 1) + 1
-
-    for d in drafts_to_commit:
-        db.delete(d)
-
-    db.commit()
-
-    from datetime import datetime, timezone
-    return {
-        "project_id": project_id,
-        "asset_line_id": line_id,
-        "committed_fields": committed_fields,
-        "draft_status": "clean",
-        "has_saved_draft": False,
-        "has_unsaved_changes": False,
-        "is_stale": False,
-        "committed_at": datetime.now(timezone.utc)
-    }
+    correlation_id = get_correlation_id(request)
+    try:
+        res = execute_commit_asset_line_draft(
+            db=db,
+            actor=current_user,
+            project_id=project_id,
+            line_id=line_id,
+            field_keys=payload.field_keys,
+            confirm=payload.confirm,
+            correlation_id=correlation_id
+        )
+        db.commit()
+        return res
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.patch("/{project_id}/asset-lines/{line_id}", response_model=ProjectAssetLineResponse)
@@ -1068,6 +1015,7 @@ def update_project_asset_line(
     project_id: uuid.UUID,
     line_id: uuid.UUID,
     payload: ProjectAssetLineUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("project:update"))
 ):
@@ -1086,6 +1034,22 @@ def update_project_asset_line(
     if not line:
         raise HTTPException(status_code=404, detail="Asset line not found")
 
+    # Reject direct mutations of workbench-gated fields or status fields
+    if (payload.description is not None or 
+        payload.appraised_unit_price is not None or 
+        payload.review_status is not None or 
+        payload.validation_status is not None):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "title": "Trường dữ liệu bị hạn chế",
+                "message": "Trường description, appraised_unit_price, review_status, và validation_status chỉ có thể cập nhật thông qua áp dụng bản nháp.",
+                "nextAction": "Vui lòng sử dụng tính năng áp dụng bản nháp của Workbench.",
+                "severity": "error",
+                "retryable": False
+            }
+        )
+
     # Optimistic lock check
     if line.row_version != payload.row_version:
         raise HTTPException(status_code=409, detail="Optimistic lock error: Record version mismatch")
@@ -1098,8 +1062,6 @@ def update_project_asset_line(
     # Update line fields
     if payload.asset_name is not None:
         line.asset_name = payload.asset_name
-    if payload.description is not None:
-        line.description = payload.description
     if payload.quantity is not None:
         line.quantity = payload.quantity
     if payload.unit_id is not None:
@@ -1108,22 +1070,16 @@ def update_project_asset_line(
         line.raw_price = payload.raw_price
     if payload.raw_price_currency_id is not None:
         line.raw_price_currency_id = payload.raw_price_currency_id
-    if payload.appraised_unit_price is not None:
-        line.appraised_unit_price = payload.appraised_unit_price
     if payload.appraised_currency_id is not None:
         line.appraised_currency_id = payload.appraised_currency_id
     if payload.brand_id is not None:
         line.brand_id = payload.brand_id
     if payload.manufacturer_id is not None:
         line.manufacturer_id = payload.manufacturer_id
-    if payload.review_status is not None:
-        line.review_status = payload.review_status
-    if payload.validation_status is not None:
-        line.validation_status = payload.validation_status
 
-    db.commit()
-    db.refresh(line)
-
+    # Atomically log audit event with correlation ID
+    correlation_id = get_correlation_id(request)
+    
     log_audit_event(
         db=db,
         event_name="ProjectAssetLineUpdated",
@@ -1131,9 +1087,18 @@ def update_project_asset_line(
         entity_id=line.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UpdateProjectAssetLine"
+        command_name="UpdateProjectAssetLine",
+        correlation_id=correlation_id,
+        payload={
+            "project_id": str(project_id),
+            "asset_line_id": str(line_id),
+            "updated_fields": [
+                k for k, v in payload.model_dump(exclude_unset=True).items() if v is not None and k != "row_version"
+            ]
+        }
     )
     db.commit()
+    db.refresh(line)
 
     return line
 

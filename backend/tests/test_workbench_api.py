@@ -11,7 +11,9 @@ from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
-    ProjectWorkflowStatus, Customer, WorkbenchNotification, WorkbenchNotificationType
+    ProjectWorkflowStatus, Customer, WorkbenchNotification, WorkbenchNotificationType,
+    ProjectAssetLine, InlineEditDraft, InlineEditDraftStatus, WorkbenchSessionStatus,
+    WorkbenchSession
 )
 
 @pytest.fixture
@@ -61,7 +63,8 @@ def setup_rbac_users(db_session: Session):
             "workbench:open",
             "workbench:read",
             "workbench:edit",
-            "workbench:undo_redo"
+            "workbench:undo_redo",
+            "project:update"
         ]
     )
     role_viewer = Role(
@@ -1459,3 +1462,461 @@ def test_selection_validation_isolation_and_rollback(client: TestClient, db_sess
     resp_get = client.get(f"/api/v1/workbench/sessions/{sid}/selection")
     assert resp_get.status_code == 200
     assert resp_get.json()[0]["selected_target_ids"] == [str(line_a.id)]
+
+
+# ==========================================
+# S12-R-004 TESTS
+# ==========================================
+
+def test_s12_r_004_direct_mutation_bypass(client: TestClient, db_session: Session, setup_rbac_users):
+    headers = {"X-User-Id": setup_rbac_users["admin_id"]}
+    cust = db_session.query(Customer).first()
+    proj = Project(
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PRJ-PATCH-BYPASS",
+        name="Project Patch Bypass",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    line = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Original Name",
+        description="Original Desc",
+        quantity=1.0,
+        appraised_unit_price=100.0,
+        row_version=1
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    # 1. Allowed mutations (e.g. quantity, asset_name) pass
+    resp = client.patch(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}",
+        json={"asset_name": "New Name", "row_version": 1},
+        headers=headers
+    )
+    assert resp.status_code == 200
+
+    # 2. Direct mutation of description is rejected
+    resp = client.patch(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}",
+        json={"description": "New Direct Desc", "row_version": 2},
+        headers=headers
+    )
+    assert resp.status_code == 400
+
+    # 3. Direct mutation of appraised_unit_price is rejected
+    resp = client.patch(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}",
+        json={"appraised_unit_price": 500.0, "row_version": 2},
+        headers=headers
+    )
+    assert resp.status_code == 400
+
+    # 4. Mixed payload with allowed and disallowed fields is rejected
+    resp = client.patch(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}",
+        json={"asset_name": "Another Name", "description": "Desc", "row_version": 2},
+        headers=headers
+    )
+    assert resp.status_code == 400
+
+    # 5. Direct mutation of status fields is rejected
+    resp = client.patch(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}",
+        json={"review_status": "accepted", "row_version": 2},
+        headers=headers
+    )
+    assert resp.status_code == 400
+
+
+def test_s12_r_004_exact_version_locking(client: TestClient, db_session: Session, setup_rbac_users):
+    headers = {"X-User-Id": setup_rbac_users["admin_id"]}
+    cust = db_session.query(Customer).first()
+    proj = Project(
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PRJ-LOCKING",
+        name="Project Locking",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    line = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Line",
+        description="Desc",
+        appraised_unit_price=100.0,
+        row_version=1
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    # Create active session
+    sess = WorkbenchSession(
+        user_id=uuid.UUID(setup_rbac_users["admin_id"]),
+        project_id=proj.id,
+        status=WorkbenchSessionStatus.ACTIVE
+    )
+    db_session.add(sess)
+    db_session.commit()
+
+    # Save draft based on stale version (base version = 0)
+    draft_stale = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": 150.0},
+        base_row_version=0,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft_stale)
+    db_session.commit()
+
+    # Commit stale draft fails with 409
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 409
+
+    # Update draft to future version (base version = 5)
+    db_session.delete(draft_stale)
+    db_session.commit()
+
+    draft_future = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": 150.0},
+        base_row_version=5,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft_future)
+    db_session.commit()
+
+    # Commit future draft fails with 409
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 409
+
+
+def test_s12_r_004_typed_validation_rules(client: TestClient, db_session: Session, setup_rbac_users):
+    headers = {"X-User-Id": setup_rbac_users["admin_id"]}
+    cust = db_session.query(Customer).first()
+    proj = Project(
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PRJ-TYPED-WB",
+        name="Project Typed WB",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    line = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Line",
+        description="Desc",
+        appraised_unit_price=100.0,
+        row_version=1
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    sess = WorkbenchSession(
+        user_id=uuid.UUID(setup_rbac_users["admin_id"]),
+        project_id=proj.id,
+        status=WorkbenchSessionStatus.ACTIVE
+    )
+    db_session.add(sess)
+    db_session.commit()
+
+    # 1. Invalid description type (array)
+    draft1 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="description",
+        draft_value={"value": ["an", "array"]},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft1)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["description"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft1)
+    db_session.commit()
+
+    # 2. Invalid description type (dict)
+    draft2 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="description",
+        draft_value={"value": {"some": "object"}},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft2)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["description"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft2)
+    db_session.commit()
+
+    # 3. Invalid appraised_unit_price (negative)
+    draft3 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": -50.0},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft3)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft3)
+    db_session.commit()
+
+    # 4. Invalid appraised_unit_price (boolean)
+    draft4 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": True},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft4)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft4)
+    db_session.commit()
+
+    # 5. Invalid appraised_unit_price (non-numeric string)
+    draft5 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": "garbage_string"},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft5)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft5)
+    db_session.commit()
+
+    # 6. Invalid appraised_unit_price (NaN/Inf)
+    draft6 = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": "NaN"},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft6)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 400
+    db_session.delete(draft6)
+    db_session.commit()
+
+
+def test_s12_r_004_side_effects_prohibition(client: TestClient, db_session: Session, setup_rbac_users, monkeypatch):
+    headers = {"X-User-Id": setup_rbac_users["admin_id"]}
+    cust = db_session.query(Customer).first()
+    proj = Project(
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PRJ-SIDE-EFFECT",
+        name="Project Side Effect",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    line = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Line",
+        description="Desc",
+        appraised_unit_price=100.0,
+        row_version=1
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    sess = WorkbenchSession(
+        user_id=uuid.UUID(setup_rbac_users["admin_id"]),
+        project_id=proj.id,
+        status=WorkbenchSessionStatus.ACTIVE
+    )
+    db_session.add(sess)
+    db_session.commit()
+
+    draft = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": 150.0},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add(draft)
+    db_session.commit()
+
+    # Mock any hypothetical external background or AI approvals
+    ai_called = False
+    def mock_ai_governance(*args, **kwargs):
+        nonlocal ai_called
+        ai_called = True
+        
+    # Apply monkeypatch if modules exist
+    try:
+        import app.modules.ai_governance_security as ai_mod
+        monkeypatch.setattr(ai_mod, "validate_approvals", mock_ai_governance)
+    except (ImportError, AttributeError):
+        pass
+
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 200
+    assert not ai_called
+
+
+def test_s12_r_004_draft_lifecycle(client: TestClient, db_session: Session, setup_rbac_users):
+    headers = {"X-User-Id": setup_rbac_users["admin_id"]}
+    cust = db_session.query(Customer).first()
+    proj = Project(
+        organization_id=setup_rbac_users["org_id"],
+        customer_id=cust.id,
+        code="PRJ-LIFECYCLE",
+        name="Project Lifecycle",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=uuid.UUID(setup_rbac_users["admin_id"])
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    line = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="Line",
+        description="Desc",
+        appraised_unit_price=100.0,
+        row_version=1
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    sess = WorkbenchSession(
+        user_id=uuid.UUID(setup_rbac_users["admin_id"]),
+        project_id=proj.id,
+        status=WorkbenchSessionStatus.ACTIVE
+    )
+    db_session.add(sess)
+    db_session.commit()
+
+    # Draft for appraised price
+    draft_price = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="appraised_unit_price",
+        draft_value={"value": 150.0},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    # Draft for description
+    draft_desc = InlineEditDraft(
+        session_id=sess.id,
+        target_type="ProjectAssetLine",
+        target_id=line.id,
+        field_key="description",
+        draft_value={"value": "New Desc"},
+        base_row_version=1,
+        status=InlineEditDraftStatus.DRAFT
+    )
+    db_session.add_all([draft_price, draft_desc])
+    db_session.commit()
+
+    # Commit only appraised_unit_price
+    resp = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp.status_code == 200
+
+    # Verify committed field deleted, other field remains
+    remaining = db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == sess.id).all()
+    assert len(remaining) == 1
+    assert remaining[0].field_key == "description"
+
+    # Repeated commit fails with 400 since draft no longer exists
+    resp_repeat = client.post(
+        f"/api/v1/projects/{proj.id}/asset-lines/{line.id}/draft/commit",
+        json={"field_keys": ["appraised_unit_price"], "confirm": True},
+        headers=headers
+    )
+    assert resp_repeat.status_code == 400
+
