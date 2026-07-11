@@ -1,561 +1,561 @@
-S12-R-001 — Repository Baseline & CI Gate Repair
+# S12-R — Pre-Validation Remediation Slice
 
-S12-R-002 — Authentication Identity Boundary Hardening
-
-S12-R-003 — Workbench Project & Session Tenant Scoping
-
-S12-R-004 — Official Mutation Command & Atomic Audit Gate
-
-S12-R-005 — Dynamic Project Context & Live Workbench Data Integrity
-
-S12-R-006 — Excel Intake Streaming & Transaction Hardening
-
-S12-R-007 — Documentation Reconciliation & Final Acceptance
-
-```
-
-
-
-Mỗi PR phải:
-
-
-
-```text
-
-một trách nhiệm chính
-
-diff nhỏ và reviewable
-
-tests đi cùng implementation
-
-không cleanup ngoài phạm vi
-
-có audit report riêng
-
-có rollback/migration impact
-
-```
-
-
+**Tên đầy đủ:** Security, Workbench Routing & Excel Intake Hardening  
+**Mã slice:** `S12-R`  
+**Trạng thái:** `BLOCKING / REQUIRED`  
+**Base branch đề xuất:** `s12-pr-002-excel-file-upload-parser-intake`  
+**Blocked task:** `S12-PR-003 — Excel Staging Validation Engine`  
+**Ngày tạo:** 2026-07-11  
+**Design authority:** Valora Design Book v1.3, Astryx Design System, Valora engineering guardrails và các ADR hiện hành.
 
 ---
 
+## 1. Lý do mở remediation slice
 
+Audit chẩn đoán code tại đầu nhánh `s12-pr-002-excel-file-upload-parser-intake` phát hiện các lỗi có thể làm sai tenant boundary, bỏ qua Human Commit Gate, tạo dữ liệu nghiệp vụ giả trên Workbench và khiến Excel intake không an toàn trước file lớn.
 
-# 6. Nhiệm vụ hiện tại: chỉ thực hiện S12-R-001
+Các lỗi này ảnh hưởng trực tiếp tới nền tảng mà `S12-PR-003` sẽ sử dụng. Vì vậy Validation Engine không được triển khai tiếp trên nhánh hiện tại trước khi remediation slice đạt PASS.
 
+---
 
+## 2. Mục tiêu
+
+Slice này phải bảo đảm:
+
+1. Danh tính người dùng không thể bị giả mạo bằng header do client tự khai báo.
+2. Mọi Workbench session bị ràng buộc đúng user, organization và project.
+3. Mọi thay đổi dữ liệu chính thức phải đi qua Human Commit Gate và audit transaction nguyên tử.
+4. Toàn bộ Workbench sử dụng một project UUID đã resolve từ route, không có slug hoặc UUID hard-code.
+5. Workbench không hiển thị dữ liệu taxonomy, currency, quote, unit hoặc identity giả.
+6. Excel upload/parser có giới hạn tài nguyên thật, xử lý streaming và không làm mất staging cũ khi upload mới thất bại.
+7. CI chạy được trên nhánh phát triển thực tế và cung cấp bằng chứng độc lập cho các audit report.
+8. Tài liệu phase, handoff và audit phản ánh đúng trạng thái code.
+
+---
+
+## 3. Ngoài phạm vi
+
+Slice này không triển khai:
+
+- Staging Validation Engine.
+- Apply/import staging rows vào `ProjectAssetLine`.
+- AI-assisted column mapping.
+- AI provider runtime.
+- Báo cáo PDF/Word.
+- Dashboard, CRM, doanh thu hoặc nghiệp vụ ngoài Valora MVP.
+- Mở rộng field editable ngoài allowlist đã được phê duyệt.
+- Thay đổi taxonomy hoặc valuation business rules không có trong Design Book/ADR.
+
+---
+
+## 4. Quy tắc blocking
+
+Trong thời gian slice `S12-R` chưa PASS:
+
+- Không merge `S12-PR-003`.
+- Không thêm endpoint apply/import vào dữ liệu chính thức.
+- Không đánh dấu Sprint 11 Live Workbench Loop là `READY`.
+- Không dùng kết quả test ghi trong audit report thay cho CI run.
+- Không thêm workaround bằng hard-code project, user, organization hoặc session ID.
+- Không mở rộng phạm vi để “tiện refactor” các domain không liên quan.
+
+---
+
+# 5. PR breakdown
 
 ## S12-R-001 — Repository Baseline & CI Gate Repair
 
+### Mục tiêu
 
+Tạo baseline GitHub đáng tin cậy và bắt buộc quality gates trước khi sửa code nghiệp vụ.
 
-Không triển khai R-002 đến R-007 trong lần thực hiện này.
+### Phạm vi
 
+- Thiết lập hoặc xác nhận nhánh `main` làm nhánh mặc định.
+- Không dùng nhánh Sprint 0 làm default branch.
+- Tạo branch protection cho `main`.
+- CI chạy trên pull request và các branch thuộc `s12-*`.
+- Thêm các job:
+  - backend pytest;
+  - PostgreSQL integration;
+  - Alembic upgrade smoke;
+  - frontend typecheck/lint;
+  - frontend build;
+  - frontend vitest;
+  - secret scan;
+  - dependency/security scan.
+- Chạy `backend/tests/check_security.py` sau khi cập nhật danh sách rule để tránh false positive.
+- Không dùng `npm install` khi lockfile tồn tại; ưu tiên `npm ci`.
 
+### Acceptance criteria
 
-### 6.1 Mục tiêu
+- Một PR test cố ý làm backend test fail phải bị chặn.
+- Một PR test cố ý làm frontend build fail phải bị chặn.
+- Migration từ empty PostgreSQL database lên head thành công.
+- Head commit có workflow run và required checks.
+- Default branch không còn trỏ vào `s0-pr-001-root-rules-audit`.
 
-
-
-Thiết lập baseline GitHub và CI đáng tin cậy trước khi sửa các security/business boundaries.
-
-
-
-### 6.2 Preflight Git
-
-
-
-Chạy và báo cáo:
-
-
-
-```bash
-
-git status --short
-
-git branch --show-current
-
-git log --oneline --decorate -10
-
-git remote -v
-
-git fetch --all --prune
-
-```
-
-
-
-Xác nhận:
-
-
+### Tests/gates
 
 ```text
-
-working tree có sạch không
-
-branch hiện tại
-
-baseline commit
-
-remote repository
-
-main branch có tồn tại không
-
-default branch hiện tại là gì
-
+GitHub Actions required checks
+PostgreSQL migration smoke
+Backend pytest
+Frontend lint/build/vitest
+Secret/dependency scan
 ```
-
-
-
-Nếu working tree có thay đổi không liên quan, không được tự động stage hoặc xóa.
-
-
-
-### 6.3 Branch
-
-
-
-Tạo branch:
-
-
-
-```text
-
-s12-r-001-repository-ci-gate-repair
-
-```
-
-
-
-từ:
-
-
-
-```text
-
-s12-pr-002-excel-file-upload-parser-intake
-
-```
-
-
-
-hoặc từ commit baseline tương ứng nếu branch đã thay đổi.
-
-
-
-Không bắt đầu từ nhánh Sprint 0.
-
-
-
-### 6.4 CI requirements
-
-
-
-Cập nhật GitHub Actions để chạy trên:
-
-
-
-```yaml
-
-pull_request:
-
-push:
-
-  branches:
-
-    - main
-
-    - "s12-*"
-
-```
-
-
-
-Các job tối thiểu:
-
-
-
-#### Backend
-
-
-
-```text
-
-Python version thống nhất với pyproject và Dockerfile.
-
-Install dependencies từ backend.
-
-Run ruff/check phù hợp.
-
-Run pytest.
-
-```
-
-
-
-#### PostgreSQL integration
-
-
-
-Dùng PostgreSQL service container.
-
-
-
-Chạy:
-
-
-
-```text
-
-Alembic upgrade từ empty database lên head.
-
-Kiểm tra migration graph chỉ có một head.
-
-Chạy nhóm persistence/integration tests phù hợp.
-
-```
-
-
-
-Không dùng riêng SQLite để kết luận PostgreSQL migration PASS.
-
-
-
-#### Frontend
-
-
-
-Nếu có `package-lock.json`, dùng:
-
-
-
-```bash
-
-npm ci
-
-```
-
-
-
-Chạy:
-
-
-
-```bash
-
-npm run lint
-
-npm run build
-
-npx vitest run --globals
-
-```
-
-
-
-Nếu test script chưa có trong package.json, bổ sung script rõ ràng thay vì bỏ test.
-
-
-
-#### Worker
-
-
-
-Chạy:
-
-
-
-```bash
-
-pytest
-
-```
-
-
-
-và các lint/check phù hợp nếu worker đang nằm trong repository.
-
-
-
-#### Security
-
-
-
-Thêm gate cho:
-
-
-
-```text
-
-secret scanning
-
-Python dependency vulnerability scan
-
-Node dependency vulnerability scan
-
-repository security policy script
-
-```
-
-
-
-Không ghi secret thật vào workflow.
-
-
-
-Không cho phép security scanner chỉ in warning rồi exit 0 khi phát hiện vấn đề blocking.
-
-
-
-### 6.5 Sửa security scanner hiện tại
-
-
-
-Kiểm tra:
-
-
-
-```text
-
-backend/tests/check_security.py
-
-```
-
-
-
-Đánh giá lại các forbidden patterns.
-
-
-
-Không được giữ rule đã lỗi thời khiến endpoint hợp lệ hiện tại bị báo false positive.
-
-
-
-Scanner phải tập trung vào các lỗi thực tế, ví dụ:
-
-
-
-```text
-
-production X-User-Id authentication
-
-all-zero UUID hard-code
-
-hard-coded project slug trong runtime component
-
-plaintext production secrets
-
-dangerous wildcard production CORS
-
-direct official mutation routes chưa được allowlist
-
-```
-
-
-
-Không được viết scanner chỉ để test hiện tại pass.
-
-
-
-### 6.6 Default branch và branch protection
-
-
-
-Nếu có quyền GitHub:
-
-
-
-```text
-
-Tạo/xác nhận main.
-
-Đặt main làm default branch.
-
-Đề xuất hoặc cấu hình branch protection.
-
-Đặt required checks theo tên CI job thực tế.
-
-```
-
-
-
-Nếu Antigravity không có quyền thay đổi repository settings:
-
-
-
-```text
-
-Không được giả vờ đã thay đổi.
-
-Tạo tài liệu chính xác các bước owner phải thực hiện.
-
-Ghi trạng thái PASS WITH LIMITATION.
-
-```
-
-
-
-### 6.7 Không được làm trong R-001
-
-
-
-Không được sửa:
-
-
-
-```text
-
-authentication business implementation
-
-Workbench session scoping implementation
-
-Human commit behavior
-
-Excel parser
-
-Validation Engine
-
-Frontend project context
-
-Domain models ngoài nhu cầu CI
-
-```
-
-
-
-Chỉ được sửa code ngoài phạm vi khi bắt buộc để CI chạy, và phải giải thích rõ.
-
-
 
 ---
 
+## S12-R-002 — Authentication Identity Boundary Hardening
 
+### Mục tiêu
 
-## 7. Acceptance criteria của S12-R-001
+Loại bỏ khả năng giả mạo user bằng `X-User-Id`.
 
+### Phạm vi
 
+- Thực hiện theo ADR authentication/session hiện hành.
+- Backend production không đọc danh tính từ `X-User-Id`.
+- User ID và organization ID phải được suy ra từ access token/session đã xác thực.
+- Access token ngắn hạn và refresh-token rotation phải được giữ đúng guardrail.
+- Test có thể override dependency trực tiếp; không mô phỏng production auth bằng header tùy ý.
+- Frontend API client gửi credential/token theo cơ chế được chọn.
+- Chuẩn hóa lỗi `401/403` theo Non-IT Error Registry.
 
-PR chỉ được kết luận PASS khi:
+### Acceptance criteria
 
+- Gửi `X-User-Id` thủ công không thể đăng nhập hoặc đổi danh tính.
+- Token user A không thể trở thành user B.
+- User inactive hoặc organization inactive bị deny-by-default.
+- Frontend gọi API bảo vệ thành công bằng auth flow thật.
+- Không log access token, refresh token hoặc secret.
 
-
-```text
-
-CI chạy trên pull request.
-
-Backend tests chạy.
-
-Frontend lint/build/vitest chạy.
-
-Worker tests chạy.
-
-PostgreSQL migration từ empty DB chạy.
-
-Migration graph có một head.
-
-Security scanner được CI gọi.
-
-Dependency scan được CI gọi.
-
-Head commit có workflow run.
-
-Default branch không còn là nhánh Sprint 0.
-
-Required checks có thể dùng làm branch protection.
-
-Không có secret mới.
-
-Không triển khai phạm vi R-002 trở đi.
-
-```
-
-
-
-Nếu chưa thể đổi default branch hoặc branch protection do thiếu GitHub permission:
-
-
+### Tests/gates
 
 ```text
-
-Final status tối đa là PASS WITH LIMITATION.
-
-Phải cung cấp hướng dẫn owner thực hiện.
-
-Không được báo PASS tuyệt đối.
-
+Token validation tests
+Expired token tests
+Refresh rotation/reuse tests
+Inactive user/org tests
+Identity spoofing regression tests
+Frontend authenticated client tests
 ```
 
+### ADR
 
+Nếu ADR hiện hành chưa đủ chi tiết cho token transport, expiry, refresh storage hoặc revocation, phải cập nhật ADR trước khi viết code.
 
 ---
 
+## S12-R-003 — Workbench Project & Session Tenant Scoping
 
+### Mục tiêu
 
-## 8. Test failure policy
+Mọi session và state của Workbench phải thuộc đúng user, organization và project.
 
+### Phạm vi
 
+- Tạo dependency/application service dùng chung để resolve session:
+  - session ID đúng;
+  - current user là owner hoặc có quyền được phê duyệt;
+  - project thuộc organization hiện tại;
+  - session đang active;
+  - project ID khớp request context.
+- Áp dụng dependency này cho:
+  - create/get session;
+  - heartbeat;
+  - layout;
+  - grid view;
+  - selection;
+  - panel state;
+  - inline draft;
+  - checkpoint;
+  - undo/redo;
+  - notification hoặc endpoint session-scoped khác.
+- Trả `404` an toàn khi cross-tenant để tránh enumeration.
+- Không tạo nhiều active session ngoài policy đã phê duyệt.
+- Audit session start/end phải chứa organization, project và actor.
 
-Nếu một test fail:
+### Acceptance criteria
 
+- User tenant A không thể tạo/read/heartbeat session thuộc tenant B.
+- User A không thể điều khiển session riêng của user B.
+- Session inactive/expired không thể ghi state.
+- Session project A không thể mutate project B.
+- Tất cả session endpoints dùng chung một scoping policy, không lặp logic tùy ý.
 
-
-1. Xác định lỗi là regression thật hay test cũ sai.
-
-2. Không xóa hoặc skip test chỉ để CI xanh.
-
-3. Không giảm assertion.
-
-4. Không chuyển security failure thành warning.
-
-5. Sửa root cause hoặc ghi rõ blocker có bằng chứng.
-
-
-
-Nếu dependency hoặc environment thiếu:
-
-
+### Tests/gates
 
 ```text
-
-Cài đặt dependency cần thiết.
-
-Chạy lại.
-
-Ghi rõ command và kết quả.
-
+Cross-tenant create/read/heartbeat tests
+Cross-user ownership tests
+Inactive session tests
+Wrong-project tests
+Permission revocation tests
 ```
-
-
 
 ---
 
+## S12-R-004 — Official Mutation Command & Atomic Audit Gate
 
+### Mục tiêu
 
-## 9. Quy tắc code và security bắt buộc
+Không còn đường ghi dữ liệu chính thức ngoài command/human-review/audit path.
 
+### Phạm vi
 
+- Tạo application command/service duy nhất cho commit draft.
+- Transaction phải bao gồm:
+  - validate permission;
+  - validate workflow state;
+  - exact optimistic version match;
+  - validate typed field value;
+  - mutate official row;
+  - clear/close applied draft;
+  - append AuditEvent;
+  - commit một lần.
+- Audit payload tối thiểu:
+  - actor;
+  - organization;
+  - project;
+  - session;
+  - entity;
+  - field;
+  - before/after;
+  - base/current version;
+  - correlation ID;
+  - command/event name.
+- Direct endpoint `PATCH /asset-lines/{line_id}`:
+  - loại bỏ field thuộc Workbench commit gate; hoặc
+  - chuyển hoàn toàn sang cùng application command và yêu cầu explicit human confirmation.
+- Không cho payload tự ghi `review_status` hoặc `validation_status` nếu không có command/workflow riêng.
+- Không xóa ReviewDecision/AuditEvent; correction dùng reversal/change request.
+
+### Acceptance criteria
+
+- Không endpoint nào có thể đổi `appraised_unit_price` ngoài commit command đã audit.
+- Nếu AuditEvent insert thất bại, official row không thay đổi.
+- Version token phải bằng chính xác `row_version`; version tương lai cũng bị reject.
+- `draft_value` sai kiểu không thể đi đến `setattr`.
+- Commit không được kích hoạt AI, report hoặc background auto-approval.
+
+### Tests/gates
 
 ```text
+Atomic rollback test
+Direct-mutation bypass test
+Future-version rejection test
+Typed value validation tests
+Audit before/after payload tests
+AI/report side-effect prohibition tests
+```
 
-Không invent domain behavior.
+---
 
-Không bypass tenant boundary.
+## S12-R-005 — Dynamic Project Context & Live Workbench Data Integrity
 
-Không official data mutation ngoài audit path.
+### Mục tiêu
 
-Không auto-approval.
+Loại bỏ hard-code project/session và dữ liệu nghiệp vụ giả khỏi frontend.
 
-Không AI commit.
+### Phạm vi
 
-Không hard-code user/project/organization/session.
+- Tạo `ResolvedProjectContext` hoặc kiến trúc tương đương:
+  - route ref;
+  - resolve UUID một lần;
+  - cung cấp project UUID cho grid, session, context drawer, draft state và commit.
+- Xóa:
+  - `hd-98-gia-lai` hard-code trong component/hook;
+  - all-zero project UUID;
+  - hard-code organization/role/project title;
+  - project route mặc định nghiệp vụ giả.
+- WorkbenchLayout nhận project ref/UUID thật từ route.
+- Adapter không được tự tạo:
+  - fake canonical asset ID;
+  - fake variant ID;
+  - taxonomy path;
+  - unit `cái`;
+  - VND;
+  - quote status;
+  - quote value `0`.
+- Missing data phải là `null`/empty state có nhãn tiếng Việt.
+- Thêm pagination/infinite loading hoặc thông báo rõ số dòng chưa tải.
+- Retry resolver phải thật sự chạy lại.
+- Chuẩn hóa toàn bộ user-facing copy theo Vietnamese-first và Astryx.
 
-Không plaintext production secrets.
+### Acceptance criteria
 
-Không raw stack trace/local path/internal token cho user.
+- Mở project A và B tạo request đúng UUID tương ứng.
+- Không request nào gửi slug hard-code hoặc zero UUID.
+- Missing currency không hiển thị VND.
+- Missing quote không hiển thị giá 0.
+- Missing taxonomy hiển thị `Chưa phân loại`, không gán taxonomy giả.
+- Grid có thể truy cập toàn bộ dataset qua pagination/loading.
+- Không có English user-facing label trong luồng Workbench chính.
 
-Không unrelated refactor.
+### Tests/gates
 
-Không xóa guardrail.
+```text
+Route-to-context tests
+Two-project isolation UI tests
+No-hardcode static scan
+Null/missing-data rendering tests
+Pagination tests
+Vietnamese copy tests
+```
 
-Không sửa audit cũ để che lỗi.
+---
+
+## S12-R-006 — Excel Intake Streaming & Transaction Hardening
+
+### Mục tiêu
+
+Làm parser intake an toàn, hữu hạn tài nguyên và không phá staging cũ khi thất bại.
+
+### Phạm vi
+
+- Không dùng:
+  - `file.file.read()` không giới hạn;
+  - `list(ws.iter_rows(...))`.
+- Thêm giới hạn:
+  - request/file byte size;
+  - compressed workbook size;
+  - worksheet row count;
+  - worksheet column count;
+  - cell/string length hợp lý.
+- Iteration streaming và dừng có kiểm soát.
+- Nếu vượt giới hạn, reject toàn bộ upload; không silent truncation.
+- Sheet được yêu cầu không tồn tại phải trả lỗi rõ ràng; không tự chuyển sheet âm thầm.
+- Re-upload theo generation/transaction:
+  - staging cũ giữ nguyên cho đến khi parse mới thành công;
+  - parse lỗi không làm mất staging cũ;
+  - batch status và audit được cập nhật nguyên tử.
+- Raw cell preservation phải giữ column position/letter và duplicate header.
+- Duplicate/blank header không được ghi đè dữ liệu.
+- Formula, external links và macros không được thực thi.
+- File extension check phải case-insensitive và thống nhất với registry.
+- Parser exception ở mọi bước phải chuyển batch sang trạng thái phù hợp và tạo audit/event an toàn.
+
+### Acceptance criteria
+
+- File vượt giới hạn bị reject trước khi dùng bộ nhớ không kiểm soát.
+- Workbook 5.001 dòng không bị cắt còn 5.000 dòng; toàn bộ batch bị reject với thông báo phù hợp.
+- Upload mới thất bại không xóa staging đã có.
+- Hai cột cùng header vẫn được lưu riêng.
+- Sheet name sai không tự chuyển sheet.
+- Không mutation `ProjectAssetLine`.
+- Không công thức/macro/external link nào được thực thi.
+
+### Tests/gates
+
+```text
+Large-file/large-row tests
+Duplicate header tests
+Blank header tests
+Wrong sheet tests
+Re-upload rollback tests
+Formula/external-link safety tests
+Official-data immutability tests
+```
+
+---
+
+## S12-R-007 — Documentation Reconciliation & Final Acceptance
+
+### Mục tiêu
+
+Đồng bộ tài liệu với code và đóng remediation slice bằng bằng chứng có thể kiểm chứng.
+
+### Phạm vi
+
+- Cập nhật:
+  - `README.md`;
+  - `CODEX.md`;
+  - `ENGINEERING_GUARDRAILS.md` nếu phase wording đã lỗi thời;
+  - project handoff;
+  - Sprint 11 final acceptance;
+  - S12-PR-001/S12-PR-002 audit addendum.
+- Không xóa lịch sử audit cũ; thêm addendum/reopen status.
+- Đánh dấu Sprint 11:
+  - `REOPENED / REMEDIATION REQUIRED` trong thời gian sửa;
+  - chỉ trở lại `READY` sau final acceptance.
+- Ghi rõ commit SHA, branch, CI run và test matrix.
+- Audit phải phân biệt:
+  - kiểm tra bằng code inspection;
+  - kiểm tra bằng unit test;
+  - kiểm tra bằng PostgreSQL integration;
+  - kiểm tra bằng CI.
+- Chạy final acceptance đầy đủ.
+
+### Acceptance criteria
+
+- Không tài liệu gốc nào còn nói dự án đang ở Sprint 0 như trạng thái hiện tại.
+- Không audit nào khẳng định “no zero UUID fallback” nếu static scan vẫn tìm thấy.
+- Không báo cáo PASS nếu required CI check chưa chạy.
+- Mọi mâu thuẫn đã nêu trong remediation intake có disposition:
+  - fixed;
+  - accepted with ADR;
+  - deferred có owner và target slice.
+
+---
+
+# 6. Thứ tự merge bắt buộc
+
+```text
+S12-R-001
+   ↓
+S12-R-002
+   ↓
+S12-R-003
+   ↓
+S12-R-004
+   ↓
+S12-R-005
+   ↓
+S12-R-006
+   ↓
+S12-R-007
+   ↓
+S12-PR-003 được phép bắt đầu/merge
+```
+
+Cho phép phát triển song song có kiểm soát:
+
+- R-003 và R-005 có thể chuẩn bị song song sau khi contract của R-002 ổn định.
+- R-004 và R-006 có thể phát triển song song nếu không sửa cùng vùng `projects.py`; ưu tiên tách router/service trước để giảm conflict.
+- R-007 chỉ đóng sau khi tất cả PR trước đã merge và CI xanh.
+
+---
+
+# 7. Kiến trúc refactor tối thiểu đề xuất
+
+Không yêu cầu broad refactor, nhưng nên tách các trách nhiệm mới để tránh tiếp tục phình `projects.py` và `models.py`.
+
+```text
+backend/app/modules/workflow_workbench/
+  application/
+    commit_asset_line_draft.py
+    resolve_owned_session.py
+  api/
+    sessions.py
+    drafts.py
+
+backend/app/modules/project_master_data/
+  api/
+    projects.py
+    asset_lines.py
+
+backend/app/modules/excel_import/
+  application/
+    parse_workbook.py
+    replace_staging_generation.py
+  domain/
+    limits.py
+    column_mapping.py
+  api/
+    asset_imports.py
+
+frontend/src/features/workbench/
+  project-context/
+  sessions/
+  asset-grid/
+  drafts/
+
+frontend/src/features/asset-import/
+  api/
+  upload/
+  staging/
+```
+
+Mọi thay đổi module boundary có tính lâu dài phải được ghi nhận bằng ADR hoặc cập nhật ADR kiến trúc hiện hành.
+
+---
+
+# 8. Definition of Done của toàn slice
+
+Slice chỉ được đánh dấu PASS khi tất cả điều kiện sau đúng:
+
+- [ ] Default branch và branch protection đúng.
+- [ ] Required CI checks chạy trên head commit.
+- [ ] Không còn production `X-User-Id` authentication.
+- [ ] Không còn cross-tenant/cross-user Workbench session access.
+- [ ] Không còn project slug hoặc zero UUID hard-code trong Workbench runtime.
+- [ ] Không còn direct mutation bypass cho field official.
+- [ ] Human commit và AuditEvent nằm trong cùng transaction.
+- [ ] Exact optimistic version match được enforce.
+- [ ] Workbench không hiển thị dữ liệu nghiệp vụ giả.
+- [ ] Grid hỗ trợ toàn bộ dataset qua pagination/loading.
+- [ ] Excel parser không đọc toàn bộ workbook vào list.
+- [ ] Upload limits được enforce, không silent truncation.
+- [ ] Re-upload failure không làm mất staging cũ.
+- [ ] Duplicate header/raw cells được bảo toàn.
+- [ ] PostgreSQL migration smoke PASS.
+- [ ] Backend test PASS.
+- [ ] Frontend lint/build/vitest PASS.
+- [ ] Security/secret/dependency scan PASS.
+- [ ] Tài liệu và audit addendum đã đồng bộ.
+- [ ] Final acceptance report ghi commit SHA và CI evidence.
+- [ ] Không có mutation `ProjectAssetLine` từ Excel intake.
+- [ ] Không có AI auto-approval hoặc auto-commit.
+
+---
+
+# 9. Final acceptance matrix
+
+| Khu vực | Gate bắt buộc | Trạng thái ban đầu |
+|---|---|---|
+| GitHub/default branch | Main/default + required checks | FAIL |
+| Authentication | Không giả mạo identity từ client header | FAIL |
+| Tenant boundary | Project/session/user scoped server-side | FAIL |
+| Human commit | Command + exact version + atomic audit | FAIL |
+| Direct update bypass | Không thể bypass gate | FAIL |
+| Workbench routing | Dynamic resolved project context | FAIL |
+| Workbench data integrity | Không fabricated business values | FAIL |
+| Pagination | Có đường truy cập toàn bộ rows | FAIL |
+| Excel memory safety | Streaming + limits | FAIL |
+| Excel transaction safety | Failed re-upload giữ staging cũ | FAIL |
+| Raw preservation | Duplicate headers không overwrite | FAIL |
+| CI evidence | Workflow run trên head | FAIL |
+| Documentation consistency | Phase/audit phản ánh code thật | FAIL |
+
+---
+
+# 10. Đầu ra bắt buộc của mỗi PR
+
+Mỗi PR thuộc slice phải báo cáo:
+
+```text
+Task ID
+Root cause
+Files changed
+Design/ADR sources
+Security and tenant impact
+Data mutation impact
+Tests added
+Commands run
+CI run
+Known limitations
+Migration impact
+Rollback plan
+Runtime/user-visible behavior
+Out-of-scope confirmation
+Final PASS/FAIL
+```
+
+---
+
+# 11. Quyết định sau remediation
+
+Chỉ sau khi `S12-R-007` đạt PASS:
+
+1. Cập nhật project handoff.
+2. Chốt baseline commit mới.
+3. Tạo nhánh mới cho `S12-PR-003`.
+4. Triển khai Validation Engine chỉ trên staging rows.
+5. Tiếp tục giữ nguyên nguyên tắc:
+   - Excel là input, không phải source of truth;
+   - staging trước, validation sau;
+   - human review trước apply;
+   - không mutation official data trong parser/validator;
+   - AI chỉ đề xuất, không phê duyệt hoặc tự commit.
