@@ -5,22 +5,33 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus,
-    User, UserStatus,
-    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
-    AssetFamily, AssetFamilyStatus,
-    AssetDNA, AssetDNAStatus,
-    AssetAttributeDefinition, AssetAttributeDataType, AssetAttributeScope,
-    CanonicalAsset, CanonicalAssetStatus, AssetVariant, AssetVariantStatus,
-    AssetVariantAttributeValue, AttributeValueSource
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    TaxonomyNode,
+    TaxonomyNodeLevel,
+    TaxonomyStatus,
+    AssetFamily,
+    AssetFamilyStatus,
+    AssetDNA,
+    AssetDNAStatus,
+    AssetAttributeDefinition,
+    AssetAttributeDataType,
+    AssetAttributeScope,
+    CanonicalAsset,
+    CanonicalAssetStatus,
+    AssetVariant,
+    AssetVariantStatus,
+    AssetVariantAttributeValue,
+    AttributeValueSource,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -40,11 +51,15 @@ def db_session() -> Session:
 
 def test_asset_variant_persistence(db_session: Session) -> None:
     # 1. Seed dependencies
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="variant@test.com", full_name="User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id, email="variant@test.com", full_name="User", status=UserStatus.ACTIVE
+    )
     db_session.add(user)
     db_session.commit()
 
@@ -53,12 +68,17 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         code="GRP-TRANS",
         name_vi="Máy biến áp",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(node)
     db_session.commit()
 
-    family = AssetFamily(taxonomy_node_id=node.id, code="FAM-TRANS", name_vi="Biến áp lực", status=AssetFamilyStatus.ACTIVE)
+    family = AssetFamily(
+        taxonomy_node_id=node.id,
+        code="FAM-TRANS",
+        name_vi="Biến áp lực",
+        status=AssetFamilyStatus.ACTIVE,
+    )
     db_session.add(family)
     db_session.commit()
 
@@ -66,7 +86,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         asset_family_id=family.id,
         primary_taxonomy_node_id=node.id,
         standard_name="Máy biến áp ABB 110kV",
-        status=CanonicalAssetStatus.ACTIVE
+        status=CanonicalAssetStatus.ACTIVE,
     )
     db_session.add(asset)
     db_session.commit()
@@ -77,7 +97,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         canonical_asset_id=asset.id,
         code="VAR-ABB-110KV-10MVA",
         display_name="Máy biến áp ABB 110kV 10MVA",
-        status=AssetVariantStatus.ACTIVE
+        status=AssetVariantStatus.ACTIVE,
     )
     db_session.add(variant)
     db_session.commit()
@@ -92,7 +112,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         canonical_asset_id=asset.id,
         code="VAR-ABB-110KV-10MVA",
         display_name="Duplicate Code",
-        status=AssetVariantStatus.DRAFT
+        status=AssetVariantStatus.DRAFT,
     )
     db_session.add(dup)
     with pytest.raises(exc.IntegrityError):
@@ -104,7 +124,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         asset_family_id=family.id,
         primary_taxonomy_node_id=node.id,
         standard_name="Máy biến áp ABB 110kV 2",
-        status=CanonicalAssetStatus.ACTIVE
+        status=CanonicalAssetStatus.ACTIVE,
     )
     db_session.add(asset2)
     db_session.commit()
@@ -114,14 +134,15 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         canonical_asset_id=asset2.id,
         code="VAR-ABB-110KV-10MVA",
         display_name="Same Code Diff Canonical",
-        status=AssetVariantStatus.ACTIVE
+        status=AssetVariantStatus.ACTIVE,
     )
     db_session.add(variant_diff_canonical)
     db_session.commit()
 
-
     # 4. Add Attribute Definitions and Values
-    dna = AssetDNA(asset_family_id=family.id, version=1, name="DNA Transformer", status=AssetDNAStatus.ACTIVE)
+    dna = AssetDNA(
+        asset_family_id=family.id, version=1, name="DNA Transformer", status=AssetDNAStatus.ACTIVE
+    )
     db_session.add(dna)
     db_session.commit()
 
@@ -130,7 +151,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         key="capacity_mva",
         label_vi="Dung lượng (MVA)",
         data_type=AssetAttributeDataType.NUMBER,
-        scope=AssetAttributeScope.VARIANT
+        scope=AssetAttributeScope.VARIANT,
     )
     db_session.add(attr_def)
     db_session.commit()
@@ -140,7 +161,7 @@ def test_asset_variant_persistence(db_session: Session) -> None:
         attribute_definition_id=attr_def.id,
         value_number=10.0,
         source=AttributeValueSource.MANUAL,
-        confidence_score=1.0
+        confidence_score=1.0,
     )
     db_session.add(val)
     db_session.commit()
@@ -152,14 +173,16 @@ def test_asset_variant_persistence(db_session: Session) -> None:
     assert variant.attributes[0].value_number == 10.0
 
 
-
-
 def test_parent_deletion_restricted(db_session: Session) -> None:
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="del@test.com", full_name="User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id, email="del@test.com", full_name="User", status=UserStatus.ACTIVE
+    )
     db_session.add(user)
     db_session.commit()
 
@@ -168,12 +191,17 @@ def test_parent_deletion_restricted(db_session: Session) -> None:
         code="GRP-TRANS",
         name_vi="Máy biến áp",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(node)
     db_session.commit()
 
-    family = AssetFamily(taxonomy_node_id=node.id, code="FAM-TRANS", name_vi="Biến áp lực", status=AssetFamilyStatus.ACTIVE)
+    family = AssetFamily(
+        taxonomy_node_id=node.id,
+        code="FAM-TRANS",
+        name_vi="Biến áp lực",
+        status=AssetFamilyStatus.ACTIVE,
+    )
     db_session.add(family)
     db_session.commit()
 
@@ -181,7 +209,7 @@ def test_parent_deletion_restricted(db_session: Session) -> None:
         asset_family_id=family.id,
         primary_taxonomy_node_id=node.id,
         standard_name="Máy biến áp ABB 110kV",
-        status=CanonicalAssetStatus.ACTIVE
+        status=CanonicalAssetStatus.ACTIVE,
     )
     db_session.add(asset)
     db_session.commit()
@@ -191,7 +219,7 @@ def test_parent_deletion_restricted(db_session: Session) -> None:
         canonical_asset_id=asset.id,
         code="VAR-ABB-110KV-10MVA",
         display_name="Máy biến áp ABB 110kV 10MVA",
-        status=AssetVariantStatus.ACTIVE
+        status=AssetVariantStatus.ACTIVE,
     )
     db_session.add(variant)
     db_session.commit()

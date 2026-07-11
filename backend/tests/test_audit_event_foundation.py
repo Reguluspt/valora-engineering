@@ -9,7 +9,7 @@ from app.modules.project_master_data.models import (
     OrganizationStatus,
     User,
     UserStatus,
-    AuditEvent
+    AuditEvent,
 )
 from app.core.audit import log_audit_event, sanitize_payload
 
@@ -56,7 +56,7 @@ def test_audit_event_model_metadata(db_session: Session) -> None:
         entity_type="Project",
         entity_id=uuid.uuid4(),
         correlation_id="corr-123",
-        payload={"some_key": "some_value"}
+        payload={"some_key": "some_value"},
     )
     db_session.add(evt)
     db_session.commit()
@@ -88,11 +88,11 @@ def test_log_audit_event_transactional(db_session: Session) -> None:
         entity_type="Project",
         entity_id=uuid.uuid4(),
         organization_id=org.id,
-        command_name="CreateProject"
+        command_name="CreateProject",
     )
     # Verify it is stored and has an ID assigned due to flush
     assert evt.id is not None
-    
+
     # Query inside the transaction
     db_evt = db_session.query(AuditEvent).filter(AuditEvent.id == evt.id).first()
     assert db_evt is not None
@@ -109,15 +109,8 @@ def test_payload_sanitization() -> None:
         "user_id": "123",
         "username": "testuser",
         "password": "my_plain_password",
-        "nested": {
-            "secret_key": "supersecret",
-            "safe_field": "hello",
-            "api_token": "bearer xyz"
-        },
-        "list_items": [
-            {"password_hash": "$argon2id$..."},
-            {"safe_value": 42}
-        ]
+        "nested": {"secret_key": "supersecret", "safe_field": "hello", "api_token": "bearer xyz"},
+        "list_items": [{"password_hash": "$argon2id$..."}, {"safe_value": 42}],
     }
 
     sanitized = sanitize_payload(payload)
@@ -142,7 +135,7 @@ def test_audit_event_append_only_policy() -> None:
     # To simulate append-only, any attempts to modify audit events should be prohibited
     # at the policy/code review level.
     import app.core.audit as audit_module
-    
+
     # Assert there are no update or delete functions exported by the audit core module
     exports = dir(audit_module)
     assert "update_audit_event" not in exports

@@ -8,18 +8,27 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus,
-    User, UserStatus, Role, UserRole, AuditEvent,
-    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
-    AssetFamily, AssetFamilyStatus, AssetDNA, AssetDNAStatus
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Role,
+    UserRole,
+    AuditEvent,
+    TaxonomyNode,
+    TaxonomyNodeLevel,
+    TaxonomyStatus,
+    AssetFamily,
+    AssetFamilyStatus,
+    AssetDNA,
+    AssetDNAStatus,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     Base.metadata.create_all(bind=engine)
     session = Session(bind=engine)
@@ -45,7 +54,9 @@ def client(db_session: Session) -> TestClient:
 
 @pytest.fixture
 def setup_user_and_headers(db_session: Session):
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
@@ -56,15 +67,25 @@ def setup_user_and_headers(db_session: Session):
             "taxonomy:node:create",
             "taxonomy:node:update",
             "taxonomy:node:approve",
-            "taxonomy:node:deprecate"
-        ]
+            "taxonomy:node:deprecate",
+        ],
     )
     role_viewer = Role(code="viewer", display_name="Viewer", permissions=[])
     db_session.add_all([role_admin, role_viewer])
     db_session.commit()
 
-    user_admin = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
-    user_viewer = User(organization_id=org.id, email="viewer@test.com", full_name="Viewer User", status=UserStatus.ACTIVE)
+    user_admin = User(
+        organization_id=org.id,
+        email="admin@test.com",
+        full_name="Admin User",
+        status=UserStatus.ACTIVE,
+    )
+    user_viewer = User(
+        organization_id=org.id,
+        email="viewer@test.com",
+        full_name="Viewer User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add_all([user_admin, user_viewer])
     db_session.commit()
 
@@ -75,11 +96,13 @@ def setup_user_and_headers(db_session: Session):
     return {
         "headers_admin": {"X-User-Id": str(user_admin.id)},
         "headers_viewer": {"X-User-Id": str(user_viewer.id)},
-        "user_admin_id": user_admin.id
+        "user_admin_id": user_admin.id,
     }
 
 
-def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_taxonomy_api_rbac_and_flow(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
     headers_viewer = setup_user_and_headers["headers_viewer"]
 
@@ -87,7 +110,7 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_viewer,
-        json={"level": "domain", "code": "DOM-ELEC", "name_vi": "Thiết bị điện"}
+        json={"level": "domain", "code": "DOM-ELEC", "name_vi": "Thiết bị điện"},
     )
     assert resp.status_code == 403
 
@@ -95,13 +118,15 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"level": "domain", "code": "DOM-ELEC", "name_vi": "Thiết bị điện"}
+        json={"level": "domain", "code": "DOM-ELEC", "name_vi": "Thiết bị điện"},
     )
     assert resp.status_code == 201
     dom_id = resp.json()["id"]
 
     # Verify audit event logged
-    audit = db_session.query(AuditEvent).filter(AuditEvent.event_name == "TAXONOMY_NODE_CREATE").first()
+    audit = (
+        db_session.query(AuditEvent).filter(AuditEvent.event_name == "TAXONOMY_NODE_CREATE").first()
+    )
     assert audit is not None
     assert audit.actor_user_id == setup_user_and_headers["user_admin_id"]
 
@@ -109,7 +134,12 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"parent_id": dom_id, "level": "subcategory", "code": "SUB-INVALID", "name_vi": "Invalid Level Order"}
+        json={
+            "parent_id": dom_id,
+            "level": "subcategory",
+            "code": "SUB-INVALID",
+            "name_vi": "Invalid Level Order",
+        },
     )
     assert resp.status_code == 422
 
@@ -117,30 +147,24 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"parent_id": dom_id, "level": "category", "code": "CAT-DIST", "name_vi": "Phân phối"}
+        json={"parent_id": dom_id, "level": "category", "code": "CAT-DIST", "name_vi": "Phân phối"},
     )
     assert resp.status_code == 201
     cat_id = resp.json()["id"]
 
     # 5. Approve node (moves draft -> active)
-    resp = client.post(
-        "/api/v1/taxonomy/nodes/{}/approve".format(dom_id),
-        headers=headers_admin
-    )
+    resp = client.post("/api/v1/taxonomy/nodes/{}/approve".format(dom_id), headers=headers_admin)
     assert resp.status_code == 200
     assert resp.json()["status"] == "active"
 
-    resp = client.post(
-        "/api/v1/taxonomy/nodes/{}/approve".format(cat_id),
-        headers=headers_admin
-    )
+    resp = client.post("/api/v1/taxonomy/nodes/{}/approve".format(cat_id), headers=headers_admin)
     assert resp.status_code == 200
 
     # 6. Create AssetFamily under active TaxonomyNode
     resp = client.post(
         "/api/v1/taxonomy/families",
         headers=headers_admin,
-        json={"taxonomy_node_id": cat_id, "code": "FAM-CB", "name_vi": "Cầu dao"}
+        json={"taxonomy_node_id": cat_id, "code": "FAM-CB", "name_vi": "Cầu dao"},
     )
     assert resp.status_code == 201
     fam_id = resp.json()["id"]
@@ -149,7 +173,7 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
     resp = client.post(
         "/api/v1/taxonomy/dna",
         headers=headers_admin,
-        json={"asset_family_id": fam_id, "version": 1, "name": "DNA Cầu dao v1"}
+        json={"asset_family_id": fam_id, "version": 1, "name": "DNA Cầu dao v1"},
     )
     assert resp.status_code == 201
     dna_id = resp.json()["id"]
@@ -165,10 +189,10 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
             "label_vi": "Dòng định mức",
             "data_type": "number",
             "scope": "canonical",
-            "is_variant_defining": True
-        }
+            "is_variant_defining": True,
+        },
     )
-    assert resp.status_code == 422 # VAL_TAX_DNA_002 scope mismatch
+    assert resp.status_code == 422  # VAL_TAX_DNA_002 scope mismatch
 
     # Correct creation
     resp = client.post(
@@ -180,53 +204,72 @@ def test_taxonomy_api_rbac_and_flow(client: TestClient, db_session: Session, set
             "label_vi": "Dòng định mức",
             "data_type": "number",
             "scope": "variant",
-            "is_variant_defining": True
-        }
+            "is_variant_defining": True,
+        },
     )
     assert resp.status_code == 201
 
 
-def test_taxonomy_node_hierarchy_errors(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_taxonomy_node_hierarchy_errors(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
 
     # 1. CATEGORY with no parent (422)
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"level": "category", "code": "CAT-M", "name_vi": "Category"}
+        json={"level": "category", "code": "CAT-M", "name_vi": "Category"},
     )
     assert resp.status_code == 422
 
     # 2. DOMAIN with a parent (422)
-    dom = TaxonomyNode(level=TaxonomyNodeLevel.DOMAIN, code="DOM-P", name_vi="Parent Domain", status=TaxonomyStatus.ACTIVE, created_by=setup_user_and_headers["user_admin_id"])
+    dom = TaxonomyNode(
+        level=TaxonomyNodeLevel.DOMAIN,
+        code="DOM-P",
+        name_vi="Parent Domain",
+        status=TaxonomyStatus.ACTIVE,
+        created_by=setup_user_and_headers["user_admin_id"],
+    )
     db_session.add(dom)
     db_session.commit()
 
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"parent_id": str(dom.id), "level": "domain", "code": "DOM-C", "name_vi": "Child Domain"}
+        json={
+            "parent_id": str(dom.id),
+            "level": "domain",
+            "code": "DOM-C",
+            "name_vi": "Child Domain",
+        },
     )
     assert resp.status_code == 422
 
 
-def test_taxonomy_node_lifecycle(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_taxonomy_node_lifecycle(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
 
     resp = client.post(
         "/api/v1/taxonomy/nodes",
         headers=headers_admin,
-        json={"level": "domain", "code": "DOM-L", "name_vi": "Lifecycle Node"}
+        json={"level": "domain", "code": "DOM-L", "name_vi": "Lifecycle Node"},
     )
     node_id = resp.json()["id"]
 
     # 1. Submit review (draft -> pending_review)
-    resp = client.post("/api/v1/taxonomy/nodes/{}/submit-review".format(node_id), headers=headers_admin)
+    resp = client.post(
+        "/api/v1/taxonomy/nodes/{}/submit-review".format(node_id), headers=headers_admin
+    )
     assert resp.status_code == 200
     assert resp.json()["status"] == "pending_review"
 
     # Cannot submit review again
-    resp = client.post("/api/v1/taxonomy/nodes/{}/submit-review".format(node_id), headers=headers_admin)
+    resp = client.post(
+        "/api/v1/taxonomy/nodes/{}/submit-review".format(node_id), headers=headers_admin
+    )
     assert resp.status_code == 400
 
     # 2. Approve (pending_review -> active)
@@ -245,11 +288,26 @@ def test_taxonomy_node_lifecycle(client: TestClient, db_session: Session, setup_
     assert node.status == TaxonomyStatus.DEPRECATED
 
 
-def test_asset_family_errors(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_asset_family_errors(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
 
-    dom = TaxonomyNode(level=TaxonomyNodeLevel.DOMAIN, code="DOM-F", name_vi="Domain F", status=TaxonomyStatus.ACTIVE, created_by=setup_user_and_headers["user_admin_id"])
-    cat_draft = TaxonomyNode(parent_id=dom.id, level=TaxonomyNodeLevel.CATEGORY, code="CAT-DRAFT", name_vi="Draft Category", status=TaxonomyStatus.DRAFT, created_by=setup_user_and_headers["user_admin_id"])
+    dom = TaxonomyNode(
+        level=TaxonomyNodeLevel.DOMAIN,
+        code="DOM-F",
+        name_vi="Domain F",
+        status=TaxonomyStatus.ACTIVE,
+        created_by=setup_user_and_headers["user_admin_id"],
+    )
+    cat_draft = TaxonomyNode(
+        parent_id=dom.id,
+        level=TaxonomyNodeLevel.CATEGORY,
+        code="CAT-DRAFT",
+        name_vi="Draft Category",
+        status=TaxonomyStatus.DRAFT,
+        created_by=setup_user_and_headers["user_admin_id"],
+    )
     db_session.add_all([dom, cat_draft])
     db_session.commit()
 
@@ -257,19 +315,29 @@ def test_asset_family_errors(client: TestClient, db_session: Session, setup_user
     resp = client.post(
         "/api/v1/taxonomy/families",
         headers=headers_admin,
-        json={"taxonomy_node_id": str(cat_draft.id), "code": "FAM-ERR", "name_vi": "Error"}
+        json={"taxonomy_node_id": str(cat_draft.id), "code": "FAM-ERR", "name_vi": "Error"},
     )
     assert resp.status_code == 400
 
 
-def test_asset_dna_uniqueness_and_activation(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_asset_dna_uniqueness_and_activation(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
 
-    dom = TaxonomyNode(level=TaxonomyNodeLevel.DOMAIN, code="DOM-DNA", name_vi="Domain", status=TaxonomyStatus.ACTIVE, created_by=setup_user_and_headers["user_admin_id"])
+    dom = TaxonomyNode(
+        level=TaxonomyNodeLevel.DOMAIN,
+        code="DOM-DNA",
+        name_vi="Domain",
+        status=TaxonomyStatus.ACTIVE,
+        created_by=setup_user_and_headers["user_admin_id"],
+    )
     db_session.add(dom)
     db_session.commit()
 
-    fam = AssetFamily(taxonomy_node_id=dom.id, code="FAM-DNA", name_vi="Family", status=AssetFamilyStatus.ACTIVE)
+    fam = AssetFamily(
+        taxonomy_node_id=dom.id, code="FAM-DNA", name_vi="Family", status=AssetFamilyStatus.ACTIVE
+    )
     db_session.add(fam)
     db_session.commit()
 
@@ -287,14 +355,24 @@ def test_asset_dna_uniqueness_and_activation(client: TestClient, db_session: Ses
     assert dna1.status == AssetDNAStatus.DEPRECATED
 
 
-def test_attribute_definition_errors(client: TestClient, db_session: Session, setup_user_and_headers) -> None:
+def test_attribute_definition_errors(
+    client: TestClient, db_session: Session, setup_user_and_headers
+) -> None:
     headers_admin = setup_user_and_headers["headers_admin"]
 
-    dom = TaxonomyNode(level=TaxonomyNodeLevel.DOMAIN, code="DOM-A", name_vi="Domain", status=TaxonomyStatus.ACTIVE, created_by=setup_user_and_headers["user_admin_id"])
+    dom = TaxonomyNode(
+        level=TaxonomyNodeLevel.DOMAIN,
+        code="DOM-A",
+        name_vi="Domain",
+        status=TaxonomyStatus.ACTIVE,
+        created_by=setup_user_and_headers["user_admin_id"],
+    )
     db_session.add(dom)
     db_session.commit()
 
-    fam = AssetFamily(taxonomy_node_id=dom.id, code="FAM-A", name_vi="Family", status=AssetFamilyStatus.ACTIVE)
+    fam = AssetFamily(
+        taxonomy_node_id=dom.id, code="FAM-A", name_vi="Family", status=AssetFamilyStatus.ACTIVE
+    )
     db_session.add(fam)
     db_session.commit()
 
@@ -311,8 +389,8 @@ def test_attribute_definition_errors(client: TestClient, db_session: Session, se
             "key": "InvalidKeyCasing",
             "label_vi": "Label",
             "data_type": "string",
-            "scope": "both"
-        }
+            "scope": "both",
+        },
     )
     assert resp.status_code == 422
 
@@ -325,8 +403,8 @@ def test_attribute_definition_errors(client: TestClient, db_session: Session, se
             "key": "enum_attr",
             "label_vi": "Enum Label",
             "data_type": "enum",
-            "scope": "both"
-        }
+            "scope": "both",
+        },
     )
     assert resp.status_code == 422
 

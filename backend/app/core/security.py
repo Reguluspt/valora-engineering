@@ -4,11 +4,13 @@ from argon2.exceptions import VerifyMismatchError
 # Instantiate PasswordHasher using standard/default parameters (which uses Argon2id)
 ph = PasswordHasher()
 
+
 def hash_password(password: str) -> str:
     """
     Hash a plaintext password using Argon2id.
     """
     return ph.hash(password)
+
 
 def verify_password(password: str, hashed_password: str) -> bool:
     """

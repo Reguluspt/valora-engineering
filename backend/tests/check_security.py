@@ -9,16 +9,14 @@ TEMPORARY_BASELINE = {
         "description": "Production X-User-Id authentication usage",
         "files": {},
         "target_pr": "S12-R-002",
-        "expiry_condition": "Implement credential-based auth session"
+        "expiry_condition": "Implement credential-based auth session",
     },
     "S12R-SESSION-001": {
         "pattern": r"00000000-0000-0000-0000-000000000000",
         "description": "All-zero UUID runtime fallback",
-        "files": {
-            "frontend/src/components/workbench/session/useWorkbenchSession.ts": 1
-        },
+        "files": {"frontend/src/components/workbench/session/useWorkbenchSession.ts": 1},
         "target_pr": "S12-R-003 / S12-R-005",
-        "expiry_condition": "Implement active project context resolution"
+        "expiry_condition": "Implement active project context resolution",
     },
     "S12R-ROUTING-001": {
         "pattern": r"hd-98-gia-lai",
@@ -26,30 +24,38 @@ TEMPORARY_BASELINE = {
         "files": {
             "frontend/src/App.tsx": 2,
             "frontend/src/components/layout/AppShell.tsx": 1,
-            "frontend/src/components/layout/WorkbenchLayout.tsx": 6
+            "frontend/src/components/layout/WorkbenchLayout.tsx": 6,
         },
         "target_pr": "S12-R-005",
-        "expiry_condition": "Implement dynamic routing and project state context"
-    }
+        "expiry_condition": "Implement dynamic routing and project state context",
+    },
 }
 
 CRITICAL_BLOCKERS = [
     {
         "name": "Dangerous wildcard production CORS",
         "pattern": r"allow_origins\s*=\s*\[\s*['\"]\*['\"]\s*\]",
-        "exts": (".py",)
+        "exts": (".py",),
     }
 ]
+
 
 def check_secret_placeholders(directory):
     print("=== Scanning for hardcoded secrets ===")
     secret_patterns = [
         r"(?:secret_key|password|api_token|auth_token)\s*=\s*['\"][^'\"]+['\"]",
-        r"['\"](?:secret_key|password|api_token|auth_token)['\"]\s*:\s*['\"][^'\"]+['\"]"
+        r"['\"](?:secret_key|password|api_token|auth_token)['\"]\s*:\s*['\"][^'\"]+['\"]",
     ]
     issues_found = 0
     for root, dirs, files in os.walk(directory):
-        if "node_modules" in root or ".git" in root or "__pycache__" in root or ".pytest_cache" in root or "docs" in root or "dist" in root:
+        if (
+            "node_modules" in root
+            or ".git" in root
+            or "__pycache__" in root
+            or ".pytest_cache" in root
+            or "docs" in root
+            or "dist" in root
+        ):
             continue
         for file in files:
             if file.endswith((".py", ".ts", ".tsx", ".yml", ".json", ".env")):
@@ -63,21 +69,39 @@ def check_secret_placeholders(directory):
                             continue
                         for pattern in secret_patterns:
                             if re.search(pattern, line, re.IGNORECASE):
-                                if any(p in line.lower() for p in ["local", "placeholder", "example", "test", "change-this", "change_this"]):
+                                if any(
+                                    p in line.lower()
+                                    for p in [
+                                        "local",
+                                        "placeholder",
+                                        "example",
+                                        "test",
+                                        "change-this",
+                                        "change_this",
+                                    ]
+                                ):
                                     continue
-                                print(f"[SECURITY FAIL] Hardcoded secret found in {path}:{line_idx} - {line.strip()}")
+                                print(
+                                    f"[SECURITY FAIL] Hardcoded secret found in {path}:{line_idx} - {line.strip()}"
+                                )
                                 issues_found += 1
     return issues_found
+
 
 def check_security_baseline_and_blockers(directory):
     print("=== Checking security baseline & critical blockers ===")
     issues = 0
-    
+
     # Store dynamic counts per file for baseline items
     actual_counts = {fid: {} for fid in TEMPORARY_BASELINE}
 
     for root, dirs, files in os.walk(directory):
-        if "node_modules" in root or ".git" in root or "__pycache__" in root or ".pytest_cache" in root:
+        if (
+            "node_modules" in root
+            or ".git" in root
+            or "__pycache__" in root
+            or ".pytest_cache" in root
+        ):
             continue
         for file in files:
             # ONLY scan text/source files to prevent UnicodeDecodeError on binaries (like SQLite .db or .rar)
@@ -88,7 +112,13 @@ def check_security_baseline_and_blockers(directory):
             rel_path = os.path.relpath(path, directory).replace("\\", "/")
 
             # Exclude tests, check script, docs, and build outputs
-            if "tests" in rel_path or "check_security.py" in rel_path or "conftest.py" in rel_path or "docs" in rel_path or "dist" in rel_path:
+            if (
+                "tests" in rel_path
+                or "check_security.py" in rel_path
+                or "conftest.py" in rel_path
+                or "docs" in rel_path
+                or "dist" in rel_path
+            ):
                 continue
 
             # Fail-closed: Let file open/read raise errors if it encounters issues
@@ -101,7 +131,9 @@ def check_security_baseline_and_blockers(directory):
                     for cb in CRITICAL_BLOCKERS:
                         if file.endswith(cb["exts"]):
                             if re.search(cb["pattern"], line, re.IGNORECASE):
-                                print(f"[BLOCKER FAIL] {cb['name']} found in {rel_path}:{line_idx} - {line.strip()}")
+                                print(
+                                    f"[BLOCKER FAIL] {cb['name']} found in {rel_path}:{line_idx} - {line.strip()}"
+                                )
                                 issues += 1
 
                     # 2. Track baseline violations
@@ -117,32 +149,41 @@ def check_security_baseline_and_blockers(directory):
         # Check for new files with this violation
         for rel_path, count in actual_files.items():
             if rel_path not in expected_files:
-                print(f"[BASELINE FAIL] New file '{rel_path}' introduced baseline violation '{fid}' ({config['description']}): {count} occurrences")
+                print(
+                    f"[BASELINE FAIL] New file '{rel_path}' introduced baseline violation '{fid}' ({config['description']}): {count} occurrences"
+                )
                 issues += 1
             else:
                 expected_count = expected_files[rel_path]
                 if count > expected_count:
-                    print(f"[BASELINE FAIL] Violations in '{rel_path}' for '{fid}' increased from {expected_count} to {count}")
+                    print(
+                        f"[BASELINE FAIL] Violations in '{rel_path}' for '{fid}' increased from {expected_count} to {count}"
+                    )
                     issues += 1
                 else:
-                    print(f"[BASELINE OK] '{rel_path}' has {count}/{expected_count} allowed violations of '{fid}'")
+                    print(
+                        f"[BASELINE OK] '{rel_path}' has {count}/{expected_count} allowed violations of '{fid}'"
+                    )
 
         # Check if some baseline violations were resolved (can decrease, but count must not exceed)
         for rel_path in expected_files:
             if rel_path not in actual_files:
-                print(f"[BASELINE INFO] Clean check: '{rel_path}' no longer has violations of '{fid}' (Expected {expected_files[rel_path]})")
+                print(
+                    f"[BASELINE INFO] Clean check: '{rel_path}' no longer has violations of '{fid}' (Expected {expected_files[rel_path]})"
+                )
 
     return issues
+
 
 if __name__ == "__main__":
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     secrets_failed = check_secret_placeholders(base_dir)
     baseline_failed = check_security_baseline_and_blockers(base_dir)
-    
+
     total_failures = secrets_failed + baseline_failed
     if total_failures > 0:
         print(f"\nScan failed: {total_failures} critical security issues found.")
         sys.exit(1)
-    
+
     print("\nScan passed: Controlled baseline validated without blocker regressions.")
     sys.exit(0)

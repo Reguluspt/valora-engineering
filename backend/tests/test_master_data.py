@@ -71,9 +71,7 @@ def setup_data(db_session: Session):
     }
 
 
-def test_customer_tax_code_uniqueness_per_organization(
-    db_session: Session, setup_data
-) -> None:
+def test_customer_tax_code_uniqueness_per_organization(db_session: Session, setup_data) -> None:
     """Verifies uq_customer_tax_org unique constraint."""
     # 1. Create customer in Org A
     c1 = Customer(
@@ -110,9 +108,7 @@ def test_customer_tax_code_uniqueness_per_organization(
         db_session.commit()
 
 
-def test_supplier_tax_code_uniqueness_per_organization(
-    db_session: Session, setup_data
-) -> None:
+def test_supplier_tax_code_uniqueness_per_organization(db_session: Session, setup_data) -> None:
     """Verifies uq_supplier_tax_org unique constraint."""
     # 1. Create supplier in Org A
     s1 = Supplier(
@@ -168,9 +164,7 @@ def test_brand_name_case_insensitive_uniqueness(db_session: Session) -> None:
         db_session.commit()
 
 
-def test_customer_supplier_alias_cascade_deletion(
-    db_session: Session, setup_data
-) -> None:
+def test_customer_supplier_alias_cascade_deletion(db_session: Session, setup_data) -> None:
     """Verifies cascade deletion of aliases when parent is deleted."""
     # 1. Create Customer with Aliases
     customer = Customer(

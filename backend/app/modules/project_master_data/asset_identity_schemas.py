@@ -3,9 +3,13 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.modules.project_master_data.models import (
-    CanonicalAssetMaturity, CanonicalAssetStatus,
-    AssetVariantStatus, AssetAliasScope, AssetAliasStatus
+    CanonicalAssetMaturity,
+    CanonicalAssetStatus,
+    AssetVariantStatus,
+    AssetAliasScope,
+    AssetAliasStatus,
 )
+
 
 class BaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)

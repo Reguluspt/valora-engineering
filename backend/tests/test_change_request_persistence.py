@@ -6,19 +6,29 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Project, ProjectWorkflowStatus, Customer,
-    ReviewDecision, ReviewDecisionChoice,
-    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ChangeRequestPriority,
-    ReviewDecisionReversal
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Project,
+    ProjectWorkflowStatus,
+    Customer,
+    ReviewDecision,
+    ReviewDecisionChoice,
+    ChangeRequest,
+    ChangeRequestStatus,
+    ChangeRequestType,
+    ChangeRequestPriority,
+    ReviewDecisionReversal,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
@@ -41,15 +51,24 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="curator@test.com", full_name="Curator User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id,
+        email="curator@test.com",
+        full_name="Curator User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add(user)
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -59,15 +78,12 @@ def setup_seed_data(db_session: Session):
         name="Project 2026",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(proj)
     db_session.commit()
 
-    return {
-        "user_id": user.id,
-        "project_id": proj.id
-    }
+    return {"user_id": user.id, "project_id": proj.id}
 
 
 def test_change_request_persistence(db_session: Session, setup_seed_data) -> None:
@@ -81,7 +97,7 @@ def test_change_request_persistence(db_session: Session, setup_seed_data) -> Non
         reason="Need to add extra quote evidence.",
         status=ChangeRequestStatus.PENDING_REVIEW,
         priority=ChangeRequestPriority.HIGH,
-        requested_by=setup_seed_data["user_id"]
+        requested_by=setup_seed_data["user_id"],
     )
     db_session.add(cr)
     db_session.commit()
@@ -102,7 +118,7 @@ def test_review_decision_reversal_linking(db_session: Session, setup_seed_data) 
         reason="Original decision was incorrect.",
         status=ChangeRequestStatus.APPROVED,
         priority=ChangeRequestPriority.HIGH,
-        requested_by=setup_seed_data["user_id"]
+        requested_by=setup_seed_data["user_id"],
     )
     db_session.add(cr)
     db_session.commit()
@@ -113,7 +129,7 @@ def test_review_decision_reversal_linking(db_session: Session, setup_seed_data) 
         target_id=setup_seed_data["project_id"],
         decision=ReviewDecisionChoice.APPROVE,
         reason="Approved initial draft",
-        decided_by=setup_seed_data["user_id"]
+        decided_by=setup_seed_data["user_id"],
     )
     db_session.add(orig_dec)
 
@@ -123,7 +139,7 @@ def test_review_decision_reversal_linking(db_session: Session, setup_seed_data) 
         target_id=setup_seed_data["project_id"],
         decision=ReviewDecisionChoice.REJECT,
         reason="Reversed initial approval",
-        decided_by=setup_seed_data["user_id"]
+        decided_by=setup_seed_data["user_id"],
     )
     db_session.add(rev_dec)
     db_session.commit()
@@ -134,13 +150,17 @@ def test_review_decision_reversal_linking(db_session: Session, setup_seed_data) 
         original_review_decision_id=orig_dec.id,
         reversal_review_decision_id=rev_dec.id,
         reason="Correcting incorrect appraisal data",
-        created_by=setup_seed_data["user_id"]
+        created_by=setup_seed_data["user_id"],
     )
     db_session.add(reversal)
     db_session.commit()
 
     db_session.expire_all()
-    q_reversal = db_session.query(ReviewDecisionReversal).filter(ReviewDecisionReversal.id == reversal.id).one()
+    q_reversal = (
+        db_session.query(ReviewDecisionReversal)
+        .filter(ReviewDecisionReversal.id == reversal.id)
+        .one()
+    )
     assert q_reversal.original_decision.decision == ReviewDecisionChoice.APPROVE
     assert q_reversal.reversal_decision.decision == ReviewDecisionChoice.REJECT
 
@@ -155,7 +175,7 @@ def test_parent_deletion_restrict(db_session: Session, setup_seed_data) -> None:
         reason="Reopen reason",
         status=ChangeRequestStatus.DRAFT,
         priority=ChangeRequestPriority.NORMAL,
-        requested_by=setup_seed_data["user_id"]
+        requested_by=setup_seed_data["user_id"],
     )
     db_session.add(cr)
     db_session.commit()
@@ -165,14 +185,14 @@ def test_parent_deletion_restrict(db_session: Session, setup_seed_data) -> None:
         target_id=setup_seed_data["project_id"],
         decision=ReviewDecisionChoice.APPROVE,
         reason="Approved",
-        decided_by=setup_seed_data["user_id"]
+        decided_by=setup_seed_data["user_id"],
     )
     rev_dec = ReviewDecision(
         target_type="project",
         target_id=setup_seed_data["project_id"],
         decision=ReviewDecisionChoice.REJECT,
         reason="Reversed",
-        decided_by=setup_seed_data["user_id"]
+        decided_by=setup_seed_data["user_id"],
     )
     db_session.add_all([orig_dec, rev_dec])
     db_session.commit()
@@ -182,7 +202,7 @@ def test_parent_deletion_restrict(db_session: Session, setup_seed_data) -> None:
         original_review_decision_id=orig_dec.id,
         reversal_review_decision_id=rev_dec.id,
         reason="Reversal reason",
-        created_by=setup_seed_data["user_id"]
+        created_by=setup_seed_data["user_id"],
     )
     db_session.add(reversal)
     db_session.commit()
@@ -197,11 +217,14 @@ def test_parent_deletion_restrict(db_session: Session, setup_seed_data) -> None:
 def test_migration_chain() -> None:
     import importlib.util
     import os
-    
-    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da9a1_create_change_request_tables.py")
+
+    filepath = os.path.join(
+        os.path.dirname(__file__),
+        "../alembic/versions/a87a9b6da9a1_create_change_request_tables.py",
+    )
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da9a1", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    
+
     assert migration.revision == "a87a9b6da9a1"
     assert migration.down_revision == "a87a9b6da9a0"

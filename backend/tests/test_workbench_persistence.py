@@ -6,24 +6,34 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Project, ProjectWorkflowStatus, Customer,
-    WorkbenchSession, WorkbenchSessionStatus,
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Project,
+    ProjectWorkflowStatus,
+    Customer,
+    WorkbenchSession,
+    WorkbenchSessionStatus,
     WorkbenchLayout,
     AssetGridView,
     WorkbenchSelection,
-    InlineEditDraft, InlineEditDraftStatus,
+    InlineEditDraft,
+    InlineEditDraftStatus,
     AutosaveCheckpoint,
-    UndoRedoStackEntry, UndoRedoActionType,
-    PanelState, WorkbenchPanelType
+    UndoRedoStackEntry,
+    UndoRedoActionType,
+    PanelState,
+    WorkbenchPanelType,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
@@ -56,15 +66,24 @@ def test_table_registration() -> None:
 
 @pytest.fixture
 def setup_seed_data(db_session: Session):
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="curator@test.com", full_name="Curator User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id,
+        email="curator@test.com",
+        full_name="Curator User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add(user)
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -74,15 +93,12 @@ def setup_seed_data(db_session: Session):
         name="Project 2026",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(proj)
     db_session.commit()
 
-    return {
-        "user_id": user.id,
-        "project_id": proj.id
-    }
+    return {"user_id": user.id, "project_id": proj.id}
 
 
 def test_workbench_session_persistence(db_session: Session, setup_seed_data) -> None:
@@ -91,7 +107,7 @@ def test_workbench_session_persistence(db_session: Session, setup_seed_data) -> 
         user_id=setup_seed_data["user_id"],
         project_id=setup_seed_data["project_id"],
         status=WorkbenchSessionStatus.ACTIVE,
-        current_selection={"selected_rows": [str(uuid.uuid4())]}
+        current_selection={"selected_rows": [str(uuid.uuid4())]},
     )
     db_session.add(session)
     db_session.commit()
@@ -106,7 +122,7 @@ def test_workbench_layout_and_views(db_session: Session, setup_seed_data) -> Non
     layout = WorkbenchLayout(
         user_id=setup_seed_data["user_id"],
         layout_name="My Custom Workspace",
-        layout_payload={"panels": ["knowledge", "lineage"], "sizes": [400, 300]}
+        layout_payload={"panels": ["knowledge", "lineage"], "sizes": [400, 300]},
     )
     db_session.add(layout)
 
@@ -116,7 +132,7 @@ def test_workbench_layout_and_views(db_session: Session, setup_seed_data) -> Non
         project_id=setup_seed_data["project_id"],
         view_name="Transformer Review View",
         columns={"standard_name": True, "brand": False},
-        filters={"status": "draft"}
+        filters={"status": "draft"},
     )
     db_session.add(grid_view)
     db_session.commit()
@@ -128,8 +144,7 @@ def test_workbench_layout_and_views(db_session: Session, setup_seed_data) -> Non
 
 def test_ephemeral_workbench_actions(db_session: Session, setup_seed_data) -> None:
     session = WorkbenchSession(
-        user_id=setup_seed_data["user_id"],
-        project_id=setup_seed_data["project_id"]
+        user_id=setup_seed_data["user_id"], project_id=setup_seed_data["project_id"]
     )
     db_session.add(session)
     db_session.commit()
@@ -138,7 +153,7 @@ def test_ephemeral_workbench_actions(db_session: Session, setup_seed_data) -> No
     sel = WorkbenchSelection(
         session_id=session.id,
         selected_target_type="project_asset_line",
-        selected_target_ids=[str(uuid.uuid4())]
+        selected_target_ids=[str(uuid.uuid4())],
     )
     db_session.add(sel)
 
@@ -149,14 +164,13 @@ def test_ephemeral_workbench_actions(db_session: Session, setup_seed_data) -> No
         target_id=uuid.uuid4(),
         field_key="standard_name",
         draft_value={"val": "ABB Transformer Revised"},
-        status=InlineEditDraftStatus.DRAFT
+        status=InlineEditDraftStatus.DRAFT,
     )
     db_session.add(draft)
 
     # 3. AutosaveCheckpoint
     checkpoint = AutosaveCheckpoint(
-        session_id=session.id,
-        checkpoint_payload={"drafts": [{"field": "standard_name"}]}
+        session_id=session.id, checkpoint_payload={"drafts": [{"field": "standard_name"}]}
     )
     db_session.add(checkpoint)
 
@@ -166,28 +180,28 @@ def test_ephemeral_workbench_actions(db_session: Session, setup_seed_data) -> No
         sequence_no=1,
         target_type="project_asset_line",
         target_id=uuid.uuid4(),
-        action_type=UndoRedoActionType.EDIT
+        action_type=UndoRedoActionType.EDIT,
     )
     db_session.add(entry)
 
     # 5. PanelState
     panel = PanelState(
-        session_id=session.id,
-        panel_type=WorkbenchPanelType.LINEAGE_VIEWER,
-        is_expanded=True
+        session_id=session.id, panel_type=WorkbenchPanelType.LINEAGE_VIEWER, is_expanded=True
     )
     db_session.add(panel)
     db_session.commit()
 
     db_session.expire_all()
-    assert db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == session.id).count() == 1
+    assert (
+        db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == session.id).count()
+        == 1
+    )
 
 
 def test_workbench_cascading_deletes(db_session: Session, setup_seed_data) -> None:
     # Ephemeral session-owned child rows should cascade delete when session is dropped
     session = WorkbenchSession(
-        user_id=setup_seed_data["user_id"],
-        project_id=setup_seed_data["project_id"]
+        user_id=setup_seed_data["user_id"], project_id=setup_seed_data["project_id"]
     )
     db_session.add(session)
     db_session.commit()
@@ -195,7 +209,7 @@ def test_workbench_cascading_deletes(db_session: Session, setup_seed_data) -> No
     sel = WorkbenchSelection(
         session_id=session.id,
         selected_target_type="project_asset_line",
-        selected_target_ids=[str(uuid.uuid4())]
+        selected_target_ids=[str(uuid.uuid4())],
     )
     db_session.add(sel)
     db_session.commit()
@@ -212,11 +226,13 @@ def test_workbench_cascading_deletes(db_session: Session, setup_seed_data) -> No
 def test_migration_chain() -> None:
     import importlib.util
     import os
-    
-    filepath = os.path.join(os.path.dirname(__file__), "../alembic/versions/a87a9b6da9a0_create_workbench_tables.py")
+
+    filepath = os.path.join(
+        os.path.dirname(__file__), "../alembic/versions/a87a9b6da9a0_create_workbench_tables.py"
+    )
     spec = importlib.util.spec_from_file_location("migration_a87a9b6da9a0", filepath)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    
+
     assert migration.revision == "a87a9b6da9a0"
     assert migration.down_revision == "a87a9b6da99f"

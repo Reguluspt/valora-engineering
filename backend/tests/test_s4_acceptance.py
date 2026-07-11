@@ -8,18 +8,28 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
-    ProjectWorkflowStatus, Customer, ReviewDecision, ReviewDecisionChoice,
-    ReviewDecisionReversal, ProjectAssetLine
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Role,
+    UserRole,
+    Project,
+    ProjectWorkflowStatus,
+    Customer,
+    ReviewDecision,
+    ReviewDecisionChoice,
+    ReviewDecisionReversal,
+    ProjectAssetLine,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
@@ -49,7 +59,11 @@ def client(db_session: Session) -> TestClient:
 
 @pytest.fixture
 def setup_acceptance_data(db_session: Session):
-    org = OrganizationProfile(legal_name="Acceptance Org", organization_slug="acceptance-org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Acceptance Org",
+        organization_slug="acceptance-org",
+        status=OrganizationStatus.ACTIVE,
+    )
     db_session.add(org)
     db_session.commit()
 
@@ -69,22 +83,27 @@ def setup_acceptance_data(db_session: Session):
             "workbench:undo_redo",
             "workflow:change_request:create",
             "workflow:change_request:review",
-            "workflow:change_request:execute"
-        ]
+            "workflow:change_request:execute",
+        ],
     )
     role_viewer = Role(
-        code="viewer",
-        display_name="Viewer",
-        permissions=[
-            "workflow:read",
-            "workbench:read"
-        ]
+        code="viewer", display_name="Viewer", permissions=["workflow:read", "workbench:read"]
     )
     db_session.add_all([role_admin, role_viewer])
     db_session.commit()
 
-    user_admin = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
-    user_viewer = User(organization_id=org.id, email="viewer@test.com", full_name="Viewer User", status=UserStatus.ACTIVE)
+    user_admin = User(
+        organization_id=org.id,
+        email="admin@test.com",
+        full_name="Admin User",
+        status=UserStatus.ACTIVE,
+    )
+    user_viewer = User(
+        organization_id=org.id,
+        email="viewer@test.com",
+        full_name="Viewer User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add_all([user_admin, user_viewer])
     db_session.commit()
 
@@ -92,7 +111,9 @@ def setup_acceptance_data(db_session: Session):
     db_session.add(UserRole(user_id=user_viewer.id, role_id=role_viewer.id, is_active=True))
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user_admin.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user_admin.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -102,7 +123,7 @@ def setup_acceptance_data(db_session: Session):
         name="Project Acceptance",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user_admin.id
+        created_by=user_admin.id,
     )
     db_session.add(proj)
     db_session.commit()
@@ -113,17 +134,14 @@ def setup_acceptance_data(db_session: Session):
         target_id=proj.id,
         decision=ReviewDecisionChoice.APPROVE,
         reason="Approved initial proposal",
-        decided_by=user_admin.id
+        decided_by=user_admin.id,
     )
     db_session.add(orig_dec)
     db_session.commit()
 
     # Seed an asset line for validation checks
     line = ProjectAssetLine(
-        id=uuid.uuid4(),
-        project_id=proj.id,
-        asset_name="Acceptance Asset",
-        quantity=1.0
+        id=uuid.uuid4(), project_id=proj.id, asset_name="Acceptance Asset", quantity=1.0
     )
     db_session.add(line)
     db_session.commit()
@@ -133,11 +151,13 @@ def setup_acceptance_data(db_session: Session):
         "viewer_id": str(user_viewer.id),
         "project_id": str(proj.id),
         "original_decision_id": str(orig_dec.id),
-        "line_id": str(line.id)
+        "line_id": str(line.id),
     }
 
 
-def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Session, setup_acceptance_data) -> None:
+def test_s4_acceptance_comprehensive_flow(
+    client: TestClient, db_session: Session, setup_acceptance_data
+) -> None:
     headers_admin = {"X-User-Id": setup_acceptance_data["admin_id"]}
     headers_viewer = {"X-User-Id": setup_acceptance_data["viewer_id"]}
 
@@ -148,7 +168,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         "/api/v1/workbench/sessions",
         json={"project_id": setup_acceptance_data["project_id"]},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 201
     session_id = resp.json()["id"]
@@ -157,7 +177,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         "/api/v1/workbench/sessions",
         json={"project_id": setup_acceptance_data["project_id"]},
-        headers=headers_viewer
+        headers=headers_viewer,
     )
     assert resp.status_code == 403
 
@@ -165,7 +185,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         f"/api/v1/workbench/sessions/{session_id}/heartbeat",
         json={"expected_row_version": 1},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
     assert resp.json()["row_version"] == 2
@@ -174,7 +194,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         f"/api/v1/workbench/sessions/{session_id}/heartbeat",
         json={"expected_row_version": 1},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 409
 
@@ -183,9 +203,9 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
         f"/api/v1/workbench/sessions/{session_id}/layout",
         json={
             "layout_name": "Acceptance Layout",
-            "layout_payload": {"panels": ["grid", "knowledge"]}
+            "layout_payload": {"panels": ["grid", "knowledge"]},
         },
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
 
@@ -196,9 +216,9 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
             "view_name": "Active Items",
             "columns": {"code": True, "name": True},
             "filters": {"status": "active"},
-            "sort": {"field": "code", "direction": "asc"}
+            "sort": {"field": "code", "direction": "asc"},
         },
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
 
@@ -207,9 +227,9 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
         f"/api/v1/workbench/sessions/{session_id}/selection",
         json={
             "selected_target_type": "project_asset_line",
-            "selected_target_ids": [setup_acceptance_data["line_id"]]
+            "selected_target_ids": [setup_acceptance_data["line_id"]],
         },
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
 
@@ -223,9 +243,9 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
             "target_type": "project_asset_line",
             "target_id": setup_acceptance_data["line_id"],
             "field_key": "standard_name",
-            "draft_value": {"val": "Delta transformer"}
+            "draft_value": {"val": "Delta transformer"},
         },
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
 
@@ -233,7 +253,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         f"/api/v1/workbench/sessions/{session_id}/checkpoint",
         json={"checkpoint_payload": {"draft_count": 1}},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
 
@@ -262,10 +282,12 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
             "target_type": "review_decision",
             "target_id": setup_acceptance_data["original_decision_id"],
             "change_type": "reverse_review_decision",
-            "requested_payload": {"original_decision_id": setup_acceptance_data["original_decision_id"]},
-            "reason": "Initial appraisal details were outdated."
+            "requested_payload": {
+                "original_decision_id": setup_acceptance_data["original_decision_id"]
+            },
+            "reason": "Initial appraisal details were outdated.",
         },
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 201
     cr_id = resp.json()["id"]
@@ -274,7 +296,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         f"/api/v1/workflow/change-requests/{cr_id}/reject",
         json={"expected_row_version": 1, "review_note": ""},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 400
 
@@ -282,7 +304,7 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     resp = client.post(
         f"/api/v1/workflow/change-requests/{cr_id}/approve",
         json={"expected_row_version": 1, "review_note": "Approved decision reversal"},
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "approved"
@@ -290,14 +312,14 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     # Execute requires approved status and expected_row_version matching
     resp = client.post(
         f"/api/v1/workflow/change-requests/{cr_id}/execute?expected_row_version=1",
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 409  # row_version incremented to 2 on approval
 
     # Execute successfully
     resp = client.post(
         f"/api/v1/workflow/change-requests/{cr_id}/execute?expected_row_version=2",
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "executed"
@@ -305,17 +327,25 @@ def test_s4_acceptance_comprehensive_flow(client: TestClient, db_session: Sessio
     # Already executed request execution rejection
     resp = client.post(
         f"/api/v1/workflow/change-requests/{cr_id}/execute?expected_row_version=3",
-        headers=headers_admin
+        headers=headers_admin,
     )
     assert resp.status_code == 400
 
     # Verify original decision is preserved
     db_session.expire_all()
-    orig = db_session.query(ReviewDecision).filter(ReviewDecision.id == uuid.UUID(setup_acceptance_data["original_decision_id"])).one()
+    orig = (
+        db_session.query(ReviewDecision)
+        .filter(ReviewDecision.id == uuid.UUID(setup_acceptance_data["original_decision_id"]))
+        .one()
+    )
     assert orig.decision == ReviewDecisionChoice.APPROVE
 
     # Verify Reversal link was created
-    reversal = db_session.query(ReviewDecisionReversal).filter(ReviewDecisionReversal.change_request_id == uuid.UUID(cr_id)).first()
+    reversal = (
+        db_session.query(ReviewDecisionReversal)
+        .filter(ReviewDecisionReversal.change_request_id == uuid.UUID(cr_id))
+        .first()
+    )
     assert reversal is not None
     assert reversal.original_review_decision_id == orig.id
     assert reversal.reversal_decision.decision == ReviewDecisionChoice.REJECT

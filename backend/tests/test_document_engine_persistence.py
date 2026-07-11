@@ -5,22 +5,42 @@ from sqlalchemy.exc import IntegrityError, DBAPIError
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Project,
-    ProjectWorkflowStatus, Customer, EvidenceFile, EvidenceSource, EvidenceSourceType,
-    DocumentTemplate, TemplateVersion, TemplateVersionStatus,
-    TemplatePlaceholder, PlaceholderDataType, PlaceholderSourceContext, PlaceholderBinding,
-    PlaceholderBindingType, ComputedPlaceholderExpression, ComputedExpressionType,
-    ComputedExpressionStatus, RenderJob, RenderJobStatus, GeneratedDocument,
-    GeneratedDocumentStatus, DocumentPackage, DocumentPackageType, DocumentPackageStatus,
-    DocumentPackageItem
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Project,
+    ProjectWorkflowStatus,
+    Customer,
+    EvidenceFile,
+    EvidenceSource,
+    EvidenceSourceType,
+    DocumentTemplate,
+    TemplateVersion,
+    TemplateVersionStatus,
+    TemplatePlaceholder,
+    PlaceholderDataType,
+    PlaceholderSourceContext,
+    PlaceholderBinding,
+    PlaceholderBindingType,
+    ComputedPlaceholderExpression,
+    ComputedExpressionType,
+    ComputedExpressionStatus,
+    RenderJob,
+    RenderJobStatus,
+    GeneratedDocument,
+    GeneratedDocumentStatus,
+    DocumentPackage,
+    DocumentPackageType,
+    DocumentPackageStatus,
+    DocumentPackageItem,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+
     # Enable foreign keys in SQLite
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -38,15 +58,24 @@ def db_session() -> Session:
 
 @pytest.fixture
 def setup_basics(db_session: Session):
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id,
+        email="admin@test.com",
+        full_name="Admin User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add(user)
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -56,7 +85,7 @@ def setup_basics(db_session: Session):
         name="Project 2026",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(proj)
     db_session.commit()
@@ -72,7 +101,7 @@ def setup_basics(db_session: Session):
         file_size=1024,
         object_key="templates/template.docx",
         checksum="abc",
-        uploaded_by=user.id
+        uploaded_by=user.id,
     )
     db_session.add(ev_file)
     db_session.commit()
@@ -81,7 +110,7 @@ def setup_basics(db_session: Session):
         "org_id": org.id,
         "user_id": user.id,
         "project_id": proj.id,
-        "evidence_file_id": ev_file.id
+        "evidence_file_id": ev_file.id,
     }
 
 
@@ -92,7 +121,7 @@ def test_document_template_code_uniqueness(db_session: Session, setup_basics) ->
         document_type="report",
         code="T1",
         name="Template One",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t1)
     db_session.commit()
@@ -103,7 +132,7 @@ def test_document_template_code_uniqueness(db_session: Session, setup_basics) ->
         document_type="report",
         code="T1",
         name="Template Two",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t2)
     with pytest.raises((IntegrityError, DBAPIError)):
@@ -117,7 +146,7 @@ def test_template_version_relationships_and_uniqueness(db_session: Session, setu
         document_type="report",
         code="T_VERS",
         name="Template Version Test",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t)
     db_session.commit()
@@ -128,7 +157,7 @@ def test_template_version_relationships_and_uniqueness(db_session: Session, setu
         version_number=1,
         source_file_id=setup_basics["evidence_file_id"],
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(v1)
     db_session.commit()
@@ -141,7 +170,7 @@ def test_template_version_relationships_and_uniqueness(db_session: Session, setu
         version_number=1,
         source_file_id=setup_basics["evidence_file_id"],
         template_format="docx",
-        status=TemplateVersionStatus.DRAFT
+        status=TemplateVersionStatus.DRAFT,
     )
     db_session.add(v2)
     with pytest.raises((IntegrityError, DBAPIError)):
@@ -157,7 +186,7 @@ def test_computed_placeholder_expressions_payload(db_session: Session, setup_bas
         expression="fee * 1.1",
         output_data_type=PlaceholderDataType.CURRENCY,
         status=ComputedExpressionStatus.ACTIVE,
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(expr)
     db_session.commit()
@@ -172,7 +201,7 @@ def test_template_placeholders_and_bindings(db_session: Session, setup_basics) -
         document_type="report",
         code="T_PL",
         name="Placeholder Test",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t)
     db_session.commit()
@@ -181,7 +210,7 @@ def test_template_placeholders_and_bindings(db_session: Session, setup_basics) -
         document_template_id=t.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(v)
     db_session.commit()
@@ -193,7 +222,7 @@ def test_template_placeholders_and_bindings(db_session: Session, setup_basics) -
         data_type=PlaceholderDataType.SCALAR,
         source_context=PlaceholderSourceContext.PROJECT,
         source_path="$.customer.legal_name",
-        is_required=True
+        is_required=True,
     )
     db_session.add(p)
     db_session.commit()
@@ -205,7 +234,7 @@ def test_template_placeholders_and_bindings(db_session: Session, setup_basics) -
         template_placeholder_id=p.id,
         binding_path="$.customer.legal_name",
         binding_type=PlaceholderBindingType.DIRECT,
-        is_required=True
+        is_required=True,
     )
     db_session.add(b)
     db_session.commit()
@@ -219,7 +248,7 @@ def test_render_job_and_generated_documents(db_session: Session, setup_basics) -
         document_type="report",
         code="T_REND",
         name="Render Test",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t)
     db_session.commit()
@@ -228,7 +257,7 @@ def test_render_job_and_generated_documents(db_session: Session, setup_basics) -
         document_template_id=t.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(v)
     db_session.commit()
@@ -241,7 +270,7 @@ def test_render_job_and_generated_documents(db_session: Session, setup_basics) -
         data_snapshot={"project_name": "Project 2026"},
         data_snapshot_hash="hash123",
         status=RenderJobStatus.QUEUED,
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(job)
     db_session.commit()
@@ -261,7 +290,7 @@ def test_render_job_and_generated_documents(db_session: Session, setup_basics) -
         file_size_bytes=50000,
         template_version_id=v.id,
         data_snapshot_hash="hash123",
-        status=GeneratedDocumentStatus.DRAFT
+        status=GeneratedDocumentStatus.DRAFT,
     )
     db_session.add(doc)
     db_session.commit()
@@ -275,7 +304,7 @@ def test_document_packages_and_items(db_session: Session, setup_basics) -> None:
         document_type="report",
         code="T_PKG",
         name="Package Test",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t)
     db_session.commit()
@@ -284,7 +313,7 @@ def test_document_packages_and_items(db_session: Session, setup_basics) -> None:
         document_template_id=t.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(v)
     db_session.commit()
@@ -297,7 +326,7 @@ def test_document_packages_and_items(db_session: Session, setup_basics) -> None:
         data_snapshot={"key": "val"},
         data_snapshot_hash="hash123",
         status=RenderJobStatus.COMPLETED,
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(job)
     db_session.commit()
@@ -313,7 +342,7 @@ def test_document_packages_and_items(db_session: Session, setup_basics) -> None:
         file_size_bytes=1000,
         template_version_id=v.id,
         data_snapshot_hash="hash123",
-        status=GeneratedDocumentStatus.OFFICIAL
+        status=GeneratedDocumentStatus.OFFICIAL,
     )
     db_session.add(doc)
     db_session.commit()
@@ -323,15 +352,13 @@ def test_document_packages_and_items(db_session: Session, setup_basics) -> None:
         package_type=DocumentPackageType.QC,
         name="QC Package",
         status=DocumentPackageStatus.DRAFT,
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(pkg)
     db_session.commit()
 
     item = DocumentPackageItem(
-        document_package_id=pkg.id,
-        generated_document_id=doc.id,
-        sort_order=1
+        document_package_id=pkg.id, generated_document_id=doc.id, sort_order=1
     )
     db_session.add(item)
     db_session.commit()
@@ -346,7 +373,7 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
         document_type="report",
         code="T_DEL",
         name="Delete Constraint Test",
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(t)
     db_session.commit()
@@ -355,7 +382,7 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
         document_template_id=t.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(v)
     db_session.commit()
@@ -368,7 +395,7 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
         data_snapshot={"key": "val"},
         data_snapshot_hash="hash123",
         status=RenderJobStatus.COMPLETED,
-        created_by=setup_basics["user_id"]
+        created_by=setup_basics["user_id"],
     )
     db_session.add(job)
     db_session.commit()
@@ -384,7 +411,7 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
         file_size_bytes=1000,
         template_version_id=v.id,
         data_snapshot_hash="hash123",
-        status=GeneratedDocumentStatus.OFFICIAL
+        status=GeneratedDocumentStatus.OFFICIAL,
     )
     db_session.add(doc)
     db_session.commit()
@@ -394,4 +421,3 @@ def test_parent_deletion_restrict_on_generated_documents(db_session: Session, se
     with pytest.raises((IntegrityError, DBAPIError)):
         db_session.commit()
     db_session.rollback()
-

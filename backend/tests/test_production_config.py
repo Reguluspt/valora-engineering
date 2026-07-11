@@ -3,22 +3,27 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings, get_settings
 from app.main import app
 
+
 def test_config_handles_multiple_cors_origins():
     # 1. Parsing works with single value
     s1 = Settings(backend_cors_origins="http://example1.com")
     assert s1.parsed_cors_origins == ["http://example1.com"]
 
     # 2. Parsing works with comma separated origins
-    s2 = Settings(backend_cors_origins="http://example1.com, http://example2.com ,http://example3.com")
+    s2 = Settings(
+        backend_cors_origins="http://example1.com, http://example2.com ,http://example3.com"
+    )
     assert s2.parsed_cors_origins == [
         "http://example1.com",
         "http://example2.com",
-        "http://example3.com"
+        "http://example3.com",
     ]
 
     # 3. Block wildcard * in production mode
     s3 = Settings(valora_env="production", backend_cors_origins="http://example.com,*")
-    with pytest.raises(ValueError, match="Wildcard '\\*' is forbidden for CORS_ALLOWED_ORIGINS in production mode"):
+    with pytest.raises(
+        ValueError, match="Wildcard '\\*' is forbidden for CORS_ALLOWED_ORIGINS in production mode"
+    ):
         _ = s3.parsed_cors_origins
 
     # 4. Empty returns empty list
@@ -29,7 +34,7 @@ def test_config_handles_multiple_cors_origins():
 def test_cors_middleware_behavior():
     # Verify CORS behavior under live FastAPI middleware stack
     client = TestClient(app)
-    
+
     # 1. Allowed Origin is accepted
     response = client.get("/health", headers={"Origin": "http://localhost:5173"})
     assert response.status_code == 200
@@ -56,20 +61,21 @@ def test_production_and_dev_docs_routing(monkeypatch):
     # Re-initialize app in production mode
     monkeypatch.setenv("VALORA_ENV", "production")
     monkeypatch.setenv("BACKEND_CORS_ORIGINS", "http://prod-site.com")
-    
+
     # Clear settings cache to force reload
     from app.core.config import get_settings as core_get_settings
+
     core_get_settings.cache_clear()
-    
+
     # Import app inside to ensure it evaluates settings under production configuration
     # (Since app is already imported in global test scope, we manually instantiate a new FastAPI instance
     # mimicking main.py's initialization routing behavior)
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
-    
+
     settings = get_settings()
     is_prod = settings.valora_env == "production"
-    
+
     prod_app = FastAPI(
         title="Valora API Test Prod",
         docs_url=None if is_prod else "/docs",
@@ -83,14 +89,13 @@ def test_production_and_dev_docs_routing(monkeypatch):
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     prod_client = TestClient(prod_app)
     assert prod_client.get("/docs").status_code == 404
     assert prod_client.get("/redoc").status_code == 404
     assert prod_client.get("/openapi.json").status_code == 404
-    
+
     # Clean up environment state
     monkeypatch.delenv("VALORA_ENV", raising=False)
     monkeypatch.delenv("BACKEND_CORS_ORIGINS", raising=False)
     core_get_settings.cache_clear()
-

@@ -2,7 +2,20 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func
+from sqlalchemy import (
+    String,
+    Text,
+    ForeignKey,
+    UniqueConstraint,
+    Index,
+    Boolean,
+    DateTime,
+    JSON,
+    text,
+    Numeric,
+    CheckConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -23,6 +36,7 @@ class UserStatus(str, enum.Enum):
 
 class OrganizationProfile(Base, UUIDMixin, TimestampMixin):
     """Represents an organization/tenant in the system."""
+
     __tablename__ = "organization_profiles"
 
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -35,57 +49,48 @@ class OrganizationProfile(Base, UUIDMixin, TimestampMixin):
     website: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     default_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     status: Mapped[OrganizationStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=OrganizationStatus.ACTIVE
+        String(50), nullable=False, default=OrganizationStatus.ACTIVE
     )
 
     users: Mapped[List["User"]] = relationship(
-        "User",
-        back_populates="organization",
-        cascade="all, delete-orphan"
+        "User", back_populates="organization", cascade="all, delete-orphan"
     )
 
 
 class User(Base, UUIDMixin, TimestampMixin):
     """Represents a user account in the system."""
+
     __tablename__ = "users"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[UserStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=UserStatus.ACTIVE
+        String(50), nullable=False, default=UserStatus.ACTIVE
     )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
+        DateTime(timezone=True), nullable=True
     )
 
     organization: Mapped["OrganizationProfile"] = relationship(
-        "OrganizationProfile",
-        back_populates="users"
+        "OrganizationProfile", back_populates="users"
     )
     roles: Mapped[List["UserRole"]] = relationship(
         "UserRole",
         back_populates="user",
         foreign_keys="[UserRole.user_id]",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
-    __table_args__ = (
-        UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "email", name="uq_user_org_email"),)
 
 
 class Role(Base, UUIDMixin):
     """Represents a system role containing permission scopes."""
+
     __tablename__ = "roles"
 
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
@@ -94,44 +99,31 @@ class Role(Base, UUIDMixin):
     permissions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
     user_roles: Mapped[List["UserRole"]] = relationship(
-        "UserRole",
-        back_populates="role",
-        cascade="all, delete-orphan"
+        "UserRole", back_populates="role", cascade="all, delete-orphan"
     )
 
 
 class UserRole(Base, UUIDMixin):
     """Relationship table mapping users to roles with active/revoked status."""
+
     __tablename__ = "user_roles"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("roles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
     )
     assigned_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="roles",
-        foreign_keys=[user_id]
-    )
+    user: Mapped["User"] = relationship("User", back_populates="roles", foreign_keys=[user_id])
     role: Mapped["Role"] = relationship("Role", back_populates="user_roles")
 
     __table_args__ = (
@@ -141,63 +133,48 @@ class UserRole(Base, UUIDMixin):
             "role_id",
             unique=True,
             postgresql_where=text("is_active = true"),
-            sqlite_where=text("is_active = 1")
+            sqlite_where=text("is_active = 1"),
         ),
     )
 
 
 class UserSession(Base, UUIDMixin):
     """Represents an active or revoked user session for authentication."""
+
     __tablename__ = "user_sessions"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     access_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     csrf_token_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
     last_seen_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
-    access_expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False
-    )
-    idle_expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False
-    )
-    absolute_expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False
-    )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    access_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    idle_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
-    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile", foreign_keys=[organization_id])
+    organization: Mapped["OrganizationProfile"] = relationship(
+        "OrganizationProfile", foreign_keys=[organization_id]
+    )
 
     __table_args__ = (
         CheckConstraint(
             "status IN ('active', 'expired', 'revoked', 'suspicious')",
-            name="chk_user_sessions_status"
+            name="chk_user_sessions_status",
         ),
         Index("idx_user_sessions_user_status", "user_id", "status"),
     )
@@ -205,62 +182,46 @@ class UserSession(Base, UUIDMixin):
 
 class RefreshTokenRecord(Base, UUIDMixin):
     """Represents a refresh token record for token rotation and reuse detection."""
+
     __tablename__ = "refresh_token_records"
 
     user_session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("user_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("user_sessions.id", ondelete="CASCADE"), nullable=False
     )
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     token_family_id: Mapped[uuid.UUID] = mapped_column(nullable=False, default=uuid.uuid4)
     parent_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("refresh_token_records.id", ondelete="SET NULL"), nullable=True
     )
     replaced_by_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("refresh_token_records.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
     issued_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False
-    )
-    consumed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
-    rotated_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    rotated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     reuse_detected_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
+        DateTime(timezone=True), nullable=True
     )
 
-    user_session: Mapped["UserSession"] = relationship("UserSession", foreign_keys=[user_session_id])
+    user_session: Mapped["UserSession"] = relationship(
+        "UserSession", foreign_keys=[user_session_id]
+    )
 
     __table_args__ = (
         CheckConstraint(
             "status IN ('active', 'rotated', 'revoked', 'reused_detected')",
-            name="chk_refresh_token_records_status"
+            name="chk_refresh_token_records_status",
         ),
         Index("idx_refresh_token_records_session", "user_session_id"),
         Index("idx_refresh_token_records_family", "token_family_id"),
         Index("idx_refresh_token_records_status", "status"),
         Index("idx_refresh_token_records_expires", "expires_at"),
     )
-
 
 
 class ReferenceStatus(str, enum.Enum):
@@ -278,6 +239,7 @@ class UnitType(str, enum.Enum):
 
 class Country(Base, UUIDMixin, TimestampMixin):
     """Represents a country in the lookup database."""
+
     __tablename__ = "countries"
 
     iso2: Mapped[Optional[str]] = mapped_column(String(2), unique=True, nullable=True)
@@ -285,32 +247,26 @@ class Country(Base, UUIDMixin, TimestampMixin):
     name_vi: Mapped[str] = mapped_column(String(128), nullable=False)
     name_en: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     status: Mapped[ReferenceStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ReferenceStatus.ACTIVE
+        String(50), nullable=False, default=ReferenceStatus.ACTIVE
     )
 
     provinces: Mapped[List["Province"]] = relationship(
-        "Province",
-        back_populates="country",
-        cascade="all, delete-orphan"
+        "Province", back_populates="country", cascade="all, delete-orphan"
     )
 
 
 class Province(Base, UUIDMixin):
     """Represents a province/city within a country."""
+
     __tablename__ = "provinces"
 
     country_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("countries.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("countries.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     status: Mapped[ReferenceStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ReferenceStatus.ACTIVE
+        String(50), nullable=False, default=ReferenceStatus.ACTIVE
     )
 
     country: Mapped["Country"] = relationship("Country", back_populates="provinces")
@@ -318,24 +274,21 @@ class Province(Base, UUIDMixin):
 
 class Unit(Base, UUIDMixin):
     """Represents a measurement unit lookup."""
+
     __tablename__ = "units"
 
     code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
     symbol: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    unit_type: Mapped[Optional[UnitType]] = mapped_column(
-        String(50),
-        nullable=True
-    )
+    unit_type: Mapped[Optional[UnitType]] = mapped_column(String(50), nullable=True)
     status: Mapped[ReferenceStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ReferenceStatus.ACTIVE
+        String(50), nullable=False, default=ReferenceStatus.ACTIVE
     )
 
 
 class Currency(Base, UUIDMixin):
     """Represents a monetary currency lookup."""
+
     __tablename__ = "currencies"
 
     code: Mapped[str] = mapped_column(String(3), unique=True, nullable=False)
@@ -343,9 +296,7 @@ class Currency(Base, UUIDMixin):
     symbol: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     decimal_places: Mapped[int] = mapped_column(nullable=False, default=0)
     status: Mapped[ReferenceStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ReferenceStatus.ACTIVE
+        String(50), nullable=False, default=ReferenceStatus.ACTIVE
     )
 
 
@@ -379,74 +330,61 @@ class SignerStatus(str, enum.Enum):
 
 class Customer(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a customer organization in the system."""
+
     __tablename__ = "customers"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     tax_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     province_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("provinces.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("provinces.id", ondelete="SET NULL"), nullable=True
     )
     contact_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     contact_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     contact_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[CustomerStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=CustomerStatus.ACTIVE
+        String(50), nullable=False, default=CustomerStatus.ACTIVE
     )
     merged_into_customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("customers.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("customers.id", ondelete="SET NULL"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
     province: Mapped[Optional["Province"]] = relationship("Province")
     aliases: Mapped[List["CustomerAlias"]] = relationship(
-        "CustomerAlias",
-        back_populates="customer",
-        cascade="all, delete-orphan"
+        "CustomerAlias", back_populates="customer", cascade="all, delete-orphan"
     )
     merged_into: Mapped[Optional["Customer"]] = relationship(
-        "Customer",
-        remote_side="[Customer.id]"
+        "Customer", remote_side="[Customer.id]"
     )
 
-    __table_args__ = (
-        UniqueConstraint("organization_id", "tax_code", name="uq_customer_tax_org"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "tax_code", name="uq_customer_tax_org"),)
 
 
 class CustomerAlias(Base, UUIDMixin):
     """Stores fuzzy matching name aliases for a customer."""
+
     __tablename__ = "customer_aliases"
 
     customer_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("customers.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
     )
     alias_name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
 
     customer: Mapped["Customer"] = relationship("Customer", back_populates="aliases")
@@ -454,74 +392,61 @@ class CustomerAlias(Base, UUIDMixin):
 
 class Supplier(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a supplier organization in the system."""
+
     __tablename__ = "suppliers"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     tax_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     province_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("provinces.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("provinces.id", ondelete="SET NULL"), nullable=True
     )
     contact_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     contact_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     contact_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     reliability_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
     status: Mapped[SupplierStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=SupplierStatus.ACTIVE
+        String(50), nullable=False, default=SupplierStatus.ACTIVE
     )
     merged_into_supplier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("suppliers.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
     province: Mapped[Optional["Province"]] = relationship("Province")
     aliases: Mapped[List["SupplierAlias"]] = relationship(
-        "SupplierAlias",
-        back_populates="supplier",
-        cascade="all, delete-orphan"
+        "SupplierAlias", back_populates="supplier", cascade="all, delete-orphan"
     )
     merged_into: Mapped[Optional["Supplier"]] = relationship(
-        "Supplier",
-        remote_side="[Supplier.id]"
+        "Supplier", remote_side="[Supplier.id]"
     )
 
-    __table_args__ = (
-        UniqueConstraint("organization_id", "tax_code", name="uq_supplier_tax_org"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "tax_code", name="uq_supplier_tax_org"),)
 
 
 class SupplierAlias(Base, UUIDMixin):
     """Stores fuzzy matching name aliases for a supplier."""
+
     __tablename__ = "supplier_aliases"
 
     supplier_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("suppliers.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=False
     )
     alias_name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
 
     supplier: Mapped["Supplier"] = relationship("Supplier", back_populates="aliases")
@@ -529,64 +454,53 @@ class SupplierAlias(Base, UUIDMixin):
 
 class Manufacturer(Base, UUIDMixin, TimestampMixin):
     """Represents a product manufacturer."""
+
     __tablename__ = "manufacturers"
 
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("countries.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("countries.id", ondelete="SET NULL"), nullable=True
     )
     website: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[ManufacturerStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ManufacturerStatus.ACTIVE
+        String(50), nullable=False, default=ManufacturerStatus.ACTIVE
     )
 
     country: Mapped[Optional["Country"]] = relationship("Country")
-    brands: Mapped[List["Brand"]] = relationship(
-        "Brand",
-        back_populates="manufacturer"
-    )
+    brands: Mapped[List["Brand"]] = relationship("Brand", back_populates="manufacturer")
 
 
 class Brand(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a product brand name."""
+
     __tablename__ = "brands"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("countries.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("countries.id", ondelete="SET NULL"), nullable=True
     )
     manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("manufacturers.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("manufacturers.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[BrandStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=BrandStatus.ACTIVE
+        String(50), nullable=False, default=BrandStatus.ACTIVE
     )
 
     country: Mapped[Optional["Country"]] = relationship("Country")
     manufacturer: Mapped[Optional["Manufacturer"]] = relationship(
-        "Manufacturer",
-        back_populates="brands"
+        "Manufacturer", back_populates="brands"
     )
 
-    __table_args__ = (
-        Index("uq_brand_name_lower", text("lower(name)"), unique=True),
-    )
+    __table_args__ = (Index("uq_brand_name_lower", text("lower(name)"), unique=True),)
 
 
 class SignerProfile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents an authorized signature profile for appraisals."""
+
     __tablename__ = "signer_profiles"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -594,9 +508,7 @@ class SignerProfile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     signature_image_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[SignerStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=SignerStatus.ACTIVE
+        String(50), nullable=False, default=SignerStatus.ACTIVE
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
@@ -650,45 +562,36 @@ class FileProcessingStatus(str, enum.Enum):
 
 class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a valuation project in the system."""
+
     __tablename__ = "projects"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     customer_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("customers.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[ProjectWorkflowStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ProjectWorkflowStatus.DRAFT
+        String(50), nullable=False, default=ProjectWorkflowStatus.DRAFT
     )
     knowledge_status: Mapped[KnowledgeUpdateStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=KnowledgeUpdateStatus.PENDING
+        String(50), nullable=False, default=KnowledgeUpdateStatus.PENDING
     )
     fee_amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False, default=0.0)
     fee_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("currencies.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("currencies.id", ondelete="SET NULL"), nullable=True
     )
     signer_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("signer_profiles.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("signer_profiles.id", ondelete="SET NULL"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
@@ -697,14 +600,10 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     signer_profile: Mapped[Optional["SignerProfile"]] = relationship("SignerProfile")
 
     asset_lines: Mapped[List["ProjectAssetLine"]] = relationship(
-        "ProjectAssetLine",
-        back_populates="project",
-        cascade="all, delete-orphan"
+        "ProjectAssetLine", back_populates="project", cascade="all, delete-orphan"
     )
     files: Mapped[List["ProjectFile"]] = relationship(
-        "ProjectFile",
-        back_populates="project",
-        cascade="all, delete-orphan"
+        "ProjectFile", back_populates="project", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -715,46 +614,37 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a single line item of assets under evaluation in a project."""
+
     __tablename__ = "project_asset_lines"
 
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     asset_name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     quantity: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False, default=1.0)
     unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("units.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("units.id", ondelete="SET NULL"), nullable=True
     )
     raw_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
     raw_price_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("currencies.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("currencies.id", ondelete="SET NULL"), nullable=True
     )
     appraised_unit_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
     appraised_currency_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("currencies.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("currencies.id", ondelete="SET NULL"), nullable=True
     )
     review_status: Mapped[AssetLineReviewStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetLineReviewStatus.PENDING
+        String(50), nullable=False, default=AssetLineReviewStatus.PENDING
     )
     validation_status: Mapped[AssetLineValidationStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetLineValidationStatus.UNVALIDATED
+        String(50), nullable=False, default=AssetLineValidationStatus.UNVALIDATED
     )
     brand_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("brands.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("brands.id", ondelete="SET NULL"), nullable=True
     )
     manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("manufacturers.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("manufacturers.id", ondelete="SET NULL"), nullable=True
     )
 
     # Future Placeholders
@@ -763,66 +653,52 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     taxonomy_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
 
     suggested_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"), nullable=True
     )
     approved_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"), nullable=True
     )
     suggested_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     approved_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     suggested_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     approved_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="asset_lines")
     unit: Mapped[Optional["Unit"]] = relationship("Unit")
     raw_price_currency: Mapped[Optional["Currency"]] = relationship(
-        "Currency",
-        foreign_keys=[raw_price_currency_id]
+        "Currency", foreign_keys=[raw_price_currency_id]
     )
     appraised_currency: Mapped[Optional["Currency"]] = relationship(
-        "Currency",
-        foreign_keys=[appraised_currency_id]
+        "Currency", foreign_keys=[appraised_currency_id]
     )
     brand: Mapped[Optional["Brand"]] = relationship("Brand")
     manufacturer: Mapped[Optional["Manufacturer"]] = relationship("Manufacturer")
 
     suggested_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship(
-        "TaxonomyNode",
-        foreign_keys=[suggested_taxonomy_node_id]
+        "TaxonomyNode", foreign_keys=[suggested_taxonomy_node_id]
     )
     approved_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship(
-        "TaxonomyNode",
-        foreign_keys=[approved_taxonomy_node_id]
+        "TaxonomyNode", foreign_keys=[approved_taxonomy_node_id]
     )
     suggested_canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship(
-        "CanonicalAsset",
-        foreign_keys=[suggested_canonical_asset_id]
+        "CanonicalAsset", foreign_keys=[suggested_canonical_asset_id]
     )
     approved_canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship(
-        "CanonicalAsset",
-        foreign_keys=[approved_canonical_asset_id]
+        "CanonicalAsset", foreign_keys=[approved_canonical_asset_id]
     )
     suggested_asset_variant: Mapped[Optional["AssetVariant"]] = relationship(
-        "AssetVariant",
-        foreign_keys=[suggested_asset_variant_id]
+        "AssetVariant", foreign_keys=[suggested_asset_variant_id]
     )
     approved_asset_variant: Mapped[Optional["AssetVariant"]] = relationship(
-        "AssetVariant",
-        foreign_keys=[approved_asset_variant_id]
+        "AssetVariant", foreign_keys=[approved_asset_variant_id]
     )
 
     __table_args__ = (
@@ -834,62 +710,51 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class ProjectFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a file uploaded as part of a project."""
+
     __tablename__ = "project_files"
 
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_category: Mapped[ProjectFileCategory] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ProjectFileCategory.SUPPORT_FILE
+        String(50), nullable=False, default=ProjectFileCategory.SUPPORT_FILE
     )
     file_size: Mapped[int] = mapped_column(nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     storage_object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
     checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     processing_status: Mapped[FileProcessingStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=FileProcessingStatus.PENDING
+        String(50), nullable=False, default=FileProcessingStatus.PENDING
     )
     extracted_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="files")
     uploader: Mapped["User"] = relationship("User")
 
-    __table_args__ = (
-        CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
-    )
+    __table_args__ = (CheckConstraint("file_size >= 0", name="chk_file_size_positive"),)
 
 
 class AuditEvent(Base, UUIDMixin):
     """Stores append-only audit log events for system and user mutations."""
+
     __tablename__ = "audit_events"
 
     organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("organization_profiles.id", ondelete="SET NULL"), nullable=True
     )
     actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     command_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     event_name: Mapped[str] = mapped_column(String(128), nullable=False)
     entity_type: Mapped[str] = mapped_column(String(128), nullable=False)
     entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     correlation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -902,6 +767,7 @@ class AuditEvent(Base, UUIDMixin):
 # ==================================================
 # TAXONOMY CORE ENUMS & MODELS
 # ==================================================
+
 
 class TaxonomyNodeLevel(str, enum.Enum):
     DOMAIN = "domain"
@@ -957,51 +823,39 @@ class TaxonomyChangeRequestStatus(str, enum.Enum):
 
 class TaxonomyNode(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a node in the hierarchical equipment/asset taxonomy."""
+
     __tablename__ = "taxonomy_nodes"
 
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="CASCADE"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id", ondelete="CASCADE"), nullable=True
     )
     level: Mapped[TaxonomyNodeLevel] = mapped_column(String(50), nullable=False)
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
     name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[TaxonomyStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=TaxonomyStatus.DRAFT
+        String(50), nullable=False, default=TaxonomyStatus.DRAFT
     )
     is_system_seed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     merged_into_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id"), nullable=True
     )
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=False
-    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     # Relationships
     parent: Mapped[Optional["TaxonomyNode"]] = relationship(
         "TaxonomyNode",
         remote_side="TaxonomyNode.id",
         back_populates="children",
-        foreign_keys=[parent_id]
+        foreign_keys=[parent_id],
     )
     children: Mapped[List["TaxonomyNode"]] = relationship(
         "TaxonomyNode",
         back_populates="parent",
         foreign_keys=[parent_id],
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
     approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
@@ -1009,73 +863,52 @@ class TaxonomyNode(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class AssetFamily(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a logical grouping of canonical assets within a taxonomy group."""
+
     __tablename__ = "asset_families"
 
     taxonomy_node_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"), nullable=False
     )
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
     default_unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("units.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("units.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[AssetFamilyStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetFamilyStatus.DRAFT
+        String(50), nullable=False, default=AssetFamilyStatus.DRAFT
     )
     is_system_seed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     taxonomy_node: Mapped["TaxonomyNode"] = relationship("TaxonomyNode")
     default_unit: Mapped[Optional["Unit"]] = relationship("Unit")
     dna_schemas: Mapped[List["AssetDNA"]] = relationship(
-        "AssetDNA",
-        back_populates="asset_family",
-        cascade="all, delete-orphan"
+        "AssetDNA", back_populates="asset_family", cascade="all, delete-orphan"
     )
 
 
 class AssetDNA(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a versioned schema template mapping technical attributes to a family."""
+
     __tablename__ = "asset_dna"
 
     asset_family_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_families.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("asset_families.id", ondelete="CASCADE"), nullable=False
     )
     version: Mapped[int] = mapped_column(nullable=False, default=1)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[AssetDNAStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetDNAStatus.DRAFT
+        String(50), nullable=False, default=AssetDNAStatus.DRAFT
     )
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     asset_family: Mapped["AssetFamily"] = relationship("AssetFamily", back_populates="dna_schemas")
     attributes: Mapped[List["AssetAttributeDefinition"]] = relationship(
-        "AssetAttributeDefinition",
-        back_populates="asset_dna",
-        cascade="all, delete-orphan"
+        "AssetAttributeDefinition", back_populates="asset_dna", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -1084,30 +917,27 @@ class AssetDNA(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
             "asset_family_id",
             unique=True,
             sqlite_where=text("status = 'active'"),
-            postgresql_where=text("status = 'active'")
+            postgresql_where=text("status = 'active'"),
         ),
     )
 
 
 class AssetAttributeDefinition(Base, UUIDMixin, TimestampMixin):
     """Represents a schema validation rule for individual characteristics inside a DNA template."""
+
     __tablename__ = "asset_attribute_definitions"
 
     asset_dna_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_dna.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("asset_dna.id", ondelete="CASCADE"), nullable=False
     )
     key: Mapped[str] = mapped_column(String(64), nullable=False)
     label_vi: Mapped[str] = mapped_column(String(255), nullable=False)
     data_type: Mapped[AssetAttributeDataType] = mapped_column(String(50), nullable=False)
     unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("units.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("units.id", ondelete="SET NULL"), nullable=True
     )
     scope: Mapped[AssetAttributeScope] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetAttributeScope.BOTH
+        String(50), nullable=False, default=AssetAttributeScope.BOTH
     )
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_variant_defining: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -1126,39 +956,27 @@ class AssetAttributeDefinition(Base, UUIDMixin, TimestampMixin):
 
 class TaxonomyChangeRequest(Base, UUIDMixin, TimestampMixin):
     """Represents a user-proposed taxonomy node change request requiring review."""
+
     __tablename__ = "taxonomy_change_requests"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     change_type: Mapped[str] = mapped_column(String(50), nullable=False)
     node_level: Mapped[str] = mapped_column(String(50), nullable=False)
     parent_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id"), nullable=True
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     name_vi: Mapped[str] = mapped_column(String(255), nullable=False)
     name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[TaxonomyChangeRequestStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=TaxonomyChangeRequestStatus.PENDING
+        String(50), nullable=False, default=TaxonomyChangeRequestStatus.PENDING
     )
     review_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=False
-    )
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     # Relationships
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
@@ -1169,6 +987,7 @@ class TaxonomyChangeRequest(Base, UUIDMixin, TimestampMixin):
 # ==================================================
 # CANONICAL ASSET ENUMS & MODELS
 # ==================================================
+
 
 class CanonicalAssetStatus(str, enum.Enum):
     DRAFT = "draft"
@@ -1197,53 +1016,38 @@ class AttributeValueSource(str, enum.Enum):
 
 class CanonicalAsset(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a master/canonical asset record in the catalog."""
+
     __tablename__ = "canonical_assets"
 
     asset_family_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_families.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("asset_families.id", ondelete="RESTRICT"), nullable=False
     )
     primary_taxonomy_node_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"), nullable=False
     )
     standard_name: Mapped[str] = mapped_column(String(255), nullable=False)
     short_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     brand_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("brands.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("brands.id", ondelete="SET NULL"), nullable=True
     )
     manufacturer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("manufacturers.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("manufacturers.id", ondelete="SET NULL"), nullable=True
     )
     country_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("countries.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("countries.id", ondelete="SET NULL"), nullable=True
     )
     model_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     maturity_level: Mapped[CanonicalAssetMaturity] = mapped_column(
-        String(50),
-        nullable=False,
-        default=CanonicalAssetMaturity.DRAFT
+        String(50), nullable=False, default=CanonicalAssetMaturity.DRAFT
     )
     status: Mapped[CanonicalAssetStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=CanonicalAssetStatus.DRAFT
+        String(50), nullable=False, default=CanonicalAssetStatus.DRAFT
     )
     merged_into_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id"),
-        nullable=True
+        ForeignKey("canonical_assets.id"), nullable=True
     )
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     asset_family: Mapped["AssetFamily"] = relationship("AssetFamily")
@@ -1254,21 +1058,20 @@ class CanonicalAsset(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     attributes: Mapped[List["CanonicalAssetAttributeValue"]] = relationship(
         "CanonicalAssetAttributeValue",
         back_populates="canonical_asset",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
 
 class CanonicalAssetAttributeValue(Base, UUIDMixin):
     """Stores common, identity-level attribute values for CanonicalAsset."""
+
     __tablename__ = "canonical_asset_attribute_values"
 
     canonical_asset_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("canonical_assets.id", ondelete="CASCADE"), nullable=False
     )
     attribute_definition_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"), nullable=False
     )
     value_string: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     value_number: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
@@ -1276,20 +1079,23 @@ class CanonicalAssetAttributeValue(Base, UUIDMixin):
     value_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     normalized_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     source: Mapped[AttributeValueSource] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AttributeValueSource.MANUAL
+        String(50), nullable=False, default=AttributeValueSource.MANUAL
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
 
     # Relationships
-    canonical_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", back_populates="attributes")
-    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
+    canonical_asset: Mapped["CanonicalAsset"] = relationship(
+        "CanonicalAsset", back_populates="attributes"
+    )
+    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship(
+        "AssetAttributeDefinition"
+    )
 
 
 # ==================================================
 # ASSET VARIANT ENUMS & MODELS
 # ==================================================
+
 
 class AssetVariantStatus(str, enum.Enum):
     DRAFT = "draft"
@@ -1301,39 +1107,28 @@ class AssetVariantStatus(str, enum.Enum):
 
 class AssetVariant(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Represents a specific configuration/variant of an asset family (e.g. power, capacity details)."""
+
     __tablename__ = "asset_variants"
 
     asset_family_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_families.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("asset_families.id", ondelete="RESTRICT"), nullable=False
     )
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     code: Mapped[str] = mapped_column(String(128), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[AssetVariantStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetVariantStatus.DRAFT
+        String(50), nullable=False, default=AssetVariantStatus.DRAFT
     )
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True
-    )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     asset_family: Mapped["AssetFamily"] = relationship("AssetFamily")
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
     attributes: Mapped[List["AssetVariantAttributeValue"]] = relationship(
-        "AssetVariantAttributeValue",
-        back_populates="asset_variant",
-        cascade="all, delete-orphan"
+        "AssetVariantAttributeValue", back_populates="asset_variant", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -1343,15 +1138,14 @@ class AssetVariant(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class AssetVariantAttributeValue(Base, UUIDMixin):
     """Stores variant-specific technical attributes for AssetVariant."""
+
     __tablename__ = "asset_variant_attribute_values"
 
     asset_variant_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("asset_variants.id", ondelete="CASCADE"), nullable=False
     )
     attribute_definition_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("asset_attribute_definitions.id", ondelete="CASCADE"), nullable=False
     )
     value_string: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     value_number: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
@@ -1359,20 +1153,23 @@ class AssetVariantAttributeValue(Base, UUIDMixin):
     value_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     normalized_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     source: Mapped[AttributeValueSource] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AttributeValueSource.MANUAL
+        String(50), nullable=False, default=AttributeValueSource.MANUAL
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
 
     # Relationships
-    asset_variant: Mapped["AssetVariant"] = relationship("AssetVariant", back_populates="attributes")
-    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship("AssetAttributeDefinition")
+    asset_variant: Mapped["AssetVariant"] = relationship(
+        "AssetVariant", back_populates="attributes"
+    )
+    attribute_definition: Mapped["AssetAttributeDefinition"] = relationship(
+        "AssetAttributeDefinition"
+    )
 
 
 # ==================================================
 # ALIAS & IDENTITY CANDIDATE ENUMS & MODELS
 # ==================================================
+
 
 class AssetAliasScope(str, enum.Enum):
     CANONICAL = "canonical"
@@ -1393,34 +1190,32 @@ class IdentityCandidateStatus(str, enum.Enum):
 
 def normalize_alias_helper(raw: str) -> str:
     import re
+
     if not raw:
         return ""
     # Downcase, strip special chars, collapse spaces
     s = raw.lower()
-    s = re.sub(r'[^\w\s]', '', s)
-    s = re.sub(r'\s+', ' ', s)
+    s = re.sub(r"[^\w\s]", "", s)
+    s = re.sub(r"\s+", " ", s)
     return s.strip()
 
 
 class AssetAlias(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Maps variation names or historical catalog labels to canonical assets or variants."""
+
     __tablename__ = "asset_aliases"
 
     alias_scope: Mapped[AssetAliasScope] = mapped_column(String(50), nullable=False)
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     raw_alias: Mapped[str] = mapped_column(String(255), nullable=False)
     normalized_alias: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[AssetAliasStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AssetAliasStatus.ACTIVE
+        String(50), nullable=False, default=AssetAliasStatus.ACTIVE
     )
 
     # Relationships
@@ -1428,35 +1223,34 @@ class AssetAlias(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
 
     __table_args__ = (
-        UniqueConstraint("normalized_alias", "canonical_asset_id", name="uq_alias_normalized_canonical"),
-        UniqueConstraint("normalized_alias", "asset_variant_id", name="uq_alias_normalized_variant"),
+        UniqueConstraint(
+            "normalized_alias", "canonical_asset_id", name="uq_alias_normalized_canonical"
+        ),
+        UniqueConstraint(
+            "normalized_alias", "asset_variant_id", name="uq_alias_normalized_variant"
+        ),
     )
 
 
 class IdentityCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Holds deterministic or AI suggested target proposals for raw project asset lines."""
+
     __tablename__ = "identity_candidates"
 
     project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"), nullable=False
     )
     proposed_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     proposed_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     proposed_taxonomy_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("taxonomy_nodes.id", ondelete="RESTRICT"), nullable=True
     )
     status: Mapped[IdentityCandidateStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=IdentityCandidateStatus.PENDING
+        String(50), nullable=False, default=IdentityCandidateStatus.PENDING
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
     match_method: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -1467,31 +1261,32 @@ class IdentityCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin)
     proposed_asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
     proposed_taxonomy_node: Mapped[Optional["TaxonomyNode"]] = relationship("TaxonomyNode")
     similarity_scores: Mapped[List["SimilarityScore"]] = relationship(
-        "SimilarityScore",
-        back_populates="identity_candidate",
-        cascade="all, delete-orphan"
+        "SimilarityScore", back_populates="identity_candidate", cascade="all, delete-orphan"
     )
 
 
 class SimilarityScore(Base, UUIDMixin):
     """Stores detailed scoring breakdowns for an IdentityCandidate."""
+
     __tablename__ = "similarity_scores"
 
     identity_candidate_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("identity_candidates.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("identity_candidates.id", ondelete="CASCADE"), nullable=False
     )
     component: Mapped[str] = mapped_column(String(64), nullable=False)
     score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
     metadata_info: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    identity_candidate: Mapped["IdentityCandidate"] = relationship("IdentityCandidate", back_populates="similarity_scores")
+    identity_candidate: Mapped["IdentityCandidate"] = relationship(
+        "IdentityCandidate", back_populates="similarity_scores"
+    )
 
 
 # ==================================================
 # DUPLICATE, MERGE & REVIEW ENUMS & MODELS
 # ==================================================
+
 
 class DuplicateCandidateStatus(str, enum.Enum):
     PENDING = "pending"
@@ -1521,27 +1316,28 @@ class IdentityDecisionType(str, enum.Enum):
 
 class DuplicateCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Holds duplicate similarity proposals between two Canonical Assets."""
+
     __tablename__ = "duplicate_candidates"
 
     source_asset_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=False
     )
     target_asset_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=False
     )
     confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
     status: Mapped[DuplicateCandidateStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DuplicateCandidateStatus.PENDING
+        String(50), nullable=False, default=DuplicateCandidateStatus.PENDING
     )
     metadata_info: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    source_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[source_asset_id])
-    target_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[target_asset_id])
+    source_asset: Mapped["CanonicalAsset"] = relationship(
+        "CanonicalAsset", foreign_keys=[source_asset_id]
+    )
+    target_asset: Mapped["CanonicalAsset"] = relationship(
+        "CanonicalAsset", foreign_keys=[target_asset_id]
+    )
 
     __table_args__ = (
         CheckConstraint("source_asset_id <> target_asset_id", name="chk_duplicate_diff_assets"),
@@ -1550,35 +1346,32 @@ class DuplicateCandidate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
 
 class MergeDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Auditable log of canonical asset merge resolutions."""
+
     __tablename__ = "merge_decisions"
 
     source_asset_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=False
     )
     target_asset_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[MergeDecisionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=MergeDecisionStatus.PROPOSED
+        String(50), nullable=False, default=MergeDecisionStatus.PROPOSED
     )
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     configuration_flags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     executed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    executed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    executed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    source_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[source_asset_id])
-    target_asset: Mapped["CanonicalAsset"] = relationship("CanonicalAsset", foreign_keys=[target_asset_id])
+    source_asset: Mapped["CanonicalAsset"] = relationship(
+        "CanonicalAsset", foreign_keys=[source_asset_id]
+    )
+    target_asset: Mapped["CanonicalAsset"] = relationship(
+        "CanonicalAsset", foreign_keys=[target_asset_id]
+    )
     executor: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
@@ -1588,34 +1381,26 @@ class MergeDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class IdentityReviewItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Proposals assigned to a human reviewer for asset line verification."""
+
     __tablename__ = "identity_review_items"
 
     project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"), nullable=False
     )
     identity_candidate_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("identity_candidates.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("identity_candidates.id", ondelete="RESTRICT"), nullable=True
     )
     review_status: Mapped[IdentityReviewStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=IdentityReviewStatus.PENDING
+        String(50), nullable=False, default=IdentityReviewStatus.PENDING
     )
     reviewer_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     project_asset_line: Mapped["ProjectAssetLine"] = relationship("ProjectAssetLine")
@@ -1626,22 +1411,18 @@ class IdentityReviewItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
 
 class IdentityDecisionLog(Base, UUIDMixin):
     """Append-only audit trail of identity decision approvals or merges."""
+
     __tablename__ = "identity_decision_logs"
 
     project_asset_line_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("project_asset_lines.id", ondelete="RESTRICT"), nullable=False
     )
     decision_type: Mapped[IdentityDecisionType] = mapped_column(String(50), nullable=False)
     actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
     executed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
@@ -1679,19 +1460,19 @@ class EvidenceAccessType(str, enum.Enum):
 
 class EvidenceSource(Base, UUIDMixin, TimestampMixin):
     """Tracks source providers or catalogue origins of evidence."""
+
     __tablename__ = "evidence_sources"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_type: Mapped[EvidenceSourceType] = mapped_column(
-        String(50),
-        nullable=False,
-        default=EvidenceSourceType.MANUAL
+        String(50), nullable=False, default=EvidenceSourceType.MANUAL
     )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class EvidenceFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Container for uploaded document files and metadata."""
+
     __tablename__ = "evidence_files"
 
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1700,18 +1481,13 @@ class EvidenceFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     object_key: Mapped[str] = mapped_column(String(512), nullable=False)
     checksum: Mapped[str] = mapped_column(String(255), nullable=False)
     sensitivity_level: Mapped[EvidenceSensitivityLevel] = mapped_column(
-        String(50),
-        nullable=False,
-        default=EvidenceSensitivityLevel.NORMAL
+        String(50), nullable=False, default=EvidenceSensitivityLevel.NORMAL
     )
     status: Mapped[EvidenceFileStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=EvidenceFileStatus.ACTIVE
+        String(50), nullable=False, default=EvidenceFileStatus.ACTIVE
     )
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     uploader: Mapped["User"] = relationship("User")
@@ -1719,59 +1495,48 @@ class EvidenceFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class EvidenceLink(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Associates an EvidenceFile with a target domain entity (soft-deletable)."""
+
     __tablename__ = "evidence_links"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     target_type: Mapped[str] = mapped_column(String(128), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     deleted_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     delete_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
     deleter: Mapped[Optional["User"]] = relationship("User", foreign_keys=[deleted_by])
 
-    __table_args__ = (
-        Index("idx_evidence_link_target", "target_type", "target_id"),
-    )
+    __table_args__ = (Index("idx_evidence_link_target", "target_type", "target_id"),)
 
 
 class EvidenceAccessLog(Base, UUIDMixin):
     """Append-only audit log tracking accesses to sensitive/restricted evidence files."""
+
     __tablename__ = "evidence_access_logs"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     accessed_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     access_type: Mapped[EvidenceAccessType] = mapped_column(String(50), nullable=False)
     access_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     accessed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
@@ -1793,18 +1558,15 @@ class EvidenceReviewDecisionStatus(str, enum.Enum):
 
 class SupplierQuoteEvidence(Base, UUIDMixin, TimestampMixin):
     """Specialized context details for vendor/supplier quotes."""
+
     __tablename__ = "supplier_quote_evidences"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
     quote_number: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    quote_date: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    quote_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     total_amount: Mapped[Optional[float]] = mapped_column(nullable=True)
     currency: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
 
@@ -1813,11 +1575,11 @@ class SupplierQuoteEvidence(Base, UUIDMixin, TimestampMixin):
 
 class CatalogueEvidence(Base, UUIDMixin, TimestampMixin):
     """Specialized details for product catalogues/pamphlets."""
+
     __tablename__ = "catalogue_evidences"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     manufacturer_name: Mapped[str] = mapped_column(String(255), nullable=False)
     catalogue_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1829,17 +1591,15 @@ class CatalogueEvidence(Base, UUIDMixin, TimestampMixin):
 
 class InternetEvidence(Base, UUIDMixin, TimestampMixin):
     """Captured web links/pages serving as pricing or specification reference."""
+
     __tablename__ = "internet_evidences"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     url: Mapped[str] = mapped_column(String(1024), nullable=False)
     captured_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
     site_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
@@ -1848,17 +1608,14 @@ class InternetEvidence(Base, UUIDMixin, TimestampMixin):
 
 class ImageEvidence(Base, UUIDMixin, TimestampMixin):
     """Photo and imaging metadata context."""
+
     __tablename__ = "image_evidences"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     resolution: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    captured_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    captured_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     camera_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
@@ -1866,35 +1623,30 @@ class ImageEvidence(Base, UUIDMixin, TimestampMixin):
 
 class EmailEvidence(Base, UUIDMixin, TimestampMixin):
     """Email correspondence records context."""
+
     __tablename__ = "email_evidences"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     sender: Mapped[str] = mapped_column(String(255), nullable=False)
     recipient: Mapped[str] = mapped_column(String(255), nullable=False)
     subject: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
 
 
 class EvidenceExtractionResult(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Holds parsed results generated by automated scanning/extraction routines."""
+
     __tablename__ = "evidence_extraction_results"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[EvidenceExtractionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=EvidenceExtractionStatus.PENDING
+        String(50), nullable=False, default=EvidenceExtractionStatus.PENDING
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
     extracted_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -1904,25 +1656,19 @@ class EvidenceExtractionResult(Base, UUIDMixin, TimestampMixin, OptimisticLockin
 
 class EvidenceReviewDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Records audit decisions concerning parses and evidence authenticity reviews."""
+
     __tablename__ = "evidence_review_decisions"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[EvidenceReviewDecisionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=EvidenceReviewDecisionStatus.PENDING
+        String(50), nullable=False, default=EvidenceReviewDecisionStatus.PENDING
     )
     reviewer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     review_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile")
@@ -1951,19 +1697,17 @@ class KnowledgeType(str, enum.Enum):
 
 class TechnicalSpecification(Base, UUIDMixin, TimestampMixin):
     """Catalog folder mapping technical specifications to canonical assets or variants."""
+
     __tablename__ = "technical_specifications"
 
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
@@ -1973,50 +1717,47 @@ class TechnicalSpecification(Base, UUIDMixin, TimestampMixin):
 
 class TechnicalSpecificationVersion(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Stores the concrete technical specifications payload attributes and lineage source links."""
+
     __tablename__ = "technical_specification_versions"
 
     technical_specification_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("technical_specifications.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("technical_specifications.id", ondelete="RESTRICT"), nullable=False
     )
     version_number: Mapped[int] = mapped_column(nullable=False)
     attribute_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
     source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
     status: Mapped[TechnicalSpecificationVersionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=TechnicalSpecificationVersionStatus.DRAFT
+        String(50), nullable=False, default=TechnicalSpecificationVersionStatus.DRAFT
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    technical_specification: Mapped["TechnicalSpecification"] = relationship("TechnicalSpecification")
+    technical_specification: Mapped["TechnicalSpecification"] = relationship(
+        "TechnicalSpecification"
+    )
     source_project: Mapped[Optional["Project"]] = relationship("Project")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
     approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
 
     __table_args__ = (
-        UniqueConstraint("technical_specification_id", "version_number", name="uq_tech_spec_version_num"),
+        UniqueConstraint(
+            "technical_specification_id", "version_number", name="uq_tech_spec_version_num"
+        ),
     )
 
 
 class KnowledgeVersion(Base, UUIDMixin, TimestampMixin):
     """Generic indexing registry mapping active version indicators across catalog entities."""
+
     __tablename__ = "knowledge_versions"
 
     knowledge_type: Mapped[KnowledgeType] = mapped_column(String(50), nullable=False)
@@ -2024,22 +1765,17 @@ class KnowledgeVersion(Base, UUIDMixin, TimestampMixin):
     concrete_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     version_number: Mapped[int] = mapped_column(nullable=False)
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
     )
     source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
     status: Mapped[KnowledgeVersionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=KnowledgeVersionStatus.DRAFT
+        String(50), nullable=False, default=KnowledgeVersionStatus.DRAFT
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
 
@@ -2048,12 +1784,19 @@ class KnowledgeVersion(Base, UUIDMixin, TimestampMixin):
     source_project: Mapped[Optional["Project"]] = relationship("Project")
 
     __table_args__ = (
-        Index("idx_knowledge_version_active", "canonical_asset_id", "asset_variant_id", "knowledge_type", "status"),
+        Index(
+            "idx_knowledge_version_active",
+            "canonical_asset_id",
+            "asset_variant_id",
+            "knowledge_type",
+            "status",
+        ),
     )
 
 
 class KnowledgeLineage(Base, UUIDMixin):
     """Append-only audit trail logging transitions, imports, and approval context events."""
+
     __tablename__ = "knowledge_lineage"
 
     knowledge_type: Mapped[KnowledgeType] = mapped_column(String(50), nullable=False)
@@ -2061,19 +1804,14 @@ class KnowledgeLineage(Base, UUIDMixin):
     concrete_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     source_project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
     )
     source_evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, nullable=False, default=list)
     actor_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -2097,59 +1835,51 @@ class QuoteLineStatus(str, enum.Enum):
 
 class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Aggregation folder for vendor/market pricing quotes relating to canonical assets or variants."""
+
     __tablename__ = "quote_batches"
 
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[QuoteBatchStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=QuoteBatchStatus.DRAFT
+        String(50), nullable=False, default=QuoteBatchStatus.DRAFT
     )
     revision_number: Mapped[int] = mapped_column(nullable=False, default=1)
     previous_quote_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"), nullable=True
     )
     approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     override_blocking_conflict_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
     asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
     approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
-    previous_quote_batch: Mapped[Optional["QuoteBatch"]] = relationship("QuoteBatch", remote_side="QuoteBatch.id")
+    previous_quote_batch: Mapped[Optional["QuoteBatch"]] = relationship(
+        "QuoteBatch", remote_side="QuoteBatch.id"
+    )
     quote_lines: Mapped[list["QuoteLine"]] = relationship("QuoteLine", back_populates="quote_batch")
 
 
 class QuoteLine(Base, UUIDMixin, TimestampMixin):
     """Raw pricing detail entries extracted from evidence files or catalog sources."""
+
     __tablename__ = "quote_lines"
 
     quote_batch_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"), nullable=False
     )
     evidence_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=True
     )
     supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
     quoted_unit_price: Mapped[float] = mapped_column(nullable=False)
@@ -2157,14 +1887,9 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
     quantity: Mapped[Optional[float]] = mapped_column(nullable=True)
     unit_of_measure: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     quote_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    quote_date: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    quote_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[QuoteLineStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=QuoteLineStatus.DRAFT
+        String(50), nullable=False, default=QuoteLineStatus.DRAFT
     )
 
     quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", back_populates="quote_lines")
@@ -2181,40 +1906,31 @@ class AppraisedPriceDecisionStatus(str, enum.Enum):
 
 class AppraisedPriceDecision(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Professional catalog price decision standard and appraiser rationale."""
+
     __tablename__ = "appraised_price_decisions"
 
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("asset_variants.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     quote_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("quote_batches.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("quote_batches.id", ondelete="RESTRICT"), nullable=True
     )
     final_unit_price: Mapped[float] = mapped_column(nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[AppraisedPriceDecisionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=AppraisedPriceDecisionStatus.DRAFT
+        String(50), nullable=False, default=AppraisedPriceDecisionStatus.DRAFT
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
     asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
@@ -2243,34 +1959,25 @@ class KnowledgeConflictSeverity(str, enum.Enum):
 
 class KnowledgeQueueItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Holds candidate suggestions and extraction queue records before approval workflows."""
+
     __tablename__ = "knowledge_queue_items"
 
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     status: Mapped[KnowledgeQueueItemStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=KnowledgeQueueItemStatus.PENDING
+        String(50), nullable=False, default=KnowledgeQueueItemStatus.PENDING
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
     auto_rejected: Mapped[bool] = mapped_column(nullable=False, default=False)
     auto_reject_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     reviewer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     claimed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    claimed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_manual: Mapped[bool] = mapped_column(nullable=False, default=False)
     is_pinned: Mapped[bool] = mapped_column(nullable=False, default=False)
 
@@ -2280,6 +1987,7 @@ class KnowledgeQueueItem(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
 
 class KnowledgeConfidence(Base, UUIDMixin):
     """Logs calculated metrics and metadata sources backing standard confidence scores."""
+
     __tablename__ = "knowledge_confidence"
 
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -2288,41 +1996,31 @@ class KnowledgeConfidence(Base, UUIDMixin):
     confidence_source: Mapped[str] = mapped_column(String(100), nullable=False)
     source_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
 
 class KnowledgeConflict(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Tracks catalog price deviations, attribute misfits, and audit resolution logs."""
+
     __tablename__ = "knowledge_conflicts"
 
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     conflict_type: Mapped[str] = mapped_column(String(100), nullable=False)
     severity: Mapped[KnowledgeConflictSeverity] = mapped_column(
-        String(50),
-        nullable=False,
-        default=KnowledgeConflictSeverity.WARNING
+        String(50), nullable=False, default=KnowledgeConflictSeverity.WARNING
     )
     status: Mapped[KnowledgeConflictStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=KnowledgeConflictStatus.OPEN
+        String(50), nullable=False, default=KnowledgeConflictStatus.OPEN
     )
     calculated_value: Mapped[float] = mapped_column(nullable=False)
     threshold_value: Mapped[float] = mapped_column(nullable=False)
     resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     resolver: Mapped[Optional["User"]] = relationship("User")
 
@@ -2335,20 +2033,18 @@ class WorkflowDefinitionStatus(str, enum.Enum):
 
 class WorkflowDefinition(Base, UUIDMixin, TimestampMixin):
     """Configuration definition specifying states and lifecycle rules."""
+
     __tablename__ = "workflow_definitions"
 
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     version: Mapped[int] = mapped_column(nullable=False, default=1)
     status: Mapped[WorkflowDefinitionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkflowDefinitionStatus.DRAFT
+        String(50), nullable=False, default=WorkflowDefinitionStatus.DRAFT
     )
 
     transitions: Mapped[List["WorkflowTransition"]] = relationship(
-        "WorkflowTransition",
-        back_populates="workflow_definition"
+        "WorkflowTransition", back_populates="workflow_definition"
     )
 
 
@@ -2360,32 +2056,32 @@ class WorkflowInstanceStatus(str, enum.Enum):
 
 class WorkflowInstance(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Running execution tracker of a workflow lifecycle target."""
+
     __tablename__ = "workflow_instances"
 
     workflow_definition_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"), nullable=False
     )
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     current_state: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[WorkflowInstanceStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkflowInstanceStatus.ACTIVE
+        String(50), nullable=False, default=WorkflowInstanceStatus.ACTIVE
     )
 
     workflow_definition: Mapped["WorkflowDefinition"] = relationship("WorkflowDefinition")
-    tasks: Mapped[List["WorkflowTask"]] = relationship("WorkflowTask", back_populates="workflow_instance")
+    tasks: Mapped[List["WorkflowTask"]] = relationship(
+        "WorkflowTask", back_populates="workflow_instance"
+    )
 
 
 class WorkflowTransition(Base, UUIDMixin):
     """Authorized paths linking lifecycle states together."""
+
     __tablename__ = "workflow_transitions"
 
     workflow_definition_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("workflow_definitions.id", ondelete="RESTRICT"), nullable=False
     )
     from_state: Mapped[str] = mapped_column(String(100), nullable=False)
     to_state: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -2395,8 +2091,7 @@ class WorkflowTransition(Base, UUIDMixin):
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     workflow_definition: Mapped["WorkflowDefinition"] = relationship(
-        "WorkflowDefinition",
-        back_populates="transitions"
+        "WorkflowDefinition", back_populates="transitions"
     )
 
 
@@ -2416,36 +2111,27 @@ class WorkflowTaskPriority(str, enum.Enum):
 
 class WorkflowTask(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Curation task checklist record associated with workflow instances."""
+
     __tablename__ = "workflow_tasks"
 
     workflow_instance_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workflow_instances.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("workflow_instances.id", ondelete="RESTRICT"), nullable=False
     )
     task_type: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[WorkflowTaskStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkflowTaskStatus.OPEN
+        String(50), nullable=False, default=WorkflowTaskStatus.OPEN
     )
     priority: Mapped[WorkflowTaskPriority] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkflowTaskPriority.NORMAL
+        String(50), nullable=False, default=WorkflowTaskPriority.NORMAL
     )
     assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    due_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workflow_instance: Mapped["WorkflowInstance"] = relationship(
-        "WorkflowInstance",
-        back_populates="tasks"
+        "WorkflowInstance", back_populates="tasks"
     )
     assignee: Mapped[Optional["User"]] = relationship("User")
 
@@ -2460,24 +2146,18 @@ class ReviewDecisionChoice(str, enum.Enum):
 
 class ReviewDecision(Base, UUIDMixin):
     """Append-only audit record detailing human curator review gates."""
+
     __tablename__ = "review_decisions"
 
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
-    decision: Mapped[ReviewDecisionChoice] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    decision: Mapped[ReviewDecisionChoice] = mapped_column(String(50), nullable=False)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     decided_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     decided_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     evidence_ids: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     previous_state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -2495,22 +2175,18 @@ class ApprovalGateStatus(str, enum.Enum):
 
 class ApprovalGate(Base, UUIDMixin):
     """Consolidated gates evaluating checklist status constraints."""
+
     __tablename__ = "approval_gates"
 
     gate_code: Mapped[str] = mapped_column(String(64), nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     gate_status: Mapped[ApprovalGateStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ApprovalGateStatus.NOT_APPLICABLE
+        String(50), nullable=False, default=ApprovalGateStatus.NOT_APPLICABLE
     )
     blocking_issue_count: Mapped[int] = mapped_column(nullable=False, default=0)
     evaluated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
 
@@ -2524,13 +2200,11 @@ class ValidationRuleCategory(str, enum.Enum):
 
 class ValidationRule(Base, UUIDMixin):
     """Declarative check validation constraints definition library."""
+
     __tablename__ = "validation_rules"
 
     rule_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    category: Mapped[ValidationRuleCategory] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    category: Mapped[ValidationRuleCategory] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_blocking: Mapped[bool] = mapped_column(nullable=False, default=False)
@@ -2550,39 +2224,28 @@ class ValidationIssueStatus(str, enum.Enum):
 
 class ValidationIssue(Base, UUIDMixin, OptimisticLockingMixin):
     """Anomalies flagged by rule checker running against assets or data batches."""
+
     __tablename__ = "validation_issues"
 
     validation_rule_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("validation_rules.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("validation_rules.id", ondelete="RESTRICT"), nullable=False
     )
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     severity: Mapped[ValidationIssueSeverity] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ValidationIssueSeverity.WARNING
+        String(50), nullable=False, default=ValidationIssueSeverity.WARNING
     )
     status: Mapped[ValidationIssueStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ValidationIssueStatus.OPEN
+        String(50), nullable=False, default=ValidationIssueStatus.OPEN
     )
     issue_message: Mapped[str] = mapped_column(Text, nullable=False)
     detected_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     validation_rule: Mapped["ValidationRule"] = relationship("ValidationRule")
@@ -2591,22 +2254,19 @@ class ValidationIssue(Base, UUIDMixin, OptimisticLockingMixin):
 
 class UserActionLog(Base, UUIDMixin):
     """Append-only timeline events detailing human curation workspace history."""
+
     __tablename__ = "user_action_logs"
 
     session_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     action_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     user: Mapped["User"] = relationship("User")
@@ -2620,33 +2280,24 @@ class WorkbenchSessionStatus(str, enum.Enum):
 
 class WorkbenchSession(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Active curation session linking curators to specific projects."""
+
     __tablename__ = "workbench_sessions"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
     )
     status: Mapped[WorkbenchSessionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkbenchSessionStatus.ACTIVE
+        String(50), nullable=False, default=WorkbenchSessionStatus.ACTIVE
     )
     current_selection: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     last_active_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     user: Mapped["User"] = relationship("User")
@@ -2655,11 +2306,11 @@ class WorkbenchSession(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class WorkbenchLayout(Base, UUIDMixin, TimestampMixin):
     """User-specific customization details for panel configurations."""
+
     __tablename__ = "workbench_layouts"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     layout_name: Mapped[str] = mapped_column(String(255), nullable=False)
     layout_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -2670,15 +2321,14 @@ class WorkbenchLayout(Base, UUIDMixin, TimestampMixin):
 
 class AssetGridView(Base, UUIDMixin, TimestampMixin):
     """User grid workspace view profiles specifying columns and filters."""
+
     __tablename__ = "asset_grid_views"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
     )
     view_name: Mapped[str] = mapped_column(String(255), nullable=False)
     columns: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -2692,19 +2342,16 @@ class AssetGridView(Base, UUIDMixin, TimestampMixin):
 
 class WorkbenchSelection(Base, UUIDMixin):
     """Ephemeral selection state cached for multi-select workflows."""
+
     __tablename__ = "workbench_selections"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=False
     )
     selected_target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     selected_target_ids: Mapped[dict] = mapped_column(JSON, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
@@ -2720,11 +2367,11 @@ class InlineEditDraftStatus(str, enum.Enum):
 
 class InlineEditDraft(Base, UUIDMixin):
     """Pending attributes modified in-place before final database execution."""
+
     __tablename__ = "inline_edit_drafts"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=False
     )
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
@@ -2733,15 +2380,10 @@ class InlineEditDraft(Base, UUIDMixin):
     base_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     base_row_version: Mapped[Optional[int]] = mapped_column(nullable=True)
     status: Mapped[InlineEditDraftStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=InlineEditDraftStatus.DRAFT
+        String(50), nullable=False, default=InlineEditDraftStatus.DRAFT
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
@@ -2749,23 +2391,17 @@ class InlineEditDraft(Base, UUIDMixin):
 
 class AutosaveCheckpoint(Base, UUIDMixin):
     """Periodic backup snapshots containing workbench draft payloads."""
+
     __tablename__ = "autosave_checkpoints"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=False
     )
     checkpoint_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
 
@@ -2778,11 +2414,11 @@ class UndoRedoActionType(str, enum.Enum):
 
 class UndoRedoStackEntry(Base, UUIDMixin):
     """Session stack tracing editor events for local undo/redo actions."""
+
     __tablename__ = "undo_redo_stack_entries"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=False
     )
     sequence_no: Mapped[int] = mapped_column(nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -2790,16 +2426,10 @@ class UndoRedoStackEntry(Base, UUIDMixin):
     field_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     before_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     after_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    action_type: Mapped[UndoRedoActionType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    action_type: Mapped[UndoRedoActionType] = mapped_column(String(50), nullable=False)
     is_undone: Mapped[bool] = mapped_column(nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
@@ -2813,23 +2443,17 @@ class WorkbenchPanelType(str, enum.Enum):
 
 class PanelState(Base, UUIDMixin):
     """Client panel layout attributes cached inside specific workspaces."""
+
     __tablename__ = "panel_states"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=False
     )
-    panel_type: Mapped[WorkbenchPanelType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    panel_type: Mapped[WorkbenchPanelType] = mapped_column(String(50), nullable=False)
     is_expanded: Mapped[bool] = mapped_column(nullable=False, default=False)
     width: Mapped[Optional[int]] = mapped_column(nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     session: Mapped["WorkbenchSession"] = relationship("WorkbenchSession")
@@ -2837,11 +2461,11 @@ class PanelState(Base, UUIDMixin):
 
 class ReviewQueueView(Base, UUIDMixin, TimestampMixin):
     """User review candidate queue sorting filter structures."""
+
     __tablename__ = "review_queue_views"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     filter_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -2859,28 +2483,22 @@ class WorkbenchNotificationType(str, enum.Enum):
 
 class WorkbenchNotification(Base, UUIDMixin):
     """Curator notifications detailing job issues or layout updates."""
+
     __tablename__ = "workbench_notifications"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("workbench_sessions.id", ondelete="CASCADE"),
-        nullable=True
+        ForeignKey("workbench_sessions.id", ondelete="CASCADE"), nullable=True
     )
     notification_type: Mapped[WorkbenchNotificationType] = mapped_column(
-        String(50),
-        nullable=False,
-        default=WorkbenchNotificationType.INFO
+        String(50), nullable=False, default=WorkbenchNotificationType.INFO
     )
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     user: Mapped["User"] = relationship("User")
@@ -2913,48 +2531,33 @@ class ChangeRequestPriority(str, enum.Enum):
 
 class ChangeRequest(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Formal request logs documenting updates requested against approved assets."""
+
     __tablename__ = "change_requests"
 
     request_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
-    change_type: Mapped[ChangeRequestType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    change_type: Mapped[ChangeRequestType] = mapped_column(String(50), nullable=False)
     requested_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[ChangeRequestStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ChangeRequestStatus.DRAFT
+        String(50), nullable=False, default=ChangeRequestStatus.DRAFT
     )
     priority: Mapped[ChangeRequestPriority] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ChangeRequestPriority.NORMAL
+        String(50), nullable=False, default=ChangeRequestPriority.NORMAL
     )
     requested_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     review_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     executed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    executed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    executed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     requester: Mapped["User"] = relationship("User", foreign_keys=[requested_by])
     reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
@@ -2963,41 +2566,40 @@ class ChangeRequest(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
 class ReviewDecisionReversal(Base, UUIDMixin):
     """Correlation log linking a decision reversal back to the original review."""
+
     __tablename__ = "review_decision_reversals"
 
     change_request_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("change_requests.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("change_requests.id", ondelete="RESTRICT"), nullable=False
     )
     original_review_decision_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("review_decisions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("review_decisions.id", ondelete="RESTRICT"), nullable=False
     )
     reversal_review_decision_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("review_decisions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("review_decisions.id", ondelete="RESTRICT"), nullable=False
     )
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     change_request: Mapped["ChangeRequest"] = relationship("ChangeRequest")
-    original_decision: Mapped["ReviewDecision"] = relationship("ReviewDecision", foreign_keys=[original_review_decision_id])
-    reversal_decision: Mapped["ReviewDecision"] = relationship("ReviewDecision", foreign_keys=[reversal_review_decision_id])
+    original_decision: Mapped["ReviewDecision"] = relationship(
+        "ReviewDecision", foreign_keys=[original_review_decision_id]
+    )
+    reversal_decision: Mapped["ReviewDecision"] = relationship(
+        "ReviewDecision", foreign_keys=[reversal_review_decision_id]
+    )
     creator: Mapped["User"] = relationship("User")
 
 
 # ==========================================
 # SPRINT 5 - DOCUMENT ENGINE ENUMS
 # ==========================================
+
 
 class DocumentTemplateStatus(str, enum.Enum):
     DRAFT = "draft"
@@ -3092,12 +2694,12 @@ class DocumentPackageStatus(str, enum.Enum):
 # SPRINT 5 - DOCUMENT ENGINE MODELS
 # ==========================================
 
+
 class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "document_templates"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
     document_type: Mapped[str] = mapped_column(String(50), nullable=False)
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
@@ -3105,17 +2707,13 @@ class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     current_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     replacement_template_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("document_templates.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("document_templates.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[DocumentTemplateStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DocumentTemplateStatus.DRAFT
+        String(50), nullable=False, default=DocumentTemplateStatus.DRAFT
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
@@ -3123,7 +2721,7 @@ class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     replacement_template: Mapped[Optional["DocumentTemplate"]] = relationship(
         "DocumentTemplate",
         remote_side="DocumentTemplate.id",
-        foreign_keys=[replacement_template_id]
+        foreign_keys=[replacement_template_id],
     )
 
 
@@ -3131,40 +2729,31 @@ class TemplateVersion(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "template_versions"
 
     document_template_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("document_templates.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("document_templates.id", ondelete="RESTRICT"), nullable=False
     )
     version_number: Mapped[int] = mapped_column(nullable=False)
     source_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=True
     )
     template_format: Mapped[str] = mapped_column(String(50), nullable=False)
     placeholder_manifest: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     status: Mapped[TemplateVersionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=TemplateVersionStatus.DRAFT
+        String(50), nullable=False, default=TemplateVersionStatus.DRAFT
     )
     deprecation_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     replacement_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("template_versions.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("template_versions.id", ondelete="SET NULL"), nullable=True
     )
     approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    document_template: Mapped["DocumentTemplate"] = relationship("DocumentTemplate", foreign_keys=[document_template_id])
+    document_template: Mapped["DocumentTemplate"] = relationship(
+        "DocumentTemplate", foreign_keys=[document_template_id]
+    )
     replacement_version: Mapped[Optional["TemplateVersion"]] = relationship(
-        "TemplateVersion",
-        remote_side="TemplateVersion.id",
-        foreign_keys=[replacement_version_id]
+        "TemplateVersion", remote_side="TemplateVersion.id", foreign_keys=[replacement_version_id]
     )
     approver: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by])
 
@@ -3178,30 +2767,19 @@ class ComputedPlaceholderExpression(Base, UUIDMixin):
 
     placeholder_key: Mapped[str] = mapped_column(String(255), nullable=False)
     expression_type: Mapped[ComputedExpressionType] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ComputedExpressionType.VALORA_EXPR
+        String(50), nullable=False, default=ComputedExpressionType.VALORA_EXPR
     )
     inputs: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     expression: Mapped[str] = mapped_column(Text, nullable=False)
-    output_data_type: Mapped[PlaceholderDataType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    output_data_type: Mapped[PlaceholderDataType] = mapped_column(String(50), nullable=False)
     status: Mapped[ComputedExpressionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ComputedExpressionStatus.DRAFT
+        String(50), nullable=False, default=ComputedExpressionStatus.DRAFT
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
     creator: Mapped["User"] = relationship("User")
@@ -3211,50 +2789,39 @@ class TemplatePlaceholder(Base, UUIDMixin):
     __tablename__ = "template_placeholders"
 
     template_version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("template_versions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("template_versions.id", ondelete="RESTRICT"), nullable=False
     )
     placeholder_key: Mapped[str] = mapped_column(String(255), nullable=False)
     label_vi: Mapped[str] = mapped_column(String(255), nullable=False)
-    data_type: Mapped[PlaceholderDataType] = mapped_column(
-        String(50),
-        nullable=False
-    )
-    source_context: Mapped[PlaceholderSourceContext] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    data_type: Mapped[PlaceholderDataType] = mapped_column(String(50), nullable=False)
+    source_context: Mapped[PlaceholderSourceContext] = mapped_column(String(50), nullable=False)
     source_path: Mapped[str] = mapped_column(String(255), nullable=False)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     default_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     format_rule: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     validation_rule: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     computed_expression_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("computed_placeholder_expressions.id", ondelete="SET NULL"),
-        nullable=True
+        ForeignKey("computed_placeholder_expressions.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
 
     template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
-    computed_expression: Mapped[Optional["ComputedPlaceholderExpression"]] = relationship("ComputedPlaceholderExpression")
+    computed_expression: Mapped[Optional["ComputedPlaceholderExpression"]] = relationship(
+        "ComputedPlaceholderExpression"
+    )
 
 
 class PlaceholderBinding(Base, UUIDMixin):
     __tablename__ = "placeholder_bindings"
 
     template_version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("template_versions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("template_versions.id", ondelete="RESTRICT"), nullable=False
     )
     template_placeholder_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("template_placeholders.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("template_placeholders.id", ondelete="RESTRICT"), nullable=False
     )
     binding_path: Mapped[str] = mapped_column(String(255), nullable=False)
-    binding_type: Mapped[PlaceholderBindingType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    binding_type: Mapped[PlaceholderBindingType] = mapped_column(String(50), nullable=False)
     fallback_value: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -3266,42 +2833,28 @@ class RenderJob(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "render_jobs"
 
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
     )
     template_version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("template_versions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("template_versions.id", ondelete="RESTRICT"), nullable=False
     )
     render_mode: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
     output_formats: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     data_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
     data_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[RenderJobStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=RenderJobStatus.QUEUED
+        String(50), nullable=False, default=RenderJobStatus.QUEUED
     )
     error_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     failed_step: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     retry_count: Mapped[int] = mapped_column(nullable=False, default=0)
-    timeout_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    timeout_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship("Project")
     template_version: Mapped["TemplateVersion"] = relationship("TemplateVersion")
@@ -3312,12 +2865,10 @@ class GeneratedDocument(Base, UUIDMixin):
     __tablename__ = "generated_documents"
 
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
     )
     render_job_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("render_jobs.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("render_jobs.id", ondelete="RESTRICT"), nullable=False
     )
     document_type: Mapped[str] = mapped_column(String(50), nullable=False)
     output_format: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -3326,29 +2877,19 @@ class GeneratedDocument(Base, UUIDMixin):
     checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     file_size_bytes: Mapped[int] = mapped_column(nullable=False)
     template_version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("template_versions.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("template_versions.id", ondelete="RESTRICT"), nullable=False
     )
     data_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[GeneratedDocumentStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=GeneratedDocumentStatus.DRAFT
+        String(50), nullable=False, default=GeneratedDocumentStatus.DRAFT
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     archived_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
-    archived_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship("Project")
     render_job: Mapped["RenderJob"] = relationship("RenderJob")
@@ -3360,22 +2901,15 @@ class DocumentPackage(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "document_packages"
 
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
     )
-    package_type: Mapped[DocumentPackageType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    package_type: Mapped[DocumentPackageType] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[DocumentPackageStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DocumentPackageStatus.DRAFT
+        String(50), nullable=False, default=DocumentPackageStatus.DRAFT
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     project: Mapped["Project"] = relationship("Project")
@@ -3386,12 +2920,10 @@ class DocumentPackageItem(Base, UUIDMixin):
     __tablename__ = "document_package_items"
 
     document_package_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("document_packages.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("document_packages.id", ondelete="RESTRICT"), nullable=False
     )
     generated_document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("generated_documents.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("generated_documents.id", ondelete="RESTRICT"), nullable=False
     )
     sort_order: Mapped[int] = mapped_column(nullable=False)
 
@@ -3402,6 +2934,7 @@ class DocumentPackageItem(Base, UUIDMixin):
 # ==========================================
 # SPRINT 5 - DOCUMENT INTELLIGENCE ENUMS
 # ==========================================
+
 
 class ParsedDocumentStatus(str, enum.Enum):
     CANDIDATE = "candidate"
@@ -3445,20 +2978,18 @@ class DocumentCorrectionStatus(str, enum.Enum):
 # SPRINT 5 - DOCUMENT INTELLIGENCE MODELS
 # ==========================================
 
+
 class ParsedDocument(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "parsed_documents"
 
     evidence_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("evidence_files.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
     )
     document_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     page_count: Mapped[Optional[int]] = mapped_column(nullable=True)
     text_content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     parse_status: Mapped[ParsedDocumentStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ParsedDocumentStatus.CANDIDATE
+        String(50), nullable=False, default=ParsedDocumentStatus.CANDIDATE
     )
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
 
@@ -3469,8 +3000,7 @@ class ExtractedField(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "extracted_fields"
 
     parsed_document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"), nullable=False
     )
     field_key: Mapped[str] = mapped_column(String(255), nullable=False)
     field_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -3479,9 +3009,7 @@ class ExtractedField(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     confidence_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True)
     source_page_number: Mapped[Optional[int]] = mapped_column(nullable=True)
     status: Mapped[ExtractedFieldStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ExtractedFieldStatus.CANDIDATE
+        String(50), nullable=False, default=ExtractedFieldStatus.CANDIDATE
     )
 
     parsed_document: Mapped["ParsedDocument"] = relationship("ParsedDocument")
@@ -3491,21 +3019,14 @@ class DocumentDiff(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "document_diffs"
 
     source_document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("generated_documents.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("generated_documents.id", ondelete="RESTRICT"), nullable=False
     )
     target_document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"), nullable=False
     )
-    diff_type: Mapped[DocumentDiffType] = mapped_column(
-        String(50),
-        nullable=False
-    )
+    diff_type: Mapped[DocumentDiffType] = mapped_column(String(50), nullable=False)
     status: Mapped[DocumentDiffStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DocumentDiffStatus.CANDIDATE
+        String(50), nullable=False, default=DocumentDiffStatus.CANDIDATE
     )
     diff_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
@@ -3517,32 +3038,23 @@ class DocumentCorrection(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
     __tablename__ = "document_corrections"
 
     parsed_document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("parsed_documents.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("parsed_documents.id", ondelete="RESTRICT"), nullable=False
     )
-    target_type: Mapped[str] = mapped_column(String(50), nullable=False) # e.g. extracted_field
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. extracted_field
     target_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     affects_approved_data: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     correction_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     decision: Mapped[DocumentCorrectionDecision] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DocumentCorrectionDecision.REQUEST_CHANGE
+        String(50), nullable=False, default=DocumentCorrectionDecision.REQUEST_CHANGE
     )
     decided_by: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     decided_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utc_now,
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
     status: Mapped[DocumentCorrectionStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=DocumentCorrectionStatus.DRAFT
+        String(50), nullable=False, default=DocumentCorrectionStatus.DRAFT
     )
 
     parsed_document: Mapped["ParsedDocument"] = relationship("ParsedDocument")
@@ -3568,30 +3080,26 @@ class ImportRowValidationStatus(str, enum.Enum):
 
 class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
     """Represents an upload batch of asset list from an Excel sheet."""
+
     __tablename__ = "project_asset_import_batches"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     source_sheet_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     status: Mapped[ImportBatchStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ImportBatchStatus.CREATED
+        String(50), nullable=False, default=ImportBatchStatus.CREATED
     )
     total_rows: Mapped[int] = mapped_column(nullable=False, default=0)
     valid_rows: Mapped[int] = mapped_column(nullable=False, default=0)
     invalid_rows: Mapped[int] = mapped_column(nullable=False, default=0)
     warning_rows: Mapped[int] = mapped_column(nullable=False, default=0)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     project: Mapped["Project"] = relationship("Project")
@@ -3605,28 +3113,24 @@ class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
 
 class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
     """Represents a single staged row from an imported Excel sheet before applying it."""
+
     __tablename__ = "project_asset_import_staging_rows"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"), nullable=False
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     import_batch_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("project_asset_import_batches.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("project_asset_import_batches.id", ondelete="CASCADE"), nullable=False
     )
     source_row_number: Mapped[int] = mapped_column(nullable=False)
     raw_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     mapped_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     normalized_preview: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     validation_status: Mapped[ImportRowValidationStatus] = mapped_column(
-        String(50),
-        nullable=False,
-        default=ImportRowValidationStatus.PENDING
+        String(50), nullable=False, default=ImportRowValidationStatus.PENDING
     )
     validation_errors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     validation_warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
@@ -3649,24 +3153,3 @@ class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
         Index("idx_staging_row_batch", "import_batch_id"),
         Index("idx_staging_row_validation", "validation_status"),
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

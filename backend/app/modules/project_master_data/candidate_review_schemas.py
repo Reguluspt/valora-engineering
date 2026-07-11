@@ -3,9 +3,13 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
 from app.modules.project_master_data.models import (
-    IdentityCandidateStatus, IdentityReviewStatus, IdentityDecisionType,
-    DuplicateCandidateStatus, MergeDecisionStatus
+    IdentityCandidateStatus,
+    IdentityReviewStatus,
+    IdentityDecisionType,
+    DuplicateCandidateStatus,
+    MergeDecisionStatus,
 )
+
 
 class BaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)

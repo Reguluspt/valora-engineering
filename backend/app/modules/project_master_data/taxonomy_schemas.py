@@ -3,9 +3,14 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.modules.project_master_data.models import (
-    TaxonomyNodeLevel, TaxonomyStatus, AssetFamilyStatus,
-    AssetDNAStatus, AssetAttributeDataType, AssetAttributeScope
+    TaxonomyNodeLevel,
+    TaxonomyStatus,
+    AssetFamilyStatus,
+    AssetDNAStatus,
+    AssetAttributeDataType,
+    AssetAttributeScope,
 )
+
 
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
@@ -114,8 +119,11 @@ class AssetAttributeDefinitionCreate(BaseSchema):
     @classmethod
     def validate_key_snake(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[a-z0-9_]+$", v):
-            raise ValueError("Key must be snake_case (lowercase, alphanumeric, and underscores only)")
+            raise ValueError(
+                "Key must be snake_case (lowercase, alphanumeric, and underscores only)"
+            )
         return v
 
 

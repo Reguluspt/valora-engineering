@@ -3,11 +3,16 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from app.modules.project_master_data.models import (
-    ParsedDocumentStatus, ExtractedFieldStatus, DocumentDiffType,
-    DocumentDiffStatus, DocumentCorrectionDecision, DocumentCorrectionStatus
+    ParsedDocumentStatus,
+    ExtractedFieldStatus,
+    DocumentDiffType,
+    DocumentDiffStatus,
+    DocumentCorrectionDecision,
+    DocumentCorrectionStatus,
 )
 
 # ----------------- ParsedDocument -----------------
+
 
 class ParsedDocumentCreate(BaseModel):
     evidence_file_id: uuid.UUID
@@ -17,6 +22,7 @@ class ParsedDocumentCreate(BaseModel):
     parse_status: ParsedDocumentStatus = ParsedDocumentStatus.CANDIDATE
     confidence_score: Optional[float] = None
 
+
 class ParsedDocumentUpdate(BaseModel):
     document_type: Optional[str] = Field(None, max_length=50)
     page_count: Optional[int] = None
@@ -24,6 +30,7 @@ class ParsedDocumentUpdate(BaseModel):
     parse_status: Optional[ParsedDocumentStatus] = None
     confidence_score: Optional[float] = None
     expected_row_version: Optional[int] = None
+
 
 class ParsedDocumentSchema(BaseModel):
     id: uuid.UUID
@@ -43,6 +50,7 @@ class ParsedDocumentSchema(BaseModel):
 
 # ----------------- ExtractedField -----------------
 
+
 class ExtractedFieldCreate(BaseModel):
     field_key: str = Field(..., max_length=255)
     field_label: Optional[str] = Field(None, max_length=255)
@@ -52,6 +60,7 @@ class ExtractedFieldCreate(BaseModel):
     source_page_number: Optional[int] = None
     status: ExtractedFieldStatus = ExtractedFieldStatus.CANDIDATE
 
+
 class ExtractedFieldUpdate(BaseModel):
     field_label: Optional[str] = Field(None, max_length=255)
     extracted_value: Optional[Dict[str, Any]] = None
@@ -59,6 +68,7 @@ class ExtractedFieldUpdate(BaseModel):
     confidence_score: Optional[float] = None
     status: Optional[ExtractedFieldStatus] = None
     expected_row_version: Optional[int] = None
+
 
 class ExtractedFieldSchema(BaseModel):
     id: uuid.UUID
@@ -80,12 +90,14 @@ class ExtractedFieldSchema(BaseModel):
 
 # ----------------- DocumentDiff -----------------
 
+
 class DocumentDiffCreate(BaseModel):
     source_document_id: uuid.UUID
     target_document_id: uuid.UUID
     diff_type: DocumentDiffType
     status: DocumentDiffStatus = DocumentDiffStatus.CANDIDATE
     diff_payload: Optional[Dict[str, Any]] = None
+
 
 class DocumentDiffSchema(BaseModel):
     id: uuid.UUID
@@ -104,6 +116,7 @@ class DocumentDiffSchema(BaseModel):
 
 # ----------------- DocumentCorrection -----------------
 
+
 class DocumentCorrectionCreate(BaseModel):
     target_type: str = Field(..., max_length=50)
     target_id: uuid.UUID
@@ -113,10 +126,12 @@ class DocumentCorrectionCreate(BaseModel):
     decided_by: uuid.UUID
     status: DocumentCorrectionStatus = DocumentCorrectionStatus.DRAFT
 
+
 class DocumentCorrectionReview(BaseModel):
     decision: DocumentCorrectionDecision
     status: DocumentCorrectionStatus
     expected_row_version: int
+
 
 class DocumentCorrectionSchema(BaseModel):
     id: uuid.UUID

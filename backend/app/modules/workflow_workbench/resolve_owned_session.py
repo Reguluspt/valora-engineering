@@ -6,8 +6,13 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.core.rbac import get_current_user
 from app.modules.project_master_data.models import (
-    User, WorkbenchSession, WorkbenchSessionStatus, Project, ProjectAssetLine
+    User,
+    WorkbenchSession,
+    WorkbenchSessionStatus,
+    Project,
+    ProjectAssetLine,
 )
+
 
 def raise_safe_404():
     raise HTTPException(
@@ -17,16 +22,17 @@ def raise_safe_404():
             "message": "Không tìm thấy phiên làm việc hoặc bạn không có quyền truy cập.",
             "nextAction": "Vui lòng kiểm tra lại đường dẫn hoặc liên hệ với Quản trị viên để được hỗ trợ.",
             "severity": "error",
-            "retryable": False
-        }
+            "retryable": False,
+        },
     )
+
 
 def require_owned_workbench_session(
     session_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     require_active: bool = True,
-    expected_project_id: Optional[uuid.UUID] = None
+    expected_project_id: Optional[uuid.UUID] = None,
 ) -> WorkbenchSession:
     # 1. Query session, join Project, and enforce scoping directly in SQL
     query = (
@@ -40,14 +46,10 @@ def require_owned_workbench_session(
     )
 
     if expected_project_id is not None:
-        query = query.filter(
-            WorkbenchSession.project_id == expected_project_id
-        )
+        query = query.filter(WorkbenchSession.project_id == expected_project_id)
 
     if require_active:
-        query = query.filter(
-            WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
-        )
+        query = query.filter(WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE)
 
     session = query.first()
     if session is None:
@@ -57,10 +59,7 @@ def require_owned_workbench_session(
 
 
 def resolve_workbench_target(
-    target_type: str,
-    target_id: uuid.UUID,
-    project_id: uuid.UUID,
-    db: Session
+    target_type: str, target_id: uuid.UUID, project_id: uuid.UUID, db: Session
 ):
     if target_type != "project_asset_line":
         raise HTTPException(
@@ -70,14 +69,15 @@ def resolve_workbench_target(
                 "message": "Loại đối tượng chỉnh sửa không hợp lệ.",
                 "nextAction": "Vui lòng liên hệ với Quản trị viên để được hỗ trợ.",
                 "severity": "error",
-                "retryable": False
-            }
+                "retryable": False,
+            },
         )
 
-    line = db.query(ProjectAssetLine).filter(
-        ProjectAssetLine.id == target_id,
-        ProjectAssetLine.project_id == project_id
-    ).first()
+    line = (
+        db.query(ProjectAssetLine)
+        .filter(ProjectAssetLine.id == target_id, ProjectAssetLine.project_id == project_id)
+        .first()
+    )
     if not line:
         raise HTTPException(
             status_code=404,
@@ -86,7 +86,7 @@ def resolve_workbench_target(
                 "message": "Không tìm thấy đối tượng chỉnh sửa trong hồ sơ hiện tại.",
                 "nextAction": "Vui lòng liên hệ với Quản trị viên để được hỗ trợ.",
                 "severity": "error",
-                "retryable": False
-            }
+                "retryable": False,
+            },
         )
     return line

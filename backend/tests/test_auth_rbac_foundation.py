@@ -15,11 +15,8 @@ from app.modules.project_master_data.models import (
     UserRole,
 )
 from app.core.security import hash_password, verify_password
-from app.core.rbac import (
-    derive_effective_permissions,
-    get_current_user,
-    require_permission
-)
+from app.core.rbac import derive_effective_permissions, get_current_user, require_permission
+
 
 @pytest.fixture
 def db_session() -> Session:
@@ -77,17 +74,14 @@ def test_rbac_effective_permission_resolution(db_session: Session) -> None:
     role_appraiser = Role(
         code="appraiser",
         display_name="Appraiser",
-        permissions=["project:create", "project:read", "project:update"]
+        permissions=["project:create", "project:read", "project:update"],
     )
     db_session.add(role_appraiser)
     db_session.commit()
 
     # 4. Associate role with active UserRole
     user_role = UserRole(
-        user_id=user.id,
-        role_id=role_appraiser.id,
-        is_active=True,
-        revoked_at=None
+        user_id=user.id, role_id=role_appraiser.id, is_active=True, revoked_at=None
     )
     db_session.add(user_role)
     db_session.commit()
@@ -116,20 +110,13 @@ def test_rbac_inactive_user_role(db_session: Session) -> None:
     db_session.add(user)
     db_session.commit()
 
-    role = Role(
-        code="appraiser",
-        display_name="Appraiser",
-        permissions=["project:create"]
-    )
+    role = Role(code="appraiser", display_name="Appraiser", permissions=["project:create"])
     db_session.add(role)
     db_session.commit()
 
     # Create inactive UserRole
     user_role_inactive = UserRole(
-        user_id=user.id,
-        role_id=role.id,
-        is_active=False,
-        revoked_at=None
+        user_id=user.id, role_id=role.id, is_active=False, revoked_at=None
     )
     db_session.add(user_role_inactive)
     db_session.commit()
@@ -139,10 +126,7 @@ def test_rbac_inactive_user_role(db_session: Session) -> None:
 
     # Create active but revoked UserRole
     user_role_revoked = UserRole(
-        user_id=user.id,
-        role_id=role.id,
-        is_active=True,
-        revoked_at=datetime.now(timezone.utc)
+        user_id=user.id, role_id=role.id, is_active=True, revoked_at=datetime.now(timezone.utc)
     )
     # Clear the session first
     db_session.delete(user_role_inactive)
@@ -184,11 +168,7 @@ def test_rbac_inactive_user_or_org(db_session: Session) -> None:
     db_session.add_all([user_a, user_b])
     db_session.commit()
 
-    role = Role(
-        code="appraiser",
-        display_name="Appraiser",
-        permissions=["project:create"]
-    )
+    role = Role(code="appraiser", display_name="Appraiser", permissions=["project:create"])
     db_session.add(role)
     db_session.commit()
 
@@ -244,11 +224,7 @@ def test_require_permission_dependency(db_session: Session) -> None:
     db_session.add(user)
     db_session.commit()
 
-    role = Role(
-        code="viewer",
-        display_name="Viewer",
-        permissions=["project:read"]
-    )
+    role = Role(code="viewer", display_name="Viewer", permissions=["project:read"])
     db_session.add(role)
     db_session.commit()
 
@@ -303,7 +279,7 @@ def test_get_current_user_dependency(db_session: Session) -> None:
         last_seen_at=now,
         access_expires_at=now + timedelta(minutes=15),
         idle_expires_at=now + timedelta(minutes=30),
-        absolute_expires_at=now + timedelta(days=7)
+        absolute_expires_at=now + timedelta(days=7),
     )
     db_session.add(mock_session)
     db_session.commit()
@@ -323,7 +299,7 @@ def test_get_current_user_dependency(db_session: Session) -> None:
         last_seen_at=now,
         access_expires_at=now + timedelta(minutes=15),
         idle_expires_at=now + timedelta(minutes=30),
-        absolute_expires_at=now + timedelta(days=7)
+        absolute_expires_at=now + timedelta(days=7),
     )
     db_session.add(valid_session)
     db_session.commit()

@@ -26,18 +26,34 @@ from app.modules.project_master_data.models import (
     Unit,
     Currency,
     SignerProfile,
-    SignerStatus
+    SignerStatus,
 )
 from app.modules.project_master_data.schemas import (
-    CountryCreate, CountryResponse,
-    ProvinceCreate, ProvinceResponse,
-    UnitCreate, UnitResponse,
-    CurrencyCreate, CurrencyResponse,
-    BrandCreate, BrandResponse,
-    ManufacturerCreate, ManufacturerResponse,
-    SignerProfileCreate, SignerProfileUpdate, SignerProfileResponse,
-    CustomerCreate, CustomerUpdate, CustomerDeactivate, CustomerMerge, CustomerResponse,
-    SupplierCreate, SupplierUpdate, SupplierDeactivate, SupplierMerge, SupplierResponse
+    CountryCreate,
+    CountryResponse,
+    ProvinceCreate,
+    ProvinceResponse,
+    UnitCreate,
+    UnitResponse,
+    CurrencyCreate,
+    CurrencyResponse,
+    BrandCreate,
+    BrandResponse,
+    ManufacturerCreate,
+    ManufacturerResponse,
+    SignerProfileCreate,
+    SignerProfileUpdate,
+    SignerProfileResponse,
+    CustomerCreate,
+    CustomerUpdate,
+    CustomerDeactivate,
+    CustomerMerge,
+    CustomerResponse,
+    SupplierCreate,
+    SupplierUpdate,
+    SupplierDeactivate,
+    SupplierMerge,
+    SupplierResponse,
 )
 
 router = APIRouter(prefix="/api/v1/master-data", tags=["master-data"])
@@ -46,12 +62,14 @@ router = APIRouter(prefix="/api/v1/master-data", tags=["master-data"])
 # Normalization helper for name matching
 def normalize_name(name: str) -> str:
     n = name.lower().strip()
-    n = re.sub(r'[^\w\s]', '', n)  # remove punctuation
-    n = re.sub(r'\s+', ' ', n)  # collapse spaces
+    n = re.sub(r"[^\w\s]", "", n)  # remove punctuation
+    n = re.sub(r"\s+", " ", n)  # collapse spaces
     return n
 
 
-def get_fuzzy_duplicate_customer_warning(db: Session, org_id: uuid.UUID, name: str, exclude_id: Optional[uuid.UUID] = None) -> Optional[str]:
+def get_fuzzy_duplicate_customer_warning(
+    db: Session, org_id: uuid.UUID, name: str, exclude_id: Optional[uuid.UUID] = None
+) -> Optional[str]:
     normalized_target = normalize_name(name)
     query = db.query(Customer).filter(Customer.organization_id == org_id)
     if exclude_id:
@@ -63,7 +81,9 @@ def get_fuzzy_duplicate_customer_warning(db: Session, org_id: uuid.UUID, name: s
     return None
 
 
-def get_fuzzy_duplicate_supplier_warning(db: Session, org_id: uuid.UUID, name: str, exclude_id: Optional[uuid.UUID] = None) -> Optional[str]:
+def get_fuzzy_duplicate_supplier_warning(
+    db: Session, org_id: uuid.UUID, name: str, exclude_id: Optional[uuid.UUID] = None
+) -> Optional[str]:
     normalized_target = normalize_name(name)
     query = db.query(Supplier).filter(Supplier.organization_id == org_id)
     if exclude_id:
@@ -79,23 +99,27 @@ def get_fuzzy_duplicate_supplier_warning(db: Session, org_id: uuid.UUID, name: s
 # CUSTOMER ENDPOINTS
 # ==========================================
 
+
 @router.post("/customers", response_model=CustomerResponse, status_code=201)
 def create_customer(
     payload: CustomerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:customer:create"))
+    current_user: User = Depends(require_permission("master_data:customer:create")),
 ):
     # 1. Scope to current_user.organization_id
     org_id = current_user.organization_id
 
     # 2. Check if tax code is unique in org (if provided)
     if payload.tax_code:
-        dup = db.query(Customer).filter(
-            Customer.organization_id == org_id,
-            Customer.tax_code == payload.tax_code
-        ).first()
+        dup = (
+            db.query(Customer)
+            .filter(Customer.organization_id == org_id, Customer.tax_code == payload.tax_code)
+            .first()
+        )
         if dup:
-            raise HTTPException(status_code=409, detail="Duplicate record (tax code already exists)")
+            raise HTTPException(
+                status_code=409, detail="Duplicate record (tax code already exists)"
+            )
 
     # 3. Check if province exists
     if payload.province_id:
@@ -120,7 +144,7 @@ def create_customer(
         contact_email=payload.contact_email,
         notes=payload.notes,
         status=CustomerStatus.ACTIVE,
-        created_by=current_user.id
+        created_by=current_user.id,
     )
     db.add(customer)
     db.commit()
@@ -135,7 +159,7 @@ def create_customer(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="CreateCustomer",
-        payload={"legal_name": customer.legal_name}
+        payload={"legal_name": customer.legal_name},
     )
     db.commit()
 
@@ -152,7 +176,7 @@ def list_customers(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:customer:read"))
+    current_user: User = Depends(require_permission("master_data:customer:read")),
 ):
     org_id = current_user.organization_id
     query = db.query(Customer).filter(Customer.organization_id == org_id)
@@ -163,7 +187,7 @@ def list_customers(
             or_(
                 Customer.legal_name.ilike(f"%{q}%"),
                 Customer.display_name.ilike(f"%{q}%"),
-                Customer.tax_code.ilike(f"%{q}%")
+                Customer.tax_code.ilike(f"%{q}%"),
             )
         )
     if status:
@@ -182,13 +206,14 @@ def update_customer(
     customer_id: uuid.UUID,
     payload: CustomerUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:customer:update"))
+    current_user: User = Depends(require_permission("master_data:customer:update")),
 ):
     org_id = current_user.organization_id
-    customer = db.query(Customer).filter(
-        Customer.organization_id == org_id,
-        Customer.id == customer_id
-    ).first()
+    customer = (
+        db.query(Customer)
+        .filter(Customer.organization_id == org_id, Customer.id == customer_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Record not found")
 
@@ -210,7 +235,9 @@ def update_customer(
         customer.notes = payload.notes
 
     # Warning warning check
-    warning = get_fuzzy_duplicate_customer_warning(db, org_id, customer.legal_name, exclude_id=customer.id)
+    warning = get_fuzzy_duplicate_customer_warning(
+        db, org_id, customer.legal_name, exclude_id=customer.id
+    )
     warnings_list = [warning] if warning else []
 
     db.commit()
@@ -224,7 +251,7 @@ def update_customer(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="UpdateCustomer",
-        payload={"display_name": customer.display_name}
+        payload={"display_name": customer.display_name},
     )
     db.commit()
 
@@ -238,13 +265,14 @@ def deactivate_customer(
     customer_id: uuid.UUID,
     payload: CustomerDeactivate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:customer:deactivate"))
+    current_user: User = Depends(require_permission("master_data:customer:deactivate")),
 ):
     org_id = current_user.organization_id
-    customer = db.query(Customer).filter(
-        Customer.organization_id == org_id,
-        Customer.id == customer_id
-    ).first()
+    customer = (
+        db.query(Customer)
+        .filter(Customer.organization_id == org_id, Customer.id == customer_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Record not found")
 
@@ -260,7 +288,7 @@ def deactivate_customer(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="DeactivateCustomer",
-        payload={"reason": payload.reason}
+        payload={"reason": payload.reason},
     )
     db.commit()
 
@@ -271,28 +299,37 @@ def deactivate_customer(
 def merge_customers(
     payload: CustomerMerge,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:customer:merge"))
+    current_user: User = Depends(require_permission("master_data:customer:merge")),
 ):
     org_id = current_user.organization_id
-    source = db.query(Customer).filter(Customer.organization_id == org_id, Customer.id == payload.source_customer_id).first()
-    target = db.query(Customer).filter(Customer.organization_id == org_id, Customer.id == payload.target_customer_id).first()
+    source = (
+        db.query(Customer)
+        .filter(Customer.organization_id == org_id, Customer.id == payload.source_customer_id)
+        .first()
+    )
+    target = (
+        db.query(Customer)
+        .filter(Customer.organization_id == org_id, Customer.id == payload.target_customer_id)
+        .first()
+    )
 
     if not source or not target:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    if source.status == CustomerStatus.MERGED or target.status in (CustomerStatus.INACTIVE, CustomerStatus.MERGED):
-        raise HTTPException(status_code=422, detail="Merge target invalid (target is inactive or already merged)")
+    if source.status == CustomerStatus.MERGED or target.status in (
+        CustomerStatus.INACTIVE,
+        CustomerStatus.MERGED,
+    ):
+        raise HTTPException(
+            status_code=422, detail="Merge target invalid (target is inactive or already merged)"
+        )
 
     # Set merged properties
     source.status = CustomerStatus.MERGED
     source.merged_into_customer_id = target.id
 
     # Preserve alias: insert CustomerAlias pointing to target
-    alias = CustomerAlias(
-        customer_id=target.id,
-        alias_name=source.legal_name,
-        confidence_score=1.0
-    )
+    alias = CustomerAlias(customer_id=target.id, alias_name=source.legal_name, confidence_score=1.0)
     db.add(alias)
     db.commit()
 
@@ -304,7 +341,7 @@ def merge_customers(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="MergeCustomer",
-        payload={"target_customer_id": str(target.id), "reason": payload.reason}
+        payload={"target_customer_id": str(target.id), "reason": payload.reason},
     )
     db.commit()
 
@@ -315,21 +352,25 @@ def merge_customers(
 # SUPPLIER ENDPOINTS
 # ==========================================
 
+
 @router.post("/suppliers", response_model=SupplierResponse, status_code=201)
 def create_supplier(
     payload: SupplierCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:supplier:create"))
+    current_user: User = Depends(require_permission("master_data:supplier:create")),
 ):
     org_id = current_user.organization_id
 
     if payload.tax_code:
-        dup = db.query(Supplier).filter(
-            Supplier.organization_id == org_id,
-            Supplier.tax_code == payload.tax_code
-        ).first()
+        dup = (
+            db.query(Supplier)
+            .filter(Supplier.organization_id == org_id, Supplier.tax_code == payload.tax_code)
+            .first()
+        )
         if dup:
-            raise HTTPException(status_code=409, detail="Duplicate record (tax code already exists)")
+            raise HTTPException(
+                status_code=409, detail="Duplicate record (tax code already exists)"
+            )
 
     if payload.province_id:
         prov = db.query(Province).filter(Province.id == payload.province_id).first()
@@ -347,7 +388,7 @@ def create_supplier(
         province_id=payload.province_id,
         reliability_score=payload.reliability_score,
         status=SupplierStatus.ACTIVE,
-        created_by=current_user.id
+        created_by=current_user.id,
     )
     db.add(supplier)
     db.commit()
@@ -361,7 +402,7 @@ def create_supplier(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="CreateSupplier",
-        payload={"legal_name": supplier.legal_name}
+        payload={"legal_name": supplier.legal_name},
     )
     db.commit()
 
@@ -378,7 +419,7 @@ def list_suppliers(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:supplier:read"))
+    current_user: User = Depends(require_permission("master_data:supplier:read")),
 ):
     org_id = current_user.organization_id
     query = db.query(Supplier).filter(Supplier.organization_id == org_id)
@@ -388,7 +429,7 @@ def list_suppliers(
             or_(
                 Supplier.legal_name.ilike(f"%{q}%"),
                 Supplier.display_name.ilike(f"%{q}%"),
-                Supplier.tax_code.ilike(f"%{q}%")
+                Supplier.tax_code.ilike(f"%{q}%"),
             )
         )
     if status:
@@ -406,13 +447,14 @@ def update_supplier(
     supplier_id: uuid.UUID,
     payload: SupplierUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:supplier:update"))
+    current_user: User = Depends(require_permission("master_data:supplier:update")),
 ):
     org_id = current_user.organization_id
-    supplier = db.query(Supplier).filter(
-        Supplier.organization_id == org_id,
-        Supplier.id == supplier_id
-    ).first()
+    supplier = (
+        db.query(Supplier)
+        .filter(Supplier.organization_id == org_id, Supplier.id == supplier_id)
+        .first()
+    )
     if not supplier:
         raise HTTPException(status_code=404, detail="Record not found")
 
@@ -421,7 +463,9 @@ def update_supplier(
     if payload.reliability_score is not None:
         supplier.reliability_score = payload.reliability_score
 
-    warning = get_fuzzy_duplicate_supplier_warning(db, org_id, supplier.legal_name, exclude_id=supplier.id)
+    warning = get_fuzzy_duplicate_supplier_warning(
+        db, org_id, supplier.legal_name, exclude_id=supplier.id
+    )
     warnings_list = [warning] if warning else []
 
     db.commit()
@@ -435,7 +479,7 @@ def update_supplier(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="UpdateSupplier",
-        payload={"display_name": supplier.display_name}
+        payload={"display_name": supplier.display_name},
     )
     db.commit()
 
@@ -449,13 +493,14 @@ def deactivate_supplier(
     supplier_id: uuid.UUID,
     payload: SupplierDeactivate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:supplier:deactivate"))
+    current_user: User = Depends(require_permission("master_data:supplier:deactivate")),
 ):
     org_id = current_user.organization_id
-    supplier = db.query(Supplier).filter(
-        Supplier.organization_id == org_id,
-        Supplier.id == supplier_id
-    ).first()
+    supplier = (
+        db.query(Supplier)
+        .filter(Supplier.organization_id == org_id, Supplier.id == supplier_id)
+        .first()
+    )
     if not supplier:
         raise HTTPException(status_code=404, detail="Record not found")
 
@@ -471,7 +516,7 @@ def deactivate_supplier(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="DeactivateSupplier",
-        payload={"reason": payload.reason}
+        payload={"reason": payload.reason},
     )
     db.commit()
 
@@ -482,27 +527,34 @@ def deactivate_supplier(
 def merge_suppliers(
     payload: SupplierMerge,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:supplier:merge"))
+    current_user: User = Depends(require_permission("master_data:supplier:merge")),
 ):
     org_id = current_user.organization_id
-    source = db.query(Supplier).filter(Supplier.organization_id == org_id, Supplier.id == payload.source_supplier_id).first()
-    target = db.query(Supplier).filter(Supplier.organization_id == org_id, Supplier.id == payload.target_supplier_id).first()
+    source = (
+        db.query(Supplier)
+        .filter(Supplier.organization_id == org_id, Supplier.id == payload.source_supplier_id)
+        .first()
+    )
+    target = (
+        db.query(Supplier)
+        .filter(Supplier.organization_id == org_id, Supplier.id == payload.target_supplier_id)
+        .first()
+    )
 
     if not source or not target:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    if source.status == SupplierStatus.MERGED or target.status in (SupplierStatus.INACTIVE, SupplierStatus.MERGED):
+    if source.status == SupplierStatus.MERGED or target.status in (
+        SupplierStatus.INACTIVE,
+        SupplierStatus.MERGED,
+    ):
         raise HTTPException(status_code=422, detail="Merge target invalid")
 
     source.status = SupplierStatus.MERGED
     source.merged_into_supplier_id = target.id
 
     # Preserve alias
-    alias = SupplierAlias(
-        supplier_id=target.id,
-        alias_name=source.legal_name,
-        confidence_score=1.0
-    )
+    alias = SupplierAlias(supplier_id=target.id, alias_name=source.legal_name, confidence_score=1.0)
     db.add(alias)
     db.commit()
 
@@ -514,7 +566,7 @@ def merge_suppliers(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="MergeSupplier",
-        payload={"target_supplier_id": str(target.id), "reason": payload.reason}
+        payload={"target_supplier_id": str(target.id), "reason": payload.reason},
     )
     db.commit()
 
@@ -525,11 +577,12 @@ def merge_suppliers(
 # COUNTRY ENDPOINTS
 # ==========================================
 
+
 @router.post("/countries", response_model=CountryResponse, status_code=201)
 def create_country(
     payload: CountryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:create"))
+    current_user: User = Depends(require_permission("master_data:reference:create")),
 ):
     # Check uniqueness of iso2 and iso3 if provided
     if payload.iso2:
@@ -546,7 +599,7 @@ def create_country(
         iso3=payload.iso3,
         name_vi=payload.name_vi,
         name_en=payload.name_en,
-        status=ReferenceStatus.ACTIVE
+        status=ReferenceStatus.ACTIVE,
     )
     db.add(country)
     db.commit()
@@ -559,7 +612,7 @@ def create_country(
         entity_id=country.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateCountry"
+        command_name="CreateCountry",
     )
     db.commit()
 
@@ -569,7 +622,7 @@ def create_country(
 @router.get("/countries", response_model=List[CountryResponse])
 def list_countries(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:read"))
+    current_user: User = Depends(require_permission("master_data:reference:read")),
 ):
     return db.query(Country).all()
 
@@ -578,11 +631,12 @@ def list_countries(
 # PROVINCE ENDPOINTS
 # ==========================================
 
+
 @router.post("/provinces", response_model=ProvinceResponse, status_code=201)
 def create_province(
     payload: ProvinceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:create"))
+    current_user: User = Depends(require_permission("master_data:reference:create")),
 ):
     # Check if country exists
     c = db.query(Country).filter(Country.id == payload.country_id).first()
@@ -593,7 +647,7 @@ def create_province(
         country_id=payload.country_id,
         name=payload.name,
         code=payload.code,
-        status=ReferenceStatus.ACTIVE
+        status=ReferenceStatus.ACTIVE,
     )
     db.add(prov)
     db.commit()
@@ -606,7 +660,7 @@ def create_province(
         entity_id=prov.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateProvince"
+        command_name="CreateProvince",
     )
     db.commit()
 
@@ -618,7 +672,7 @@ def list_provinces(
     country_id: Optional[uuid.UUID] = None,
     q: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:read"))
+    current_user: User = Depends(require_permission("master_data:reference:read")),
 ):
     query = db.query(Province)
     if country_id:
@@ -632,14 +686,20 @@ def list_provinces(
 # BRAND ENDPOINTS
 # ==========================================
 
+
 @router.post("/brands", response_model=BrandResponse, status_code=201)
 def create_brand(
     payload: BrandCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:brand:create"))
+    current_user: User = Depends(require_permission("master_data:brand:create")),
 ):
     # Check duplicate brand name (case-insensitive)
-    dup = db.query(Brand).filter(text("lower(name) = :name")).params(name=payload.name.lower()).first()
+    dup = (
+        db.query(Brand)
+        .filter(text("lower(name) = :name"))
+        .params(name=payload.name.lower())
+        .first()
+    )
     if dup:
         raise HTTPException(status_code=409, detail="Duplicate record (brand name already exists)")
 
@@ -659,7 +719,7 @@ def create_brand(
         name=payload.name,
         country_id=payload.country_id,
         manufacturer_id=payload.manufacturer_id,
-        status=BrandStatus.ACTIVE
+        status=BrandStatus.ACTIVE,
     )
     db.add(brand)
     db.commit()
@@ -672,7 +732,7 @@ def create_brand(
         entity_id=brand.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateBrand"
+        command_name="CreateBrand",
     )
     db.commit()
 
@@ -685,7 +745,7 @@ def list_brands(
     country_id: Optional[uuid.UUID] = None,
     status: Optional[BrandStatus] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:brand:read"))
+    current_user: User = Depends(require_permission("master_data:brand:read")),
 ):
     query = db.query(Brand)
     if q:
@@ -701,11 +761,12 @@ def list_brands(
 # MANUFACTURER ENDPOINTS
 # ==========================================
 
+
 @router.post("/manufacturers", response_model=ManufacturerResponse, status_code=201)
 def create_manufacturer(
     payload: ManufacturerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:manufacturer:create"))
+    current_user: User = Depends(require_permission("master_data:manufacturer:create")),
 ):
     # Check country
     if payload.country_id:
@@ -717,7 +778,7 @@ def create_manufacturer(
         legal_name=payload.legal_name,
         country_id=payload.country_id,
         website=payload.website,
-        status=ManufacturerStatus.ACTIVE
+        status=ManufacturerStatus.ACTIVE,
     )
     db.add(mfg)
     db.commit()
@@ -730,7 +791,7 @@ def create_manufacturer(
         entity_id=mfg.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateManufacturer"
+        command_name="CreateManufacturer",
     )
     db.commit()
 
@@ -740,7 +801,7 @@ def create_manufacturer(
 @router.get("/manufacturers", response_model=List[ManufacturerResponse])
 def list_manufacturers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:manufacturer:read"))
+    current_user: User = Depends(require_permission("master_data:manufacturer:read")),
 ):
     return db.query(Manufacturer).all()
 
@@ -749,11 +810,12 @@ def list_manufacturers(
 # UNIT ENDPOINTS
 # ==========================================
 
+
 @router.post("/units", response_model=UnitResponse, status_code=201)
 def create_unit(
     payload: UnitCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:unit:create"))
+    current_user: User = Depends(require_permission("master_data:unit:create")),
 ):
     # Check code uniqueness
     dup = db.query(Unit).filter(Unit.code == payload.code).first()
@@ -765,7 +827,7 @@ def create_unit(
         display_name=payload.display_name,
         symbol=payload.symbol,
         unit_type=payload.unit_type,
-        status=ReferenceStatus.ACTIVE
+        status=ReferenceStatus.ACTIVE,
     )
     db.add(unit)
     db.commit()
@@ -778,7 +840,7 @@ def create_unit(
         entity_id=unit.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateUnit"
+        command_name="CreateUnit",
     )
     db.commit()
 
@@ -788,7 +850,7 @@ def create_unit(
 @router.get("/units", response_model=List[UnitResponse])
 def list_units(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:unit:read"))
+    current_user: User = Depends(require_permission("master_data:unit:read")),
 ):
     return db.query(Unit).all()
 
@@ -797,11 +859,12 @@ def list_units(
 # CURRENCY ENDPOINTS
 # ==========================================
 
+
 @router.post("/currencies", response_model=CurrencyResponse, status_code=201)
 def create_currency(
     payload: CurrencyCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:currency:create"))
+    current_user: User = Depends(require_permission("master_data:currency:create")),
 ):
     # Check code uniqueness
     dup = db.query(Currency).filter(Currency.code == payload.code).first()
@@ -813,7 +876,7 @@ def create_currency(
         display_name=payload.display_name,
         symbol=payload.symbol,
         decimal_places=payload.decimal_places,
-        status=ReferenceStatus.ACTIVE
+        status=ReferenceStatus.ACTIVE,
     )
     db.add(curr)
     db.commit()
@@ -826,7 +889,7 @@ def create_currency(
         entity_id=curr.id,
         organization_id=current_user.organization_id,
         actor_user_id=current_user.id,
-        command_name="CreateCurrency"
+        command_name="CreateCurrency",
     )
     db.commit()
 
@@ -836,7 +899,7 @@ def create_currency(
 @router.get("/currencies", response_model=List[CurrencyResponse])
 def list_currencies(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:read"))
+    current_user: User = Depends(require_permission("master_data:reference:read")),
 ):
     return db.query(Currency).all()
 
@@ -845,19 +908,19 @@ def list_currencies(
 # SIGNER ENDPOINTS
 # ==========================================
 
+
 @router.post("/signers", response_model=SignerProfileResponse, status_code=201)
 def create_signer_profile(
     payload: SignerProfileCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:signer:create"))
+    current_user: User = Depends(require_permission("master_data:signer:create")),
 ):
     org_id = current_user.organization_id
 
     # If this profile is default, unset any other defaults in the same organization
     if payload.is_default:
         db.query(SignerProfile).filter(
-            SignerProfile.organization_id == org_id,
-            SignerProfile.is_default == True
+            SignerProfile.organization_id == org_id, SignerProfile.is_default == True
         ).update({"is_default": False})
 
     signer = SignerProfile(
@@ -866,7 +929,7 @@ def create_signer_profile(
         title=payload.title,
         certificate_number=payload.certificate_number,
         is_default=payload.is_default,
-        status=SignerStatus.ACTIVE
+        status=SignerStatus.ACTIVE,
     )
     db.add(signer)
     db.commit()
@@ -879,7 +942,7 @@ def create_signer_profile(
         entity_id=signer.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="CreateSignerProfile"
+        command_name="CreateSignerProfile",
     )
     db.commit()
 
@@ -889,7 +952,7 @@ def create_signer_profile(
 @router.get("/signers", response_model=List[SignerProfileResponse])
 def list_signer_profiles(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:reference:read"))
+    current_user: User = Depends(require_permission("master_data:reference:read")),
 ):
     org_id = current_user.organization_id
     return db.query(SignerProfile).filter(SignerProfile.organization_id == org_id).all()
@@ -900,13 +963,14 @@ def update_signer_profile(
     signer_profile_id: uuid.UUID,
     payload: SignerProfileUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("master_data:signer:update"))
+    current_user: User = Depends(require_permission("master_data:signer:update")),
 ):
     org_id = current_user.organization_id
-    signer = db.query(SignerProfile).filter(
-        SignerProfile.organization_id == org_id,
-        SignerProfile.id == signer_profile_id
-    ).first()
+    signer = (
+        db.query(SignerProfile)
+        .filter(SignerProfile.organization_id == org_id, SignerProfile.id == signer_profile_id)
+        .first()
+    )
 
     if not signer:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -914,8 +978,7 @@ def update_signer_profile(
     if payload.is_default is not None:
         if payload.is_default:
             db.query(SignerProfile).filter(
-                SignerProfile.organization_id == org_id,
-                SignerProfile.is_default == True
+                SignerProfile.organization_id == org_id, SignerProfile.is_default == True
             ).update({"is_default": False})
         signer.is_default = payload.is_default
 
@@ -932,7 +995,7 @@ def update_signer_profile(
         entity_id=signer.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UpdateSignerProfile"
+        command_name="UpdateSignerProfile",
     )
     db.commit()
 

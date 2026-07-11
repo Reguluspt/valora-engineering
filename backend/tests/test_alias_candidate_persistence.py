@@ -5,23 +5,34 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus,
-    User, UserStatus,
-    TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
-    AssetFamily, AssetFamilyStatus,
-    CanonicalAsset, CanonicalAssetStatus,
-    AssetAlias, AssetAliasScope, AssetAliasStatus, normalize_alias_helper,
-    IdentityCandidate, IdentityCandidateStatus,
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    TaxonomyNode,
+    TaxonomyNodeLevel,
+    TaxonomyStatus,
+    AssetFamily,
+    AssetFamilyStatus,
+    CanonicalAsset,
+    CanonicalAssetStatus,
+    AssetAlias,
+    AssetAliasScope,
+    AssetAliasStatus,
+    normalize_alias_helper,
+    IdentityCandidate,
+    IdentityCandidateStatus,
     SimilarityScore,
-    Project, ProjectAssetLine, Customer
+    Project,
+    ProjectAssetLine,
+    Customer,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
 
     @event.listens_for(engine, "connect")
@@ -41,11 +52,15 @@ def db_session() -> Session:
 
 def test_asset_alias_persistence(db_session: Session) -> None:
     # 1. Seed deps
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="alias@test.com", full_name="User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id, email="alias@test.com", full_name="User", status=UserStatus.ACTIVE
+    )
     db_session.add(user)
     db_session.commit()
 
@@ -54,12 +69,17 @@ def test_asset_alias_persistence(db_session: Session) -> None:
         code="GRP-TRANS",
         name_vi="Máy biến áp",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(node)
     db_session.commit()
 
-    family = AssetFamily(taxonomy_node_id=node.id, code="FAM-TRANS", name_vi="Biến áp lực", status=AssetFamilyStatus.ACTIVE)
+    family = AssetFamily(
+        taxonomy_node_id=node.id,
+        code="FAM-TRANS",
+        name_vi="Biến áp lực",
+        status=AssetFamilyStatus.ACTIVE,
+    )
     db_session.add(family)
     db_session.commit()
 
@@ -67,7 +87,7 @@ def test_asset_alias_persistence(db_session: Session) -> None:
         asset_family_id=family.id,
         primary_taxonomy_node_id=node.id,
         standard_name="Máy biến áp ABB 110kV",
-        status=CanonicalAssetStatus.ACTIVE
+        status=CanonicalAssetStatus.ACTIVE,
     )
     db_session.add(asset)
     db_session.commit()
@@ -83,7 +103,7 @@ def test_asset_alias_persistence(db_session: Session) -> None:
         canonical_asset_id=asset.id,
         raw_alias=raw,
         normalized_alias=normalized,
-        status=AssetAliasStatus.ACTIVE
+        status=AssetAliasStatus.ACTIVE,
     )
     db_session.add(alias)
     db_session.commit()
@@ -98,7 +118,7 @@ def test_asset_alias_persistence(db_session: Session) -> None:
         canonical_asset_id=asset.id,
         raw_alias="ABB 110kV",
         normalized_alias=normalized,
-        status=AssetAliasStatus.ACTIVE
+        status=AssetAliasStatus.ACTIVE,
     )
     db_session.add(dup)
     with pytest.raises(exc.IntegrityError):
@@ -113,11 +133,15 @@ def test_asset_alias_persistence(db_session: Session) -> None:
 
 
 def test_identity_candidate_and_scoring(db_session: Session) -> None:
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
-    user = User(organization_id=org.id, email="cand@test.com", full_name="User", status=UserStatus.ACTIVE)
+    user = User(
+        organization_id=org.id, email="cand@test.com", full_name="User", status=UserStatus.ACTIVE
+    )
     db_session.add(user)
     db_session.commit()
 
@@ -126,16 +150,23 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
         code="GRP-TRANS",
         name_vi="Máy biến áp",
         status=TaxonomyStatus.ACTIVE,
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(node)
     db_session.commit()
 
-    family = AssetFamily(taxonomy_node_id=node.id, code="FAM-TRANS", name_vi="Biến áp lực", status=AssetFamilyStatus.ACTIVE)
+    family = AssetFamily(
+        taxonomy_node_id=node.id,
+        code="FAM-TRANS",
+        name_vi="Biến áp lực",
+        status=AssetFamilyStatus.ACTIVE,
+    )
     db_session.add(family)
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -144,16 +175,12 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
         customer_id=customer.id,
         code="PRJ-99",
         name="Project 1",
-        created_by=user.id
+        created_by=user.id,
     )
     db_session.add(project)
     db_session.commit()
 
-    line = ProjectAssetLine(
-        project_id=project.id,
-        asset_name="MBA ABB 110kV",
-        quantity=1.0
-    )
+    line = ProjectAssetLine(project_id=project.id, asset_name="MBA ABB 110kV", quantity=1.0)
     db_session.add(line)
     db_session.commit()
 
@@ -161,7 +188,7 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
         asset_family_id=family.id,
         primary_taxonomy_node_id=node.id,
         standard_name="Máy biến áp ABB 110kV",
-        status=CanonicalAssetStatus.ACTIVE
+        status=CanonicalAssetStatus.ACTIVE,
     )
     db_session.add(asset)
     db_session.commit()
@@ -173,7 +200,7 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
         proposed_taxonomy_node_id=node.id,
         status=IdentityCandidateStatus.PENDING,
         confidence_score=0.92,
-        match_method="deterministic"
+        match_method="deterministic",
     )
     db_session.add(cand)
     db_session.commit()
@@ -184,20 +211,10 @@ def test_identity_candidate_and_scoring(db_session: Session) -> None:
     assert cand.proposed_canonical_asset_id == asset.id
 
     # 2. Add Similarity Scores
-    score1 = SimilarityScore(
-        identity_candidate_id=cand.id,
-        component="name",
-        score=0.95
-    )
-    score2 = SimilarityScore(
-        identity_candidate_id=cand.id,
-        component="brand",
-        score=1.0
-    )
+    score1 = SimilarityScore(identity_candidate_id=cand.id, component="name", score=0.95)
+    score2 = SimilarityScore(identity_candidate_id=cand.id, component="brand", score=1.0)
     db_session.add_all([score1, score2])
     db_session.commit()
 
     assert len(cand.similarity_scores) == 2
     assert float(cand.similarity_scores[0].score) == 0.95
-
-

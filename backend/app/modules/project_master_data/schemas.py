@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -292,7 +293,9 @@ class ProjectAssetLineResponse(BaseSchema):
     validation_status: str
     brand_id: Optional[uuid.UUID]
     manufacturer_id: Optional[uuid.UUID]
-    version_token: str = Field(..., serialization_alias="version_token", validation_alias="row_version")
+    version_token: str = Field(
+        ..., serialization_alias="version_token", validation_alias="row_version"
+    )
 
     @field_validator("version_token", mode="before")
     @classmethod
@@ -340,5 +343,3 @@ class ProjectResolutionResponse(BaseSchema):
     project_id: uuid.UUID
     display_name: str
     matched_by: str
-
-

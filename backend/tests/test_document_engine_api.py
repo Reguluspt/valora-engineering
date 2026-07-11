@@ -8,18 +8,30 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
-    ProjectWorkflowStatus, Customer, DocumentTemplate, TemplateVersion, TemplateVersionStatus, GeneratedDocument,
-    UserActionLog, AuditEvent
+    OrganizationProfile,
+    OrganizationStatus,
+    User,
+    UserStatus,
+    Role,
+    UserRole,
+    Project,
+    ProjectWorkflowStatus,
+    Customer,
+    DocumentTemplate,
+    TemplateVersion,
+    TemplateVersionStatus,
+    GeneratedDocument,
+    UserActionLog,
+    AuditEvent,
 )
+
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
@@ -49,7 +61,9 @@ def client(db_session: Session) -> TestClient:
 
 @pytest.fixture
 def setup_rbac_users(db_session: Session):
-    org = OrganizationProfile(legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE)
+    org = OrganizationProfile(
+        legal_name="Org", organization_slug="org", status=OrganizationStatus.ACTIVE
+    )
     db_session.add(org)
     db_session.commit()
 
@@ -63,21 +77,27 @@ def setup_rbac_users(db_session: Session):
             "document_engine:template:deprecate",
             "document_engine:render:create",
             "document_engine:package:create",
-            "document_engine:package:update"
-        ]
+            "document_engine:package:update",
+        ],
     )
     role_viewer = Role(
-        code="document_viewer",
-        display_name="Document Viewer",
-        permissions=[
-            "document_engine:read"
-        ]
+        code="document_viewer", display_name="Document Viewer", permissions=["document_engine:read"]
     )
     db_session.add_all([role_admin, role_viewer])
     db_session.commit()
 
-    user_admin = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
-    user_viewer = User(organization_id=org.id, email="viewer@test.com", full_name="Viewer User", status=UserStatus.ACTIVE)
+    user_admin = User(
+        organization_id=org.id,
+        email="admin@test.com",
+        full_name="Admin User",
+        status=UserStatus.ACTIVE,
+    )
+    user_viewer = User(
+        organization_id=org.id,
+        email="viewer@test.com",
+        full_name="Viewer User",
+        status=UserStatus.ACTIVE,
+    )
     db_session.add_all([user_admin, user_viewer])
     db_session.commit()
 
@@ -85,7 +105,9 @@ def setup_rbac_users(db_session: Session):
     db_session.add(UserRole(user_id=user_viewer.id, role_id=role_viewer.id, is_active=True))
     db_session.commit()
 
-    customer = Customer(organization_id=org.id, legal_name="Cust 1", status="active", created_by=user_admin.id)
+    customer = Customer(
+        organization_id=org.id, legal_name="Cust 1", status="active", created_by=user_admin.id
+    )
     db_session.add(customer)
     db_session.commit()
 
@@ -95,7 +117,7 @@ def setup_rbac_users(db_session: Session):
         name="Project 2026",
         status=ProjectWorkflowStatus.DRAFT,
         customer_id=customer.id,
-        created_by=user_admin.id
+        created_by=user_admin.id,
     )
     db_session.add(proj)
     db_session.commit()
@@ -104,7 +126,7 @@ def setup_rbac_users(db_session: Session):
         "org_id": org.id,
         "admin_id": user_admin.id,
         "viewer_id": user_viewer.id,
-        "project_id": proj.id
+        "project_id": proj.id,
     }
 
 
@@ -142,7 +164,7 @@ def test_document_template_endpoints(client: TestClient, setup_rbac_users) -> No
         "code": "QC-T1",
         "name": "Quality Control Template",
         "description": "A template for QC reports",
-        "status": "draft"
+        "status": "draft",
     }
     res = client.post("/api/v1/document-engine/templates", json=payload, headers=admin_headers)
     assert res.status_code == 201
@@ -166,24 +188,31 @@ def test_document_template_endpoints(client: TestClient, setup_rbac_users) -> No
     assert res.json()["name"] == "Quality Control Template"
 
     # 5. Update Template with Admin
-    update_payload = {
-        "name": "QC Template Updated",
-        "expected_row_version": 1
-    }
-    res = client.patch(f"/api/v1/document-engine/templates/{template_id}", json=update_payload, headers=admin_headers)
+    update_payload = {"name": "QC Template Updated", "expected_row_version": 1}
+    res = client.patch(
+        f"/api/v1/document-engine/templates/{template_id}",
+        json=update_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 200
     assert res.json()["name"] == "QC Template Updated"
 
     # 6. Verify row_version stale update returns 409 Conflict
     stale_payload = {
         "name": "Should Fail",
-        "expected_row_version": 1  # Should be 2 now
+        "expected_row_version": 1,  # Should be 2 now
     }
-    res = client.patch(f"/api/v1/document-engine/templates/{template_id}", json=stale_payload, headers=admin_headers)
+    res = client.patch(
+        f"/api/v1/document-engine/templates/{template_id}",
+        json=stale_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 409
 
 
-def test_template_version_uniqueness_and_deprecation(client: TestClient, setup_rbac_users, db_session: Session) -> None:
+def test_template_version_uniqueness_and_deprecation(
+    client: TestClient, setup_rbac_users, db_session: Session
+) -> None:
     admin_headers = {"X-User-Id": str(setup_rbac_users["admin_id"])}
 
     # Create template
@@ -192,44 +221,56 @@ def test_template_version_uniqueness_and_deprecation(client: TestClient, setup_r
         document_type="qc_report",
         code="VER-T1",
         name="Version Test Template",
-        created_by=setup_rbac_users["admin_id"]
+        created_by=setup_rbac_users["admin_id"],
     )
     db_session.add(tpl)
     db_session.commit()
 
     # 1. Create Version 1
-    v1_payload = {
-        "version_number": 1,
-        "template_format": "docx",
-        "status": "draft"
-    }
-    res = client.post(f"/api/v1/document-engine/templates/{tpl.id}/versions", json=v1_payload, headers=admin_headers)
+    v1_payload = {"version_number": 1, "template_format": "docx", "status": "draft"}
+    res = client.post(
+        f"/api/v1/document-engine/templates/{tpl.id}/versions",
+        json=v1_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 201
     v1 = res.json()
     assert v1["version_number"] == 1
 
     # 2. Prevent Duplicate Version Number
-    res = client.post(f"/api/v1/document-engine/templates/{tpl.id}/versions", json=v1_payload, headers=admin_headers)
+    res = client.post(
+        f"/api/v1/document-engine/templates/{tpl.id}/versions",
+        json=v1_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 400
 
     # 3. Deprecate Version
     deprecate_payload = {
         "deprecation_reason": "Outdated standard",
-        "expected_row_version": v1["row_version"]
+        "expected_row_version": v1["row_version"],
     }
-    res = client.post(f"/api/v1/document-engine/template-versions/{v1['id']}/deprecate", json=deprecate_payload, headers=admin_headers)
+    res = client.post(
+        f"/api/v1/document-engine/template-versions/{v1['id']}/deprecate",
+        json=deprecate_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 200
     deprecated_v = res.json()
     assert deprecated_v["status"] == "deprecated"
     assert deprecated_v["deprecation_reason"] == "Outdated standard"
 
     # 4. Verify historical versions are not deleted
-    db_version = db_session.query(TemplateVersion).filter(TemplateVersion.id == uuid.UUID(v1["id"])).first()
+    db_version = (
+        db_session.query(TemplateVersion).filter(TemplateVersion.id == uuid.UUID(v1["id"])).first()
+    )
     assert db_version is not None
     assert db_version.status == TemplateVersionStatus.DEPRECATED
 
 
-def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_users, db_session: Session) -> None:
+def test_placeholder_bindings_and_expressions(
+    client: TestClient, setup_rbac_users, db_session: Session
+) -> None:
     admin_headers = {"X-User-Id": str(setup_rbac_users["admin_id"])}
 
     tpl = DocumentTemplate(
@@ -237,7 +278,7 @@ def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_use
         document_type="report",
         code="PL-T1",
         name="Placeholders Template",
-        created_by=setup_rbac_users["admin_id"]
+        created_by=setup_rbac_users["admin_id"],
     )
     db_session.add(tpl)
     db_session.commit()
@@ -246,7 +287,7 @@ def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_use
         document_template_id=tpl.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(ver)
     db_session.commit()
@@ -257,15 +298,21 @@ def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_use
         "label_vi": "Tên Khách Hàng",
         "data_type": "scalar",
         "source_context": "project",
-        "source_path": "$.customer.legal_name"
+        "source_path": "$.customer.legal_name",
     }
-    res = client.post(f"/api/v1/document-engine/template-versions/{ver.id}/placeholders", json=pl_payload, headers=admin_headers)
+    res = client.post(
+        f"/api/v1/document-engine/template-versions/{ver.id}/placeholders",
+        json=pl_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 201
     placeholder = res.json()
     assert placeholder["placeholder_key"] == "customer.name"
 
     # 2. Get list of Placeholders
-    res = client.get(f"/api/v1/document-engine/template-versions/{ver.id}/placeholders", headers=admin_headers)
+    res = client.get(
+        f"/api/v1/document-engine/template-versions/{ver.id}/placeholders", headers=admin_headers
+    )
     assert res.status_code == 200
     assert len(res.json()) == 1
 
@@ -274,9 +321,13 @@ def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_use
         "template_placeholder_id": placeholder["id"],
         "binding_path": "$.customer.legal_name",
         "binding_type": "direct",
-        "fallback_value": {"val": "Unknown"}
+        "fallback_value": {"val": "Unknown"},
     }
-    res = client.post(f"/api/v1/document-engine/template-versions/{ver.id}/bindings", json=bind_payload, headers=admin_headers)
+    res = client.post(
+        f"/api/v1/document-engine/template-versions/{ver.id}/bindings",
+        json=bind_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 201
     assert res.json()["binding_path"] == "$.customer.legal_name"
 
@@ -286,14 +337,20 @@ def test_placeholder_bindings_and_expressions(client: TestClient, setup_rbac_use
         "expression_type": "valora_expr",
         "inputs": {"subtotal": "$.project.fee_amount"},
         "expression": "subtotal * 0.1",
-        "output_data_type": "currency"
+        "output_data_type": "currency",
     }
-    res = client.post(f"/api/v1/document-engine/template-versions/{ver.id}/computed-expressions", json=expr_payload, headers=admin_headers)
+    res = client.post(
+        f"/api/v1/document-engine/template-versions/{ver.id}/computed-expressions",
+        json=expr_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 201
     assert res.json()["expression"] == "subtotal * 0.1"
 
 
-def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_session: Session) -> None:
+def test_mock_render_jobs_and_packages(
+    client: TestClient, setup_rbac_users, db_session: Session
+) -> None:
     admin_headers = {"X-User-Id": str(setup_rbac_users["admin_id"])}
 
     tpl = DocumentTemplate(
@@ -301,7 +358,7 @@ def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_
         document_type="contract",
         code="REND-T1",
         name="Contract Template",
-        created_by=setup_rbac_users["admin_id"]
+        created_by=setup_rbac_users["admin_id"],
     )
     db_session.add(tpl)
     db_session.commit()
@@ -310,7 +367,7 @@ def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_
         document_template_id=tpl.id,
         version_number=1,
         template_format="docx",
-        status=TemplateVersionStatus.ACTIVE
+        status=TemplateVersionStatus.ACTIVE,
     )
     db_session.add(ver)
     db_session.commit()
@@ -321,9 +378,11 @@ def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_
         "template_version_id": str(ver.id),
         "render_mode": "official",
         "output_formats": ["docx", "pdf"],
-        "data_snapshot": {"project_name": "Project 2026", "fee": 5000}
+        "data_snapshot": {"project_name": "Project 2026", "fee": 5000},
     }
-    res = client.post("/api/v1/document-engine/render-jobs", json=render_payload, headers=admin_headers)
+    res = client.post(
+        "/api/v1/document-engine/render-jobs", json=render_payload, headers=admin_headers
+    )
     assert res.status_code == 201
     job = res.json()
     assert job["status"] == "completed"
@@ -331,7 +390,11 @@ def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_
     assert job["data_snapshot_hash"] != ""
 
     # Verify GeneratedDocument records were created synchronously
-    docs = db_session.query(GeneratedDocument).filter(GeneratedDocument.render_job_id == uuid.UUID(job["id"])).all()
+    docs = (
+        db_session.query(GeneratedDocument)
+        .filter(GeneratedDocument.render_job_id == uuid.UUID(job["id"]))
+        .all()
+    )
     assert len(docs) == 2
     doc_id = docs[0].id
 
@@ -345,18 +408,19 @@ def test_mock_render_jobs_and_packages(client: TestClient, setup_rbac_users, db_
         "project_id": str(setup_rbac_users["project_id"]),
         "package_type": "qc",
         "name": "S5 Package",
-        "status": "draft"
+        "status": "draft",
     }
     res = client.post("/api/v1/document-engine/packages", json=pkg_payload, headers=admin_headers)
     assert res.status_code == 201
     pkg = res.json()
 
     # 4. Add Package Item
-    item_payload = {
-        "generated_document_id": str(doc_id),
-        "sort_order": 1
-    }
-    res = client.post(f"/api/v1/document-engine/packages/{pkg['id']}/items", json=item_payload, headers=admin_headers)
+    item_payload = {"generated_document_id": str(doc_id), "sort_order": 1}
+    res = client.post(
+        f"/api/v1/document-engine/packages/{pkg['id']}/items",
+        json=item_payload,
+        headers=admin_headers,
+    )
     assert res.status_code == 201
     assert res.json()["sort_order"] == 1
 
@@ -370,18 +434,22 @@ def test_audit_logs_created(client: TestClient, setup_rbac_users, db_session: Se
         "document_type": "report",
         "code": "AUDIT-T1",
         "name": "Audit Test Template",
-        "status": "draft"
+        "status": "draft",
     }
     res = client.post("/api/v1/document-engine/templates", json=payload, headers=admin_headers)
     assert res.status_code == 201
     tpl_id = res.json()["id"]
 
     # Verify AuditEvent was logged
-    audit_events = db_session.query(AuditEvent).filter(AuditEvent.entity_id == uuid.UUID(tpl_id)).all()
+    audit_events = (
+        db_session.query(AuditEvent).filter(AuditEvent.entity_id == uuid.UUID(tpl_id)).all()
+    )
     assert len(audit_events) > 0
     assert audit_events[0].event_name == "DOCUMENT_TEMPLATE_CREATE"
 
     # Verify UserActionLog was logged
-    action_logs = db_session.query(UserActionLog).filter(UserActionLog.target_id == uuid.UUID(tpl_id)).all()
+    action_logs = (
+        db_session.query(UserActionLog).filter(UserActionLog.target_id == uuid.UUID(tpl_id)).all()
+    )
     assert len(action_logs) > 0
     assert action_logs[0].action_type == "create_template"

@@ -8,26 +8,57 @@ from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
-    User, WorkflowDefinition, WorkflowInstance, WorkflowInstanceStatus,
-    WorkflowTransition, WorkflowTask, WorkflowTaskStatus,
-    ReviewDecision, ValidationRule, ValidationIssue, ValidationIssueStatus,
-    ValidationIssueSeverity, ApprovalGate, UserActionLog,
-    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ReviewDecisionChoice, ReviewDecisionReversal
+    User,
+    WorkflowDefinition,
+    WorkflowInstance,
+    WorkflowInstanceStatus,
+    WorkflowTransition,
+    WorkflowTask,
+    WorkflowTaskStatus,
+    ReviewDecision,
+    ValidationRule,
+    ValidationIssue,
+    ValidationIssueStatus,
+    ValidationIssueSeverity,
+    ApprovalGate,
+    UserActionLog,
+    ChangeRequest,
+    ChangeRequestStatus,
+    ChangeRequestType,
+    ReviewDecisionChoice,
+    ReviewDecisionReversal,
 )
 from app.modules.project_master_data.workflow_schemas import (
-    WorkflowInstanceCreate, WorkflowInstanceSchema, WorkflowTransitionRequest,
-    WorkflowTaskUpdate, WorkflowTaskSchema, ReviewDecisionCreate,
-    ReviewDecisionSchema, ApprovalGateSchema, ValidationRuleSchema,
-    ValidationIssueUpdate, ValidationIssueResolveRequest, ValidationIssueSchema,
-    UserActionLogSchema, ChangeRequestCreate, ChangeRequestReviewRequest,
-    ChangeRequestSchema
+    WorkflowInstanceCreate,
+    WorkflowInstanceSchema,
+    WorkflowTransitionRequest,
+    WorkflowTaskUpdate,
+    WorkflowTaskSchema,
+    ReviewDecisionCreate,
+    ReviewDecisionSchema,
+    ApprovalGateSchema,
+    ValidationRuleSchema,
+    ValidationIssueUpdate,
+    ValidationIssueResolveRequest,
+    ValidationIssueSchema,
+    UserActionLogSchema,
+    ChangeRequestCreate,
+    ChangeRequestReviewRequest,
+    ChangeRequestSchema,
 )
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["Workflow"])
 
 
 # Helper to log user action
-def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: str, target_id: uuid.UUID, payload: dict):
+def log_action(
+    db: Session,
+    user_id: uuid.UUID,
+    action_type: str,
+    target_type: str,
+    target_id: uuid.UUID,
+    payload: dict,
+):
     serialized_payload = {}
     for k, v in payload.items():
         if isinstance(v, uuid.UUID):
@@ -40,16 +71,26 @@ def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: s
         action_type=action_type,
         target_type=target_type,
         target_id=target_id,
-        action_payload=serialized_payload
+        action_payload=serialized_payload,
     )
     db.add(log)
 
 
 ALLOWED_COMMANDS = {
-    "StartImport", "CompleteImport", "CompleteParsing", "CompleteIdentityReview",
-    "CompleteKnowledgeReview", "CompleteValuationReview", "CompletePriceReview",
-    "SubmitForClientReview", "CompleteClientReview", "SubmitProjectForQC",
-    "ApproveProject", "RejectProject", "ReopenProjectReview", "CancelProject"
+    "StartImport",
+    "CompleteImport",
+    "CompleteParsing",
+    "CompleteIdentityReview",
+    "CompleteKnowledgeReview",
+    "CompleteValuationReview",
+    "CompletePriceReview",
+    "SubmitForClientReview",
+    "CompleteClientReview",
+    "SubmitProjectForQC",
+    "ApproveProject",
+    "RejectProject",
+    "ReopenProjectReview",
+    "CancelProject",
 }
 
 
@@ -57,10 +98,14 @@ ALLOWED_COMMANDS = {
 def create_instance(
     data: WorkflowInstanceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:instance:manage"))
+    current_user: User = Depends(require_permission("workflow:instance:manage")),
 ):
     # Check definition exists
-    wf_def = db.query(WorkflowDefinition).filter(WorkflowDefinition.id == data.workflow_definition_id).first()
+    wf_def = (
+        db.query(WorkflowDefinition)
+        .filter(WorkflowDefinition.id == data.workflow_definition_id)
+        .first()
+    )
     if not wf_def:
         raise HTTPException(status_code=404, detail="Workflow definition not found")
 
@@ -69,7 +114,7 @@ def create_instance(
         target_type=data.target_type,
         target_id=data.target_id,
         current_state=data.current_state,
-        status=WorkflowInstanceStatus.ACTIVE
+        status=WorkflowInstanceStatus.ACTIVE,
     )
     db.add(instance)
     db.commit()
@@ -80,9 +125,11 @@ def create_instance(
         event_name="WORKFLOW_INSTANCE_CREATE",
         entity_type="workflow_instance",
         entity_id=instance.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
-    log_action(db, current_user.id, "workflow_instance_creation", "workflow_instance", instance.id, {})
+    log_action(
+        db, current_user.id, "workflow_instance_creation", "workflow_instance", instance.id, {}
+    )
     db.commit()
 
     return instance
@@ -92,7 +139,7 @@ def create_instance(
 def get_instance(
     instance_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    current_user: User = Depends(require_permission("workflow:read")),
 ):
     instance = db.query(WorkflowInstance).filter(WorkflowInstance.id == instance_id).first()
     if not instance:
@@ -105,7 +152,7 @@ def execute_transition(
     instance_id: uuid.UUID,
     req: WorkflowTransitionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read")) # Base check
+    current_user: User = Depends(require_permission("workflow:read")),  # Base check
 ):
     # 1. Verify command whitelist
     if req.command_name not in ALLOWED_COMMANDS:
@@ -120,15 +167,21 @@ def execute_transition(
         raise HTTPException(status_code=409, detail="Stale row version")
 
     # 3. Find transition definition
-    trans = db.query(WorkflowTransition).filter(
-        WorkflowTransition.workflow_definition_id == instance.workflow_definition_id,
-        WorkflowTransition.from_state == instance.current_state,
-        WorkflowTransition.command_name == req.command_name,
-        WorkflowTransition.is_active == True
-    ).first()
+    trans = (
+        db.query(WorkflowTransition)
+        .filter(
+            WorkflowTransition.workflow_definition_id == instance.workflow_definition_id,
+            WorkflowTransition.from_state == instance.current_state,
+            WorkflowTransition.command_name == req.command_name,
+            WorkflowTransition.is_active == True,
+        )
+        .first()
+    )
 
     if not trans:
-        raise HTTPException(status_code=400, detail="Invalid from_state or transition path not configured")
+        raise HTTPException(
+            status_code=400, detail="Invalid from_state or transition path not configured"
+        )
 
     # 4. RBAC check for the transition permission if specified
     if trans.required_permission:
@@ -138,15 +191,21 @@ def execute_transition(
                 has_perm = True
                 break
         if not has_perm:
-            raise HTTPException(status_code=403, detail=f"Missing required permission: {trans.required_permission}")
+            raise HTTPException(
+                status_code=403, detail=f"Missing required permission: {trans.required_permission}"
+            )
 
     # 5. Check blocking validation issues
-    blocking_issues = db.query(ValidationIssue).filter(
-        ValidationIssue.target_type == instance.target_type,
-        ValidationIssue.target_id == instance.target_id,
-        ValidationIssue.status == ValidationIssueStatus.OPEN,
-        ValidationIssue.severity == ValidationIssueSeverity.BLOCKING
-    ).all()
+    blocking_issues = (
+        db.query(ValidationIssue)
+        .filter(
+            ValidationIssue.target_type == instance.target_type,
+            ValidationIssue.target_id == instance.target_id,
+            ValidationIssue.status == ValidationIssueStatus.OPEN,
+            ValidationIssue.severity == ValidationIssueSeverity.BLOCKING,
+        )
+        .all()
+    )
 
     if blocking_issues:
         # Check override permission
@@ -156,7 +215,9 @@ def execute_transition(
                 has_override = True
                 break
         if not has_override or not req.override_reason:
-            raise HTTPException(status_code=400, detail="Transition is blocked by open validation issues")
+            raise HTTPException(
+                status_code=400, detail="Transition is blocked by open validation issues"
+            )
 
     # 6. Perform transition mutation
     old_state = instance.current_state
@@ -171,9 +232,16 @@ def execute_transition(
         entity_id=instance.id,
         actor_user_id=current_user.id,
         command_name=req.command_name,
-        payload={"from_state": old_state, "to_state": trans.to_state}
+        payload={"from_state": old_state, "to_state": trans.to_state},
     )
-    log_action(db, current_user.id, "transition_execution", "workflow_instance", instance.id, {"from_state": old_state, "to_state": trans.to_state, "command": req.command_name})
+    log_action(
+        db,
+        current_user.id,
+        "transition_execution",
+        "workflow_instance",
+        instance.id,
+        {"from_state": old_state, "to_state": trans.to_state, "command": req.command_name},
+    )
     db.commit()
 
     return instance
@@ -181,8 +249,7 @@ def execute_transition(
 
 @router.get("/tasks", response_model=List[WorkflowTaskSchema])
 def list_tasks(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(WorkflowTask).all()
 
@@ -191,7 +258,7 @@ def list_tasks(
 def get_task(
     task_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    current_user: User = Depends(require_permission("workflow:read")),
 ):
     task = db.query(WorkflowTask).filter(WorkflowTask.id == task_id).first()
     if not task:
@@ -204,7 +271,7 @@ def update_task(
     task_id: uuid.UUID,
     update: WorkflowTaskUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:task:assign"))
+    current_user: User = Depends(require_permission("workflow:task:assign")),
 ):
     task = db.query(WorkflowTask).filter(WorkflowTask.id == task_id).first()
     if not task:
@@ -233,7 +300,7 @@ def update_task(
         event_name="WORKFLOW_TASK_UPDATE",
         entity_type="workflow_task",
         entity_id=task.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     db.commit()
     return task
@@ -244,7 +311,7 @@ def complete_task(
     task_id: uuid.UUID,
     expected_row_version: int = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:task:complete"))
+    current_user: User = Depends(require_permission("workflow:task:complete")),
 ):
     task = db.query(WorkflowTask).filter(WorkflowTask.id == task_id).first()
     if not task:
@@ -263,7 +330,7 @@ def complete_task(
         event_name="WORKFLOW_TASK_COMPLETE",
         entity_type="workflow_task",
         entity_id=task.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "task_complete", "workflow_task", task.id, {})
     db.commit()
@@ -275,7 +342,7 @@ def complete_task(
 def create_decision(
     data: ReviewDecisionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:decision:create"))
+    current_user: User = Depends(require_permission("workflow:decision:create")),
 ):
     decision = ReviewDecision(
         target_type=data.target_type,
@@ -285,7 +352,7 @@ def create_decision(
         decided_by=current_user.id,
         evidence_ids=data.evidence_ids,
         previous_state=data.previous_state,
-        new_state=data.new_state
+        new_state=data.new_state,
     )
     db.add(decision)
     db.commit()
@@ -296,7 +363,7 @@ def create_decision(
         event_name="REVIEW_DECISION_RECORD",
         entity_type="review_decision",
         entity_id=decision.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "review_decision_creation", "review_decision", decision.id, {})
     db.commit()
@@ -308,7 +375,7 @@ def create_decision(
 def get_decision(
     decision_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    current_user: User = Depends(require_permission("workflow:read")),
 ):
     decision = db.query(ReviewDecision).filter(ReviewDecision.id == decision_id).first()
     if not decision:
@@ -318,16 +385,14 @@ def get_decision(
 
 @router.get("/validation-rules", response_model=List[ValidationRuleSchema])
 def list_validation_rules(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(ValidationRule).all()
 
 
 @router.get("/validation-issues", response_model=List[ValidationIssueSchema])
 def list_validation_issues(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(ValidationIssue).all()
 
@@ -336,7 +401,7 @@ def list_validation_issues(
 def get_validation_issue(
     issue_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    current_user: User = Depends(require_permission("workflow:read")),
 ):
     issue = db.query(ValidationIssue).filter(ValidationIssue.id == issue_id).first()
     if not issue:
@@ -349,7 +414,7 @@ def update_validation_issue(
     issue_id: uuid.UUID,
     update: ValidationIssueUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:instance:manage"))
+    current_user: User = Depends(require_permission("workflow:instance:manage")),
 ):
     issue = db.query(ValidationIssue).filter(ValidationIssue.id == issue_id).first()
     if not issue:
@@ -374,7 +439,7 @@ def update_validation_issue(
         event_name="VALIDATION_ISSUE_UPDATE",
         entity_type="validation_issue",
         entity_id=issue.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     db.commit()
     return issue
@@ -385,7 +450,7 @@ def resolve_validation_issue(
     issue_id: uuid.UUID,
     req: ValidationIssueResolveRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:instance:manage"))
+    current_user: User = Depends(require_permission("workflow:instance:manage")),
 ):
     issue = db.query(ValidationIssue).filter(ValidationIssue.id == issue_id).first()
     if not issue:
@@ -407,7 +472,7 @@ def resolve_validation_issue(
         event_name="VALIDATION_ISSUE_RESOLVE",
         entity_type="validation_issue",
         entity_id=issue.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "validation_issue_resolution", "validation_issue", issue.id, {})
     db.commit()
@@ -417,16 +482,14 @@ def resolve_validation_issue(
 
 @router.get("/approval-gates", response_model=List[ApprovalGateSchema])
 def list_approval_gates(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(ApprovalGate).all()
 
 
 @router.get("/action-logs", response_model=List[UserActionLogSchema])
 def list_action_logs(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(UserActionLog).all()
 
@@ -435,7 +498,7 @@ def list_action_logs(
 def create_change_request(
     data: ChangeRequestCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:change_request:create"))
+    current_user: User = Depends(require_permission("workflow:change_request:create")),
 ):
     code = f"CR-{uuid.uuid4().hex[:8].upper()}"
     cr = ChangeRequest(
@@ -447,7 +510,7 @@ def create_change_request(
         reason=data.reason,
         status=ChangeRequestStatus.PENDING_REVIEW,
         priority=data.priority,
-        requested_by=current_user.id
+        requested_by=current_user.id,
     )
     db.add(cr)
     db.commit()
@@ -458,7 +521,7 @@ def create_change_request(
         event_name="CHANGE_REQUEST_CREATE",
         entity_type="change_request",
         entity_id=cr.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "change_request_creation", "change_request", cr.id, {})
     db.commit()
@@ -468,8 +531,7 @@ def create_change_request(
 
 @router.get("/change-requests", response_model=List[ChangeRequestSchema])
 def list_change_requests(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("workflow:read"))
 ):
     return db.query(ChangeRequest).all()
 
@@ -478,7 +540,7 @@ def list_change_requests(
 def get_change_request(
     change_request_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:read"))
+    current_user: User = Depends(require_permission("workflow:read")),
 ):
     cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
     if not cr:
@@ -491,7 +553,7 @@ def approve_change_request(
     change_request_id: uuid.UUID,
     req: ChangeRequestReviewRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:change_request:review"))
+    current_user: User = Depends(require_permission("workflow:change_request:review")),
 ):
     cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
     if not cr:
@@ -513,7 +575,7 @@ def approve_change_request(
         event_name="CHANGE_REQUEST_APPROVE",
         entity_type="change_request",
         entity_id=cr.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "change_request_approval", "change_request", cr.id, {})
     db.commit()
@@ -526,7 +588,7 @@ def reject_change_request(
     change_request_id: uuid.UUID,
     req: ChangeRequestReviewRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:change_request:review"))
+    current_user: User = Depends(require_permission("workflow:change_request:review")),
 ):
     cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
     if not cr:
@@ -551,7 +613,7 @@ def reject_change_request(
         event_name="CHANGE_REQUEST_REJECT",
         entity_type="change_request",
         entity_id=cr.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "change_request_rejection", "change_request", cr.id, {})
     db.commit()
@@ -564,7 +626,7 @@ def execute_change_request(
     change_request_id: uuid.UUID,
     expected_row_version: int = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workflow:change_request:execute"))
+    current_user: User = Depends(require_permission("workflow:change_request:execute")),
 ):
     cr = db.query(ChangeRequest).filter(ChangeRequest.id == change_request_id).first()
     if not cr:
@@ -574,21 +636,31 @@ def execute_change_request(
         raise HTTPException(status_code=409, detail="Stale row version")
 
     if cr.status != ChangeRequestStatus.APPROVED:
-        raise HTTPException(status_code=400, detail="Change request must be approved before execution")
+        raise HTTPException(
+            status_code=400, detail="Change request must be approved before execution"
+        )
 
     # Execution logic
     if cr.change_type == ChangeRequestType.REVERSE_REVIEW_DECISION:
         # Locate original review decision
         orig_dec_id = cr.requested_payload.get("original_decision_id")
         if not orig_dec_id:
-            raise HTTPException(status_code=400, detail="Missing original_decision_id in requested_payload")
+            raise HTTPException(
+                status_code=400, detail="Missing original_decision_id in requested_payload"
+            )
 
-        orig_dec = db.query(ReviewDecision).filter(ReviewDecision.id == uuid.UUID(orig_dec_id)).first()
+        orig_dec = (
+            db.query(ReviewDecision).filter(ReviewDecision.id == uuid.UUID(orig_dec_id)).first()
+        )
         if not orig_dec:
             raise HTTPException(status_code=404, detail="Original review decision not found")
 
         # Determine target choice reversal
-        reversal_choice = ReviewDecisionChoice.REJECT if orig_dec.decision == ReviewDecisionChoice.APPROVE else ReviewDecisionChoice.APPROVE
+        reversal_choice = (
+            ReviewDecisionChoice.REJECT
+            if orig_dec.decision == ReviewDecisionChoice.APPROVE
+            else ReviewDecisionChoice.APPROVE
+        )
 
         # Append a new reversal ReviewDecision
         rev_dec = ReviewDecision(
@@ -598,7 +670,7 @@ def execute_change_request(
             reason=f"Reversed via ChangeRequest {cr.request_code}: {cr.reason}",
             decided_by=current_user.id,
             previous_state=orig_dec.new_state,
-            new_state=orig_dec.previous_state
+            new_state=orig_dec.previous_state,
         )
         db.add(rev_dec)
         db.commit()
@@ -610,13 +682,16 @@ def execute_change_request(
             original_review_decision_id=orig_dec.id,
             reversal_review_decision_id=rev_dec.id,
             reason=cr.reason,
-            created_by=current_user.id
+            created_by=current_user.id,
         )
         db.add(reversal_link)
 
     else:
         # Reopening or other data modifications are unsupported/deferred to keep execution safe
-        raise HTTPException(status_code=422, detail="Reversal execution is not supported for this change request type")
+        raise HTTPException(
+            status_code=422,
+            detail="Reversal execution is not supported for this change request type",
+        )
 
     cr.status = ChangeRequestStatus.EXECUTED
     cr.executed_by = current_user.id
@@ -630,10 +705,9 @@ def execute_change_request(
         event_name="CHANGE_REQUEST_EXECUTE",
         entity_type="change_request",
         entity_id=cr.id,
-        actor_user_id=current_user.id
+        actor_user_id=current_user.id,
     )
     log_action(db, current_user.id, "change_request_execution", "change_request", cr.id, {})
     db.commit()
 
     return cr
-

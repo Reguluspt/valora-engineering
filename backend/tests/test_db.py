@@ -28,11 +28,13 @@ def test_mixins_structure() -> None:
     """Uses SQLite in-memory to verify declarative mapping, default generation, and locking."""
     # 1. Assert timezone-aware UTC default generator works directly
     from app.db.mixins import utc_now
+
     now = utc_now()
     assert now.tzinfo == timezone.utc
 
     # 2. Assert column types have timezone=True configured
     from sqlalchemy import DateTime
+
     created_at_col = DummyModel.__table__.c.created_at
     updated_at_col = DummyModel.__table__.c.updated_at
     assert isinstance(created_at_col.type, DateTime)

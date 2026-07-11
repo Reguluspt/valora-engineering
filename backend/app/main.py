@@ -28,7 +28,7 @@ app = FastAPI(
     docs_url=None if is_prod else "/docs",
     redoc_url=None if is_prod else "/redoc",
     openapi_url=None if is_prod else "/openapi.json",
-    dependencies=[Depends(csrf_gate)]
+    dependencies=[Depends(csrf_gate)],
 )
 
 # Configure CORS Middleware safely
@@ -61,5 +61,3 @@ def root() -> dict[str, str]:
         "status": "ok",
         "phase": "engineering-sprint-0",
     }
-
-
