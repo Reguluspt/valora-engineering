@@ -1,15 +1,13 @@
-import uuid
 import pytest
-from datetime import datetime, timezone
-from sqlalchemy import create_engine, event, inspect
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, DBAPIError
 
 from app.db import Base
 from app.modules.project_master_data.models import (
-    OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
+    OrganizationProfile, OrganizationStatus, User, UserStatus, Project,
     ProjectWorkflowStatus, Customer, EvidenceFile, EvidenceSource, EvidenceSourceType,
-    DocumentTemplate, DocumentTemplateStatus, TemplateVersion, TemplateVersionStatus,
+    DocumentTemplate, TemplateVersion, TemplateVersionStatus,
     TemplatePlaceholder, PlaceholderDataType, PlaceholderSourceContext, PlaceholderBinding,
     PlaceholderBindingType, ComputedPlaceholderExpression, ComputedExpressionType,
     ComputedExpressionStatus, RenderJob, RenderJobStatus, GeneratedDocument,

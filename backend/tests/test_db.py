@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import timezone
 from sqlalchemy import String, create_engine
 from sqlalchemy.orm import Mapped, mapped_column, Session
 

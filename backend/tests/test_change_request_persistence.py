@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime, timezone
 import pytest
 from sqlalchemy import create_engine, exc, event
 from sqlalchemy.orm import Session

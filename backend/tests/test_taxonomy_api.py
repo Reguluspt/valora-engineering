@@ -1,7 +1,7 @@
 import uuid
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -11,8 +11,7 @@ from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus,
     User, UserStatus, Role, UserRole, AuditEvent,
     TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
-    AssetFamily, AssetFamilyStatus, AssetDNA, AssetDNAStatus,
-    AssetAttributeDefinition, AssetAttributeDataType, AssetAttributeScope
+    AssetFamily, AssetFamilyStatus, AssetDNA, AssetDNAStatus
 )
 
 @pytest.fixture

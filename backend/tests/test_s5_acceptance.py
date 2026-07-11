@@ -9,12 +9,7 @@ from app.main import app
 from app.db import Base, get_db
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole, Project,
-    ProjectWorkflowStatus, Customer, EvidenceFile, GeneratedDocument, GeneratedDocumentStatus,
-    ParsedDocument, ParsedDocumentStatus, ExtractedField, ExtractedFieldStatus,
-    DocumentDiff, DocumentDiffType, DocumentDiffStatus, DocumentCorrection,
-    DocumentCorrectionDecision, DocumentCorrectionStatus, UserActionLog, AuditEvent,
-    DocumentTemplate, TemplateVersion, TemplateVersionStatus, RenderJob, RenderJobStatus,
-    DocumentPackage, DocumentPackageStatus, DocumentPackageItem
+    ProjectWorkflowStatus, Customer, EvidenceFile, GeneratedDocument, UserActionLog, AuditEvent
 )
 
 @pytest.fixture

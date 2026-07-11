@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from app.modules.project_master_data.models import (
     TechnicalSpecificationVersionStatus, QuoteBatchStatus, QuoteLineStatus,
     AppraisedPriceDecisionStatus, KnowledgeQueueItemStatus, KnowledgeConflictSeverity, KnowledgeConflictStatus

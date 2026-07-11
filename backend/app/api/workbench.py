@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Security
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -12,7 +12,7 @@ from app.modules.project_master_data.models import (
     User, WorkbenchSession, WorkbenchSessionStatus, WorkbenchLayout,
     AssetGridView, WorkbenchSelection, InlineEditDraft, InlineEditDraftStatus,
     AutosaveCheckpoint, UndoRedoStackEntry, UndoRedoActionType, PanelState,
-    ReviewQueueView, WorkbenchNotification, Project, UserActionLog
+    WorkbenchNotification, Project, UserActionLog
 )
 from app.modules.project_master_data.workbench_schemas import (
     WorkbenchSessionCreate, WorkbenchSessionSchema, WorkbenchSessionHeartbeatRequest,

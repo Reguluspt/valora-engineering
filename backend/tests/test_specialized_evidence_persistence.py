@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime, timezone
 import pytest
 from sqlalchemy import create_engine, exc, event
@@ -9,7 +8,7 @@ from app.db import Base
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus,
     User, UserStatus,
-    EvidenceFile, EvidenceFileStatus, EvidenceSensitivityLevel,
+    EvidenceFile, EvidenceSensitivityLevel,
     SupplierQuoteEvidence, CatalogueEvidence, InternetEvidence, ImageEvidence, EmailEvidence,
     EvidenceExtractionResult, EvidenceExtractionStatus,
     EvidenceReviewDecision, EvidenceReviewDecisionStatus

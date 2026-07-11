@@ -15,8 +15,7 @@ from app.modules.project_master_data.models import (
     Project, ProjectWorkflowStatus, ProjectAssetLine,
     IdentityCandidate, IdentityCandidateStatus,
     SimilarityScore,
-    IdentityReviewItem, IdentityReviewStatus, IdentityDecisionLog, IdentityDecisionType,
-    CanonicalAsset, CanonicalAssetStatus, CanonicalAssetMaturity, AssetVariant, AssetVariantStatus,
+    IdentityReviewItem, IdentityReviewStatus, IdentityDecisionLog, CanonicalAsset, CanonicalAssetStatus, CanonicalAssetMaturity, AssetVariant, AssetVariantStatus,
     DuplicateCandidate, DuplicateCandidateStatus, MergeDecision, MergeDecisionStatus,
     AssetAlias, AssetAliasScope, AssetAliasStatus
 )

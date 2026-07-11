@@ -6,9 +6,6 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.modules.project_master_data.models import (
     User,
-    UserRole,
-    Role,
-    OrganizationProfile,
     OrganizationStatus,
     UserStatus
 )

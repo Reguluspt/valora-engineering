@@ -13,8 +13,7 @@ from app.modules.project_master_data.models import (
     TaxonomyNode, TaxonomyNodeLevel, TaxonomyStatus,
     AssetFamily, AssetFamilyStatus,
     CanonicalAsset, CanonicalAssetStatus,
-    AssetVariant, AssetVariantStatus,
-    AssetAlias, AssetAliasStatus
+    AssetVariant, AssetVariantStatus
 )
 
 @pytest.fixture

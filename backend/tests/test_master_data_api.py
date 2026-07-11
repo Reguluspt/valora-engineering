@@ -23,14 +23,7 @@ from app.modules.project_master_data.models import (
     Supplier,
     SupplierStatus,
     SupplierAlias,
-    Brand,
-    BrandStatus,
-    Manufacturer,
-    ManufacturerStatus,
-    Unit,
-    Currency,
-    SignerProfile,
-    SignerStatus
+    SignerProfile
 )
 
 from sqlalchemy.pool import StaticPool

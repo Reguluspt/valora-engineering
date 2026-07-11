@@ -1,6 +1,5 @@
-import uuid
 import pytest
-from sqlalchemy import create_engine, exc, inspect
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 

@@ -5,10 +5,10 @@ import openpyxl
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, text, func
+from sqlalchemy import or_, func
 
 from app.db import get_db
-from app.core.rbac import require_permission, get_current_user
+from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
     User,
@@ -24,7 +24,6 @@ from app.modules.project_master_data.models import (
     AssetLineValidationStatus,
     ProjectFile,
     FileProcessingStatus,
-    ProjectFileCategory,
     Unit,
     WorkbenchSession,
     WorkbenchSessionStatus,

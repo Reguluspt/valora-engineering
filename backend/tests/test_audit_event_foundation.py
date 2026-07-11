@@ -2,7 +2,6 @@ import uuid
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 
 from app.db import Base
 from app.modules.project_master_data.models import (
