@@ -745,6 +745,11 @@ def test_postgres_concurrent_refresh_endpoint():
         setup_db.add(test_user)
         setup_db.commit()
 
+        # Capture IDs as plain values before closing session to avoid DetachedInstanceError
+        test_org_id = test_org.id
+        test_org_slug = test_org.organization_slug
+        test_user_email = test_user.email
+
         setup_db.close()
 
         # Build a test client that uses real PG
@@ -758,10 +763,10 @@ def test_postgres_concurrent_refresh_endpoint():
         app.dependency_overrides[get_db] = pg_get_db
         pg_client = TestClient(app)
 
-        # Login to get actual tokens
+        # Login to get actual tokens (use captured plain values — not detached ORM objects)
         resp = pg_client.post("/api/v1/auth/login", json={
-            "organization_slug": test_org.organization_slug,
-            "email": test_user.email,
+            "organization_slug": test_org_slug,
+            "email": test_user_email,
             "password": "pg_secret_pass"
         })
         assert resp.status_code == 200, f"Login failed: {resp.text}"
@@ -864,10 +869,10 @@ def test_postgres_concurrent_refresh_endpoint():
         cleanup_db = PGSession()
         try:
             cleanup_db.query(User).filter(
-                User.organization_id == test_org.id
+                User.organization_id == test_org_id
             ).delete(synchronize_session=False)
             cleanup_db.query(OrganizationProfile).filter(
-                OrganizationProfile.id == test_org.id
+                OrganizationProfile.id == test_org_id
             ).delete(synchronize_session=False)
             cleanup_db.commit()
         except Exception:
