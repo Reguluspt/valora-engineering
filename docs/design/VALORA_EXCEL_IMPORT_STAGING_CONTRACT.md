@@ -157,3 +157,26 @@ AI integration is strictly advisory. AI cannot auto-map, auto-approve, or auto-a
     "offset": 0
   }
   ```
+
+---
+
+## 12. S12-PR-002: Excel File Upload & Parser Intake
+To enable ingestion of Excel spreadsheets into the staging model, the following specifications are implemented:
+
+- **Route**: `POST /api/v1/projects/{project_id}/asset-imports/{batch_id}/upload`
+- **Request Format**: `multipart/form-data` with form field `file`
+- **Permission**: `workbench:edit`
+- **Accepted File Type**: `.xlsx` only. Content verification processes file headers and extension type; invalid formats trigger a friendly Vietnamese error.
+- **Value-Only Parsing**: `openpyxl` is loaded in read-only mode with `data_only=True` to extract cell values and cached evaluations. Execution of formulas, macros, VBA scripts, or external workbook links is strictly disabled.
+- **Header Normalization**: Columns are trimmed, converted to lowercase, and normalized using underscores (e.g. `Tên tài sản` -> `ten_tai_san` / `tên_tài_sản`).
+- **Deterministic Column Mapping**: 
+  - `proposed_asset_name` maps `asset_name`, `ten_tai_san`, `tên_tài_sản`, `name`
+  - `proposed_description` maps `description`, `mo_ta`, `mô_tả`, `specification`, `thong_so`, `thông_số`
+  - `proposed_quantity` maps `quantity`, `so_luong`, `số_lượng`, `qty`
+  - `proposed_unit` maps `unit`, `don_vi`, `đơn_vị`
+  - `proposed_raw_price` maps `raw_price`, `gia_goc`, `giá_gốc`, `cost`, `price`
+  - `proposed_currency` maps `currency`, `tien_te`, `tiền_tệ`
+- **Staging Row Creation**: Parsed rows create isolated `ProjectAssetImportStagingRow` entries defaulting to `pending` validation state. Fully empty sheet lines are skipped. Absolute row count limit is capped at 5,000 rows.
+- **Batch Counters**: The upload endpoint returns the updated `ProjectAssetImportBatchResponse` with modified `status` (`parsed`) and updated `total_rows`.
+- **Immutability**: Staging ingestion remains decoupled from official data. No mutations occur on the `ProjectAssetLine` table.
+

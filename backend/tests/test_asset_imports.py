@@ -257,3 +257,133 @@ def test_excel_import_staging_flow(client: TestClient, db_session: Session) -> N
 
     # Verify no ProjectAssetLine rows were mutated
     assert db_session.query(ProjectAssetLine).count() == 0
+
+
+def test_excel_upload_and_parser(client: TestClient, db_session: Session) -> None:
+    import openpyxl
+    import io
+
+    # 1. Seed tenant, users, and roles
+    org = OrganizationProfile(legal_name="Org A", organization_slug="org-a", status=OrganizationStatus.ACTIVE)
+    org_other = OrganizationProfile(legal_name="Org B", organization_slug="org-b", status=OrganizationStatus.ACTIVE)
+    db_session.add_all([org, org_other])
+    db_session.commit()
+
+    role_editor = Role(
+        code="editor",
+        display_name="Editor",
+        permissions=["project:read", "workbench:edit"]
+    )
+    db_session.add(role_editor)
+    db_session.commit()
+
+    user_editor = User(organization_id=org.id, email="editor@orga.com", full_name="Editor", status=UserStatus.ACTIVE)
+    user_other = User(organization_id=org_other.id, email="other@orgb.com", full_name="Other", status=UserStatus.ACTIVE)
+    db_session.add_all([user_editor, user_other])
+    db_session.commit()
+
+    db_session.add_all([
+        UserRole(user_id=user_editor.id, role_id=role_editor.id, is_active=True),
+        UserRole(user_id=user_other.id, role_id=role_editor.id, is_active=True),
+    ])
+    db_session.commit()
+
+    cust = Customer(organization_id=org.id, legal_name="Cust A", status=CustomerStatus.ACTIVE, created_by=user_editor.id)
+    db_session.add(cust)
+    db_session.commit()
+
+    proj = Project(
+        organization_id=org.id,
+        customer_id=cust.id,
+        code="PROJ-A",
+        name="Project A",
+        status=ProjectWorkflowStatus.DRAFT,
+        created_by=user_editor.id
+    )
+    db_session.add(proj)
+    db_session.commit()
+
+    headers_editor = {"X-User-Id": str(user_editor.id)}
+    headers_other = {"X-User-Id": str(user_other.id)}
+
+    # Create batch
+    batch = ProjectAssetImportBatch(
+        organization_id=org.id,
+        project_id=proj.id,
+        source_filename="test_upload.xlsx",
+        source_sheet_name="Assets",
+        status=ImportBatchStatus.CREATED,
+        created_by_user_id=user_editor.id
+    )
+    db_session.add(batch)
+    db_session.commit()
+
+    # Generate Excel workbook in memory
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Assets"
+    
+    # Write headers
+    ws.append(["Tên tài sản", "Mô tả", "Số lượng", "Đơn vị", "Giá gốc", "Tiền tệ", "Giá thẩm định"])
+    ws.append(["Máy phát điện", "Máy phát điện diesel 5kVA", "2", "cái", "15000000", "VND", "14500000"])
+    # Row with formula
+    ws.append(["Bơm chìm", "Bơm thoát nước", "=1+1", "bộ", "2500000", "VND", "2400000"])
+    # Completely empty row
+    ws.append([None, None, None, None, None, None, None])
+
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    # Test upload with invalid extension
+    res_bad_ext = client.post(
+        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/upload",
+        files={"file": ("assets.txt", io.BytesIO(b"dummy text"), "text/plain")},
+        headers=headers_editor
+    )
+    assert res_bad_ext.status_code == 400
+    assert "Định dạng tệp không được hỗ trợ" in res_bad_ext.json()["detail"]
+
+    # Test upload with cross-org user
+    file_stream.seek(0)
+    res_cross_org = client.post(
+        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/upload",
+        files={"file": ("assets.xlsx", file_stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=headers_other
+    )
+    assert res_cross_org.status_code == 404
+
+    # Test successful upload
+    file_stream.seek(0)
+    res_ok = client.post(
+        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/upload",
+        files={"file": ("assets.xlsx", file_stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=headers_editor
+    )
+    assert res_ok.status_code == 200
+    data = res_ok.json()
+    assert data["status"] == "parsed"
+    assert data["total_rows"] == 2
+
+    # Check staging rows in DB
+    staging_rows = db_session.query(ProjectAssetImportStagingRow).filter(
+        ProjectAssetImportStagingRow.import_batch_id == batch.id
+    ).all()
+    assert len(staging_rows) == 2
+
+    # Check row 1
+    row1 = [r for r in staging_rows if r.source_row_number == 2][0]
+    assert row1.proposed_asset_name == "Máy phát điện"
+    assert row1.proposed_quantity == "2"
+    assert row1.proposed_unit == "cái"
+    assert row1.raw_values["Tên tài sản"] == "Máy phát điện"
+    assert row1.mapped_values["proposed_asset_name"] == "Máy phát điện"
+
+    # Check row 2 (which had a formula)
+    row2 = [r for r in staging_rows if r.source_row_number == 3][0]
+    assert row2.proposed_asset_name == "Bơm chìm"
+    assert row2.raw_values["Số lượng"] == ""
+
+    # Ensure no changes to ProjectAssetLine
+    assert db_session.query(ProjectAssetLine).count() == 0
+

@@ -93,3 +93,21 @@ export async function fetchAssetImportRows(
   const path = `/api/v1/projects/${projectId}/asset-imports/${batchId}/rows${queryString ? `?${queryString}` : ""}`;
   return request<ProjectAssetImportStagingRowPaginationResponse>(path);
 }
+
+export async function uploadAssetImportWorkbook(
+  projectId: string,
+  batchId: string,
+  file: File
+): Promise<ProjectAssetImportBatchResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request<ProjectAssetImportBatchResponse>(
+    `/api/v1/projects/${projectId}/asset-imports/${batchId}/upload`,
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+}
+
