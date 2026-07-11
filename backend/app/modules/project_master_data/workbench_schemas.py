@@ -213,3 +213,57 @@ class AssetLineDraftCommitResponse(BaseModel):
     has_unsaved_changes: bool
     is_stale: bool
     committed_at: datetime
+
+
+# ProjectAssetImportBatch
+class ProjectAssetImportBatchCreate(BaseModel):
+    source_filename: str
+    source_sheet_name: Optional[str] = None
+
+
+class ProjectAssetImportBatchResponse(SchemaBase):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    status: str
+    source_filename: str
+    source_sheet_name: Optional[str]
+    total_rows: int
+    valid_rows: int
+    invalid_rows: int
+    warning_rows: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectAssetImportValidationMessage(BaseModel):
+    field: Optional[str] = None
+    message_key: str
+    message: Optional[str] = None
+
+
+class ProjectAssetImportStagingRowResponse(SchemaBase):
+    id: uuid.UUID
+    import_batch_id: uuid.UUID
+    source_row_number: int
+    validation_status: str
+    validation_errors: List[ProjectAssetImportValidationMessage]
+    validation_warnings: List[ProjectAssetImportValidationMessage]
+    proposed_asset_name: Optional[str] = None
+    proposed_description: Optional[str] = None
+    proposed_quantity: Optional[str] = None
+    proposed_unit: Optional[str] = None
+    proposed_raw_price: Optional[str] = None
+    proposed_currency: Optional[str] = None
+    proposed_appraised_unit_price: Optional[str] = None
+    proposed_review_status: Optional[str] = None
+    proposed_validation_status: Optional[str] = None
+
+
+class ProjectAssetImportStagingRowPaginationResponse(BaseModel):
+    project_id: uuid.UUID
+    import_batch_id: uuid.UUID
+    items: List[ProjectAssetImportStagingRowResponse]
+    total: int
+    limit: int
+    offset: int
+

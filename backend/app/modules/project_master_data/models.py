@@ -3432,6 +3432,109 @@ class DocumentCorrection(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
     decider: Mapped["User"] = relationship("User")
 
 
+class ImportBatchStatus(str, enum.Enum):
+    CREATED = "created"
+    PARSING = "parsing"
+    PARSED = "parsed"
+    VALIDATION_FAILED = "validation_failed"
+    READY_FOR_REVIEW = "ready_for_review"
+    APPLIED = "applied"
+    FAILED = "failed"
+
+
+class ImportRowValidationStatus(str, enum.Enum):
+    PENDING = "pending"
+    VALID = "valid"
+    INVALID = "invalid"
+    WARNING = "warning"
+
+
+class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
+    """Represents an upload batch of asset list from an Excel sheet."""
+    __tablename__ = "project_asset_import_batches"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_sheet_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    status: Mapped[ImportBatchStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ImportBatchStatus.CREATED
+    )
+    total_rows: Mapped[int] = mapped_column(nullable=False, default=0)
+    valid_rows: Mapped[int] = mapped_column(nullable=False, default=0)
+    invalid_rows: Mapped[int] = mapped_column(nullable=False, default=0)
+    warning_rows: Mapped[int] = mapped_column(nullable=False, default=0)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False
+    )
+
+    project: Mapped["Project"] = relationship("Project")
+    creator: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        Index("idx_import_batch_org", "organization_id"),
+        Index("idx_import_batch_project", "project_id"),
+    )
+
+
+class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
+    """Represents a single staged row from an imported Excel sheet before applying it."""
+    __tablename__ = "project_asset_import_staging_rows"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("project_asset_import_batches.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    source_row_number: Mapped[int] = mapped_column(nullable=False)
+    raw_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    mapped_values: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    normalized_preview: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    validation_status: Mapped[ImportRowValidationStatus] = mapped_column(
+        String(50),
+        nullable=False,
+        default=ImportRowValidationStatus.PENDING
+    )
+    validation_errors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    validation_warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+
+    proposed_asset_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    proposed_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    proposed_quantity: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    proposed_unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    proposed_raw_price: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    proposed_currency: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    proposed_appraised_unit_price: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    proposed_review_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    proposed_validation_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    import_batch: Mapped["ProjectAssetImportBatch"] = relationship("ProjectAssetImportBatch")
+
+    __table_args__ = (
+        Index("idx_staging_row_org", "organization_id"),
+        Index("idx_staging_row_project", "project_id"),
+        Index("idx_staging_row_batch", "import_batch_id"),
+        Index("idx_staging_row_validation", "validation_status"),
+    )
+
+
+
 
 
 

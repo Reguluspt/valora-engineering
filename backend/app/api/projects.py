@@ -29,7 +29,11 @@ from app.modules.project_master_data.models import (
     InlineEditDraft,
     InlineEditDraftStatus,
     UndoRedoStackEntry,
-    UndoRedoActionType
+    UndoRedoActionType,
+    ProjectAssetImportBatch,
+    ProjectAssetImportStagingRow,
+    ImportBatchStatus,
+    ImportRowValidationStatus
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -44,7 +48,10 @@ from app.modules.project_master_data.workbench_schemas import (
     AssetLineDraftSaveRequest,
     AssetLineDraftSaveResponse,
     AssetLineDraftCommitRequest,
-    AssetLineDraftCommitResponse
+    AssetLineDraftCommitResponse,
+    ProjectAssetImportBatchCreate,
+    ProjectAssetImportBatchResponse,
+    ProjectAssetImportStagingRowPaginationResponse
 )
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
@@ -486,6 +493,124 @@ def list_project_asset_lines(
         "limit": limit,
         "offset": offset
     }
+
+
+@router.post("/{project_id}/asset-imports", response_model=ProjectAssetImportBatchResponse, status_code=201)
+def create_project_asset_import(
+    project_id: uuid.UUID,
+    payload: ProjectAssetImportBatchCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit"))
+):
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    batch = ProjectAssetImportBatch(
+        organization_id=org_id,
+        project_id=project_id,
+        source_filename=payload.source_filename,
+        source_sheet_name=payload.source_sheet_name,
+        status=ImportBatchStatus.CREATED,
+        total_rows=0,
+        valid_rows=0,
+        invalid_rows=0,
+        warning_rows=0,
+        created_by_user_id=current_user.id
+    )
+    db.add(batch)
+    db.commit()
+    db.refresh(batch)
+
+    log_audit_event(
+        db=db,
+        event_name="ProjectAssetImportBatchCreated",
+        entity_type="ProjectAssetImportBatch",
+        entity_id=batch.id,
+        organization_id=org_id,
+        actor_user_id=current_user.id,
+        command_name="CreateProjectAssetImportBatch"
+    )
+    db.commit()
+
+    return batch
+
+
+@router.get("/{project_id}/asset-imports", response_model=List[ProjectAssetImportBatchResponse])
+def list_project_asset_imports(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read"))
+):
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    batches = db.query(ProjectAssetImportBatch).filter(
+        ProjectAssetImportBatch.project_id == project_id,
+        ProjectAssetImportBatch.organization_id == org_id
+    ).all()
+
+    return batches
+
+
+@router.get("/{project_id}/asset-imports/{batch_id}/rows", response_model=ProjectAssetImportStagingRowPaginationResponse)
+def list_project_asset_import_rows(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    validation_status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read"))
+):
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    batch = db.query(ProjectAssetImportBatch).filter(
+        ProjectAssetImportBatch.organization_id == org_id,
+        ProjectAssetImportBatch.project_id == project_id,
+        ProjectAssetImportBatch.id == batch_id
+    ).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+
+    query = db.query(ProjectAssetImportStagingRow).filter(
+        ProjectAssetImportStagingRow.import_batch_id == batch_id,
+        ProjectAssetImportStagingRow.organization_id == org_id,
+        ProjectAssetImportStagingRow.project_id == project_id
+    )
+
+    if validation_status:
+        query = query.filter(ProjectAssetImportStagingRow.validation_status == validation_status)
+
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+
+    return {
+        "project_id": project_id,
+        "import_batch_id": batch_id,
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+
 
 
 @router.get("/{project_id}/asset-lines/draft-state", response_model=ProjectDraftStateResponse)
