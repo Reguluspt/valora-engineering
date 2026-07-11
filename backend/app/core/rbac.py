@@ -7,8 +7,10 @@ from app.db import get_db
 from app.modules.project_master_data.models import (
     User,
     OrganizationStatus,
-    UserStatus
+    UserStatus,
+    UserSession
 )
+from app.api.auth import get_current_session
 
 def derive_effective_permissions(user: User, db: Session) -> Set[str]:
     """
@@ -41,25 +43,24 @@ def derive_effective_permissions(user: User, db: Session) -> Set[str]:
 
 def get_current_user(
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None)
+    session: UserSession = Depends(get_current_session)
 ) -> User:
     """
-    Placeholder dependency to extract the current user.
-    Uses the 'X-User-Id' request header as a testable placeholder.
-    Raises HTTP 401 if missing, invalid, or user not found.
+    Dependency to resolve the current active user from session cookie.
+    Raises HTTP 401 via get_current_session if not authenticated or invalid.
     """
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    try:
-        user_uuid = uuid.UUID(x_user_id)
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    user = db.query(User).filter(User.id == user_uuid).first()
+    user = db.query(User).filter(User.id == session.user_id).first()
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "title": "Phiên làm việc hết hạn",
+                "message": "Không tìm thấy thông tin tài khoản đăng nhập.",
+                "nextAction": "Vui lòng đăng nhập lại.",
+                "severity": "blocking",
+                "retryable": False
+            }
+        )
     return user
 
 
@@ -74,7 +75,16 @@ def require_permission(permission_code: str):
     ) -> User:
         perms = derive_effective_permissions(current_user, db)
         if permission_code not in perms:
-            raise HTTPException(status_code=403, detail="Missing permission")
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "title": "Không có quyền thực hiện",
+                    "message": "Tài khoản của bạn không được cấp quyền thực hiện thao tác này.",
+                    "nextAction": "Vui lòng liên hệ với Quản trị viên để được hỗ trợ.",
+                    "severity": "error",
+                    "retryable": False
+                }
+            )
         return current_user
 
     return dependency

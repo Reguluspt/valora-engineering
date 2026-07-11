@@ -266,11 +266,14 @@ def test_require_permission_dependency(db_session: Session) -> None:
     with pytest.raises(HTTPException) as exc_info:
         dependency_func_create(current_user=user, db=db_session)
     assert exc_info.value.status_code == 403
-    assert exc_info.value.detail == "Missing permission"
+    assert exc_info.value.detail["title"] == "Không có quyền thực hiện"
 
 
 def test_get_current_user_dependency(db_session: Session) -> None:
-    """Verifies get_current_user behaves correctly with headers."""
+    """Verifies get_current_user behaves correctly with UserSession."""
+    from app.modules.project_master_data.models import UserSession
+    from datetime import datetime, timedelta, timezone
+
     org = OrganizationProfile(
         legal_name="Test Organization",
         organization_slug="test-org",
@@ -288,22 +291,42 @@ def test_get_current_user_dependency(db_session: Session) -> None:
     db_session.add(user)
     db_session.commit()
 
-    # 1. No header raises HTTP 401
-    with pytest.raises(HTTPException) as exc_info:
-        get_current_user(db=db_session, x_user_id=None)
-    assert exc_info.value.status_code == 401
+    now = datetime.now(timezone.utc)
 
-    # 2. Invalid header format raises HTTP 401
-    with pytest.raises(HTTPException) as exc_info:
-        get_current_user(db=db_session, x_user_id="not-a-uuid")
-    assert exc_info.value.status_code == 401
+    # 1. Non-existent user in session raises HTTP 401
+    mock_session = UserSession(
+        user_id=uuid.uuid4(),
+        organization_id=org.id,
+        access_token_hash="some-hash",
+        status="active",
+        created_at=now,
+        last_seen_at=now,
+        access_expires_at=now + timedelta(minutes=15),
+        idle_expires_at=now + timedelta(minutes=30),
+        absolute_expires_at=now + timedelta(days=7)
+    )
+    db_session.add(mock_session)
+    db_session.commit()
 
-    # 3. Non-existent user raises HTTP 401
-    random_uuid = str(uuid.uuid4())
     with pytest.raises(HTTPException) as exc_info:
-        get_current_user(db=db_session, x_user_id=random_uuid)
+        get_current_user(db=db_session, session=mock_session)
     assert exc_info.value.status_code == 401
+    assert exc_info.value.detail["title"] == "Phiên làm việc hết hạn"
 
-    # 4. Valid user ID header returns user
-    res_user = get_current_user(db=db_session, x_user_id=str(user.id))
+    # 2. Valid user ID session returns user
+    valid_session = UserSession(
+        user_id=user.id,
+        organization_id=org.id,
+        access_token_hash="valid-hash",
+        status="active",
+        created_at=now,
+        last_seen_at=now,
+        access_expires_at=now + timedelta(minutes=15),
+        idle_expires_at=now + timedelta(minutes=30),
+        absolute_expires_at=now + timedelta(days=7)
+    )
+    db_session.add(valid_session)
+    db_session.commit()
+
+    res_user = get_current_user(db=db_session, session=valid_session)
     assert res_user.id == user.id

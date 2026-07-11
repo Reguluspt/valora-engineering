@@ -14,7 +14,17 @@ export class ApiError extends Error {
 
 const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/+$/, "");
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
+// Global promise to deduplicate concurrent refresh requests
+let refreshPromise: Promise<any> | null = null;
+
+export async function request<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${BASE_URL}${normalizedPath}`;
 
@@ -23,35 +33,70 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(url, {
+  // Enforce synchronizer CSRF token in state-mutating requests
+  const csrfToken = getCookie("XSRF-TOKEN");
+  if (csrfToken) {
+    headers.set("X-CSRF-Token", csrfToken);
+  }
+
+  // Defense-in-depth: Fetch Metadata
+  headers.set("Sec-Fetch-Site", "same-origin");
+
+  const fetchOptions: RequestInit = {
     ...options,
-    headers
-  }).catch((err) => {
-    throw new ApiError(`Network connection error: ${err.message}`, 0);
-  });
-
-  if (!response.ok) {
-    let errBody: any = null;
-    try {
-      errBody = await response.json();
-    } catch {
-      // Ignore parsing errors for non-json
-    }
-
-    const message = errBody?.detail || errBody?.message || `HTTP error ${response.status}`;
-    const code = errBody?.code;
-    throw new ApiError(message, response.status, code, errBody);
-  }
-
-  // Handle empty bodies
-  if (response.status === 204) {
-    return {} as T;
-  }
+    headers,
+    credentials: "include" // Always send and accept secure cookies
+  };
 
   try {
+    const response = await fetch(url, fetchOptions);
+
+    if (response.status === 401 && !isRetry && path !== "/api/v1/auth/refresh" && path !== "/api/v1/auth/login") {
+      // Access token expired, attempt refresh
+      try {
+        if (!refreshPromise) {
+          refreshPromise = request("/api/v1/auth/refresh", { method: "POST" }, true)
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
+        await refreshPromise;
+        // Retry the original request
+        return await request<T>(path, options, true);
+      } catch (refreshErr) {
+        // Refresh failed, clear auth cookies/state
+        try {
+          await fetch(`${BASE_URL}/api/v1/auth/logout`, { method: "POST", credentials: "include" });
+        } catch {
+          // Ignore failed logout on refresh error
+        }
+        throw new ApiError("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.", 401);
+      }
+    }
+
+    if (!response.ok) {
+      let errBody: any = null;
+      try {
+        errBody = await response.json();
+      } catch {
+        // Ignore parsing errors for non-json
+      }
+
+      const message = errBody?.detail?.message || errBody?.detail || errBody?.message || `HTTP error ${response.status}`;
+      const code = errBody?.code;
+      throw new ApiError(message, response.status, code, errBody);
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
     return await response.json();
   } catch (err: any) {
-    throw new ApiError(`Invalid JSON response: ${err.message}`, response.status);
+    if (err instanceof ApiError) {
+      throw err;
+    }
+    throw new ApiError(`Network connection error: ${err.message}`, 0);
   }
 }
 

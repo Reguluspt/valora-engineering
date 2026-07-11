@@ -7,9 +7,7 @@ TEMPORARY_BASELINE = {
     "S12R-AUTH-001": {
         "pattern": r"X-User-Id",
         "description": "Production X-User-Id authentication usage",
-        "files": {
-            "backend/app/core/rbac.py": 4
-        },
+        "files": {},
         "target_pr": "S12-R-002",
         "expiry_condition": "Implement credential-based auth session"
     },
