@@ -146,6 +146,123 @@ class UserRole(Base, UUIDMixin):
     )
 
 
+class UserSession(Base, UUIDMixin):
+    """Represents an active or revoked user session for authentication."""
+    __tablename__ = "user_sessions"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    access_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    csrf_token_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now
+    )
+    access_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+    idle_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+    absolute_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    revoked_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile", foreign_keys=[organization_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'expired', 'revoked', 'suspicious')",
+            name="chk_user_sessions_status"
+        ),
+        Index("idx_user_sessions_user_status", "user_id", "status"),
+    )
+
+
+class RefreshTokenRecord(Base, UUIDMixin):
+    """Represents a refresh token record for token rotation and reuse detection."""
+    __tablename__ = "refresh_token_records"
+
+    user_session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_sessions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    token_family_id: Mapped[uuid.UUID] = mapped_column(nullable=False, default=uuid.uuid4)
+    parent_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    replaced_by_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    issued_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+    consumed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    rotated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    reuse_detected_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    user_session: Mapped["UserSession"] = relationship("UserSession", foreign_keys=[user_session_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'rotated', 'revoked', 'reused_detected')",
+            name="chk_refresh_token_records_status"
+        ),
+        Index("idx_refresh_token_records_session", "user_session_id"),
+        Index("idx_refresh_token_records_family", "token_family_id"),
+        Index("idx_refresh_token_records_status", "status"),
+        Index("idx_refresh_token_records_expires", "expires_at"),
+    )
+
+
+
 class ReferenceStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"

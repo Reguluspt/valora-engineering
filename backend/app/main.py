@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
@@ -12,6 +12,7 @@ from app.api.workflow import router as workflow_router
 from app.api.workbench import router as workbench_router
 from app.api.document_engine import router as document_engine_router
 from app.api.document_intelligence import router as document_intelligence_router
+from app.api.auth import router as auth_router, csrf_gate
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -27,6 +28,7 @@ app = FastAPI(
     docs_url=None if is_prod else "/docs",
     redoc_url=None if is_prod else "/redoc",
     openapi_url=None if is_prod else "/openapi.json",
+    dependencies=[Depends(csrf_gate)]
 )
 
 # Configure CORS Middleware safely
@@ -49,6 +51,7 @@ app.include_router(workflow_router)
 app.include_router(workbench_router)
 app.include_router(document_engine_router)
 app.include_router(document_intelligence_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

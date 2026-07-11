@@ -9,7 +9,8 @@ from app.modules.project_master_data.models import (
     CanonicalAsset, CanonicalAssetAttributeValue,
     AssetVariant, AssetVariantAttributeValue,
     AssetAlias, IdentityCandidate, SimilarityScore,
-    DuplicateCandidate, MergeDecision, IdentityReviewItem, IdentityDecisionLog
+    DuplicateCandidate, MergeDecision, IdentityReviewItem, IdentityDecisionLog,
+    UserSession, RefreshTokenRecord
 )
 
 __all__ = [
@@ -55,4 +56,6 @@ __all__ = [
     "MergeDecision",
     "IdentityReviewItem",
     "IdentityDecisionLog",
+    "UserSession",
+    "RefreshTokenRecord",
 ]
