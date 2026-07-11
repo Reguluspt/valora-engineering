@@ -35,12 +35,9 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
 
   // Enforce synchronizer CSRF token in state-mutating requests
   const csrfToken = getCookie("XSRF-TOKEN");
-  if (csrfToken) {
+  if (csrfToken && ["POST", "PUT", "PATCH", "DELETE"].includes(options.method || "GET")) {
     headers.set("X-CSRF-Token", csrfToken);
   }
-
-  // Defense-in-depth: Fetch Metadata
-  headers.set("Sec-Fetch-Site", "same-origin");
 
   const fetchOptions: RequestInit = {
     ...options,
@@ -61,14 +58,13 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
             });
         }
         await refreshPromise;
-        // Retry the original request
+        // Retry the original request exactly once
         return await request<T>(path, options, true);
       } catch (refreshErr) {
-        // Refresh failed, clear auth cookies/state
-        try {
-          await fetch(`${BASE_URL}/api/v1/auth/logout`, { method: "POST", credentials: "include" });
-        } catch {
-          // Ignore failed logout on refresh error
+        // Refresh failed, clear frontend auth state/redirect
+        if (typeof localStorage !== "undefined") {
+          // Clear any local storage/session tokens if any (do not call logout without CSRF)
+          localStorage.removeItem("user");
         }
         throw new ApiError("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.", 401);
       }
@@ -79,11 +75,12 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
       try {
         errBody = await response.json();
       } catch {
-        // Ignore parsing errors for non-json
+        // Ignore parsing errors
       }
 
+      // Security: ensure cookies/secrets are never included in ApiError
       const message = errBody?.detail?.message || errBody?.detail || errBody?.message || `HTTP error ${response.status}`;
-      const code = errBody?.code;
+      const code = errBody?.code || errBody?.detail?.code;
       throw new ApiError(message, response.status, code, errBody);
     }
 

@@ -194,6 +194,14 @@ class UserSession(Base, UUIDMixin):
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile", foreign_keys=[organization_id])
 
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'expired', 'revoked', 'suspicious')",
+            name="chk_user_sessions_status"
+        ),
+        Index("idx_user_sessions_user_status", "user_id", "status"),
+    )
+
 
 class RefreshTokenRecord(Base, UUIDMixin):
     """Represents a refresh token record for token rotation and reuse detection."""
@@ -209,7 +217,10 @@ class RefreshTokenRecord(Base, UUIDMixin):
         ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
         nullable=True
     )
-    replaced_by_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
+    replaced_by_token_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("refresh_token_records.id", ondelete="SET NULL"),
+        nullable=True
+    )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
     issued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -238,6 +249,17 @@ class RefreshTokenRecord(Base, UUIDMixin):
     )
 
     user_session: Mapped["UserSession"] = relationship("UserSession", foreign_keys=[user_session_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'rotated', 'revoked', 'reused_detected')",
+            name="chk_refresh_token_records_status"
+        ),
+        Index("idx_refresh_token_records_session", "user_session_id"),
+        Index("idx_refresh_token_records_family", "token_family_id"),
+        Index("idx_refresh_token_records_status", "status"),
+        Index("idx_refresh_token_records_expires", "expires_at"),
+    )
 
 
 
