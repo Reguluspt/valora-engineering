@@ -1,7 +1,7 @@
 # Live Workbench Project Asset Lines API Contract
 
-- **Status**: Authoritative API Contract
-- **Sprint Target**: S11-PR-001
+- **Status**: Completed / Operational
+- **Sprint Target**: S11-PR-007 (Sprint 11 Final Acceptance)
 
 ---
 
