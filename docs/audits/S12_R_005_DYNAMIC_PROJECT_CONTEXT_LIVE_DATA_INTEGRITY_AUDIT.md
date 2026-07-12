@@ -1,7 +1,7 @@
 # S12-R-005 — Dynamic Project Context & Live Workbench Data Integrity Audit
 
 ## Status
-`PRE-PR EVIDENCE COMPLETE — AWAITING DRAFT PR AND CI`
+`DRAFT PR CI VALIDATED — AWAITING FINAL DOCUMENTATION-HEAD CI AND INDEPENDENT AUDIT`
 
 ## Git Baseline
 | Item | Value |
@@ -22,10 +22,11 @@
 | Session/pagination proof audit SHA | `16d8b6930d4e426bd94f5ece52276a1f925bea6b` (Commit L) |
 | Correction code SHA | `e0ae061d0def93f55244b6f4d60da3c4b093401f` (Commit M) |
 | Correction audit SHA | `62bd2762d214a275c0d0da4e0a97c5b7abc13bb5` (Commit N) |
-| Draft PR | NOT CREATED |
-| CI | PENDING |
-| Branch ahead/behind | 14 commits ahead, 0 behind main |
-| Net changed paths | 36 files (+1735 / -954) |
+| Reconciliation doc SHA | `7cee268196c4601671d3d5343bf57acaff2fc897` (Commit O) |
+| **Draft PR** | **[#5](https://github.com/Reguluspt/valora-engineering/pull/5)** |
+| **CI Run** | **[#73 (29187664152)](https://github.com/Reguluspt/valora-engineering/actions/runs/29187664152)** |
+| Branch ahead/behind | 15 commits ahead, 0 behind main |
+| Net changed paths | 36 files (+1689 / -954) |
 
 ## Root Cause Matrix
 
@@ -98,9 +99,51 @@ App.tsx (extracts {ref} from hash)
 | Frontend vitest | **80 passed (15 test files)** |
 | npm audit | 0 vulnerabilities |
 
-### Skipped Tests
+### Skipped Tests (Local)
 4 PostgreSQL-gated (local dev): `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
 SKIPPED — REQUIRES CI WITH POSTGRESQL
+
+## Draft PR & CI Evidence
+
+| Item | Value |
+|---|---|
+| PR | [#5](https://github.com/Reguluspt/valora-engineering/pull/5) |
+| PR state | Draft |
+| Base branch | `main` |
+| Head branch | `s12-r-005-dynamic-project-context-live-data-integrity` |
+| CI tested SHA | `7cee268196c4601671d3d5343bf57acaff2fc897` |
+| Workflow | CI |
+| Run number | 73 |
+| Run ID | `29187664152` |
+| Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29187664152 |
+
+### Code-Bearing CI Results
+
+| Job | Result | Details |
+|---|---|---|
+| Backend | PASS | Static checks, Alembic smoke, single head `db5977424e7b`, 326 passed, 0 skipped, 14 warnings |
+| Frontend | PASS | Lint, build, Vitest 80 passed (15 files), npm audit 0 vulnerabilities |
+| Worker | PASS | Ruff, pytest 1 passed, dependency audit clean |
+| Security | PASS | Security policy scan, secret scan, controlled baseline validated |
+
+### PostgreSQL Gate
+All four previously locally-skipped PostgreSQL-gated tests executed in CI with zero skips:
+
+- `test_auth_endpoints.py:737` — PostgreSQL integration: **EXECUTED — PASS**
+- `test_s12_r_004_official_mutation.py:1049` — PostgreSQL concurrency: **EXECUTED — PASS**
+- `test_workbench_api.py:696` — PostgreSQL concurrent session: **EXECUTED — PASS**
+- `test_workbench_api.py:980` — PostgreSQL unexpected-error rollback: **EXECUTED — PASS**
+
+CI backend result: **326 passed, 0 skipped**. PostgreSQL requirement satisfied.
+
+### Local vs CI Distinction
+- Local (without PostgreSQL): 322 passed, 4 skipped
+- Code-bearing CI (with PostgreSQL): 326 passed, 0 skipped
+
+===================================================
+## Test Inventory
+(unchanged — 80 frontend tests + 3 backend security-blocker tests)
+===================================================
 
 ## Final Test Inventory (80 tests)
 
