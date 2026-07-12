@@ -202,9 +202,15 @@ Enables authorized users to review and explicitly apply draft edits to official 
   ```json
   {
     "field_keys": ["appraised_unit_price"],
-    "confirm": true
+    "confirm": true,
+    "version_token": "1"
   }
   ```
+- **Version Token Requirement** (S12-R-004): `version_token` must be a strictly positive integer string representing the current `row_version` of the official `ProjectAssetLine`. The server enforces exact three-way equality:
+  ```text
+  request_version_token == every selected draft.base_row_version == locked official line.row_version
+  ```
+  Missing, malformed, non-positive, stale (current version mismatch), or future version tokens are rejected with `400 Bad Request` or `409 Conflict`.
 - **Response Shape**:
   ```json
   {
@@ -234,9 +240,6 @@ Enables authorized users to review and explicitly apply draft edits to official 
   - `description`: Must be a string (rejects nested JSON objects, boolean, lists, float/int).
   - `appraised_unit_price`: Must parse to a positive number (rejects non-numeric formats, negative values, NaN, and Infinity).
 - **Atomic Rollback**: If logging the audit event fails or any exception occurs during commit, the entire database transaction is rolled back.
-
-
-
 
 
 

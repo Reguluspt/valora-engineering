@@ -61,12 +61,14 @@ describe("useWorkbenchDraftSync Hook", () => {
 
     const res = await projectsApi.commitAssetLineDraft("p1", "l1", {
       field_keys: ["appraised_unit_price"],
-      confirm: true
+      confirm: true,
+      version_token: "1"
     });
 
     expect(commitSpy).toHaveBeenCalledWith("p1", "l1", {
       field_keys: ["appraised_unit_price"],
-      confirm: true
+      confirm: true,
+      version_token: "1"
     });
     expect(res.draft_status).toBe("clean");
   });

@@ -17,6 +17,23 @@ interface AssetGridProps {
   onCommitDraft?: (id: string, fields: string[], versionToken: string) => void;
 }
 
+export function executeDraftCommit(
+  confirm: (message: string) => boolean,
+  commit: ((id: string, fields: string[], versionToken: string) => void) | undefined,
+  id: string,
+  rowVersion: number,
+  fields: string[],
+  confirmationMessage: string
+): boolean {
+  if (confirm(confirmationMessage)) {
+    if (commit) {
+      commit(id, fields, String(rowVersion));
+    }
+    return true;
+  }
+  return false;
+}
+
 export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {}, onCommitDraft }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -285,13 +302,14 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                           />
                           {draftStates[row.project_asset_line_id]?.has_saved_draft && (
                             <button
-                              onClick={() => {
-                                if (window.confirm("Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu.")) {
-                                  if (onCommitDraft) {
-                                    onCommitDraft(row.project_asset_line_id, ["appraised_unit_price"], String(row.row_version));
-                                  }
-                                }
-                              }}
+                              onClick={() => executeDraftCommit(
+                                (msg) => window.confirm(msg),
+                                onCommitDraft,
+                                row.project_asset_line_id,
+                                row.row_version,
+                                ["appraised_unit_price"],
+                                "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
+                              )}
                               style={{
                                 fontSize: "10px",
                                 padding: "2px 6px",
