@@ -1,14 +1,19 @@
 # S12-R-005 — Dynamic Project Context & Live Workbench Data Integrity Audit
 
 ## Status
-`LOCAL IMPLEMENTATION COMPLETE — AWAITING DRAFT PR AND CI`
+`CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
 
 ## Git Baseline
 | Item | Value |
 |---|---|
 | Main baseline SHA | `e68375756f3ad591889e919bca9de7ac277f1dea` |
 | Branch | `s12-r-005-dynamic-project-context-live-data-integrity` |
-| Implementation SHA | `PENDING` (Commit A) |
+| Original implementation SHA | `f533eee02fc11545ec1d906c4dfca588b8cb3386` |
+| Previous audit SHA | `77f5e9a4c546ea45662bb5c29509bbaeb253d14a` |
+| Corrective implementation SHA | `PENDING` (Commit C) |
+| Audit evidence SHA | `PENDING` (Commit D) |
+| Draft PR | NOT CREATED |
+| CI | PENDING |
 
 ## Root Cause Matrix
 
@@ -126,6 +131,34 @@ Deleted:
 
 Skipped: 4 PostgreSQL-gated (local dev, expected)
 
+## Corrective Finding Disposition
+
+| Finding | Resolution | Evidence |
+|---|---|---|
+| F-1: Security scanner weakened | Added 2 fail-closed critical blockers for `hd-98-gia-lai` and all-zero UUID to `CRITICAL_BLOCKERS` | Security scan now blocks reintroduction |
+| F-2: All-zero UUID runtime literal | Created shared `isValidProjectUuid()` validator; removed ZERO_UUID constants; both hooks use semantic hex comparison | Static scan confirms 0 runtime occurrences |
+| F-3: Hardcoded role/org | Removed role/organization footer from AppShell | AppShell no longer renders fabricated identity |
+| F-4: Fabricated workflow status | Made status/statusLabel optional in WorkbenchHeader; removed hard-coded values from WorkbenchLayout; made issuesCount nullable in WorkbenchFooter | No fabricated draft/issue claims |
+| F-5: Fabricated context drawer entities | Removed all fabricated specs, decisions, versions, decisions from useAssetLineContext; panels render null states | All panels show truthful unavailable states |
+| F-6: False validation conclusion | Changed validation page to neutral "Chưa có dữ liệu kiểm tra" | No false PASS claims |
+| F-7: Route preservation | AppShell Workbench nav now preserves active project path; only navigates to neutral when no project is active | Routing test confirms behavior |
+| F-8: Pagination races | Replaced stale state with projectGen guard; AbortController; dedup via Set; line_no from offset; consumedOffset-based hasMore; immediate reset on project change | 10 pagination tests |
+| F-9: Session project-switch race | Added projectGen guard; clear session/sessionRef on project change; heartbeat binds to current generation | Stale response ignored |
+| F-10: Vietnamese labels | Translated all grid headers, toolbar selects, placeholders, disabled buttons; added `workbench.requiresBackendSession` i18n key | No English in main Workbench UI |
+| F-11: Strict version parsing | Replaced `parseInt` with regex `^[1-9]\d*$` + `Number.isSafeInteger` | Table-driven test covers 8 invalid cases |
+| F-12: Null price | Changed `?? 0` to pass-through null in AssetGrid draft editing | Legitimate zero preserved, null preserved |
+| F-13: Unused import | Removed `useResolvedProject` import from App.tsx | Build/lint PASS |
+| F-14: Audit document | Updated status, SHA tracking, added corrective disposition table, removed overstatements | This document |
+
+## Corrective Test Results
+
+| File | Tests | Status |
+|---|---|---|
+| `useProjectAssetLines.test.ts` | 10 | PASS (strict parsing, pagination, null/zero price) |
+| `useAssetLineContext.test.ts` | 2 | PASS (null panels, no fabricated entities) |
+| All other existing tests | 29 | PASS (no regressions) |
+| **Total frontend** | **39** | **PASS (9 test files)** |
+
 ## Out of Scope
 - S12-R-006: Excel parser hardening
 - S12-PR-003: Validation Engine
@@ -135,5 +168,5 @@ Skipped: 4 PostgreSQL-gated (local dev, expected)
 
 ## Final Verdict
 ```text
-LOCAL IMPLEMENTATION COMPLETE — AWAITING DRAFT PR AND CI
+CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT
 ```
