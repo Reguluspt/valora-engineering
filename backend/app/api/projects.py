@@ -1,7 +1,5 @@
 import uuid
 import re
-import io
-import openpyxl
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
 from sqlalchemy.orm import Session
@@ -34,7 +32,6 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     ImportBatchStatus,
-    ImportRowValidationStatus
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -55,6 +52,8 @@ from app.modules.project_master_data.workbench_schemas import (
     ProjectAssetImportStagingRowPaginationResponse
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
+from app.modules.excel_import.application import parse_uploaded_workbook
+from app.modules.excel_import.application.replace_staging_rows import replace_staging_rows, record_failure_audit
 
 
 def get_correlation_id(request: Request) -> str:
@@ -617,40 +616,12 @@ def list_project_asset_import_rows(
     }
 
 
-def normalize_header(header: str) -> str:
-    if not header:
-        return ""
-    h = str(header).strip().lower()
-    h = re.sub(r'[\s\-]+', '_', h)
-    return h
-
-
-def map_columns(headers: List[str]) -> dict:
-    mapping = {}
-    aliases = {
-        "proposed_asset_name": ["asset_name", "ten_tai_san", "tên_tài_sản", "ten_tai_san", "tên_tài_sản", "name"],
-        "proposed_description": ["description", "mo_ta", "mô_tả", "specification", "thong_so", "thông_số"],
-        "proposed_quantity": ["quantity", "so_luong", "số_lượng", "qty"],
-        "proposed_unit": ["unit", "don_vi", "đơn_vị"],
-        "proposed_raw_price": ["raw_price", "gia_goc", "giá_gốc", "cost", "price"],
-        "proposed_currency": ["currency", "tien_te", "tiền_tệ"]
-    }
-    aliases["proposed_appraised_unit_price"] = ["appraised_unit_price", "gia_tham_dinh", "giá_thẩm_định", "appraised_price"]
-
-    for i, h in enumerate(headers):
-        normalized = normalize_header(h)
-        for target_key, alias_list in aliases.items():
-            if normalized in alias_list:
-                mapping[target_key] = i
-                break
-    return mapping
-
-
 @router.post("/{project_id}/asset-imports/{batch_id}/upload", response_model=ProjectAssetImportBatchResponse)
 def upload_project_asset_import_file(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     file: UploadFile = File(...),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit"))
 ):
@@ -670,127 +641,76 @@ def upload_project_asset_import_file(
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
-    filename = file.filename or "import.xlsx"
-    if not filename.endswith(".xlsx"):
-        raise HTTPException(
-            status_code=400,
-            detail="Định dạng tệp không được hỗ trợ. Vui lòng tải lên tệp .xlsx"
-        )
-
-    sanitized_filename = filename.split("/")[-1].split("\\")[-1]
+    correlation_id = get_correlation_id(request) if request else None
+    previous_count = (
+        db.query(ProjectAssetImportStagingRow)
+        .filter(ProjectAssetImportStagingRow.import_batch_id == batch_id)
+        .count()
+    )
+    error_code = None
+    limit_category = None
+    sheet_name = batch.source_sheet_name
 
     try:
-        file_bytes = file.file.read()
-        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
-    except Exception:
-        batch.status = ImportBatchStatus.FAILED
-        db.commit()
-        raise HTTPException(
-            status_code=400,
-            detail="Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc tệp."
+        staged_rows, headers, raw_cells_list, parsed_count, sanitized_filename = parse_uploaded_workbook(
+            file=file,
+            source_sheet_name=batch.source_sheet_name,
         )
+        sheet_name = batch.source_sheet_name or file.filename or "Sheet1"
 
-    sheet_name = batch.source_sheet_name or wb.sheetnames[0]
-    if sheet_name not in wb.sheetnames:
-        sheet_name = wb.sheetnames[0]
-    ws = wb[sheet_name]
-
-    header_row_idx = None
-    headers = []
-    
-    rows = list(ws.iter_rows(values_only=True))
-    for r_idx, row in enumerate(rows):
-        if any(cell is not None for cell in row):
-            header_row_idx = r_idx
-            headers = [str(cell) if cell is not None else "" for cell in row]
-            break
-
-    if header_row_idx is None:
-        batch.status = ImportBatchStatus.FAILED
-        db.commit()
-        raise HTTPException(
-            status_code=400,
-            detail="Tệp Excel trống hoặc không chứa dòng tiêu đề."
-        )
-
-    mapping = map_columns(headers)
-
-    batch.status = ImportBatchStatus.PARSING
-    db.commit()
-
-    staging_rows_created = 0
-    max_rows = 5000
-    
-    db.query(ProjectAssetImportStagingRow).filter(
-        ProjectAssetImportStagingRow.import_batch_id == batch_id
-    ).delete()
-    db.commit()
-
-    for r_idx in range(header_row_idx + 1, len(rows)):
-        row = rows[r_idx]
-        if not any(cell is not None for cell in row):
-            continue
-
-        if staging_rows_created >= max_rows:
-            break
-
-        raw_values = {}
-        for col_idx, cell in enumerate(row):
-            col_name = headers[col_idx] if col_idx < len(headers) else f"Column_{col_idx}"
-            raw_values[col_name] = str(cell) if cell is not None else ""
-
-        mapped_values = {}
-        proposed = {}
-        for target_key, col_idx in mapping.items():
-            if col_idx < len(row):
-                cell_val = row[col_idx]
-                val_str = str(cell_val) if cell_val is not None else ""
-                mapped_values[target_key] = val_str
-                proposed[target_key] = val_str
-
-        staging_row = ProjectAssetImportStagingRow(
-            organization_id=org_id,
+        batch = replace_staging_rows(
+            db=db,
+            actor=current_user,
+            org_id=org_id,
             project_id=project_id,
-            import_batch_id=batch_id,
-            source_row_number=r_idx + 1,
-            raw_values=raw_values,
-            mapped_values=mapped_values,
-            normalized_preview={},
-            validation_status=ImportRowValidationStatus.PENDING,
-            validation_errors=[],
-            validation_warnings=[],
-            proposed_asset_name=proposed.get("proposed_asset_name"),
-            proposed_description=proposed.get("proposed_description"),
-            proposed_quantity=proposed.get("proposed_quantity"),
-            proposed_unit=proposed.get("proposed_unit"),
-            proposed_raw_price=proposed.get("proposed_raw_price"),
-            proposed_currency=proposed.get("proposed_currency"),
-            proposed_appraised_unit_price=proposed.get("proposed_appraised_unit_price")
+            batch_id=batch_id,
+            staged_rows=staged_rows,
+            raw_cells_list=raw_cells_list,
+            parsed_count=parsed_count,
+            sanitized_filename=sanitized_filename,
+            sheet_name=sheet_name,
+            column_count=len(headers),
+            correlation_id=correlation_id,
         )
-        db.add(staging_row)
-        staging_rows_created += 1
+        db.commit()
+        db.refresh(batch)
+        return batch
 
-    batch.source_filename = sanitized_filename
-    batch.source_sheet_name = sheet_name
-    batch.status = ImportBatchStatus.PARSED
-    batch.total_rows = staging_rows_created
-    batch.valid_rows = 0
-    batch.invalid_rows = 0
-    batch.warning_rows = 0
-    
-    db.commit()
-    db.refresh(batch)
+    except HTTPException:
+        db.rollback()
+        error_code = "parse_error"
+        limit_category = "resource_limit"
+        record_failure_audit(
+            db=db,
+            org_id=org_id,
+            batch_id=batch_id,
+            actor_id=current_user.id,
+            sanitized_filename=file.filename or "import.xlsx",
+            requested_sheet=sheet_name,
+            error_code=error_code,
+            limit_category=limit_category,
+            previous_row_count=previous_count,
+            correlation_id=correlation_id,
+        )
+        db.commit()
+        raise
 
-    log_audit_event(
-        db=db,
-        event_name="ProjectAssetImportBatchUploaded",
-        entity_type="ProjectAssetImportBatch",
-        entity_id=batch.id,
-        organization_id=org_id,
-        actor_user_id=current_user.id,
-        command_name="UploadProjectAssetImportBatch"
-    )
-    db.commit()
+    except Exception:
+        db.rollback()
+        error_code = "unexpected_error"
+        record_failure_audit(
+            db=db,
+            org_id=org_id,
+            batch_id=batch_id,
+            actor_id=current_user.id,
+            sanitized_filename=file.filename or "import.xlsx",
+            requested_sheet=sheet_name,
+            error_code=error_code,
+            previous_row_count=previous_count,
+            correlation_id=correlation_id,
+        )
+        db.commit()
+        raise HTTPException(status_code=500, detail="Lỗi hệ thống khi xử lý tệp Excel.")
 
     return batch
 

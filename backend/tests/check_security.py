@@ -30,6 +30,18 @@ CRITICAL_BLOCKERS = [
         "pattern": r"00000000-0000-0000-0000-000000000000",
         "exts": (".ts", ".tsx", ".py"),
         "description": "All-zero UUID must never be sent as a project or session identifier."
+    },
+    {
+        "name": "Unbounded UploadFile read in runtime",
+        "pattern": r"file\.file\.read\(\s*\)",
+        "exts": (".py",),
+        "description": "UploadFile.file.read() without a size argument consumes unlimited memory."
+    },
+    {
+        "name": "Worksheet row materialization in runtime",
+        "pattern": r"list\(\s*.*\.iter_rows\(",
+        "exts": (".py",),
+        "description": "list(ws.iter_rows(...)) materialises all workbook rows into memory at once."
     }
 ]
 
