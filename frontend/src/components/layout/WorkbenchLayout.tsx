@@ -69,6 +69,7 @@ export function WorkbenchLayout({ projectRef, children }: WorkbenchLayoutProps) 
 
   return (
     <WorkbenchLayoutInner
+      key={projectId}
       projectId={projectId}
       displayName={displayName || "Hồ sơ"}
       children={children}

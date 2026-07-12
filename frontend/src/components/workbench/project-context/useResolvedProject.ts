@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { resolveProjectReference } from "../../../api/projects";
 import { isValidProjectUuid } from "../validators";
 
@@ -17,17 +17,17 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [state, setState] = useState<ResolutionState>("idle");
   const [error, setError] = useState<ResolvedProject["error"]>(null);
-  const [retryCounter, setRetryCounter] = useState(0);
-  const generationRef = { current: 0 };
+  const generationRef = useRef(0);
 
   const resolve = useCallback(async () => {
     generationRef.current += 1;
     const gen = generationRef.current;
 
+    setProjectId(null);
+    setDisplayName(null);
+
     if (!routeRef) {
       if (gen !== generationRef.current) return;
-      setProjectId(null);
-      setDisplayName(null);
       setState("idle");
       setError(null);
       return;
@@ -39,7 +39,7 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       setState("error");
       setError({
         title: "Mã hồ sơ không hợp lệ",
-        message: "Không thể sử dụng mã hồ sơ rỗng.",
+        message: "Không thể sử dụng mã dự án rỗng.",
         nextAction: "Vui lòng chọn một hồ sơ từ danh sách.",
       });
       return;
@@ -59,7 +59,7 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       setState("error");
       setError({
         title: "Mã hồ sơ không hợp lệ",
-        message: "Không thể sử dụng mã hồ sơ rỗng.",
+        message: "Không thể sử dụng mã dự án rỗng.",
         nextAction: "Vui lòng chọn một hồ sơ từ danh sách.",
       });
       return;
@@ -105,15 +105,21 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
         });
       }
     }
-  }, [routeRef, retryCounter]);
+  }, [routeRef]);
 
   useEffect(() => {
     resolve();
+    return () => {
+      generationRef.current += 1;
+    };
   }, [resolve]);
 
   const retry = useCallback(() => {
-    setRetryCounter((c) => c + 1);
-  }, []);
+    generationRef.current += 1;
+    setState("loading");
+    setError(null);
+    resolve();
+  }, [resolve]);
 
   return { projectId, displayName, state, error, retry };
 }

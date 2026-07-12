@@ -10,12 +10,15 @@ export function useWorkbenchSession(projectId: string) {
   const [error, setError] = useState<string | null>(null);
   const [rbacError, setRbacError] = useState<string | null>(null);
   const [conflictError, setConflictError] = useState<boolean>(false);
-  const [lastHeartbeat, setLastHeartbeat] = useState<string>("N/A");
+  const [lastHeartbeat, setLastHeartbeat] = useState<string>("—");
 
   const sessionRef = useRef<WorkbenchSession | null>(null);
   const projectGen = useRef(0);
 
   const initSession = useCallback(async () => {
+    projectGen.current += 1;
+    const gen = projectGen.current;
+
     if (!projectId || !isValidProjectUuid(projectId)) {
       setSession(null);
       sessionRef.current = null;
@@ -23,9 +26,6 @@ export function useWorkbenchSession(projectId: string) {
       setError(projectId ? "Mã hồ sơ không hợp lệ" : null);
       return;
     }
-
-    projectGen.current += 1;
-    const gen = projectGen.current;
 
     try {
       setLoading(true);
@@ -61,6 +61,9 @@ export function useWorkbenchSession(projectId: string) {
     setRbacError(null);
     setConflictError(false);
     initSession();
+    return () => {
+      projectGen.current += 1;
+    };
   }, [initSession]);
 
   useEffect(() => {

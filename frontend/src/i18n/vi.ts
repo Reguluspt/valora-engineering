@@ -199,6 +199,23 @@ export const vi = {
   "status.returned": "Đã trả về",
   "status.completed": "Hoàn tất",
 
+  "grid.status.raw": "Thô",
+  "grid.status.parsed": "Đã phân tích",
+  "grid.status.approved": "Đã duyệt",
+  "grid.status.identity_suggested": "Đề xuất định danh",
+  "grid.status.identity_approved": "Đã định danh",
+  "grid.status.taxonomy_approved": "Đã phân loại",
+  "grid.status.knowledge_matched": "Đã khớp dữ liệu",
+  "grid.status.price_reviewed": "Đã thẩm định giá",
+  "grid.status.locked": "Đã khóa",
+  "grid.status.excluded": "Đã loại",
+  "grid.valid.valid": "Hợp lệ",
+  "grid.valid.warning": "Cảnh báo",
+  "grid.valid.error": "Lỗi",
+  "grid.valid.blocking": "Chặn",
+  "grid.valid.unvalidated": "Chưa kiểm tra",
+  "grid.valid.needs_review": "Cần kiểm tra",
+
   // Empty States
   "empty.noData": "Chưa có dữ liệu",
   "empty.noAssets": "Chưa có tài sản nào",

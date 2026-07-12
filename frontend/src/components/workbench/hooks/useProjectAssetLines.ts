@@ -47,18 +47,27 @@ export function useProjectAssetLines(projectId: string) {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const loadingMoreRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
   const projectGen = useRef(0);
+  const consumedOffsetRef = useRef(0);
 
   const resetState = useCallback(() => {
     setRows([]);
     setLoading(true);
     setLoadingMore(false);
     loadingMoreRef.current = false;
+    consumedOffsetRef.current = 0;
     setErrorMsg(null);
     setFriendlyError(null);
     setTotalCount(0);
     setHasMore(false);
+  }, []);
+
+  const appendRows = useCallback((items: AssetLineGridRow[]) => {
+    setRows((prev) => {
+      const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
+      const newRows = items.filter((r) => !existingIds.has(r.project_asset_line_id));
+      return [...prev, ...newRows];
+    });
   }, []);
 
   const loadPage = useCallback(async (offset: number) => {
@@ -73,14 +82,11 @@ export function useProjectAssetLines(projectId: string) {
       if (offset === 0) {
         setRows(mappedRows);
       } else {
-        setRows((prev) => {
-          const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
-          const newRows = mappedRows.filter((r) => !existingIds.has(r.project_asset_line_id));
-          return [...prev, ...newRows];
-        });
+        appendRows(mappedRows);
       }
+      consumedOffsetRef.current = offset + res.items.length;
       setTotalCount(res.total);
-      setHasMore(offset + res.items.length < res.total);
+      setHasMore(consumedOffsetRef.current < res.total);
     } catch (err: any) {
       if (gen !== projectGen.current) return;
       setErrorMsg(err.message || "Không thể tải danh sách tài sản");
@@ -92,7 +98,7 @@ export function useProjectAssetLines(projectId: string) {
         loadingMoreRef.current = false;
       }
     }
-  }, [projectId]);
+  }, [projectId, appendRows]);
 
   useEffect(() => {
     resetState();
@@ -110,8 +116,8 @@ export function useProjectAssetLines(projectId: string) {
     if (!projectId || loadingMoreRef.current || !hasMore) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    await loadPage(rows.length);
-  }, [projectId, hasMore, rows.length, loadPage]);
+    await loadPage(consumedOffsetRef.current);
+  }, [projectId, hasMore, loadPage]);
 
   return {
     rows,
@@ -123,6 +129,11 @@ export function useProjectAssetLines(projectId: string) {
     hasMore,
     loadedCount: rows.length,
     totalCount,
-    retry: () => { projectGen.current += 1; loadPage(0); },
+    retry: () => {
+      resetState();
+      projectGen.current += 1;
+      setLoading(true);
+      loadPage(0);
+    },
   };
 }
