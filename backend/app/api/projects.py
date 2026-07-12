@@ -640,7 +640,7 @@ def upload_project_asset_import_file(
         ProjectAssetImportBatch.organization_id == org_id,
         ProjectAssetImportBatch.project_id == project_id,
         ProjectAssetImportBatch.id == batch_id
-    ).first()
+    ).with_for_update().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
@@ -651,12 +651,13 @@ def upload_project_asset_import_file(
         .count()
     )
 
-    request_size = get_request_size(request)
-    enforce_request_limit(request_size, DEFAULT_LIMITS)
-
     sanitized = sanitize_filename(file.filename or "import.xlsx")
 
+    sp = db.begin_nested()
     try:
+        request_size = get_request_size(request)
+        enforce_request_limit(request_size, DEFAULT_LIMITS)
+
         lazy = parse_workbook_lazy(
             file=file,
             source_sheet_name=batch.source_sheet_name,
@@ -674,11 +675,12 @@ def upload_project_asset_import_file(
             column_count=lazy.column_count,
             correlation_id=correlation_id,
         )
+        sp.commit()
         db.commit()
         return batch
 
     except ParseError as pe:
-        db.rollback()
+        sp.rollback()
         record_failure_audit(
             db=db,
             org_id=org_id,
@@ -695,7 +697,7 @@ def upload_project_asset_import_file(
         raise HTTPException(status_code=pe.status, detail=pe.detail)
 
     except Exception:
-        db.rollback()
+        sp.rollback()
         record_failure_audit(
             db=db,
             org_id=org_id,
@@ -704,6 +706,7 @@ def upload_project_asset_import_file(
             sanitized_filename=sanitized,
             requested_sheet=batch.source_sheet_name,
             error_code="unexpected_error",
+            limit_category=None,
             previous_row_count=previous_count,
             correlation_id=correlation_id,
         )

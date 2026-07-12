@@ -38,23 +38,28 @@ def _validate_zip(file_obj, limits):
     try:
         zf = zipfile.ZipFile(file_obj)
     except (zipfile.BadZipFile, zipfile.LargeZipFile, struct.error):
-        _fail(400, "invalid_xlsx", "Tep Excel khong hop le.")
+        _fail(400, "invalid_xlsx", "Tệp Excel không hợp lệ hoặc không thể đọc được.")
     with zf:
         infos = zf.infolist()
         if len(infos) > limits.max_zip_entries:
-            _fail(413, "zip_entry_limit", "Qua nhieu thanh phan ZIP.", limit_category="zip_entries")
+            _fail(413, "zip_entry_limit", "Số lượng thành phần trong tệp ZIP vượt quá giới hạn cho phép.", limit_category="zip_entries")
         total = sum(i.file_size for i in infos)
         if total > limits.max_uncompressed_zip_bytes:
-            _fail(413, "zip_expansion_limit", "Kich thuoc giai nen vuot gioi han.", limit_category="zip_size")
+            _fail(413, "zip_expansion_limit", "Kích thước giải nén tệp ZIP vượt quá giới hạn cho phép.", limit_category="zip_size")
         names = {i.filename for i in infos}
         for part in REQUIRED_ZIP_PARTS:
-            if part not in names: _fail(400, "invalid_xlsx", "Thieu thanh phan XLSX.")
+            if part not in names:
+                _fail(400, "invalid_xlsx", "Thiếu thành phần cấu trúc XLSX bắt buộc.")
         for info in infos:
             fn = info.filename
-            if _is_unsafe_zip_path(fn): _fail(400, "unsafe_zip_path", "Duong dan ZIP khong an toan.")
-            if info.flag_bits & 0x1: _fail(400, "encrypted_archive", "Tep ma hoa khong ho tro.")
-            if fn in FORBIDDEN_ZIP_PARTS: _fail(400, "macro_not_allowed", "Chua macro VBA.")
-            if any(fn.startswith(p) for p in EXTERNAL_LINK_PATHS): _fail(400, "external_link_not_allowed", "Chua lien ket ngoai.")
+            if _is_unsafe_zip_path(fn):
+                _fail(400, "unsafe_zip_path", "Đường dẫn tệp trong lưu trữ ZIP không an toàn.")
+            if info.flag_bits & 0x1:
+                _fail(400, "encrypted_archive", "Tệp mã hóa không được hỗ trợ.")
+            if fn in FORBIDDEN_ZIP_PARTS:
+                _fail(400, "macro_not_allowed", "Tệp Excel chứa macro hoặc mã VBA không được phép.")
+            if any(fn.startswith(p) for p in EXTERNAL_LINK_PATHS):
+                _fail(400, "external_link_not_allowed", "Tệp Excel chứa liên kết ngoài không được phép.")
     file_obj.seek(0)
 
 def _copy_spool(file, limits):
@@ -66,7 +71,7 @@ def _copy_spool(file, limits):
         total += len(chunk)
         if total > limits.max_upload_bytes:
             s.close()
-            _fail(413, "upload_too_large", "Tep vuot kich thuoc cho phep.", limit_category="file_size")
+            _fail(413, "upload_too_large", "Kích thước tệp tải lên vượt quá giới hạn cho phép.", limit_category="file_size")
         s.write(chunk)
     s.seek(0)
     return s
@@ -79,38 +84,44 @@ def get_request_size(request):
 
 def enforce_request_limit(size, limits):
     if size is not None and size < 0:
-        _fail(400, "request_too_large", "Kich thuoc yeu cau khong hop le.", limit_category="request_size")
+        _fail(400, "request_too_large", "Kích thước yêu cầu HTTP không hợp lệ.", limit_category="request_size")
     if size is not None and size > limits.max_request_bytes:
-        _fail(413, "request_too_large", "Yeu cau vuot kich thuoc.", limit_category="request_size")
+        _fail(413, "request_too_large", "Kích thước yêu cầu HTTP vượt quá giới hạn cho phép.", limit_category="request_size")
 
 def parse_workbook_lazy(file, source_sheet_name, limits=None):
     limits = limits or DEFAULT_LIMITS
     fn = file.filename or "import.xlsx"
     ext = fn[fn.rfind("."):] if "." in fn else ""
     if ext.lower() not in ACCEPTED_EXTENSIONS:
-        _fail(400, "unsupported_extension", "Dinh dang khong ho tro.")
+        _fail(400, "unsupported_extension", "Định dạng tệp không được hỗ trợ. Chỉ chấp nhận tệp .xlsx.")
     enforce_request_limit(file.size, limits)
     spool = _copy_spool(file, limits)
+    wb = None
     try:
         _validate_zip(spool, limits)
         wb = openpyxl.load_workbook(spool, data_only=True, read_only=True, keep_links=False, keep_vba=False)
-    except ParseError:
-        spool.close()
-        raise
+        return _LazyWorkbook(spool, wb, source_sheet_name, limits)
     except Exception:
-        spool.close()
-        _fail(400, "invalid_xlsx", "Khong the doc tep Excel.")
-    return _LazyWorkbook(spool, wb, source_sheet_name, limits)
+        if wb:
+            try: wb.close()
+            except: pass
+        try: spool.close()
+        except: pass
+        raise
 
 class _LazyWorkbook:
     def __init__(self, spool, wb, source_sheet_name, limits):
         self._spool, self._wb, self._limits = spool, wb, limits
         self._closed, self._yielded = False, 0
-        self._sheet_name = _resolve_sheet(wb, source_sheet_name)
-        ws = wb[self._sheet_name]
-        self._gen = enumerate(ws.iter_rows(values_only=True))
-        self._headers, self._header_idx = self._find_headers()
-        self._mapping = _map_columns(self._headers)
+        try:
+            self._sheet_name = _resolve_sheet(wb, source_sheet_name)
+            ws = wb[self._sheet_name]
+            self._gen = enumerate(ws.iter_rows(values_only=True))
+            self._headers, self._header_idx = self._find_headers()
+            self._mapping = _map_columns(self._headers)
+        except Exception:
+            self.close()
+            raise
 
     @property
     def resolved_sheet(self): return self._sheet_name
@@ -122,15 +133,31 @@ class _LazyWorkbook:
         for r_idx, row in self._gen:
             if r_idx >= self._limits.max_header_search_rows:
                 self.close()
-                _fail(400, "header_not_found", "Khong tim thay dong tieu de.")
+                _fail(400, "header_not_found", "Không tìm thấy dòng tiêu đề hợp lệ trong phạm vi cho phép.")
             if any(c is not None for c in row):
-                hdrs = [str(c) if c is not None else "" for c in row]
+                hdrs = []
+                row_char_sum = 0
+                for c in row:
+                    if c is not None:
+                        c_str = str(c)
+                        if len(c_str) > self._limits.max_cell_chars:
+                            self.close()
+                            _fail(400, "cell_length_limit", "Ô tiêu đề vượt quá độ dài ký tự cho phép.")
+                        row_char_sum += len(c_str)
+                        hdrs.append(c_str)
+                    else:
+                        hdrs.append("")
+
+                if row_char_sum > self._limits.max_row_chars:
+                    self.close()
+                    _fail(400, "row_length_limit", "Độ dài dòng tiêu đề vượt quá giới hạn ký tự cho phép.")
+
                 if len(hdrs) > self._limits.max_columns:
                     self.close()
-                    _fail(400, "column_limit", "Qua nhieu cot.", limit_category="columns")
+                    _fail(400, "column_limit", "Số lượng cột tiêu đề vượt quá giới hạn cho phép.", limit_category="columns")
                 return hdrs, r_idx
         self.close()
-        _fail(400, "header_not_found", "Tep trong hoac khong co tieu de.")
+        _fail(400, "header_not_found", "Tệp trống hoặc không chứa tiêu đề hợp lệ.")
 
     def __iter__(self): return self
 
@@ -141,24 +168,24 @@ class _LazyWorkbook:
             except StopIteration: self.close(); raise
             if r_idx >= self._limits.max_physical_rows:
                 self.close()
-                _fail(413, "physical_row_limit", "Qua nhieu dong.", limit_category="rows")
+                _fail(413, "physical_row_limit", "Số lượng dòng vật lý vượt quá giới hạn cho phép.", limit_category="rows")
             if not any(c is not None for c in row): continue
             if self._yielded >= self._limits.max_data_rows:
                 self.close()
-                _fail(413, "data_row_limit", f"Vuot {self._limits.max_data_rows} dong.", limit_category="rows")
+                _fail(413, "data_row_limit", f"Số lượng dòng dữ liệu vượt quá giới hạn {self._limits.max_data_rows} dòng.", limit_category="rows")
             if len(row) > self._limits.max_columns:
                 self.close()
-                _fail(400, "column_limit", "Dong vuot so cot.", limit_category="columns")
+                _fail(400, "column_limit", "Số lượng cột dữ liệu vượt quá giới hạn cho phép.", limit_category="columns")
             rl = 0
             for c in row:
                 if c is not None:
                     s = str(c); rl += len(s)
                     if len(s) > self._limits.max_cell_chars:
                         self.close()
-                        _fail(400, "cell_length_limit", "O qua dai.")
+                        _fail(400, "cell_length_limit", "Ô dữ liệu vượt quá độ dài ký tự cho phép.")
             if rl > self._limits.max_row_chars:
                 self.close()
-                _fail(400, "row_length_limit", "Dong qua lon.")
+                _fail(400, "row_length_limit", "Độ dài dòng dữ liệu vượt quá giới hạn ký tự cho phép.")
             cells = _build_cells(self._headers, row)
             mp = {}
             props = {}
@@ -175,6 +202,7 @@ class _LazyWorkbook:
                     "proposed_raw_price": props.get("proposed_raw_price"),
                     "proposed_currency": props.get("proposed_currency"),
                     "proposed_appraised_unit_price": props.get("proposed_appraised_unit_price")}
+
     def close(self):
         if not self._closed:
             self._closed = True
@@ -183,11 +211,17 @@ class _LazyWorkbook:
             try: self._spool.close()
             except: pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 def _resolve_sheet(wb, requested):
     if requested:
         if requested in wb.sheetnames: return requested
-        _fail(400, "sheet_not_found", f"Trang '{requested}' khong ton tai.")
-    if not wb.sheetnames: _fail(400, "invalid_xlsx", "Khong co trang tinh.")
+        _fail(400, "sheet_not_found", f"Trang tính '{requested}' không tồn tại trong tệp.")
+    if not wb.sheetnames: _fail(400, "invalid_xlsx", "Không tìm thấy trang tính hợp lệ.")
     return wb.sheetnames[0]
 
 def _normalize(h):

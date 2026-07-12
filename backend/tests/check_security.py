@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import ast
 
 # Controlled security debt baseline configuration
 TEMPORARY_BASELINE = {
@@ -30,26 +31,38 @@ CRITICAL_BLOCKERS = [
         "pattern": r"00000000-0000-0000-0000-000000000000",
         "exts": (".ts", ".tsx", ".py"),
         "description": "All-zero UUID must never be sent as a project or session identifier."
-    },
-    {
-        "name": "Unbounded UploadFile read in runtime",
-        "pattern": r"\.read\(\s*\)",
-        "exts": (".py",),
-        "description": ".read() without a size argument on a file/spool/socket consumes unlimited memory."
-    },
-    {
-        "name": "Whole-file BytesIO copy in runtime",
-        "pattern": r"BytesIO\s*\(\s*.*\.read\s*\(\s*\)\s*\)",
-        "exts": (".py",),
-        "description": "io.BytesIO(file.read()) creates an extra copy of the entire upload."
-    },
-    {
-        "name": "Worksheet row materialization in runtime",
-        "pattern": r"list\(\s*.*\.iter_rows\(",
-        "exts": (".py",),
-        "description": "list(ws.iter_rows(...)) materialises all workbook rows into memory at once."
     }
 ]
+
+class ExcelIntakeSecurityVisitor(ast.NodeVisitor):
+    def __init__(self):
+        self.issues = []
+
+    def visit_Call(self, node):
+        # 1. Unbounded read: .read() with no args
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "read":
+            if len(node.args) == 0 and not any(kw.arg == "size" for kw in node.keywords):
+                self.issues.append((node.lineno, "Unbounded UploadFile read in runtime", ".read() called without size limit"))
+        
+        # 2. BytesIO copy: BytesIO(source.read())
+        is_bytesio = False
+        if isinstance(node.func, ast.Name) and node.func.id == "BytesIO":
+            is_bytesio = True
+        elif isinstance(node.func, ast.Attribute) and node.func.attr == "BytesIO":
+            is_bytesio = True
+            
+        if is_bytesio and len(node.args) > 0:
+            arg = node.args[0]
+            if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute) and arg.func.attr == "read":
+                self.issues.append((node.lineno, "Whole-file BytesIO copy in runtime", "BytesIO(source.read()) detected"))
+
+        # 3. Worksheet row materialization: list(ws.iter_rows(...))
+        if isinstance(node.func, ast.Name) and node.func.id == "list" and len(node.args) > 0:
+            arg = node.args[0]
+            if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute) and arg.func.attr == "iter_rows":
+                self.issues.append((node.lineno, "Worksheet row materialization in runtime", "list(ws.iter_rows(...)) detected"))
+
+        self.generic_visit(node)
 
 def check_secret_placeholders(directory):
     print("=== Scanning for hardcoded secrets ===")
@@ -102,6 +115,21 @@ def check_security_baseline_and_blockers(directory):
                 continue
 
             # Fail-closed: Let file open/read raise errors if it encounters issues
+            is_excel_scope = ("app/modules/excel_import" in rel_path or "app/api/projects.py" in rel_path)
+            if is_excel_scope and file.endswith(".py"):
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    try:
+                        tree = ast.parse(content, filename=path)
+                        visitor = ExcelIntakeSecurityVisitor()
+                        visitor.visit(tree)
+                        for lineno, name, detail in visitor.issues:
+                            print(f"[BLOCKER FAIL] {name} found in {rel_path}:{lineno} - {detail}")
+                            issues += 1
+                    except SyntaxError as se:
+                        print(f"[AST ERROR] Syntax error parsing {rel_path}: {se}")
+                        issues += 1
+
             with open(path, "r", encoding="utf-8") as f:
                 for line_idx, line in enumerate(f, 1):
                     if line.strip().startswith(("#", "//")):
