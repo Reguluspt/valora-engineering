@@ -105,12 +105,12 @@ def parse_workbook_lazy(file, source_sheet_name, limits=None):
 class _LazyWorkbook:
     def __init__(self, spool, wb, source_sheet_name, limits):
         self._spool, self._wb, self._limits = spool, wb, limits
+        self._closed, self._yielded = False, 0
         self._sheet_name = _resolve_sheet(wb, source_sheet_name)
         ws = wb[self._sheet_name]
         self._gen = enumerate(ws.iter_rows(values_only=True))
         self._headers, self._header_idx = self._find_headers()
         self._mapping = _map_columns(self._headers)
-        self._closed, self._yielded = False, 0
 
     @property
     def resolved_sheet(self): return self._sheet_name

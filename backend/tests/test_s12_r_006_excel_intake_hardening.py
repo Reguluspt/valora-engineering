@@ -9,6 +9,17 @@ from app.modules.excel_import.application.parse_workbook import (
     parse_workbook_lazy, ParseError, sanitize_filename, get_request_size, enforce_request_limit,
 )
 from app.modules.excel_import.domain import ExcelImportLimits, DEFAULT_LIMITS
+from app.modules.project_master_data.models import (
+    OrganizationProfile, OrganizationStatus, User, UserStatus,
+    Role, UserRole, Customer, CustomerStatus, Project, ProjectWorkflowStatus,
+    ProjectAssetImportBatch, ProjectAssetImportStagingRow,
+    ImportBatchStatus, ImportRowValidationStatus, ProjectAssetLine,
+)
+from app.main import app
+from app.db import Base, get_db
+from sqlalchemy import create_engine as ce
+from sqlalchemy.pool import StaticPool
+from sqlalchemy.orm import Session as S
 
 # ── helpers ────────────────────────────────────────────────────────────────
 class FakeUpload:
@@ -119,11 +130,18 @@ class TestZipSecurity:
             parse_workbook_lazy(FakeUpload("test.xlsx", data), None)
         assert exc.value.error_code == "invalid_xlsx"
 
-    def test_encrypted_entry(self):
+    def test_encrypted_entry(self, monkeypatch):
         data = self._zip_with_entries([
             ("[Content_Types].xml", "<xml/>"), ("xl/workbook.xml", "<xml/>"),
-            ("xl/worksheets/sheet1.xml", "<xml/>"),
-        ], password=True)
+        ])
+        original_infolist = zipfile.ZipFile.infolist
+        def mock_infolist(self):
+            infos = original_infolist(self)
+            for info in infos:
+                if "workbook.xml" in info.filename:
+                    info.flag_bits |= 0x1
+            return infos
+        monkeypatch.setattr(zipfile.ZipFile, "infolist", mock_infolist)
         with pytest.raises(ParseError) as exc:
             parse_workbook_lazy(FakeUpload("test.xlsx", data), None)
         assert exc.value.error_code == "encrypted_archive"
@@ -191,11 +209,18 @@ class TestZipSecurity:
             parse_workbook_lazy(FakeUpload("test.xlsx", data), None)
         assert exc.value.error_code == "unsafe_zip_path"
 
-    def test_nul_path(self):
+    def test_nul_path(self, monkeypatch):
         data = self._zip_with_entries([
             ("[Content_Types].xml", "<xml/>"), ("xl/workbook.xml", "<xml/>"),
-            ("bad\x00name.txt", b"bad"),
         ])
+        original_infolist = zipfile.ZipFile.infolist
+        def mock_infolist(self):
+            infos = original_infolist(self)
+            bad_info = zipfile.ZipInfo()
+            bad_info.filename = "bad\x00name.txt"
+            infos.append(bad_info)
+            return infos
+        monkeypatch.setattr(zipfile.ZipFile, "infolist", mock_infolist)
         with pytest.raises(ParseError) as exc:
             parse_workbook_lazy(FakeUpload("test.xlsx", data), None)
         assert exc.value.error_code == "unsafe_zip_path"
@@ -226,7 +251,7 @@ class TestWorkbookLimits:
 
     def test_header_beyond_boundary(self):
         limits = ExcelImportLimits(max_header_search_rows=1)
-        rows = [["x"], ["y"], ["z"], ["w"]]
+        rows = [[None], ["asset_name"]]
         content = _xlsx(rows=rows)
         with pytest.raises(ParseError) as exc:
             parse_workbook_lazy(FakeUpload("test.xlsx", content), None, limits=limits)
@@ -257,19 +282,8 @@ class TestWorkbookLimits:
 # ── R-8: transaction fault injection ────────────────────────────────────────
 class TestTransactionFaults:
     def _setup(self):
-        from app.main import app
-        from app.db import Base, get_db
-        from app.modules.project_master_data.models import (
-            OrganizationProfile, OrganizationStatus, User, UserStatus,
-            Role, UserRole, Customer, CustomerStatus, Project, ProjectWorkflowStatus,
-            ProjectAssetImportBatch, ProjectAssetImportStagingRow,
-            ImportBatchStatus, ImportRowValidationStatus, ProjectAssetLine,
-        )
-        from sqlalchemy import create_engine as ce
-        from sqlalchemy.pool import StaticPool
         engine = ce("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
         Base.metadata.create_all(bind=engine)
-        from sqlalchemy.orm import Session as S
         sess = S(bind=engine)
         o = OrganizationProfile(legal_name="T", organization_slug="t", status=OrganizationStatus.ACTIVE)
         sess.add(o); sess.commit()
@@ -301,10 +315,12 @@ class TestTransactionFaults:
         self.app.dependency_overrides.clear()
         self.sess.close()
 
-    def test_success_replaces_exactly(self):
+    def test_success_replaces_exactly_default_sheet(self):
         self._setup()
         try:
-            content = _xlsx(rows=[["H"],["new1"],["new2"]])
+            self.b.source_sheet_name = None
+            self.sess.commit()
+            content = _xlsx(rows=[["asset_name"],["new1"],["new2"]])
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
                 files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
@@ -324,7 +340,7 @@ class TestTransactionFaults:
             self.b.source_sheet_name = "Missing"
             self.sess.commit()
             pre = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).count()
-            content = _xlsx(sheet="Wrong", rows=[["H"],["v"]])
+            content = _xlsx(sheet="Wrong", rows=[["asset_name"],["v"]])
             resp = self.client.post(f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
                 files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
                 headers={"X-User-Id": str(self.u.id)})
@@ -334,12 +350,12 @@ class TestTransactionFaults:
         finally:
             self.teardown()
 
-    def test_success_replaces_exactly(self):
+    def test_success_replaces_exactly_custom_sheet(self):
         self._setup()
         try:
             self.b.source_sheet_name = "S"
             self.sess.commit()
-            content = _xlsx(sheet="S", rows=[["H"],["new1"],["new2"]])
+            content = _xlsx(sheet="S", rows=[["asset_name"],["new1"],["new2"]])
             resp = self.client.post(f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
                 files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
                 headers={"X-User-Id": str(self.u.id)})
