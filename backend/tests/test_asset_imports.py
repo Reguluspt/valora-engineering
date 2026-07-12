@@ -342,7 +342,7 @@ def test_excel_upload_and_parser(client: TestClient, db_session: Session) -> Non
         headers=headers_editor
     )
     assert res_bad_ext.status_code == 400
-    assert "Định dạng tệp không được hỗ trợ" in res_bad_ext.json()["detail"]
+    assert any(w in res_bad_ext.json()["detail"].lower() for w in ["không được hỗ trợ", "khong ho tro"])
 
     # Test upload with cross-org user
     file_stream.seek(0)

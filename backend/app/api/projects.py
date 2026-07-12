@@ -52,8 +52,11 @@ from app.modules.project_master_data.workbench_schemas import (
     ProjectAssetImportStagingRowPaginationResponse
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
-from app.modules.excel_import.application.parse_workbook import parse_workbook, ParseError
+from app.modules.excel_import.application.parse_workbook import (
+    parse_workbook_lazy, ParseError, sanitize_filename, get_request_size, enforce_request_limit
+)
 from app.modules.excel_import.application.replace_staging_rows import replace_staging_rows, record_failure_audit
+from app.modules.excel_import.domain import DEFAULT_LIMITS
 
 
 def get_correlation_id(request: Request) -> str:
@@ -648,8 +651,13 @@ def upload_project_asset_import_file(
         .count()
     )
 
+    request_size = get_request_size(request)
+    enforce_request_limit(request_size, DEFAULT_LIMITS)
+
+    sanitized = sanitize_filename(file.filename or "import.xlsx")
+
     try:
-        staging_rows, sanitized_filename, resolved_sheet, column_count = parse_workbook(
+        lazy = parse_workbook_lazy(
             file=file,
             source_sheet_name=batch.source_sheet_name,
         )
@@ -659,11 +667,11 @@ def upload_project_asset_import_file(
             org_id=org_id,
             project_id=project_id,
             batch_id=batch_id,
-            staged_rows=staging_rows,
-            parsed_count=len(staging_rows),
-            sanitized_filename=sanitized_filename,
-            sheet_name=resolved_sheet,
-            column_count=column_count,
+            lazy_rows=lazy,
+            parsed_count=None,
+            sanitized_filename=sanitized,
+            sheet_name=lazy.resolved_sheet,
+            column_count=lazy.column_count,
             correlation_id=correlation_id,
         )
         db.commit()
@@ -676,7 +684,7 @@ def upload_project_asset_import_file(
             org_id=org_id,
             batch_id=batch_id,
             actor_id=current_user.id,
-            sanitized_filename=file.filename or "import.xlsx",
+            sanitized_filename=sanitized,
             requested_sheet=batch.source_sheet_name,
             error_code=pe.error_code,
             limit_category=pe.limit_category,
@@ -693,7 +701,7 @@ def upload_project_asset_import_file(
             org_id=org_id,
             batch_id=batch_id,
             actor_id=current_user.id,
-            sanitized_filename=file.filename or "import.xlsx",
+            sanitized_filename=sanitized,
             requested_sheet=batch.source_sheet_name,
             error_code="unexpected_error",
             previous_row_count=previous_count,
@@ -701,8 +709,6 @@ def upload_project_asset_import_file(
         )
         db.commit()
         raise HTTPException(status_code=500, detail="Lỗi hệ thống khi xử lý tệp Excel.")
-
-
 
 
 

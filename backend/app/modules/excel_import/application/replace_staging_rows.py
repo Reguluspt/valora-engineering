@@ -20,8 +20,8 @@ def replace_staging_rows(
     org_id: uuid.UUID,
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
-    staged_rows: list[dict],
-    parsed_count: int | None = None,
+    lazy_rows: object,
+    parsed_count: int | None,
     sanitized_filename: str,
     sheet_name: str,
     column_count: int,
@@ -29,15 +29,10 @@ def replace_staging_rows(
     correlation_id: str | None = None,
 ) -> ProjectAssetImportBatch:
     limits = limits or DEFAULT_LIMITS
-    if parsed_count is None:
-        parsed_count = len(staged_rows)
 
-    # 1. Resolve and tenant-scope
-    project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.organization_id == org_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.id == project_id, Project.organization_id == org_id
+    ).first()
     if not project:
         raise ValueError("Project not found in organization scope")
 
@@ -54,32 +49,44 @@ def replace_staging_rows(
     if not batch:
         raise ValueError("Import batch not found")
 
-    # 2. Delete old staging + insert new + update batch ALL IN ONE TX
+    # Delete old staging
     db.query(ProjectAssetImportStagingRow).filter(
         ProjectAssetImportStagingRow.import_batch_id == batch_id
     ).delete()
 
-    for item in staged_rows:
-        staging = ProjectAssetImportStagingRow(
-            organization_id=org_id,
-            project_id=project_id,
-            import_batch_id=batch_id,
-            source_row_number=item["source_row_number"],
-            raw_values={"cells": item["raw_cells"]},
-            mapped_values=item["mapped_values"],
-            normalized_preview={},
-            validation_status=ImportRowValidationStatus.PENDING,
-            validation_errors=[],
-            validation_warnings=[],
-            proposed_asset_name=item["proposed_asset_name"],
-            proposed_description=item["proposed_description"],
-            proposed_quantity=item["proposed_quantity"],
-            proposed_unit=item["proposed_unit"],
-            proposed_raw_price=item["proposed_raw_price"],
-            proposed_currency=item["proposed_currency"],
-            proposed_appraised_unit_price=item["proposed_appraised_unit_price"],
-        )
-        db.add(staging)
+    count = 0
+    try:
+        for row_data in lazy_rows:
+            staging = ProjectAssetImportStagingRow(
+                organization_id=org_id,
+                project_id=project_id,
+                import_batch_id=batch_id,
+                source_row_number=row_data["source_row_number"],
+                raw_values={"cells": row_data["raw_cells"]},
+                mapped_values=row_data["mapped_values"],
+                normalized_preview={},
+                validation_status=ImportRowValidationStatus.PENDING,
+                validation_errors=[],
+                validation_warnings=[],
+                proposed_asset_name=row_data.get("proposed_asset_name"),
+                proposed_description=row_data.get("proposed_description"),
+                proposed_quantity=row_data.get("proposed_quantity"),
+                proposed_unit=row_data.get("proposed_unit"),
+                proposed_raw_price=row_data.get("proposed_raw_price"),
+                proposed_currency=row_data.get("proposed_currency"),
+                proposed_appraised_unit_price=row_data.get("proposed_appraised_unit_price"),
+            )
+            db.add(staging)
+            count += 1
+    finally:
+        try:
+            if hasattr(lazy_rows, "close"):
+                lazy_rows.close()
+        except Exception:
+            pass
+
+    if parsed_count is None:
+        parsed_count = count
 
     batch.source_filename = sanitized_filename
     batch.source_sheet_name = sheet_name
@@ -89,7 +96,6 @@ def replace_staging_rows(
     batch.invalid_rows = 0
     batch.warning_rows = 0
 
-    # 3. Success audit in same transaction
     log_audit_event(
         db=db,
         event_name="ProjectAssetImportBatchUploaded",
@@ -110,7 +116,6 @@ def replace_staging_rows(
     )
 
     db.flush()
-
     return batch
 
 

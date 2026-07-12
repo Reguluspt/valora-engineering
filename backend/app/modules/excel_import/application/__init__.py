@@ -1,5 +1,8 @@
-from app.modules.excel_import.application.parse_workbook import parse_workbook, ParseError
+from app.modules.excel_import.application.parse_workbook import (
+    parse_workbook_lazy, ParseError, sanitize_filename, get_request_size, enforce_request_limit,
+)
 
-parse_uploaded_workbook = parse_workbook
+parse_workbook = None  # removed; use parse_workbook_lazy
 
-__all__ = ["parse_workbook", "ParseError", "parse_uploaded_workbook"]
+__all__ = ["parse_workbook_lazy", "ParseError", "sanitize_filename",
+           "get_request_size", "enforce_request_limit"]
