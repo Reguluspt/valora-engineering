@@ -1,7 +1,7 @@
 # S12-R-006 — Excel Intake Streaming & Transaction Hardening Audit
 
 ## Status
-`CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
+`S12-R-006 LOCAL IMPLEMENTATION COMPLETE — AWAITING POSTGRESQL CI VERIFICATION`
 
 ## Git Baseline
 | Item | Value |
@@ -9,13 +9,15 @@
 | Main baseline SHA | `ff40fda18a399afb01a76c6489aebf2f7cfd2d14` |
 | Branch | `s12-r-006-excel-intake-streaming-transaction-hardening` |
 | Commit H SHA | `8835a0415d6891d1bdd457ccb0691aa33a17628a` |
-| Commit I SHA | `56cbca3628e0967e1b65aa32c4a230814173ffb8` (Contains both audit and design contract updates) |
-| Commit J SHA | `ffd88411138499658aa8340ad4f57202d5c1d09b` (Implementation of transaction faults, close spy verifications, PG concurrency and AST scoping) |
-| Commit K SHA | `df19144f9ed75888ad7ab3b023984586a1c535ae` (Corrected audit evidence with final local output) |
-| Commit L SHA | `9fb0e3bcedf471562d7d1e4a367e7fcadd3982da` (Restored complete ZIP/XLSX limits, boundary, character tests, immutability snapshots, transaction fault tests, PG session-isolated concurrency proof) |
-| Commit M SHA | `PENDING` (Contains this reconciled audit log) |
+| Commit I SHA | `56cbca3628e0967e1b65aa32c4a230814173ffb8` |
+| Commit J SHA | `ffd88411138499658aa8340ad4f57202d5c1d09b` |
+| Commit K SHA | `df19144f9ed75888ad7ab3b023984586a1c535ae` |
+| Commit L SHA | `9fb0e3bcedf471562d7d1e4a367e7fcadd3982da` |
+| Commit M SHA | `35b2363ecc6a7c10b915df7d164cdd34ef1fe7a3` |
+| Commit N SHA (Recovery) | `82724aa1740d79f2b88da471eb3679d297dafa6d` (N‑4 fingerprint guard, N‑6 boundary tests, N‑7 raw persistence, N‑8 design wording) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
+| Exact final audit-only reconciliation commit SHA | reported in the delivery report |
 
 ## Root Cause Matrix
 | # | Defect | Before | After |
@@ -109,20 +111,19 @@ backend/app/modules/excel_import/
   - `test_physical_row_limit_exceeded` (Physical rows at 5101 is rejected)
   - `test_column_limit_boundary` (Columns at 100 is accepted)
   - `test_column_limit_exceeded` (Columns at 101 is rejected)
-  - `test_cell_character_limit` (Cell value at 10000 chars is accepted)
-  - `test_cell_character_limit_exceeded` (Cell value at 10001 chars is rejected)
-  - `test_row_character_limit` (Row text at 100000 chars is accepted)
-  - `test_row_character_limit_exceeded` (Row text at 100001 chars is rejected)
-- `TestLazyRowLimitRollbackRestored`:
-  - `test_lazy_row_limit_rollback_after_rows_added` (Guarantees cleanup and rollback when limits are tripped during parsing)
-- `TestLazyCleanupRestored`:
-  - `test_lazy_cleanup_early_exit` (Ensures workbook resource closure on early break/exit)
-  - `test_lazy_cleanup_scenarios` (Asserts 100% precise close calls for invalid ZIP, missing sheet, header failure, iteration limit, iteration exception, normal close)
+  - `test_cell_length_boundary_accepted` (Cell at 10 chars is accepted)
+  - `test_cell_length_boundary_rejected` (Cell at 11 chars is rejected)
+  - `test_row_length_boundary_accepted` (Row at 15 chars is accepted)
+  - `test_row_length_boundary_rejected` (Row at 16 chars is rejected)
+  - `test_column_limit_boundary` (Columns at 100 accepted)
+  - `test_column_limit_exceeded` (Columns at 101 rejected)
+- `TestRawPersistenceRestored`:
+  - `test_db_raw_persistence_scenarios` (Database-backed raw cell persistence including duplicates, blanks, extra columns, empty cells, first-alias-wins, row ordering)
 - `TestPGIsolatedConcurrencyRestored` (Skipped locally, verified in PG-CI):
   - `Scenario A` (Two concurrent successful uploads serialize cleanly)
   - `Scenario B` (Stale failures from slow uploads do not overwrite newer success states)
 - `TestFailureAuditFingerprintRestored`:
-  - `test_failed_upload_to_already_parsed_retained` (Fingerprint matching to preserve newer PARSED statuses)
+  - `test_failed_upload_to_already_parsed_retained` (Fingerprint matching preserves newer PARSED statuses)
 - `TestTransactionFaultsCompleted`:
   - `test_outer_commit_failure` (Recovery sequence and `commit_failure` event logging on outer database error)
   - `test_failure_audit_event_commit_failure` (Resilience on failure event commit failure)
@@ -148,16 +149,9 @@ backend/app/modules/excel_import/
 ### Skipped (local)
 - 1 PostgreSQL-gated test in hardening suite: `TestPGIsolatedConcurrencyRestored` (requires PostgreSQL service).
 - 4 other PostgreSQL-gated integration tests in main suite.
-
-## Known Limitations
-- No PostgreSQL concurrency test locally (PostgreSQL concurrency test is fully structured but skipped locally when Postgres is not running).
-
-## Out of Scope
-- Validation Engine, Apply, AI mapping
-- No model/migration/frontend/worker/CI changes
-- No ProjectAssetLine mutation
+- **Total backend pytest: 370 passed, 5 skipped, 20 warnings.**
 
 ## Final Verdict
 ```text
-CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+S12-R-006 LOCAL IMPLEMENTATION COMPLETE — AWAITING POSTGRESQL CI VERIFICATION
 ```
