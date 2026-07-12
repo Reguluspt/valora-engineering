@@ -40,6 +40,8 @@ function reviewLabel(v: string): string {
   return REVIEW_LABELS[v] ?? UNKNOWN_LABEL;
 }
 
+export { validationLabel, reviewLabel, VALIDATION_LABELS, REVIEW_LABELS, UNKNOWN_LABEL };
+
 interface AssetGridProps {
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
