@@ -16,8 +16,10 @@
 | **Micro-corrective audit SHA** | `dc5854ca6812d9f6782fb5d6f0a7ee6562504a34` (Commit F) |
 | **Coverage pass code SHA** | `4a140fcb8d25662687a3f44c8603d0948035f9f5` (Commit G) |
 | **Coverage pass audit SHA** | `ee176d86bfc9ca1a0896ef3a03a551e47550ba2f` (Commit H) |
-| **Behavioral proof code SHA** | `1ae4816` (Commit I) |
-| **Behavioral proof audit SHA** | `PENDING` (Commit J) |
+| **Behavioral proof code SHA** | `1ae4816f08cf375f047bd54b58e36ddf59ba0954` (Commit I) |
+| **Behavioral proof audit SHA** | `a31e4c0652e5519eb54e3dc9207ad0e4bb9d24b9` (Commit J) |
+| **Session/pagination proof code SHA** | `da2417245fa596a2b6896c0c60b49ce1d42b9db9` (Commit K) |
+| **Session/pagination proof audit SHA** | `PENDING` (Commit L) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 
@@ -132,12 +134,17 @@ Deleted:
 | Worker pytest | 1 passed |
 | Frontend lint | PASS |
 | Frontend build | PASS |
-| Frontend vitest | **66 passed (15 test files)** |
+| Frontend vitest | **75 passed (15 test files)** |
 | npm audit | 0 vulnerabilities |
 
 ### Test File Inventory
 | File | Tests | Type |
 |---|---|---|
+| `useResolvedProject.test.tsx` | 8 | Lifecycle + race (resolver) |
+| `useWorkbenchSession.lifecycle.test.tsx` | 6 | Lifecycle (session A-to-B, invalid, clearing) |
+| `useProjectAssetLines.lifecycle.test.ts` | 11 | Lifecycle + race (pagination, dedup, A-to-B) |
+| `AppShell.route.test.tsx` | 2 | Routing (preservation, neutral nav) |
+| `AssetGrid.statusLabels.test.tsx` | 4 | Display label (all values, null fallback, mutation) |
 | `validators.test.tsx` | 5 | UUID validation unit |
 | `test_check_security_blockers.py` | 3 | Security blocker enforcement |
 | `useProjectAssetLines.test.ts` | 10 | Mapping + pagination (mocked) |
@@ -149,6 +156,13 @@ Deleted:
 | `i18n.test.ts` | 4 | Translation keys |
 | `AssetGrid.commit.test.tsx` | 4 | Commit confirmation |
 | `errorRegistry.test.ts` | 5 | Error mapping |
+
+### Test Type Distinctions
+- **Pure mapping:** `useProjectAssetLines.test.ts` (10 tests) — mapAssetLinesToGridRows + version token parsing
+- **Lifecycle/race:** `useResolvedProject.test.tsx` (8 tests), `useWorkbenchSession.lifecycle.test.tsx` (6 tests), `useProjectAssetLines.lifecycle.test.ts` (11 tests) — real hook mount/unmount/rerender/switch
+- **Routing:** `AppShell.route.test.tsx` (2 tests) — component render with react-test-renderer
+- **Display label:** `AssetGrid.statusLabels.test.tsx` (4 tests) — Vietnamese status label mapping
+- `key={projectId}` on WorkbenchLayoutInner: independently reviewed code evidence (no dedicated behavioral test)
 
 ### Skipped Tests
 4 PostgreSQL-gated (local dev): `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
@@ -191,5 +205,5 @@ SKIPPED — REQUIRES CI WITH POSTGRESQL
 
 ## Final Verdict
 ```text
-BEHAVIORAL PROOF COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+SESSION AND PAGINATION PROOF COMPLETE — READY FOR INDEPENDENT RE-AUDIT
 ```
