@@ -101,12 +101,16 @@ describe("useResolvedProject lifecycle", () => {
     expect(result.current.projectId).toBe("u-c");
   });
 
-  it("unmount cleanup invalidates pending request", () => {
-    (projectsApi.resolveProjectReference as any).mockReturnValueOnce(new Promise<any>(() => {}));
+  it("unmount cleanup rejects late response", async () => {
+    let ra: (v: any) => void = () => {};
+    (projectsApi.resolveProjectReference as any).mockReturnValueOnce(new Promise<any>((r) => { ra = r; }));
     const { result, unmount } = renderWithRef("slug-xx");
     expect(result.current.state).toBe("loading");
     unmount();
+    ra!({ project_id: "late-proj", display_name: "Late" });
+    await new Promise((r) => setTimeout(r, 20));
     expect(result.current.state).toBe("loading");
+    expect(result.current.projectId).toBeNull();
   });
 
   it("malformed UUID fails closed", () => {

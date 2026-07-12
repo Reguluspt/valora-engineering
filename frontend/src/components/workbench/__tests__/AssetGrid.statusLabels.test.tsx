@@ -24,13 +24,21 @@ describe("AssetGrid status labels", () => {
     expect(reviewLabel("excluded")).toBe("Đã loại");
   });
 
-  it("unknown value returns Chưa xác định", () => {
+  it("unknown/null/undefined all return Chưa xác định", () => {
     expect(validationLabel("nonexistent")).toBe("Chưa xác định");
     expect(reviewLabel("foobar")).toBe("Chưa xác định");
+    expect(validationLabel(null)).toBe("Chưa xác định");
+    expect(reviewLabel(null)).toBe("Chưa xác định");
+    expect(validationLabel(undefined)).toBe("Chưa xác định");
+    expect(reviewLabel(undefined)).toBe("Chưa xác định");
   });
 
-  it("raw API enums remain unchanged", () => {
-    expect("valid").toBe("valid");
-    expect("raw").toBe("raw");
+  it("helpers do not mutate the original enum variables", () => {
+    const rawValidation = "valid";
+    const rawReview = "raw";
+    validationLabel(rawValidation);
+    reviewLabel(rawReview);
+    expect(rawValidation).toBe("valid");
+    expect(rawReview).toBe("raw");
   });
 });

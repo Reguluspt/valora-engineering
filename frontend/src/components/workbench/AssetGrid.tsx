@@ -32,11 +32,13 @@ const REVIEW_LABELS: Record<string, string> = {
 
 const UNKNOWN_LABEL = "Chưa xác định";
 
-function validationLabel(v: string): string {
+function validationLabel(v: string | null | undefined): string {
+  if (v === null || v === undefined) return UNKNOWN_LABEL;
   return VALIDATION_LABELS[v] ?? UNKNOWN_LABEL;
 }
 
-function reviewLabel(v: string): string {
+function reviewLabel(v: string | null | undefined): string {
+  if (v === null || v === undefined) return UNKNOWN_LABEL;
   return REVIEW_LABELS[v] ?? UNKNOWN_LABEL;
 }
 

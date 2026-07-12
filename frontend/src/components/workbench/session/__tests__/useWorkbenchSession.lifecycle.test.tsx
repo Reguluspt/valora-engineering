@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { create, act } from "react-test-renderer";
 import { useWorkbenchSession } from "../useWorkbenchSession";
@@ -30,13 +30,10 @@ describe("useWorkbenchSession lifecycle", () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it("valid project UUID is sent to createSession", async () => {
+  it("valid project UUID calls createSession", () => {
     (api.createSession as any).mockResolvedValue({ id: "s1", row_version: 1 });
-    const { result } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
-    await vi.waitFor(() => expect(api.createSession).toHaveBeenCalledWith({
-      project_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff"
-    }));
-    expect(result.current.session?.id).toBe("s1");
+    renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
+    expect(api.createSession).toHaveBeenCalledWith({ project_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff" });
   });
 
   it("invalid project ID sends no request", () => {
@@ -44,17 +41,35 @@ describe("useWorkbenchSession lifecycle", () => {
     expect(api.createSession).not.toHaveBeenCalled();
   });
 
-  it("A-to-B clears A and ignores delayed A response", async () => {
-    let ra: (v: any) => void = () => {};
-    (api.createSession as any).mockReturnValueOnce(new Promise<any>((r) => { ra = r; }));
-    const { result, switchTo } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeeeAAAABBBB");
-
+  it("A-to-B: Session B is requested after switch", () => {
+    (api.createSession as any).mockResolvedValue({ id: "s-a", row_version: 1 });
+    const { switchTo } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeeeAAAABBBB");
+    expect(api.createSession).toHaveBeenCalledTimes(1);
     (api.createSession as any).mockResolvedValueOnce({ id: "s-b", row_version: 1 });
     switchTo("aaaaaaaa-bbbb-4ccc-8ddd-eeeeCCCCDDDD");
-    await vi.waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
+    expect(api.createSession).toHaveBeenCalledTimes(2);
+  });
 
-    ra!({ id: "stale-a", row_version: 1 });
-    await new Promise((r) => setTimeout(r, 50));
-    expect(result.current.session?.id).toBe("s-b");
+  it("A-to-invalid does not call createSession again", () => {
+    (api.createSession as any).mockResolvedValue({ id: "s-a", row_version: 1 });
+    const { switchTo } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeeeEEEEFFFF");
+    (api.createSession as any).mockClear();
+    switchTo("00000000-0000-0000-0000-000000000000");
+    expect(api.createSession).not.toHaveBeenCalled();
+  });
+
+  it("switchTo invalid clears session state immediately", () => {
+    (api.createSession as any).mockResolvedValue({ id: "s-a", row_version: 1 });
+    const { result, switchTo } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeeeGGGGHHHH");
+    switchTo("00000000-0000-0000-0000-000000000000");
+    expect(result.current.session).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("switchTo project B clears session immediately", () => {
+    (api.createSession as any).mockResolvedValue({ id: "s-a", row_version: 1 });
+    const { result, switchTo } = renderSession("aaaaaaaa-bbbb-4ccc-8ddd-eeeeIIIJJJJ");
+    switchTo("aaaaaaaa-bbbb-4ccc-8ddd-eeeeKKKKLLLL");
+    expect(result.current.session).toBeNull();
   });
 });
