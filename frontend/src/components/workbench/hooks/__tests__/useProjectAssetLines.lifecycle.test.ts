@@ -169,4 +169,21 @@ describe("useProjectAssetLines lifecycle", () => {
       );
     });
   });
+
+  it("C-8: concurrent loadMore produces exactly one API request", async () => {
+    (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("a1"), mk("a2")], total: 55, limit: 2, offset: 0 });
+    const { result } = renderPages("aaaaaaaa-bbbb-4ccc-8ddd-eeeeCONC01");
+    await vi.waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasMore).toBe(true);
+
+    let resolveP2: (v: any) => void = () => {};
+    (api.fetchProjectAssetLines as any).mockReturnValueOnce(new Promise<any>((r) => { resolveP2 = r; }));
+    act(() => { result.current.loadMore(); });
+    act(() => { result.current.loadMore(); });
+    expect(api.fetchProjectAssetLines).toHaveBeenCalledTimes(2);
+    resolveP2!({ items: [mk("a3")], total: 55, limit: 2, offset: 2 });
+    await act(async () => {});
+    expect(result.current.loadingMore).toBe(false);
+    expect(result.current.rows.length).toBe(3);
+  });
 });

@@ -101,14 +101,13 @@ describe("useResolvedProject lifecycle", () => {
     expect(result.current.projectId).toBe("u-c");
   });
 
-  it("unmount cleanup rejects late response", async () => {
+  it("C-9: unmount blocks late response after cleanup", async () => {
     let ra: (v: any) => void = () => {};
     (projectsApi.resolveProjectReference as any).mockReturnValueOnce(new Promise<any>((r) => { ra = r; }));
     const { result, unmount } = renderWithRef("slug-xx");
     expect(result.current.state).toBe("loading");
     unmount();
-    ra!({ project_id: "late-proj", display_name: "Late" });
-    await new Promise((r) => setTimeout(r, 20));
+    await act(async () => { ra!({ project_id: "late-proj", display_name: "Late" }); });
     expect(result.current.state).toBe("loading");
     expect(result.current.projectId).toBeNull();
   });
