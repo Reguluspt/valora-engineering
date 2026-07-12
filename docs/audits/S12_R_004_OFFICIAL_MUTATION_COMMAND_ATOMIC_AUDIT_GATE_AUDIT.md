@@ -1,7 +1,7 @@
 # S12-R-004 — Official Mutation Command & Atomic Audit Gate Audit
 
 ## Status
-`LOCAL IMPLEMENTATION COMPLETE — AWAITING DRAFT PR AND CI`
+`CI VALIDATED — AWAITING FINAL INDEPENDENT REVIEW`
 
 ## Git Baseline
 | Item | Value |
@@ -10,8 +10,13 @@
 | Branch | `s12-r-004-official-mutation-command-atomic-audit-gate` |
 | Previous code-bearing SHA | `7086eca114331e59a5d595a0064478aa42fab27c` |
 | Corrective code-bearing SHA | `ff7b33c5bc43868056d9dca85a1e1e422c274a54` (Commit A: corrective gaps) |
-| Draft PR | PENDING |
-| CI Run ID / URL | PENDING |
+| Documentation head SHA | `7c9c3361a67ea19e293d164a97437d9b2ebbb31b` (Commit B: local evidence) |
+| Draft PR | [#4](https://github.com/Reguluspt/valora-engineering/pull/4) |
+| CI Run ID | `29179626140` |
+| CI Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29179626140 |
+| CI tested SHA | `7c9c3361a67ea19e293d164a97437d9b2ebbb31b` |
+| Base branch | `main` |
+| PR state | Draft |
 
 ## Root Cause
 Prior to S12-R-004, users could bypass the Workbench human-commit flow by issuing direct `PATCH` requests to `/api/v1/projects/{project_id}/asset-lines/{line_id}`. There was no exact optimistic version lock, no DRAFT-only project status gate, no typed field validation for `Decimal`, and the audit payload key `field_keys` was auto-redacted by the sanitizer (which redacts any key containing `"key"`).
@@ -159,10 +164,36 @@ frontend/src/components/workbench/__tests__/AssetGrid.commit.test.tsx  (NEW)
 | 3 | `test_workbench_api.py:696` | PostgreSQL not configured — awaiting CI with PostgreSQL service. |
 | 4 | `test_workbench_api.py:980` | PostgreSQL not configured — awaiting CI with PostgreSQL service. |
 
+## CI Verification Evidence (Run `29179626140`, SHA `7c9c336`)
+
+| Gate | Result |
+|---|---|
+| Backend pytest | **323 passed, 0 skipped, 14 warnings** |
+| PostgreSQL concurrency (`test_postgres_concurrent_official_commit`) | **EXECUTED — PASS** (no longer skipped) |
+| PostgreSQL auth concurrent endpoint | **EXECUTED — PASS** |
+| PostgreSQL Workbench concurrent session create | **EXECUTED — PASS** |
+| PostgreSQL Workbench unexpected-error rollback | **EXECUTED — PASS** |
+| Worker pytest | **1 passed** |
+| Frontend Vitest | **34 passed (9 test files)** |
+| Ruff (backend + worker) | **PASS** |
+| Security scanner | **PASS** — Controlled baseline validated |
+| Alembic migration smoke | **PASS** — Single head: `db5977424e7b` |
+| Dependency vulnerability scan | **PASS** — 0 vulnerabilities |
+| Secret scan | **PASS** |
+
+CI tested all 323 backend tests with 0 skips — PostgreSQL service container was available.
+All four previously locally-skipped PostgreSQL-gated tests executed in CI and passed.
+
+No CI failures. No corrective commits were needed after PR creation.
+
 ## PostgreSQL Concurrency
-`test_postgres_concurrent_official_commit` — locally SKIPPED (no PostgreSQL configured).
-Requires CI with PostgreSQL service container to execute.
-In CI, must `pytest.fail` if `CI=true` and PostgreSQL unavailable.
+`test_postgres_concurrent_official_commit` — **CI PASS** (not skipped).
+Verified in CI with `CI=true` and PostgreSQL service container:
+- Exactly one commit succeeds, one receives `409`
+- `row_version` increments exactly once
+- Exactly one `project.asset_line.draft_committed` AuditEvent persisted
+- Losing draft remains
+- No lost update
 
 ## Micro-Corrective Finding Disposition
 
@@ -172,7 +203,7 @@ In CI, must `pytest.fail` if `CI=true` and PostgreSQL unavailable.
 | F-2: No API serialization test | Corrective §17 | Created `projects.test.ts` with fetch mock, exact body assert | `ff7b33c` |
 | F-3: No human confirmation test | Corrective §17 | Extracted `executeDraftCommit` helper, 4 unit tests | `ff7b33c` |
 | F-4: Contract §13 stale | Corrective §16 | Updated request shape, added version_token documentation | `ff7b33c` |
-| F-5: Audit premature PASS | Corrective §18 | Status changed to AWAITING DRAFT PR AND CI, local gates recorded | Current commit |
+| F-5: Audit premature PASS | Corrective §18 | Status → AWAITING CI, then CI VALIDATED | `7c9c336` + current |
 | F-6: test_projects_api.py diff | Onboarding report | Verified +2/-2, documented as minimal mandatory | N/A (verified) |
 | F-7: projects.py semantic diff | Onboarding report | Verified semantic-only changes, no formatting churn | N/A (verified) |
 
@@ -185,5 +216,7 @@ In CI, must `pytest.fail` if `CI=true` and PostgreSQL unavailable.
 
 ## Final Verdict
 ```text
-PENDING INDEPENDENT RE-AUDIT AND CI
+DRAFT PR CI VALIDATED — READY FOR FINAL INDEPENDENT AUDIT
 ```
+
+PR remains in Draft state. Not marked Ready for review. Not merged.
