@@ -22,9 +22,9 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
         </div>
         <SideNavSection title="Menu" isHeaderHidden={true}>
           <SideNavItem
-            isSelected={getLinkActive("/workbench/projects/")}
+            isSelected={getLinkActive("/workbench/projects")}
             label={t("nav.workbench")}
-            onClick={() => onNavigate("/workbench/projects/hd-98-gia-lai")}
+            onClick={() => onNavigate("/workbench/projects")}
           />
           <SideNavItem
             isSelected={getLinkActive("/workbench/queue") || getLinkActive("/queue")}

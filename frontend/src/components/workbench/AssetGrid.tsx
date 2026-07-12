@@ -256,40 +256,40 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       <td style={{ padding: "var(--space-sm)", fontWeight: 600, color: "#fff", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.raw_name}>
                         {row.raw_name}
                       </td>
-                      <td style={{ padding: "var(--space-sm)" }}>
-                        {nameValue}
+                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>
+                        {nameValue ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", color: "var(--accent-cyan)" }}>
-                        {row.canonical_asset.standard_name}
+                        {row.canonical_asset?.standard_name ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)" }}>{row.asset_variant.display_name}</td>
-                      <td style={{ padding: "var(--space-sm)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.taxonomy_node.path}>
-                        {row.taxonomy_node.path}
+                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>{row.asset_variant?.display_name ?? "—"}</td>
+                      <td style={{ padding: "var(--space-sm)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.taxonomy_node?.path ?? ""}>
+                        {row.taxonomy_node?.path ?? "Chưa phân loại"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", width: "80px" }}>{row.quantity}</td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
-                        {row.unit.name_vi}
+                        {row.unit?.name_vi ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_1 ? row.supplier_quote_1.toLocaleString() : "—"}
+                        {row.supplier_quote_1 != null ? row.supplier_quote_1.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_2 ? row.supplier_quote_2.toLocaleString() : "—"}
+                        {row.supplier_quote_2 != null ? row.supplier_quote_2.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_3 ? row.supplier_quote_3.toLocaleString() : "—"}
+                        {row.supplier_quote_3 != null ? row.supplier_quote_3.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
-                        {row.currency.code}
+                        {row.currency?.code ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontWeight: 600, width: "120px", color: "var(--accent-blue)" }}>
                         <InlineDraftCell
-                          value={typeof priceValue === "number" ? priceValue.toString() : priceValue}
+                          value={priceValue != null ? (typeof priceValue === "number" ? priceValue.toString() : priceValue) : "—"}
                           isDirty={isPriceDirty}
                           onSave={(newVal) => {
-                            if (onDraftChange) {
+                            if (onDraftChange && row.row_version != null) {
                               const numericVal = parseInt(newVal.replace(/,/g, ""), 10);
-                              onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price, row.row_version);
+                              onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price ?? 0, row.row_version);
                             }
                           }}
                         />
@@ -300,16 +300,19 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                             status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                             label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                           />
-                          {draftStates[row.project_asset_line_id]?.has_saved_draft && (
+                          {draftStates[row.project_asset_line_id]?.has_saved_draft && row.row_version != null && (
                             <button
-                              onClick={() => executeDraftCommit(
-                                (msg) => window.confirm(msg),
-                                onCommitDraft,
-                                row.project_asset_line_id,
-                                row.row_version,
-                                ["appraised_unit_price"],
-                                "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
-                              )}
+                              onClick={() => {
+                                if (row.row_version == null) return;
+                                executeDraftCommit(
+                                  (msg) => window.confirm(msg),
+                                  onCommitDraft,
+                                  row.project_asset_line_id,
+                                  row.row_version,
+                                  ["appraised_unit_price"],
+                                  "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
+                                )
+                              }}
                               style={{
                                 fontSize: "10px",
                                 padding: "2px 6px",

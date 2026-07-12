@@ -2,13 +2,19 @@ import React, { useState, useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
+import { useResolvedProject } from "./components/workbench/project-context";
 
 import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
 
-export function App() {
-  const [currentPath, setCurrentPath] = useState("/workbench/projects/hd-98-gia-lai");
+const WORKBENCH_BASE = "/workbench/projects";
+const NEUTRAL_PATH = WORKBENCH_BASE;
 
-  // Keep hash sync for manual page refreshes if relevant
+export function App() {
+  const [currentPath, setCurrentPath] = useState(() => {
+    const hash = window.location.hash?.replace("#", "");
+    return hash || NEUTRAL_PATH;
+  });
+
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace("#", "");
@@ -27,15 +33,18 @@ export function App() {
 
   const renderRoute = () => {
     if (currentPath.startsWith("/workbench/projects/")) {
-      const parts = currentPath.split("/");
-      const projectId = parts[parts.length - 1];
+      const ref = currentPath.substring("/workbench/projects/".length);
+      return <WorkbenchLayout projectRef={ref || null} />;
+    }
+
+    if (currentPath === "/workbench/projects") {
       return (
-        <WorkbenchLayout
-          projectTitle={`Project: ${projectId.toUpperCase().replace(/-/g, " ")}`}
-          status="review"
-          statusLabel="Ready for Review"
-          issuesCount={2}
-        />
+        <div style={{ padding: "var(--space-xl)" }}>
+          <h2 style={{ color: "#fff" }}>Chọn hồ sơ</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
+            Vui lòng chọn một hồ sơ từ thanh điều hướng để bắt đầu làm việc.
+          </p>
+        </div>
       );
     }
 
@@ -46,14 +55,14 @@ export function App() {
     if (currentPath === "/workbench/validation") {
       return (
         <div style={{ padding: "var(--space-xl)" }}>
-          <h2 style={{ color: "#fff" }}>Validation Dashboard</h2>
+          <h2 style={{ color: "#fff" }}>Bảng lỗi cần xử lý</h2>
           <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
-            Overview of validation warnings and blocking issues.
+            Tổng quan các cảnh báo và lỗi cần xử lý.
           </p>
           <div style={{ border: "1px solid var(--border-color)", padding: "var(--space-lg)", borderRadius: "var(--radius-lg)" }}>
-            <h3>No Unresolved Critical Issues</h3>
+            <h3>Không có lỗi nghiêm trọng</h3>
             <p style={{ color: "var(--text-muted)" }}>
-              All project constraints are verified and complete.
+              Tất cả các ràng buộc dự án đã được xác minh và hoàn tất.
             </p>
           </div>
         </div>
@@ -62,10 +71,10 @@ export function App() {
 
     return (
       <EmptyState
-        title="Page Not Found"
-        message="The requested route does not exist."
-        onAction={() => handleNavigate("/workbench/projects/hd-98-gia-lai")}
-        actionLabel="Go to Workbench"
+        title="Không tìm thấy trang"
+        message="Trang được yêu cầu không tồn tại."
+        onAction={() => handleNavigate(NEUTRAL_PATH)}
+        actionLabel="Về bàn làm việc"
       />
     );
   };

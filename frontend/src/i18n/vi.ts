@@ -206,6 +206,8 @@ export const vi = {
   "empty.noReports": "Chưa có báo cáo nào",
   "empty.uploadExcelDesc": "Hãy tải lên tệp Excel để bắt đầu",
   "empty.selectAssetDesc": "Hãy chọn một dòng tài sản để xem chi tiết",
+  "empty.selectProject": "Vui lòng chọn một hồ sơ từ thanh điều hướng để bắt đầu làm việc.",
+  "empty.unclassified": "Chưa phân loại",
 
   // Confirmation Messages
   "confirm.ask": "Anh/chị có chắc muốn tiếp tục?",

@@ -1,143 +1,103 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchProjectAssetLines, ProjectAssetLineResponse } from "../../../api/assetLines";
-import { resolveProjectReference } from "../../../api/projects";
 import { AssetLineGridRow } from "../AssetGridTypes";
 import { getFriendlyErrorFromUnknown } from "../../../errors/errorRegistry";
+
+const PAGE_SIZE = 50;
+
+function toIntSafe(val: string | undefined): number | null {
+  if (val === undefined || val === null) return null;
+  const parsed = parseInt(val, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
 
 export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[]): AssetLineGridRow[] {
   return items.map((item, idx) => ({
     project_asset_line_id: item.id,
     line_no: idx + 1,
     raw_name: item.asset_name,
-    normalized_name: item.asset_name,
-    canonical_asset: {
-      id: item.brand_id || `c-${item.id}`,
-      standard_name: item.description || item.asset_name,
-    },
-    asset_variant: {
-      id: item.manufacturer_id || `v-${item.id}`,
-      display_name: item.description || "N/A",
-    },
-    taxonomy_node: {
-      id: `t-${item.id}`,
-      path: "Thiết bị điện > Chưa phân loại",
-    },
+    normalized_name: null,
+    canonical_asset: null,
+    asset_variant: null,
+    taxonomy_node: null,
     quantity: item.quantity,
-    unit: {
-      id: item.unit_id || "u-1",
-      code: "cai",
-      name_vi: "cái",
-    },
-    quote_batch_status: "active",
-    supplier_quote_1: item.raw_price || 0,
-    supplier_quote_2: 0,
-    supplier_quote_3: 0,
-    appraised_price: item.appraised_unit_price || 0,
-    currency: {
-      id: item.appraised_currency_id || "cur-1",
-      code: "VND",
-    },
-    validation_status: (item.validation_status as any) === "needs_review" ? "warning" : item.validation_status as any,
-    review_status: item.review_status as any,
-    row_version: parseInt(item.version_token) || 1,
+    unit: null,
+    quote_batch_status: null,
+    supplier_quote_1: null,
+    supplier_quote_2: null,
+    supplier_quote_3: null,
+    appraised_price: item.appraised_unit_price ?? null,
+    currency: null,
+    validation_status: (item.validation_status as any) === "needs_review" ? "warning" : (item.validation_status as any),
+    review_status: (item.review_status as any),
+    row_version: toIntSafe(item.version_token) ?? null,
   }));
 }
 
 export function useProjectAssetLines(projectId: string) {
   const [rows, setRows] = useState<AssetLineGridRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [friendlyError, setFriendlyError] = useState<{ title: string; message: string; nextAction: string } | null>(null);
-  const [resolvedUuid, setResolvedUuid] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [hasMore, setHasMore] = useState<boolean>(false);
 
-  // Validate and resolve project ID
-  useEffect(() => {
-    let active = true;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-    if (uuidRegex.test(projectId)) {
-      setResolvedUuid(projectId);
-      return;
-    }
-
-    async function resolve() {
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-        setFriendlyError(null);
-
-        const res = await resolveProjectReference(projectId);
-        if (active) {
-          setResolvedUuid(res.project_id);
-        }
-      } catch (err: any) {
-        if (!active) return;
-        setErrorMsg(err.message || "Failed to resolve project reference");
-        
-        if (err.status === 404) {
-          setFriendlyError({
-            title: "Không tìm thấy hồ sơ",
-            message: "Không tìm thấy hồ sơ tương ứng với mã cung cấp.",
-            nextAction: "Vui lòng mở hồ sơ từ danh sách hồ sơ hoặc thử tải lại."
-          });
-        } else if (err.status === 409) {
-          setFriendlyError({
-            title: "Trùng lặp hồ sơ",
-            message: "Có nhiều hồ sơ trùng thông tin, vui lòng chọn từ danh sách hồ sơ.",
-            nextAction: "Vui lòng liên hệ quản trị viên hoặc chọn chính xác mã ID."
-          });
-        } else if (err.status === 403) {
-          setFriendlyError({
-            title: "Không có quyền truy cập",
-            message: "Hồ sơ không thuộc phạm vi truy cập của tài khoản này.",
-            nextAction: "Vui lòng liên hệ quản trị viên để đăng ký vai trò phù hợp."
-          });
-        } else {
-          setFriendlyError(getFriendlyErrorFromUnknown(err));
-        }
-        setLoading(false);
-      }
-    }
-
-    resolve();
-
-    return () => {
-      active = false;
-    };
-  }, [projectId]);
-
-  const loadAssetLines = useCallback(async () => {
-    if (!resolvedUuid) return;
+  const loadFirstPage = useCallback(async () => {
+    if (!projectId) return;
+    setLoading(true);
+    setErrorMsg(null);
+    setFriendlyError(null);
 
     try {
-      setLoading(true);
-      setErrorMsg(null);
-      setFriendlyError(null);
-
-      const res = await fetchProjectAssetLines(resolvedUuid);
+      const res = await fetchProjectAssetLines(projectId, { limit: PAGE_SIZE, offset: 0 });
       const mappedRows = mapAssetLinesToGridRows(res.items);
       setRows(mappedRows);
+      setTotalCount(res.total);
+      setHasMore(res.total > PAGE_SIZE);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to load asset lines");
+      setErrorMsg(err.message || "Không thể tải danh sách tài sản");
       setFriendlyError(getFriendlyErrorFromUnknown(err));
     } finally {
       setLoading(false);
     }
-  }, [resolvedUuid]);
+  }, [projectId]);
+
+  const loadMore = useCallback(async () => {
+    if (!projectId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    try {
+      const res = await fetchProjectAssetLines(projectId, { limit: PAGE_SIZE, offset: rows.length });
+      const mappedRows = mapAssetLinesToGridRows(res.items);
+      setRows((prev) => {
+        const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
+        const newRows = mappedRows.filter((r) => !existingIds.has(r.project_asset_line_id));
+        return [...prev, ...newRows];
+      });
+      setTotalCount(res.total);
+      setHasMore(rows.length + mappedRows.length < res.total);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Không thể tải thêm dữ liệu");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [projectId, loadingMore, hasMore, rows.length]);
 
   useEffect(() => {
-    loadAssetLines();
-  }, [loadAssetLines]);
+    loadFirstPage();
+  }, [loadFirstPage]);
 
   return {
     rows,
     loading,
+    loadingMore,
     errorMsg,
     friendlyError,
-    retry: resolvedUuid ? loadAssetLines : () => {
-      // Re-trigger resolution
-      setResolvedUuid(null);
-      setLoading(true);
-    },
+    loadMore,
+    hasMore,
+    loadedCount: rows.length,
+    totalCount,
+    retry: loadFirstPage,
   };
 }

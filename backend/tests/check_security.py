@@ -10,26 +10,6 @@ TEMPORARY_BASELINE = {
         "files": {},
         "target_pr": "S12-R-002",
         "expiry_condition": "Implement credential-based auth session"
-    },
-    "S12R-SESSION-001": {
-        "pattern": r"00000000-0000-0000-0000-000000000000",
-        "description": "All-zero UUID runtime fallback",
-        "files": {
-            "frontend/src/components/workbench/session/useWorkbenchSession.ts": 1
-        },
-        "target_pr": "S12-R-003 / S12-R-005",
-        "expiry_condition": "Implement active project context resolution"
-    },
-    "S12R-ROUTING-001": {
-        "pattern": r"hd-98-gia-lai",
-        "description": "Hard-coded project slug in runtime",
-        "files": {
-            "frontend/src/App.tsx": 2,
-            "frontend/src/components/layout/AppShell.tsx": 1,
-            "frontend/src/components/layout/WorkbenchLayout.tsx": 6
-        },
-        "target_pr": "S12-R-005",
-        "expiry_condition": "Implement dynamic routing and project state context"
     }
 }
 

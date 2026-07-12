@@ -3,6 +3,8 @@ import { WorkbenchSession } from "./WorkbenchSessionTypes";
 import { createSession, sendHeartbeat } from "../../../api/workbenchSession";
 import { ApiError } from "../../../api/client";
 
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+
 export function useWorkbenchSession(projectId: string) {
   const [session, setSession] = useState<WorkbenchSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,25 +17,29 @@ export function useWorkbenchSession(projectId: string) {
   sessionRef.current = session;
 
   const initSession = useCallback(async () => {
+    if (!projectId || projectId === ZERO_UUID) {
+      setLoading(false);
+      setError("Mã hồ sơ không hợp lệ");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       setRbacError(null);
       setConflictError(false);
-      // Hardcode UUID project ID for API compatibility with mock string
-      const apiProjectId = "00000000-0000-0000-0000-000000000000";
-      const newSession = await createSession({ project_id: apiProjectId });
+      const newSession = await createSession({ project_id: projectId });
       setSession(newSession);
       setLastHeartbeat(new Date().toLocaleTimeString());
     } catch (err: any) {
       if (err instanceof ApiError) {
         if (err.status === 403) {
-          setRbacError("Permission denied: You do not have the required scopes to open a workbench session.");
+          setRbacError("Tài khoản chưa được cấp quyền mở phiên làm việc.");
         } else {
           setError(err.message);
         }
       } else {
-        setError(err.message || "Failed to initialize workbench session");
+        setError(err.message || "Không thể khởi tạo phiên làm việc");
       }
     } finally {
       setLoading(false);
@@ -44,7 +50,6 @@ export function useWorkbenchSession(projectId: string) {
     initSession();
   }, [initSession]);
 
-  // Heartbeat loop
   useEffect(() => {
     if (!session) return;
 
@@ -65,15 +70,12 @@ export function useWorkbenchSession(projectId: string) {
             setConflictError(true);
             clearInterval(interval);
           } else if (err.status === 403) {
-            setRbacError("Session expired or permission revoked.");
+            setRbacError("Phiên làm việc hết hạn hoặc quyền đã bị thu hồi.");
             clearInterval(interval);
-          } else {
-            // Treat other issues as temporary network loss
-            console.warn("Heartbeat network warning:", err.message);
           }
         }
       }
-    }, 15000); // 15 seconds interval
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [session]);
