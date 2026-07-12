@@ -53,7 +53,7 @@ def test_unbounded_read_blocked():
         os.makedirs(other_dir, exist_ok=True)
         with open(os.path.join(other_dir, "runtime.py"), "w", encoding="utf-8") as f:
             f.write('data = spool.read()')
-        issues_other = m.check_security_baseline_and_blockers(tmp)
+        m.check_security_baseline_and_blockers(tmp)
         # Note: issues_other will still be > 0 because we didn't clean/recreate tmp, but let's test isolation
         
 def test_unbounded_read_allowed_outside_scope():
@@ -115,3 +115,32 @@ def test_streaming_iter_rows_allowed():
             f.write('for row in ws.iter_rows(values_only=True):\n    pass')
         issues = m.check_security_baseline_and_blockers(tmp)
         assert issues == 0, f"Expected 0 issues for streaming iter_rows, got {issues}"
+
+
+def test_projects_api_scoping_blocks_inside_upload():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        api_dir = os.path.join(tmp, "app", "api")
+        os.makedirs(api_dir, exist_ok=True)
+        with open(os.path.join(api_dir, "projects.py"), "w", encoding="utf-8") as f:
+            f.write('''
+def upload_project_asset_import_file():
+    data = spool.read()
+''')
+        issues = m.check_security_baseline_and_blockers(tmp)
+        assert issues > 0, "Expected blocker inside upload function in projects.py"
+
+
+def test_projects_api_scoping_allows_outside_upload():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        api_dir = os.path.join(tmp, "app", "api")
+        os.makedirs(api_dir, exist_ok=True)
+        with open(os.path.join(api_dir, "projects.py"), "w", encoding="utf-8") as f:
+            f.write('''
+def unrelated_function():
+    data = spool.read()
+''')
+        issues = m.check_security_baseline_and_blockers(tmp)
+        assert issues == 0, "Expected no blocker outside upload function in projects.py"
+

@@ -52,11 +52,7 @@ from app.modules.project_master_data.workbench_schemas import (
     ProjectAssetImportStagingRowPaginationResponse
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
-from app.modules.excel_import.application.parse_workbook import (
-    parse_workbook_lazy, ParseError, sanitize_filename, get_request_size, enforce_request_limit
-)
-from app.modules.excel_import.application.replace_staging_rows import replace_staging_rows, record_failure_audit
-from app.modules.excel_import.domain import DEFAULT_LIMITS
+from app.modules.excel_import.application.import_service import upload_excel_file_orchestrator
 
 
 def get_correlation_id(request: Request) -> str:
@@ -636,82 +632,17 @@ def upload_project_asset_import_file(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    batch = db.query(ProjectAssetImportBatch).filter(
-        ProjectAssetImportBatch.organization_id == org_id,
-        ProjectAssetImportBatch.project_id == project_id,
-        ProjectAssetImportBatch.id == batch_id
-    ).with_for_update().first()
-    if not batch:
-        raise HTTPException(status_code=404, detail="Import batch not found")
-
     correlation_id = get_correlation_id(request) if request else None
-    previous_count = (
-        db.query(ProjectAssetImportStagingRow)
-        .filter(ProjectAssetImportStagingRow.import_batch_id == batch_id)
-        .count()
+    return upload_excel_file_orchestrator(
+        db=db,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+        file=file,
+        request=request,
+        current_user=current_user,
+        correlation_id=correlation_id
     )
-
-    sanitized = sanitize_filename(file.filename or "import.xlsx")
-
-    sp = db.begin_nested()
-    try:
-        request_size = get_request_size(request)
-        enforce_request_limit(request_size, DEFAULT_LIMITS)
-
-        lazy = parse_workbook_lazy(
-            file=file,
-            source_sheet_name=batch.source_sheet_name,
-        )
-        batch = replace_staging_rows(
-            db=db,
-            actor=current_user,
-            org_id=org_id,
-            project_id=project_id,
-            batch_id=batch_id,
-            lazy_rows=lazy,
-            parsed_count=None,
-            sanitized_filename=sanitized,
-            sheet_name=lazy.resolved_sheet,
-            column_count=lazy.column_count,
-            correlation_id=correlation_id,
-        )
-        sp.commit()
-        db.commit()
-        return batch
-
-    except ParseError as pe:
-        sp.rollback()
-        record_failure_audit(
-            db=db,
-            org_id=org_id,
-            batch_id=batch_id,
-            actor_id=current_user.id,
-            sanitized_filename=sanitized,
-            requested_sheet=batch.source_sheet_name,
-            error_code=pe.error_code,
-            limit_category=pe.limit_category,
-            previous_row_count=previous_count,
-            correlation_id=correlation_id,
-        )
-        db.commit()
-        raise HTTPException(status_code=pe.status, detail=pe.detail)
-
-    except Exception:
-        sp.rollback()
-        record_failure_audit(
-            db=db,
-            org_id=org_id,
-            batch_id=batch_id,
-            actor_id=current_user.id,
-            sanitized_filename=sanitized,
-            requested_sheet=batch.source_sheet_name,
-            error_code="unexpected_error",
-            limit_category=None,
-            previous_row_count=previous_count,
-            correlation_id=correlation_id,
-        )
-        db.commit()
-        raise HTTPException(status_code=500, detail="Lỗi hệ thống khi xử lý tệp Excel.")
 
 
 
