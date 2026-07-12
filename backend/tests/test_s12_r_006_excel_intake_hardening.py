@@ -614,13 +614,13 @@ class TestPGIsolatedConcurrencyRestored:
             results = []
             exceptions = []
 
-            def worker_success(worker_id, user_id, filename, row_val):
+            def worker_success(worker_id, user_id, filename, row_vals):
                 sess_w = SessionLocal()
                 try:
                     current_u = sess_w.query(User).get(user_id)
-                    content = _xlsx(rows=[["asset_name"], [row_val]])
+                    content = _xlsx(rows=[["asset_name"]] + [[v] for v in row_vals])
                     upload = FakeUpload(filename, content)
-                    barrier.wait()
+                    barrier.wait(timeout=30)
                     res = upload_excel_file_orchestrator(
                         db=sess_w,
                         org_id=org_id,
@@ -631,40 +631,43 @@ class TestPGIsolatedConcurrencyRestored:
                         current_user=current_u,
                         correlation_id=f"corr-success-{worker_id}"
                     )
-                    results.append((worker_id, "success", res.total_rows, res.source_filename))
+                    results.append((worker_id, "success", res.total_rows, res.source_filename, set(row_vals)))
+                except threading.BrokenBarrierError:
+                    results.append((worker_id, "barrier_timeout"))
                 except Exception as e:
                     exceptions.append(e)
                     results.append((worker_id, "failure", str(e), None))
                 finally:
                     sess_w.close()
 
-            # Using different filenames and row sets
-            t1 = threading.Thread(target=worker_success, args=(1, u1_id, f"w1_{uid_s}.xlsx", "worker-1-row"))
-            t2 = threading.Thread(target=worker_success, args=(2, u2_id, f"w2_{uid_s}.xlsx", "worker-2-row"))
+            t1 = threading.Thread(target=worker_success, args=(1, u1_id, f"w1_{uid_s}.xlsx", ["w1-row-a","w1-row-b","w1-row-c"]))
+            t2 = threading.Thread(target=worker_success, args=(2, u2_id, f"w2_{uid_s}.xlsx", ["w2-row-a","w2-row-b","w2-row-c"]))
             t1.start()
             t2.start()
-            t1.join()
-            t2.join()
+            t1.join(timeout=60)
+            t2.join(timeout=60)
+            assert not t1.is_alive()
+            assert not t2.is_alive()
 
             assert exceptions == []
             assert len(results) == 2
             assert all(r[1] == "success" for r in results)
 
-            # Final filename, staging rows, counts must match one complete worker generation (no mixed rows)
             sess.expire_all()
             final_batch = sess.query(ProjectAssetImportBatch).get(batch_id)
             assert final_batch.status == ImportBatchStatus.PARSED
-            
+
             staging_rows = sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).all()
-            assert len(staging_rows) == 1
-            final_row_val = staging_rows[0].proposed_asset_name
-            assert final_row_val in ("worker-1-row", "worker-2-row")
-            if final_row_val == "worker-1-row":
+            assert len(staging_rows) == 3
+            row_vals = {r.proposed_asset_name for r in staging_rows}
+            assert row_vals in ({"w1-row-a","w1-row-b","w1-row-c"}, {"w2-row-a","w2-row-b","w2-row-c"})
+            if row_vals == {"w1-row-a","w1-row-b","w1-row-c"}:
                 assert final_batch.source_filename == f"w1_{uid_s}.xlsx"
+                assert final_batch.total_rows == 3
             else:
                 assert final_batch.source_filename == f"w2_{uid_s}.xlsx"
+                assert final_batch.total_rows == 3
 
-            # Assert exactly two success AuditEvents
             events = sess.query(AuditEvent).filter_by(entity_id=batch_id).all()
             success_events = [e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"]
             assert len(success_events) == 2
@@ -681,77 +684,79 @@ class TestPGIsolatedConcurrencyRestored:
             stale_results = []
             stale_exceptions = []
 
-            def worker_stale_fail():
-                sess_w = SessionLocal()
-                try:
-                    current_u = sess_w.query(User).get(u1_id)
-                    # Controlled slow-failing file-like object (invalid zip bytes)
-                    controlled_file = ControlledSlowFile(b"corrupt-zip-bytes", read_event, block_event)
-                    upload = FakeUpload(f"b_stale_{uid_s}.xlsx", b"")
-                    upload.file = controlled_file
-                    
-                    upload_excel_file_orchestrator(
-                        db=sess_w,
-                        org_id=org_id,
-                        project_id=proj_id,
-                        batch_id=batch_id,
-                        file=upload,
-                        request=None,
-                        current_user=current_u,
-                        correlation_id=f"corr-stale-{uid_s}"
-                    )
-                    stale_results.append(("worker_stale", "success"))
-                except HTTPException as e:
-                    stale_results.append(("worker_stale", "http_error", e.status_code))
-                except Exception as e:
-                    stale_exceptions.append(e)
-                    stale_results.append(("worker_stale", "unexpected_error", str(e)))
-                finally:
-                    sess_w.close()
+            try:
+                def worker_stale_fail():
+                    sess_w = SessionLocal()
+                    try:
+                        current_u = sess_w.query(User).get(u1_id)
+                        controlled_file = ControlledSlowFile(b"corrupt-zip-bytes", read_event, block_event)
+                        upload = FakeUpload(f"b_stale_{uid_s}.xlsx", b"")
+                        upload.file = controlled_file
 
-            def worker_newer_success():
-                # Wait until worker A is inside orchestrator holding batch lock
-                read_event.wait()
-                
-                sess_w = SessionLocal()
-                try:
-                    current_u = sess_w.query(User).get(u2_id)
-                    content = _xlsx(rows=[["asset_name"], ["success-final-val"]])
-                    upload = FakeUpload(f"b_success_{uid_s}.xlsx", content)
-                    
-                    # This call will block on batch FOR UPDATE query until worker A releases lock
-                    # We trigger block_event after starting worker B to resume worker A
-                    # Wait 0.2s after starting thread to ensure it is blocked
-                    upload_excel_file_orchestrator(
-                        db=sess_w,
-                        org_id=org_id,
-                        project_id=proj_id,
-                        batch_id=batch_id,
-                        file=upload,
-                        request=None,
-                        current_user=current_u,
-                        correlation_id=f"corr-success-{uid_s}"
-                    )
-                    stale_results.append(("worker_success", "success"))
-                except Exception as e:
-                    stale_exceptions.append(e)
-                    stale_results.append(("worker_success", "failure", str(e)))
-                finally:
-                    sess_w.close()
+                        upload_excel_file_orchestrator(
+                            db=sess_w,
+                            org_id=org_id,
+                            project_id=proj_id,
+                            batch_id=batch_id,
+                            file=upload,
+                            request=None,
+                            current_user=current_u,
+                            correlation_id=f"corr-stale-{uid_s}"
+                        )
+                        stale_results.append(("worker_stale", "success"))
+                    except HTTPException as e:
+                        stale_results.append(("worker_stale", "http_error", e.status_code))
+                    except Exception as e:
+                        stale_exceptions.append(e)
+                        stale_results.append(("worker_stale", "unexpected_error", str(e)))
+                    finally:
+                        sess_w.close()
+                        block_event.set()
 
-            t_fail = threading.Thread(target=worker_stale_fail)
-            t_succ = threading.Thread(target=worker_newer_success)
-            t_fail.start()
-            t_succ.start()
+                def worker_newer_success():
+                    read_event.wait(timeout=30)
+                    sess_w = SessionLocal()
+                    try:
+                        current_u = sess_w.query(User).get(u2_id)
+                        content = _xlsx(rows=[["asset_name"], ["success-final-val"]])
+                        upload = FakeUpload(f"b_success_{uid_s}.xlsx", content)
 
-            # Ensure worker A holds lock
-            read_event.wait()
-            time.sleep(0.2)
-            # Release worker A to fail
-            block_event.set()
+                        upload_excel_file_orchestrator(
+                            db=sess_w,
+                            org_id=org_id,
+                            project_id=proj_id,
+                            batch_id=batch_id,
+                            file=upload,
+                            request=None,
+                            current_user=current_u,
+                            correlation_id=f"corr-success-{uid_s}"
+                        )
+                        stale_results.append(("worker_success", "success"))
+                    except Exception as e:
+                        stale_exceptions.append(e)
+                        stale_results.append(("worker_success", "failure", str(e)))
+                    finally:
+                        sess_w.close()
+                        read_event.set()
+                        block_event.set()
 
-            t_fail.join()
-            t_succ.join()
+                t_fail = threading.Thread(target=worker_stale_fail)
+                t_succ = threading.Thread(target=worker_newer_success)
+                t_fail.start()
+                t_succ.start()
+
+                read_event.wait(timeout=10)
+                time.sleep(0.2)
+                block_event.set()
+
+                t_fail.join(timeout=60)
+                t_succ.join(timeout=60)
+                assert not t_fail.is_alive()
+                assert not t_succ.is_alive()
+
+            finally:
+                block_event.set()
+                read_event.set()
 
             assert stale_exceptions == []
             # One HTTP 400 failure and one success
