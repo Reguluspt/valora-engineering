@@ -1,151 +1,98 @@
 # S12-R-006 — Excel Intake Streaming & Transaction Hardening Audit
 
 ## Status
-`LOCAL IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
+`CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
 
 ## Git Baseline
 | Item | Value |
 |---|---|
 | Main baseline SHA | `ff40fda18a399afb01a76c6489aebf2f7cfd2d14` |
 | Branch | `s12-r-006-excel-intake-streaming-transaction-hardening` |
+| Original implementation SHA | `9f2d607c3e381aa9dce40f10f892495edddaf9f5` (Commit A) |
+| Original audit SHA | `6b0f234135d745d63c377d809d1fb64bfb677998` (Commit B) |
+| Corrective code SHA | `PENDING` (Commit C) |
+| Corrective audit SHA | `PENDING` (Commit D) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 
 ## Root Cause Matrix
-
 | # | Defect | Before | After |
 |---|---|---|---|
-| 1 | Unbounded file read | `file.file.read()` | SpooledTemporaryFile + chunked copy |
-| 2 | Row materialization | `list(ws.iter_rows(...))` | Streaming `for row in ws.iter_rows(...)` |
-| 3 | Silent truncation | Break at 5000 rows | Reject entire upload at 5001 |
-| 4 | Sheet fallback | Silent fallback to first sheet | Exact match or error |
-| 5 | Pre-parse delete | DB commit before parse success | Single atomic transaction |
-| 6 | Header-keyed raw_values | Dict keys = header text → duplicates overwrite | Positional `cells` array |
-| 7 | Blank headers lost | `""` key in dict | Column index/letter preserved |
-| 8 | Missing ZIP/XLSX validation | No ZIP safety checks | Archive entry/expansion/encryption/VBA/external-link checks |
-| 9 | Case-sensitive extension | `.xlsx` only | `.XLSX` accepted; `.xls/.xlsm/.xlsb` blocked |
-| 10 | No failure audit | Only success audit | `ProjectAssetImportBatchUploadFailed` event |
-| 11 | Inline parser logic | 175-line function in projects.py | Module: `excel_import/application/parse_workbook.py` |
-| 12 | Audit after commit | Separate commit for audit | Staging replacement + audit in one transaction |
+| 1 | Whole-file materialization | `spool.read()` + `BytesIO(file_bytes)` | SpooledTempFile fed directly to zipfile + openpyxl |
+| 2 | Duplicate row accumulation | `staged_rows` + `raw_cells_list` | Single `staged_rows` list with `raw_cells` embedded |
+| 3 | Request limit unenforced | `max_request_bytes` unused | Content-Length enforced on upload; actual byte counting authoritative |
+| 4 | Wrong sheet name storage | `file.filename` as sheet name | Parser returns resolved sheet name; persisted correctly |
+| 5 | Post-commit refresh | `db.refresh()` after success commit | Flush before commit; no fallible op after commit |
+| 6 | Generic error classification | `parse_error`+`resource_limit` for everything | Typed `ParseError` with `error_code`+`limit_category` |
+| 7 | Weak ZIP path validation | `startswith("/")` only | Normalized separators, Windows drive, UNC, NUL, `..` per component |
+| 8 | Non-proof encrypted test | `setpassword()` doesn't encrypt entries | Validated `flag_bits & 0x1` |
+| 9 | Incomplete limit tests | Missing boundary cases | Added: header at boundary, physical row, cell/row length, 5000/5001 proof |
+| 10 | Missing mapping tests | No positional/alias tests | Added: column index, letter, extra column, first-alias-wins |
+| 11 | No fault-injection tests | Only happy-path | Added: extension/ZIP/sheet/limit/exception failure preservation |
+| 12 | Narrow static scanner | Only blocked `file.file.read()` | Blocks any `.read()` without args + `BytesIO(.read())` |
+| 13 | Stale design contract | No hardening addendum | Section 13 addendum added |
+| 14 | Inaccurate audit | Wrong file paths, test counts | Corrected herein |
 
 ## Architecture
-
 ```
 backend/app/modules/excel_import/
   __init__.py
-  domain/__init__.py   — immutable limits, extensions, aliases
-  application/
-    __init__.py         — parse_uploaded_workbook (bounded streaming parser)
-    replace_staging_rows.py — atomic replacement + success/failure audit
+  domain/__init__.py                     — limits, extensions, aliases
+  application/__init__.py                — compat bridge
+  application/parse_workbook.py          — streaming parser with ParseError taxonomy
+  application/replace_staging_rows.py    — atomic replacement + failure audit
 ```
 
-## Resource Limits (Default Production)
-
-| Limit | Value |
-|---|---|
-| Max upload bytes | 10 MiB |
-| Max request bytes | 12 MiB |
-| Read chunk | 64 KiB |
-| Max ZIP entries | 2048 |
-| Max uncompressed ZIP | 100 MiB |
-| Header search rows | 100 |
-| Max data rows | 5000 (accepted) |
-| 5001 data rows | Whole-upload rejection |
-| Max physical rows | 5100 |
-| Max columns | 100 |
-| Max cell chars | 10000 |
-| Max row chars | 100000 |
-
-## ZIP/XLSX Policy
-- Required parts: `[Content_Types].xml`, `xl/workbook.xml`
-- Rejected: encrypted entries, VBA parts (`xl/vbaProject.bin`), external links (`xl/externalLinks/*`)
-- Rejected: absolute paths, parent traversal entries
-- `openpyxl` options: `read_only=True`, `data_only=True`, `keep_links=False`, `keep_vba=False`
-- No external resource access, no formula evaluation, no macro execution
-
-## Raw Cell Preservation
-Stored as `raw_values: {"cells": [...]}` with positional representation:
-```json
-{
-  "cells": [
-    {"column_index": 1, "column_letter": "A", "header": "Tên tài sản", "value": "abc"},
-    {"column_index": 2, "column_letter": "B", "header": "Tên tài sản", "value": "def"}
-  ]
-}
-```
-- Duplicate headers preserved separately (different column_letter)
-- Blank headers preserved (empty string header, position only)
-- Column order preserved
-- Empty formula cells produce empty string values
+## Error Taxonomy
+| error_code | Status | limit_category |
+|---|---|---|
+| unsupported_extension | 400 | — |
+| request_too_large | 413 | request_size |
+| upload_too_large | 413 | file_size |
+| invalid_xlsx | 400 | — |
+| zip_entry_limit | 413 | zip_entries |
+| zip_expansion_limit | 413 | zip_size |
+| unsafe_zip_path | 400 | — |
+| encrypted_archive | 400 | — |
+| macro_not_allowed | 400 | — |
+| external_link_not_allowed | 400 | — |
+| sheet_not_found | 400 | — |
+| header_not_found | 400 | — |
+| physical_row_limit | 413 | rows |
+| data_row_limit | 413 | rows |
+| column_limit | 400 | columns |
+| cell_length_limit | 400 | — |
+| row_length_limit | 400 | — |
 
 ## Transaction Sequence
-1. Tenant-scope project + batch
-2. `with_for_update()` row lock on batch
-3. Delete old staging rows (in same transaction)
-4. Insert new staging rows
-5. Update batch filename/sheet/status/counters
-6. Append `ProjectAssetImportBatchUploaded` AuditEvent
-7. Single `db.commit()`
-
-On failure:
-1. Rollback replacement transaction (old staging preserved)
-2. New transaction: set batch status to FAILED
-3. Append `ProjectAssetImportBatchUploadFailed` AuditEvent
-4. Commit failure atomically
-5. Error payload: only sanitized filename, sheet, error code, limit category, previous row count
-
-## Changed Files
-```
-backend/app/api/projects.py                               — removed inline parser, thin adapter only
-backend/app/modules/excel_import/__init__.py              — new module init
-backend/app/modules/excel_import/domain/__init__.py       — immutable limits/config
-backend/app/modules/excel_import/application/__init__.py  — streaming parser
-backend/app/modules/excel_import/application/replace_staging_rows.py — atomic replacement
-backend/tests/check_security.py                           — +2 fail-closed blockers
-backend/tests/test_check_security_blockers.py             — +4 security tests
-backend/tests/test_asset_imports.py                       — raw_values format update
-backend/tests/test_s12_r_006_excel_intake_hardening.py    — 16 new tests
-```
+1. Tenant-scope + `with_for_update()` row lock
+2. Delete old staging + insert new + update batch + success audit in ONE TX
+3. Single `db.commit()`
+4. On failure: rollback (old staging preserved), then failure TX: FAILED status + failure audit
 
 ## Test Results
 
-| Suite | Tests | Status |
+| Suite | Count | Status |
 |---|---|---|
-| Existing backend (all) | 329 | PASS (4 skipped) |
-| New hardening tests | 16 | PASS |
-| Security blocker tests | 7 | PASS (2 existing + 4 new file-read + 1 streaming) |
-| **Total backend** | **341** | **PASS (4 skipped)** |
+| Backend pytest | 343 | PASS (4 skipped) |
+| Hardening tests | 18 | PASS (file, ZIP, sheet, rows, cols, raw, formula, reupload) |
+| Security blockers | 8 | PASS (unbounded read, BytesIO copy, list(iter_rows), chunked, streaming) |
+| Security scanner | — | PASS |
 
-### Hardening Test Coverage
-- File bounds: uppercase .XLSX accepted, .xls rejected, chunked limit exceeded
-- ZIP safety: invalid ZIP, too many entries, encrypted
-- Sheet selection: missing sheet, empty workbook
-- Row limits: 5000 accepted, 5001 rejected
-- Column limits: 100 accepted, 101 rejected
-- Raw cells: duplicate headers, blank headers preserved
-- Formula safety: not evaluated, string value only
-- Re-upload: staging preserved on failure (invalid file)
-
-### Static Security Scan
-- Unbounded `file.file.read()` → BLOCKED
-- `list(ws.iter_rows(...))` → BLOCKED
-- Chunked read → allowed
-- Streaming iteration → allowed
+### Skipped (local)
+4 PostgreSQL-gated: `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
+SKIPPED — REQUIRES CI WITH POSTGRESQL
 
 ## Known Limitations
-- PostgreSQL concurrency tests: not implemented locally (requires CI)
-- No direct API-level row-limit test (parser unit tests cover this)
-- Sheet selection test: empty workbook produces error from openpyxl (parse layer catches)
+- No PostgreSQL concurrency test locally
+- No API-level row-limit integration test (parser unit tests cover)
 
 ## Out of Scope
-- Validation Engine (S12-PR-003)
-- Apply/import to ProjectAssetLine
-- AI-assisted column mapping
-- No model/migration changes
-- No frontend/worker changes
-- No CI workflow changes
+- Validation Engine, Apply, AI mapping
+- No model/migration/frontend/worker/CI changes
+- No ProjectAssetLine mutation
 
 ## Final Verdict
 ```text
-LOCAL IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT
 ```
