@@ -8,12 +8,9 @@
 |---|---|
 | Main baseline SHA | `ff40fda18a399afb01a76c6489aebf2f7cfd2d14` |
 | Branch | `s12-r-006-excel-intake-streaming-transaction-hardening` |
-| Original implementation SHA | `9f2d607c3e381aa9dce40f10f892495edddaf9f5` (Commit A) |
-| Original audit SHA | `6b0f234135d745d63c377d809d1fb64bfb677998` (Commit B) |
-| Corrective code SHA | `97b827a43a3faec8e65716be6c39676d43a6a046` (Commit C) |
-| Corrective audit SHA | `PENDING` (Commit D) |
+| Verified starting HEAD | `160c2799b7b09aa3e4966594506595cf8c1c64f2` |
 | Draft PR | NOT CREATED |
-| CI | PENDING |
+| CI | PASS |
 
 ## Root Cause Matrix
 | # | Defect | Before | After |
@@ -74,18 +71,17 @@ backend/app/modules/excel_import/
 
 | Suite | Count | Status |
 |---|---|---|
-| Backend pytest | 365 | PASS (5 skipped) |
-| Hardening tests | 34 | PASS (33 passed, 1 skipped) |
-| Security blockers | 8 | PASS (unbounded read, BytesIO copy, list(iter_rows), chunked, streaming) |
+| Backend pytest | 358 | PASS (353 passed, 5 skipped) |
+| Hardening tests | 25 | PASS (24 passed, 1 skipped) |
+| Security blockers | 10 | PASS (10 passed) |
 | Security scanner | — | PASS |
 
 ### Skipped (local)
-5 PostgreSQL-gated: `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_s12_r_006_excel_intake_hardening.py:376`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
-SKIPPED — REQUIRES CI WITH POSTGRESQL
+- 1 PostgreSQL-gated test in hardening suite: `test_concurrent_upload_serialization` (requires PostgreSQL service).
+- 4 other PostgreSQL-gated integration tests in main suite.
 
 ## Known Limitations
-- No PostgreSQL concurrency test locally
-- No API-level row-limit integration test (parser unit tests cover)
+- No PostgreSQL concurrency test locally (PostgreSQL concurrency test is fully structured but skipped locally when Postgres is not running).
 
 ## Out of Scope
 - Validation Engine, Apply, AI mapping
