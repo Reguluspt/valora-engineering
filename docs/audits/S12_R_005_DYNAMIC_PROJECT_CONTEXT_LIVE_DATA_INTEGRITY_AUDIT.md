@@ -1,7 +1,7 @@
 # S12-R-005 — Dynamic Project Context & Live Workbench Data Integrity Audit
 
 ## Status
-`CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
+`FINAL MICRO-CORRECTIVE COMPLETE — READY FOR INDEPENDENT RE-AUDIT`
 
 ## Git Baseline
 | Item | Value |
@@ -10,8 +10,10 @@
 | Branch | `s12-r-005-dynamic-project-context-live-data-integrity` |
 | Original implementation SHA | `f533eee02fc11545ec1d906c4dfca588b8cb3386` |
 | Previous audit SHA | `77f5e9a4c546ea45662bb5c29509bbaeb253d14a` |
-| Corrective implementation SHA | `PENDING` (Commit C) |
-| Audit evidence SHA | `PENDING` (Commit D) |
+| Corrective implementation SHA | `94b8030dda5bd8d7af39a4796439549905256bef` |
+| Corrective audit SHA | `16c6a61f0457bd3ef51478f56c4fc8753aef79cb` |
+| **Micro-corrective code SHA** | `PENDING` (Commit E) |
+| **Micro-corrective audit SHA** | `PENDING` (Commit F) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 
@@ -114,24 +116,32 @@ Deleted:
 
 ## Obfuscated (ZERO_UUID guard constants only in `useWorkbenchSession.ts` and `useResolvedProject.ts`)
 
-## Local Quality Gate Results
+## Micro-Corrective Local Quality Gate Results
 
 | Gate | Result |
 |---|---|
 | Backend ruff | PASS |
-| Backend pytest | 319 passed, 4 skipped, 0 failed |
-| Security scanner | PASS (S12R-SESSION-001 + S12R-ROUTING-001 resolved) |
+| Backend pytest | **322 passed, 4 skipped, 0 failed** (includes 3 security blocker tests) |
+| Security scanner | PASS (critical blockers enforced: slug + all-zero UUID) |
 | Alembic heads | PASS (single: `db5977424e7b`) |
 | Worker ruff | PASS |
 | Worker pytest | 1 passed |
 | Frontend lint | PASS |
 | Frontend build | PASS |
-| Frontend vitest | 36 passed (9 test files) |
+| Frontend vitest | **44 passed (10 test files)** |
 | npm audit | 0 vulnerabilities |
 
-Skipped: 4 PostgreSQL-gated (local dev, expected)
+### Added Tests
+| Test | Type | Count | Scope |
+|---|---|---|---|
+| `validators.test.tsx` | Frontend unit | 5 | UUID validation: valid, uppercase, malformed, empty, all-zero |
+| `test_check_security_blockers.py` | Backend security | 3 | Slug blocker, UUID blocker, clean source passes |
 
-## Corrective Finding Disposition
+### Skipped Tests
+4 PostgreSQL-gated (local dev): `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
+SKIPPED — REQUIRES CI WITH POSTGRESQL
+
+## Micro-Corrective Finding Disposition
 
 | Finding | Resolution | Evidence |
 |---|---|---|
@@ -168,5 +178,5 @@ Skipped: 4 PostgreSQL-gated (local dev, expected)
 
 ## Final Verdict
 ```text
-CORRECTIVE IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+FINAL MICRO-CORRECTIVE COMPLETE — READY FOR INDEPENDENT RE-AUDIT
 ```
