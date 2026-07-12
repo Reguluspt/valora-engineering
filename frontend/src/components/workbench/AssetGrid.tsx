@@ -8,6 +8,38 @@ import { EmptyState } from "../common/EmptyState";
 import { InlineEditDraft } from "./drafts/DraftStateTypes";
 import { getDraftStatusLabelVi, getDraftStatusBadge } from "./hooks/useWorkbenchDraftState";
 
+const VALIDATION_LABELS: Record<string, string> = {
+  valid: "Hợp lệ",
+  warning: "Cảnh báo",
+  error: "Lỗi",
+  blocking: "Chặn",
+  unvalidated: "Chưa kiểm tra",
+  needs_review: "Cần kiểm tra",
+};
+
+const REVIEW_LABELS: Record<string, string> = {
+  raw: "Thô",
+  parsed: "Đã phân tích",
+  identity_suggested: "Đề xuất định danh",
+  identity_approved: "Đã định danh",
+  taxonomy_approved: "Đã phân loại",
+  knowledge_matched: "Đã khớp dữ liệu",
+  price_reviewed: "Đã thẩm định giá",
+  approved: "Đã duyệt",
+  locked: "Đã khóa",
+  excluded: "Đã loại",
+};
+
+const UNKNOWN_LABEL = "Chưa xác định";
+
+function validationLabel(v: string): string {
+  return VALIDATION_LABELS[v] ?? UNKNOWN_LABEL;
+}
+
+function reviewLabel(v: string): string {
+  return REVIEW_LABELS[v] ?? UNKNOWN_LABEL;
+}
+
 interface AssetGridProps {
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
@@ -331,11 +363,11 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <StatusBadge
                           status={row.validation_status === "valid" ? "approved" : row.validation_status}
-                          label={row.validation_status}
+                          label={validationLabel(row.validation_status)}
                         />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
-                        <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={row.review_status} />
+                        <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={reviewLabel(row.review_status)} />
                       </td>
                     </tr>
                   );

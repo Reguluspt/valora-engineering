@@ -63,6 +63,7 @@ export function useWorkbenchSession(projectId: string) {
     initSession();
     return () => {
       projectGen.current += 1;
+      sessionRef.current = null;
     };
   }, [initSession]);
 

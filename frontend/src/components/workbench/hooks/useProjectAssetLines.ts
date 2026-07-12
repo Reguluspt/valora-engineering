@@ -15,6 +15,15 @@ function parseVersionToken(val: string | undefined): number | null {
   return parsed;
 }
 
+function dedupeRows(rows: AssetLineGridRow[]): AssetLineGridRow[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    if (seen.has(r.project_asset_line_id)) return false;
+    seen.add(r.project_asset_line_id);
+    return true;
+  });
+}
+
 export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[], offset: number): AssetLineGridRow[] {
   return items.map((item, idx) => ({
     project_asset_line_id: item.id,
@@ -62,14 +71,6 @@ export function useProjectAssetLines(projectId: string) {
     setHasMore(false);
   }, []);
 
-  const appendRows = useCallback((items: AssetLineGridRow[]) => {
-    setRows((prev) => {
-      const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
-      const newRows = items.filter((r) => !existingIds.has(r.project_asset_line_id));
-      return [...prev, ...newRows];
-    });
-  }, []);
-
   const loadPage = useCallback(async (offset: number) => {
     if (!projectId) return;
     const gen = projectGen.current;
@@ -79,10 +80,16 @@ export function useProjectAssetLines(projectId: string) {
       if (gen !== projectGen.current) return;
 
       const mappedRows = mapAssetLinesToGridRows(res.items, offset);
+      const deduped = dedupeRows(mappedRows);
       if (offset === 0) {
-        setRows(mappedRows);
+        setRows(deduped);
       } else {
-        appendRows(mappedRows);
+        const existingIds = new Set<string>();
+        setRows((prev) => {
+          prev.forEach((r) => existingIds.add(r.project_asset_line_id));
+          const newUnique = deduped.filter((r) => !existingIds.has(r.project_asset_line_id));
+          return [...prev, ...newUnique];
+        });
       }
       consumedOffsetRef.current = offset + res.items.length;
       setTotalCount(res.total);
@@ -98,7 +105,7 @@ export function useProjectAssetLines(projectId: string) {
         loadingMoreRef.current = false;
       }
     }
-  }, [projectId, appendRows]);
+  }, [projectId]);
 
   useEffect(() => {
     resetState();
