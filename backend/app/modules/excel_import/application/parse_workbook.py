@@ -189,12 +189,15 @@ class _LazyWorkbook:
                 self.close()
                 raise
             if r_idx >= self._limits.max_physical_rows:
+                self.close()
                 _fail(413, "physical_row_limit", "Số lượng dòng vật lý vượt quá giới hạn cho phép.", limit_category="rows")
             if not any(c is not None for c in row):
                 continue
             if self._yielded >= self._limits.max_data_rows:
+                self.close()
                 _fail(413, "data_row_limit", f"Số lượng dòng dữ liệu vượt quá giới hạn {self._limits.max_data_rows} dòng.", limit_category="rows")
             if len(row) > self._limits.max_columns:
+                self.close()
                 _fail(400, "column_limit", "Số lượng cột dữ liệu vượt quá giới hạn cho phép.", limit_category="columns")
             rl = 0
             for c in row:
@@ -202,8 +205,10 @@ class _LazyWorkbook:
                     s = str(c)
                     rl += len(s)
                     if len(s) > self._limits.max_cell_chars:
+                        self.close()
                         _fail(400, "cell_length_limit", "Ô dữ liệu vượt quá độ dài ký tự cho phép.")
             if rl > self._limits.max_row_chars:
+                self.close()
                 _fail(400, "row_length_limit", "Độ dài dòng dữ liệu vượt quá giới hạn ký tự cho phép.")
             cells = _build_cells(self._headers, row)
             mp = {}
