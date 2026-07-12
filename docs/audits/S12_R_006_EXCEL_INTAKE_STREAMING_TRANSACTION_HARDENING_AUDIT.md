@@ -14,7 +14,9 @@
 | Commit K SHA | `df19144f9ed75888ad7ab3b023984586a1c535ae` |
 | Commit L SHA | `9fb0e3bcedf471562d7d1e4a367e7fcadd3982da` |
 | Commit M SHA | `35b2363ecc6a7c10b915df7d164cdd34ef1fe7a3` |
-| Commit N SHA (Recovery) | `82724aa1740d79f2b88da471eb3679d297dafa6d` (N‑4 fingerprint guard, N‑6 boundary tests, N‑7 raw persistence, N‑8 design wording) |
+| Commit N SHA (Recovery) | `82724aa1740d79f2b88da471eb3679d297dafa6d` |
+| Commit O SHA | `936587a4c8185e211eb7e930aa63fbab69a2578d` |
+| Commit P SHA | `09bd361` (corrected fingerprint recovery, PG timeouts, multi-row datasets) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 | Exact final audit-only reconciliation commit SHA | reported in the delivery report |
