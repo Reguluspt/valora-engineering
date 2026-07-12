@@ -16,10 +16,13 @@
 | Commit M SHA | `35b2363ecc6a7c10b915df7d164cdd34ef1fe7a3` |
 | Commit N SHA (Recovery) | `82724aa1740d79f2b88da471eb3679d297dafa6d` |
 | Commit O SHA | `936587a4c8185e211eb7e930aa63fbab69a2578d` |
-| Commit P SHA | `09bd361` (corrected fingerprint recovery, PG timeouts, multi-row datasets) |
+| Commit P SHA | `09bd3611891c5d5d7e9181b2680cc22caba1bf17` (corrected fingerprint, PG timeouts, multi-row) |
+| Commit Q SHA | `1bbcefcbbf19df181c685e40b2da7d85aeb84c79` |
+| Commit R SHA | `PENDING` (contains this reconciled audit log) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
-| Exact final audit-only reconciliation commit SHA | reported in the delivery report |
+| **Backend pytest** | **369 passed, 5 skipped, 20 warnings** (zero failures) |
+| **PostgreSQL** | **LOCALLY SKIPPED — REQUIRES CI WITH POSTGRESQL** |
 
 ## Root Cause Matrix
 | # | Defect | Before | After |
