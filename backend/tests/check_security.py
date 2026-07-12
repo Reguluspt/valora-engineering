@@ -33,9 +33,15 @@ CRITICAL_BLOCKERS = [
     },
     {
         "name": "Unbounded UploadFile read in runtime",
-        "pattern": r"file\.file\.read\(\s*\)",
+        "pattern": r"\.read\(\s*\)",
         "exts": (".py",),
-        "description": "UploadFile.file.read() without a size argument consumes unlimited memory."
+        "description": ".read() without a size argument on a file/spool/socket consumes unlimited memory."
+    },
+    {
+        "name": "Whole-file BytesIO copy in runtime",
+        "pattern": r"BytesIO\s*\(\s*.*\.read\s*\(\s*\)\s*\)",
+        "exts": (".py",),
+        "description": "io.BytesIO(file.read()) creates an extra copy of the entire upload."
     },
     {
         "name": "Worksheet row materialization in runtime",

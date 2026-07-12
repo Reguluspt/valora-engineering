@@ -37,13 +37,22 @@ def test_clean_source_passes():
         assert issues == 0, f"Expected 0 issues for clean source, got {issues}"
 
 
-def test_unbounded_file_read_blocked():
+def test_unbounded_read_blocked():
     m = _import_checker()
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, "runtime.py"), "w", encoding="utf-8") as f:
-            f.write('data = file.file.read()')
+            f.write('data = spool.read()')
         issues = m.check_security_baseline_and_blockers(tmp)
-        assert issues > 0, "Expected blocker for unbounded file read"
+        assert issues > 0, "Expected blocker for unbounded .read()"
+
+
+def test_bytesio_copy_blocked():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "runtime.py"), "w", encoding="utf-8") as f:
+            f.write('buf = io.BytesIO(spool.read())')
+        issues = m.check_security_baseline_and_blockers(tmp)
+        assert issues > 0, "Expected blocker for BytesIO(spool.read())"
 
 
 def test_list_iter_rows_blocked():

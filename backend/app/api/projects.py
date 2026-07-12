@@ -52,7 +52,7 @@ from app.modules.project_master_data.workbench_schemas import (
     ProjectAssetImportStagingRowPaginationResponse
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
-from app.modules.excel_import.application import parse_uploaded_workbook
+from app.modules.excel_import.application.parse_workbook import parse_workbook, ParseError
 from app.modules.excel_import.application.replace_staging_rows import replace_staging_rows, record_failure_audit
 
 
@@ -647,72 +647,60 @@ def upload_project_asset_import_file(
         .filter(ProjectAssetImportStagingRow.import_batch_id == batch_id)
         .count()
     )
-    error_code = None
-    limit_category = None
-    sheet_name = batch.source_sheet_name
 
     try:
-        staged_rows, headers, raw_cells_list, parsed_count, sanitized_filename = parse_uploaded_workbook(
+        staging_rows, sanitized_filename, resolved_sheet, column_count = parse_workbook(
             file=file,
             source_sheet_name=batch.source_sheet_name,
         )
-        sheet_name = batch.source_sheet_name or file.filename or "Sheet1"
-
         batch = replace_staging_rows(
             db=db,
             actor=current_user,
             org_id=org_id,
             project_id=project_id,
             batch_id=batch_id,
-            staged_rows=staged_rows,
-            raw_cells_list=raw_cells_list,
-            parsed_count=parsed_count,
+            staged_rows=staging_rows,
+            parsed_count=len(staging_rows),
             sanitized_filename=sanitized_filename,
-            sheet_name=sheet_name,
-            column_count=len(headers),
+            sheet_name=resolved_sheet,
+            column_count=column_count,
             correlation_id=correlation_id,
         )
         db.commit()
-        db.refresh(batch)
         return batch
 
-    except HTTPException:
+    except ParseError as pe:
         db.rollback()
-        error_code = "parse_error"
-        limit_category = "resource_limit"
         record_failure_audit(
             db=db,
             org_id=org_id,
             batch_id=batch_id,
             actor_id=current_user.id,
             sanitized_filename=file.filename or "import.xlsx",
-            requested_sheet=sheet_name,
-            error_code=error_code,
-            limit_category=limit_category,
+            requested_sheet=batch.source_sheet_name,
+            error_code=pe.error_code,
+            limit_category=pe.limit_category,
             previous_row_count=previous_count,
             correlation_id=correlation_id,
         )
         db.commit()
-        raise
+        raise HTTPException(status_code=pe.status, detail=pe.detail)
 
     except Exception:
         db.rollback()
-        error_code = "unexpected_error"
         record_failure_audit(
             db=db,
             org_id=org_id,
             batch_id=batch_id,
             actor_id=current_user.id,
             sanitized_filename=file.filename or "import.xlsx",
-            requested_sheet=sheet_name,
-            error_code=error_code,
+            requested_sheet=batch.source_sheet_name,
+            error_code="unexpected_error",
             previous_row_count=previous_count,
             correlation_id=correlation_id,
         )
         db.commit()
         raise HTTPException(status_code=500, detail="Lỗi hệ thống khi xử lý tệp Excel.")
-
-    return batch
 
 
 

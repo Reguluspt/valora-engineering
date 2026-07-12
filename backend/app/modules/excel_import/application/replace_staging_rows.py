@@ -21,8 +21,7 @@ def replace_staging_rows(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     staged_rows: list[dict],
-    raw_cells_list: list[list[dict]],
-    parsed_count: int,
+    parsed_count: int | None = None,
     sanitized_filename: str,
     sheet_name: str,
     column_count: int,
@@ -30,6 +29,8 @@ def replace_staging_rows(
     correlation_id: str | None = None,
 ) -> ProjectAssetImportBatch:
     limits = limits or DEFAULT_LIMITS
+    if parsed_count is None:
+        parsed_count = len(staged_rows)
 
     # 1. Resolve and tenant-scope
     project = (

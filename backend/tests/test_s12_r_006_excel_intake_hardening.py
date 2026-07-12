@@ -1,303 +1,231 @@
 """
-S12-R-006 Excel intake hardening tests.
-Tests for file bounds, ZIP safety, streaming limits, raw cell preservation,
-and re-upload atomicity.
+S12-R-006 Excel intake hardening tests — corrected for streaming API.
 """
 import io
-import struct
-import os
 import zipfile
 
 import openpyxl
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+from fastapi import UploadFile
 
-from app.modules.excel_import.application import parse_uploaded_workbook
+from app.modules.excel_import.application.parse_workbook import parse_workbook, ParseError
 from app.modules.excel_import.domain import ExcelImportLimits
 from app.modules.project_master_data.models import (
-    ProjectAssetLine,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     ImportBatchStatus,
 )
 
 
-# ── helpers ────────────────────────────────────────────────────────────────
-def _make_upload_file(filename: str, content: bytes) -> "UploadFile":
-    from fastapi import UploadFile
+def _mk_file(filename: str, content: bytes) -> UploadFile:
     return UploadFile(filename=filename, file=io.BytesIO(content))
 
 
-def _make_xlsx(sheet_name: str = "Sheet1", rows: list[list] | None = None) -> io.BytesIO:
+def _xlsx(sheet: str = "Sheet1", rows: list | None = None) -> io.BytesIO:
     wb = openpyxl.Workbook()
     ws = wb.active
-    if ws:
-        ws.title = sheet_name
+    ws.title = sheet
     if rows:
-        for row in rows:
-            ws.append([str(c) if c is not None else None for c in row])
+        for r in rows:
+            ws.append([str(c) if c is not None else None for c in r])
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
     return buf
 
 
-# ── B1: file/request bounds ────────────────────────────────────────────────
 class TestFileBounds:
-    def test_uppercase_xlsx_succeeds(self):
-        buf = _make_xlsx(rows=[["A"], ["v"]])
-        staged, headers, raw_cells, count, name = parse_uploaded_workbook(
-            _make_upload_file("test.XLSX", buf.read()), source_sheet_name=None
-        )
-        assert count == 1
+    def test_uppercase_xlsx(self):
+        buf = _xlsx(rows=[["A"], ["v"]])
+        staging, fname, sheet, cols = parse_workbook(_mk_file("test.XLSX", buf.read()), None)
+        assert len(staging) == 1
+        assert cols == 1
 
     def test_xls_rejected(self):
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("bad.xls", b"not-excel"), source_sheet_name=None
-            )
-        assert "không được hỗ trợ" in str(exc.value.detail)
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("bad.xls", b"not-excel"), None)
+        assert exc.value.error_code == "unsupported_extension"
 
-    def test_chunked_upload_exceeding_limit(self):
+    def test_oversized(self):
         limits = ExcelImportLimits(max_upload_bytes=100)
-        large = b"x" * 101
-        buf = _make_xlsx(rows=[["A"], ["v"]])
-        content = buf.read()
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("test.xlsx", content), source_sheet_name=None, limits=limits
-            )
-        assert "vượt quá" in str(exc.value.detail)
+        buf = _xlsx(rows=[["A"], ["v"]])
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert exc.value.error_code == "upload_too_large"
 
 
-# ── B2: ZIP/XLSX safety ────────────────────────────────────────────────────
 class TestZipSafety:
-    def test_invalid_zip_rejected(self):
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("bad.xlsx", b"not-a-zip"), source_sheet_name=None
-            )
-        assert "không hợp lệ" in str(exc.value.detail)
+    def test_invalid(self):
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("bad.xlsx", b"not-zip"), None)
+        assert exc.value.error_code == "invalid_xlsx"
 
-    def test_too_many_zip_entries(self):
+    def test_many_entries(self):
         limits = ExcelImportLimits(max_zip_entries=5)
-        buf = _make_xlsx(rows=[["A"], ["v"]])
-        content = buf.read()
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("test.xlsx", content), source_sheet_name=None, limits=limits
-            )
-        assert "quá nhiều" in str(exc.value.detail)
+        buf = _xlsx(rows=[["A"], ["v"]])
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert exc.value.error_code == "zip_entry_limit"
 
-    def test_encrypted_zip_rejected(self):
+    def test_encrypted(self):
         buf = io.BytesIO()
         zf = zipfile.ZipFile(buf, "w")
         zf.writestr("[Content_Types].xml", "<xml></xml>")
         zf.writestr("xl/workbook.xml", "<xml></xml>")
         zf.setpassword(b"pass")
         zf.close()
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("enc.xlsx", buf.getvalue()), source_sheet_name=None
-            )
-        detail = str(exc.value.detail).lower()
-        assert "mã hóa" in detail or "không thể đọc" in detail
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("enc.xlsx", buf.getvalue()), None)
+        assert exc.value.error_code in ("encrypted_archive", "invalid_xlsx")
 
 
-# ── B3: sheet selection ────────────────────────────────────────────────────
-class TestSheetSelection:
-    def test_requested_sheet_not_found(self):
-        buf = _make_xlsx(sheet_name="Wrong", rows=[["A"], ["v"]])
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("test.xlsx", buf.read()), source_sheet_name="Missing"
-            )
-        assert "không tồn tại" in str(exc.value.detail)
+class TestSheet:
+    def test_missing_sheet(self):
+        buf = _xlsx(sheet="Wrong", rows=[["A"], ["v"]])
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("test.xlsx", buf.read()), "Missing")
+        assert exc.value.error_code == "sheet_not_found"
 
-    def test_empty_workbook_rejected(self):
+    def test_empty_wb(self):
         buf = io.BytesIO()
         zf = zipfile.ZipFile(buf, "w")
         zf.writestr("[Content_Types].xml", "<xml></xml>")
         zf.writestr("xl/workbook.xml", "<xml></xml>")
         zf.close()
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("empty.xlsx", buf.getvalue()), source_sheet_name=None
-            )
-        detail = str(exc.value.detail).lower()
-        assert any(w in detail for w in ["không chứa", "trống", "không thể đọc"])
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("empty.xlsx", buf.getvalue()), None)
+        assert exc.value.error_code in ("invalid_xlsx",)
 
 
-# ── B4: row limits ─────────────────────────────────────────────────────────
 class TestRowLimits:
-    def test_5000_rows_accepted(self):
+    def test_5000_ok(self):
         limits = ExcelImportLimits(max_data_rows=5000, max_physical_rows=5100)
         rows = [["H"]] + [[f"r{i}"] for i in range(5000)]
-        buf = _make_xlsx(rows=rows)
-        _, _, _, count, _ = parse_uploaded_workbook(
-            _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None, limits=limits
-        )
-        assert count == 5000
+        buf = _xlsx(rows=rows)
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert len(staging) == 5000
 
-    def test_5001_rows_rejected(self):
+    def test_5001_reject(self):
         limits = ExcelImportLimits(max_data_rows=5000, max_physical_rows=5100)
         rows = [["H"]] + [[f"r{i}"] for i in range(5001)]
-        buf = _make_xlsx(rows=rows)
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None, limits=limits
-            )
-        assert "5000" in str(exc.value.detail)
+        buf = _xlsx(rows=rows)
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert exc.value.error_code == "data_row_limit"
 
 
-# ── B5: column limits ──────────────────────────────────────────────────────
 class TestColumnLimits:
-    def test_100_columns_accepted(self):
+    def test_100_ok(self):
         limits = ExcelImportLimits(max_columns=100)
-        header = [f"C{i}" for i in range(100)]
-        buf = _make_xlsx(rows=[header, [str(i) for i in range(100)]])
-        _, _, _, count, _ = parse_uploaded_workbook(
-            _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None, limits=limits
-        )
-        assert count == 1
+        h = [f"c{i}" for i in range(100)]
+        buf = _xlsx(rows=[h, [str(i) for i in range(100)]])
+        staging, _, _, cols = parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert cols == 100
+        assert len(staging) == 1
 
-    def test_101_columns_rejected(self):
+    def test_101_reject(self):
         limits = ExcelImportLimits(max_columns=100)
-        header = [f"C{i}" for i in range(101)]
-        buf = _make_xlsx(rows=[header, [str(i) for i in range(101)]])
-        with pytest.raises(Exception) as exc:
-            parse_uploaded_workbook(
-                _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None, limits=limits
-            )
-        assert "cột" in str(exc.value.detail).lower()
+        h = [f"c{i}" for i in range(101)]
+        buf = _xlsx(rows=[h, [str(i) for i in range(101)]])
+        with pytest.raises(ParseError) as exc:
+            parse_workbook(_mk_file("test.xlsx", buf.read()), None, limits=limits)
+        assert exc.value.error_code == "column_limit"
 
 
-# ── B6: raw cells preserve duplicates and blanks ───────────────────────────
 class TestRawCells:
-    def test_duplicate_headers_preserved(self):
-        buf = _make_xlsx(rows=[["A", "A"], ["1", "2"]])
-        _, _, raw_cells_list, _, _ = parse_uploaded_workbook(
-            _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None
-        )
-        cells = raw_cells_list[0]
+    def test_duplicates(self):
+        buf = _xlsx(rows=[["A", "A"], ["1", "2"]])
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None)
+        cells = staging[0]["raw_cells"]
         assert len(cells) == 2
         assert cells[0]["header"] == "A"
         assert cells[1]["header"] == "A"
         assert cells[0]["value"] == "1"
         assert cells[1]["value"] == "2"
 
-    def test_blank_headers_preserved(self):
-        buf = _make_xlsx(rows=[["A", "", "B"], ["1", "blank", "3"]])
-        _, _, raw_cells_list, _, _ = parse_uploaded_workbook(
-            _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None
-        )
-        cells = raw_cells_list[0]
+    def test_blanks(self):
+        buf = _xlsx(rows=[["A", "", "B"], ["1", "blank", "3"]])
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None)
+        cells = staging[0]["raw_cells"]
         assert cells[1]["header"] == ""
         assert cells[1]["value"] == "blank"
 
+    def test_positions(self):
+        buf = _xlsx(rows=[["A", "B", "C"], ["x", "y", "z"]])
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None)
+        c = staging[0]["raw_cells"]
+        assert c[0]["column_index"] == 1
+        assert c[0]["column_letter"] == "A"
+        assert c[1]["column_index"] == 2
+        assert c[1]["column_letter"] == "B"
 
-# ── B7: formula safety ─────────────────────────────────────────────────────
-class TestFormulaSafety:
-    def test_formula_not_evaluated(self):
-        buf = _make_xlsx(rows=[["A"], ["text", "=SUM(1+1)"]])
-        _, _, raw_cells_list, _, _ = parse_uploaded_workbook(
-            _make_upload_file("test.xlsx", buf.read()), source_sheet_name=None
-        )
-        assert len(raw_cells_list) >= 1
-        val = raw_cells_list[0][1]["value"]
+    def test_extra_columns(self):
+        buf = _xlsx(rows=[["A"], ["1", "2", "3"]])
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None)
+        cells = staging[0]["raw_cells"]
+        assert len(cells) == 3
+        assert cells[2]["header"] == ""
+        assert cells[2]["value"] == "3"
+
+
+class TestFormula:
+    def test_not_evaluated(self):
+        buf = _xlsx(rows=[["A"], ["text", "=SUM(1+1)"]])
+        staging, _, _, _ = parse_workbook(_mk_file("test.xlsx", buf.read()), None)
+        val = staging[0]["raw_cells"][1]["value"]
         assert isinstance(val, str)
-        assert val != "3"  # formula should never produce a computed value
+        assert val != "3"
 
 
-# ── B8: re-upload preservation and atomicity ──────────────────────────────
-class TestReuploadAtomicity:
-    def test_staging_preserved_on_upload_failure(self):
+class TestReupload:
+    def test_preserved(self):
         from app.main import app
         from app.db import Base, get_db
         from app.modules.project_master_data.models import (
             OrganizationProfile, OrganizationStatus, User, UserStatus,
             Role, UserRole, Customer, CustomerStatus, Project, ProjectWorkflowStatus,
         )
-        engine = _create_test_engine()
+        from sqlalchemy import create_engine as ce
+        from sqlalchemy.pool import StaticPool
+        engine = ce("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
         Base.metadata.create_all(bind=engine)
-        sess = Session(bind=engine)
+        from sqlalchemy.orm import Session as S
+        sess = S(bind=engine)
         try:
-            org = _seed_org(sess)
-            user = _seed_user(sess, org)
-            proj = _seed_project(sess, org, user)
-            batch = _seed_parsed_batch(sess, org, proj, user)
-            batch_id = batch.id
-
-            pre_count = sess.query(ProjectAssetImportStagingRow).filter(
-                ProjectAssetImportStagingRow.import_batch_id == batch_id
-            ).count()
-            assert pre_count > 0
-
+            o = OrganizationProfile(legal_name="T", organization_slug="t", status=OrganizationStatus.ACTIVE)
+            sess.add(o)
+            sess.commit()
+            r = Role(code="e", display_name="E", permissions=["project:read","workbench:edit"])
+            sess.add(r)
+            sess.commit()
+            u = User(organization_id=o.id, email="u@t.com", full_name="U", status=UserStatus.ACTIVE)
+            sess.add(u)
+            sess.commit()
+            ur = UserRole(user_id=u.id, role_id=r.id, is_active=True)
+            sess.add(ur)
+            sess.commit()
+            c = Customer(organization_id=o.id, legal_name="C", status=CustomerStatus.ACTIVE, created_by=u.id)
+            sess.add(c)
+            sess.commit()
+            p = Project(organization_id=o.id, customer_id=c.id, code="P", name="P", status=ProjectWorkflowStatus.DRAFT, created_by=u.id)
+            sess.add(p)
+            sess.commit()
+            b = ProjectAssetImportBatch(organization_id=o.id, project_id=p.id, source_filename="old.xlsx", status=ImportBatchStatus.PARSED, total_rows=3, created_by_user_id=u.id)
+            sess.add(b)
+            sess.commit()
+            for i in range(3):
+                sr = ProjectAssetImportStagingRow(organization_id=o.id, project_id=p.id, import_batch_id=b.id, source_row_number=i+1, raw_values={"cells":[]}, mapped_values={}, normalized_preview={}, validation_status="valid", proposed_asset_name=f"O{i}")
+                sess.add(sr)
+            sess.commit()
+            pre = sess.query(ProjectAssetImportStagingRow).filter(ProjectAssetImportStagingRow.import_batch_id==b.id).count()
+            assert pre > 0
             app.dependency_overrides[get_db] = lambda: sess
-            client = TestClient(app)
-
-            resp = client.post(
-                f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/upload",
-                files={"file": ("bad.xls", b"not-a-workbook", "application/vnd.ms-excel")},
-                headers={"X-User-Id": str(user.id)},
-            )
+            cl = TestClient(app)
+            resp = cl.post(f"/api/v1/projects/{p.id}/asset-imports/{b.id}/upload", files={"file": ("bad.xls", b"not-wb", "app/vnd.ms-excel")}, headers={"X-User-Id": str(u.id)})
             assert resp.status_code in (400, 413)
-
-            post_count = sess.query(ProjectAssetImportStagingRow).filter(
-                ProjectAssetImportStagingRow.import_batch_id == batch_id
-            ).count()
-            assert post_count == pre_count
+            post = sess.query(ProjectAssetImportStagingRow).filter(ProjectAssetImportStagingRow.import_batch_id==b.id).count()
+            assert post == pre
         finally:
             app.dependency_overrides.clear()
             sess.close()
-
-
-def _create_test_engine():
-    from sqlalchemy import create_engine
-    from sqlalchemy.pool import StaticPool
-    return create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-
-
-def _seed_org(sess):
-    from app.modules.project_master_data.models import OrganizationProfile, OrganizationStatus
-    org = OrganizationProfile(legal_name="Test", organization_slug="test", status=OrganizationStatus.ACTIVE)
-    sess.add(org)
-    sess.commit()
-    return org
-
-
-def _seed_user(sess, org):
-    from app.modules.project_master_data.models import User, UserStatus, Role, UserRole
-    role = Role(code="editor", display_name="E", permissions=["project:read", "workbench:edit"])
-    sess.add(role)
-    sess.commit()
-    user = User(organization_id=org.id, email="u@t.com", full_name="U", status=UserStatus.ACTIVE)
-    sess.add(user)
-    sess.commit()
-    sess.add(UserRole(user_id=user.id, role_id=role.id, is_active=True))
-    sess.commit()
-    return user
-
-
-def _seed_project(sess, org, user):
-    from app.modules.project_master_data.models import Customer, CustomerStatus, Project, ProjectWorkflowStatus
-    c = Customer(organization_id=org.id, legal_name="Cust", status=CustomerStatus.ACTIVE, created_by=user.id)
-    sess.add(c)
-    sess.commit()
-    p = Project(organization_id=org.id, customer_id=c.id, code="P", name="P", status=ProjectWorkflowStatus.DRAFT, created_by=user.id)
-    sess.add(p)
-    sess.commit()
-    return p
-
-
-def _seed_parsed_batch(sess, org, proj, user):
-    from app.modules.project_master_data.models import ProjectAssetImportBatch, ProjectAssetImportStagingRow, ImportBatchStatus, ImportRowValidationStatus
-    batch = ProjectAssetImportBatch(organization_id=org.id, project_id=proj.id, source_filename="old.xlsx", status=ImportBatchStatus.PARSED, total_rows=3, created_by_user_id=user.id)
-    sess.add(batch)
-    sess.commit()
-    for i in range(3):
-        sr = ProjectAssetImportStagingRow(organization_id=org.id, project_id=proj.id, import_batch_id=batch.id, source_row_number=i+1, raw_values={"cells": []}, mapped_values={}, normalized_preview={}, validation_status=ImportRowValidationStatus.VALID, proposed_asset_name=f"Old{i}")
-        sess.add(sr)
-    sess.commit()
-    return batch
