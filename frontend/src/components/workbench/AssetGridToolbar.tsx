@@ -23,7 +23,7 @@ export function AssetGridToolbar({
     <div className="grid-toolbar" style={{ display: "flex", gap: "var(--space-md)", alignItems: "center", marginBottom: "var(--space-md)", flexWrap: "wrap" }}>
       <input
         type="text"
-        placeholder="Search raw name..."
+        placeholder="Tìm kiếm theo tên..."
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         style={{
@@ -46,10 +46,10 @@ export function AssetGridToolbar({
           borderRadius: "var(--radius-md)"
         }}
       >
-        <option value="All">All Review Statuses</option>
-        <option value="raw">Raw</option>
-        <option value="parsed">Parsed</option>
-        <option value="approved">Approved</option>
+        <option value="All">Tất cả trạng thái kiểm tra</option>
+        <option value="raw">Thô</option>
+        <option value="parsed">Đã phân tích</option>
+        <option value="approved">Đã duyệt</option>
       </select>
       <select
         value={validationFilter}
@@ -62,15 +62,15 @@ export function AssetGridToolbar({
           borderRadius: "var(--radius-md)"
         }}
       >
-        <option value="All">All Validation Statuses</option>
-        <option value="valid">Valid</option>
-        <option value="warning">Warning</option>
-        <option value="error">Error</option>
-        <option value="blocking">Blocking</option>
+        <option value="All">Tất cả trạng thái kiểm tra dữ liệu</option>
+        <option value="valid">Hợp lệ</option>
+        <option value="warning">Cảnh báo</option>
+        <option value="error">Lỗi</option>
+        <option value="blocking">Chặn</option>
       </select>
       {selectedCount > 0 && (
         <span style={{ fontSize: "var(--font-size-sm)", color: "var(--accent-cyan)" }}>
-          {selectedCount} row(s) selected
+          Đã chọn {selectedCount} dòng
         </span>
       )}
     </div>

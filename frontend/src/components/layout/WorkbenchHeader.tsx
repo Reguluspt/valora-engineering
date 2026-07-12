@@ -5,8 +5,8 @@ import { t } from "../../i18n";
 
 interface WorkbenchHeaderProps {
   projectTitle: string;
-  status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
-  statusLabel: string;
+  status?: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
+  statusLabel?: string;
 }
 
 export function WorkbenchHeader({ projectTitle, status, statusLabel }: WorkbenchHeaderProps) {
@@ -39,8 +39,14 @@ export function WorkbenchHeader({ projectTitle, status, statusLabel }: Workbench
         )}
         <div className="project-status-bar">
           <span>{t("workbench.statusLabel")}</span>
-          <StatusBadge status={status} label={statusLabel} />
-          <button className="action-btn" disabled title="Requires backend session state">
+          {status && statusLabel ? (
+            <StatusBadge status={status} label={statusLabel} />
+          ) : (
+            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
+              Chưa có dữ liệu trạng thái
+            </span>
+          )}
+          <button className="action-btn" disabled title={t("workbench.requiresBackendSession")}>
             {t("review.submitQc")} [{t("status.locked")}]
           </button>
         </div>

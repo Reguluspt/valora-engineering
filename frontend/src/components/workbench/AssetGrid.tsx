@@ -8,6 +8,42 @@ import { EmptyState } from "../common/EmptyState";
 import { InlineEditDraft } from "./drafts/DraftStateTypes";
 import { getDraftStatusLabelVi, getDraftStatusBadge } from "./hooks/useWorkbenchDraftState";
 
+const VALIDATION_LABELS: Record<string, string> = {
+  valid: "Hợp lệ",
+  warning: "Cảnh báo",
+  error: "Lỗi",
+  blocking: "Chặn",
+  unvalidated: "Chưa kiểm tra",
+  needs_review: "Cần kiểm tra",
+};
+
+const REVIEW_LABELS: Record<string, string> = {
+  raw: "Thô",
+  parsed: "Đã phân tích",
+  identity_suggested: "Đề xuất định danh",
+  identity_approved: "Đã định danh",
+  taxonomy_approved: "Đã phân loại",
+  knowledge_matched: "Đã khớp dữ liệu",
+  price_reviewed: "Đã thẩm định giá",
+  approved: "Đã duyệt",
+  locked: "Đã khóa",
+  excluded: "Đã loại",
+};
+
+const UNKNOWN_LABEL = "Chưa xác định";
+
+function validationLabel(v: string | null | undefined): string {
+  if (v === null || v === undefined) return UNKNOWN_LABEL;
+  return VALIDATION_LABELS[v] ?? UNKNOWN_LABEL;
+}
+
+function reviewLabel(v: string | null | undefined): string {
+  if (v === null || v === undefined) return UNKNOWN_LABEL;
+  return REVIEW_LABELS[v] ?? UNKNOWN_LABEL;
+}
+
+export { validationLabel, reviewLabel, VALIDATION_LABELS, REVIEW_LABELS, UNKNOWN_LABEL };
+
 interface AssetGridProps {
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
@@ -179,27 +215,27 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                 <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left", width: "60px" }} onClick={() => handleSortChange("line_no")}>
                   # {sortState.field === "line_no" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
                 </th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left" }} onClick={() => handleSortChange("raw_name")}>
-                  Raw Name {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Normalized Name</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Canonical Asset</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Variant</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Taxonomy Path</th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "80px" }} onClick={() => handleSortChange("quantity")}>
-                  Qty {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Unit</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 1</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 2</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 3</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Currency</th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
-                  Price {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Validation</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Review</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left" }} onClick={() => handleSortChange("raw_name")}>
+                    Tên gốc {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tên chuẩn hóa</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tài sản chuẩn</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Biến thể</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Phân loại</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "80px" }} onClick={() => handleSortChange("quantity")}>
+                    SL {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Đơn vị</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 1</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 2</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 3</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Tiền tệ</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
+                    Giá TĐ {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra DL</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra</th>
               </tr>
             </thead>
           </table>
@@ -256,38 +292,38 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       <td style={{ padding: "var(--space-sm)", fontWeight: 600, color: "#fff", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.raw_name}>
                         {row.raw_name}
                       </td>
-                      <td style={{ padding: "var(--space-sm)" }}>
-                        {nameValue}
+                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>
+                        {nameValue ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", color: "var(--accent-cyan)" }}>
-                        {row.canonical_asset.standard_name}
+                        {row.canonical_asset?.standard_name ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)" }}>{row.asset_variant.display_name}</td>
-                      <td style={{ padding: "var(--space-sm)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.taxonomy_node.path}>
-                        {row.taxonomy_node.path}
+                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>{row.asset_variant?.display_name ?? "—"}</td>
+                      <td style={{ padding: "var(--space-sm)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.taxonomy_node?.path ?? ""}>
+                        {row.taxonomy_node?.path ?? "Chưa phân loại"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", width: "80px" }}>{row.quantity}</td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
-                        {row.unit.name_vi}
+                        {row.unit?.name_vi ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_1 ? row.supplier_quote_1.toLocaleString() : "—"}
+                        {row.supplier_quote_1 != null ? row.supplier_quote_1.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_2 ? row.supplier_quote_2.toLocaleString() : "—"}
+                        {row.supplier_quote_2 != null ? row.supplier_quote_2.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
-                        {row.supplier_quote_3 ? row.supplier_quote_3.toLocaleString() : "—"}
+                        {row.supplier_quote_3 != null ? row.supplier_quote_3.toLocaleString() : "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
-                        {row.currency.code}
+                        {row.currency?.code ?? "—"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "right", fontWeight: 600, width: "120px", color: "var(--accent-blue)" }}>
                         <InlineDraftCell
-                          value={typeof priceValue === "number" ? priceValue.toString() : priceValue}
+                          value={priceValue != null ? (typeof priceValue === "number" ? priceValue.toString() : priceValue) : "—"}
                           isDirty={isPriceDirty}
                           onSave={(newVal) => {
-                            if (onDraftChange) {
+                            if (onDraftChange && row.row_version != null) {
                               const numericVal = parseInt(newVal.replace(/,/g, ""), 10);
                               onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price, row.row_version);
                             }
@@ -300,16 +336,19 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                             status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                             label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                           />
-                          {draftStates[row.project_asset_line_id]?.has_saved_draft && (
+                          {draftStates[row.project_asset_line_id]?.has_saved_draft && row.row_version != null && (
                             <button
-                              onClick={() => executeDraftCommit(
-                                (msg) => window.confirm(msg),
-                                onCommitDraft,
-                                row.project_asset_line_id,
-                                row.row_version,
-                                ["appraised_unit_price"],
-                                "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
-                              )}
+                              onClick={() => {
+                                if (row.row_version == null) return;
+                                executeDraftCommit(
+                                  (msg) => window.confirm(msg),
+                                  onCommitDraft,
+                                  row.project_asset_line_id,
+                                  row.row_version,
+                                  ["appraised_unit_price"],
+                                  "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
+                                )
+                              }}
                               style={{
                                 fontSize: "10px",
                                 padding: "2px 6px",
@@ -328,11 +367,11 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <StatusBadge
                           status={row.validation_status === "valid" ? "approved" : row.validation_status}
-                          label={row.validation_status}
+                          label={validationLabel(row.validation_status)}
                         />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
-                        <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={row.review_status} />
+                        <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={reviewLabel(row.review_status)} />
                       </td>
                     </tr>
                   );

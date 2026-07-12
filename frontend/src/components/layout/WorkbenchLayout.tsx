@@ -15,34 +15,87 @@ import { useWorkbenchSession } from "../workbench/session/useWorkbenchSession";
 import { WorkbenchSessionStatus } from "../workbench/session/WorkbenchSessionStatus";
 
 import { useWorkbenchStateSync } from "../workbench/session/useWorkbenchStateSync";
-
 import { useWorkbenchDraftSync } from "../workbench/session/useWorkbenchDraftSync";
+
+import { useResolvedProject } from "../workbench/project-context";
 
 import { ApiErrorBanner } from "../common/ApiErrorBanner";
 import { ConflictWarning } from "../common/ConflictWarning";
 import { RbacLockNotice } from "../common/RbacLockNotice";
 
 interface WorkbenchLayoutProps {
-  projectTitle: string;
-  status: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
-  statusLabel: string;
-  issuesCount: number;
+  projectRef: string | null;
   children?: React.ReactNode;
 }
 
-export function WorkbenchLayout({
-  projectTitle,
-  status,
-  statusLabel,
-  issuesCount,
+export function WorkbenchLayout({ projectRef, children }: WorkbenchLayoutProps) {
+  const { projectId, displayName, state, error: resolveError, retry: retryResolve } = useResolvedProject(projectRef);
+
+  if (state === "idle" && !projectRef) {
+    return (
+      <div style={{ padding: "var(--space-xl)", textAlign: "center" }}>
+        <h2 style={{ color: "#fff" }}>Chọn hồ sơ</h2>
+        <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
+          Vui lòng chọn một hồ sơ từ thanh điều hướng để bắt đầu làm việc.
+        </p>
+      </div>
+    );
+  }
+
+  if (state === "loading") {
+    return (
+      <div style={{ padding: "var(--space-xl)", textAlign: "center", color: "var(--text-muted)" }}>
+        Đang tải thông tin hồ sơ...
+      </div>
+    );
+  }
+
+  if (state === "error" && resolveError) {
+    return (
+      <div className="state-container" style={{ padding: "var(--space-xl)", textAlign: "center" }}>
+        <h2 className="state-title" style={{ color: "var(--color-danger)" }}>{resolveError.title}</h2>
+        <p className="state-message" style={{ margin: "var(--space-md) 0" }}>{resolveError.message}</p>
+        <p className="state-message" style={{ fontSize: "var(--font-size-sm)", color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>{resolveError.nextAction}</p>
+        <button className="action-btn" onClick={retryResolve}>
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
+  if (!projectId) {
+    return null;
+  }
+
+  return (
+    <WorkbenchLayoutInner
+      key={projectId}
+      projectId={projectId}
+      displayName={displayName || "Hồ sơ"}
+      children={children}
+    />
+  );
+}
+
+function WorkbenchLayoutInner({
+  projectId,
+  displayName,
   children
-}: WorkbenchLayoutProps) {
+}: {
+  projectId: string;
+  displayName: string;
+  children?: React.ReactNode;
+}) {
   const {
     rows,
     loading: gridLoading,
     friendlyError: gridFriendlyError,
+    loadMore,
+    hasMore,
+    loadedCount,
+    totalCount,
     retry: retryGrid
-  } = useProjectAssetLines("hd-98-gia-lai");
+  } = useProjectAssetLines(projectId);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
 
   const {
@@ -53,7 +106,7 @@ export function WorkbenchLayout({
     conflictError,
     lastHeartbeat,
     retry
-  } = useWorkbenchSession("hd-98-gia-lai");
+  } = useWorkbenchSession(projectId);
 
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState(false);
@@ -67,7 +120,7 @@ export function WorkbenchLayout({
     syncRedo
   } = useWorkbenchDraftSync(
     session?.id,
-    "hd-98-gia-lai",
+    projectId,
     (msg) => setSyncError(msg),
     () => setSyncConflict(true)
   );
@@ -91,7 +144,7 @@ export function WorkbenchLayout({
   } = useDraftSession();
 
   const handleDraftChange = async (id: string, field: string, value: any, baseValue: any, rowVersion: number) => {
-    if (conflictError || syncConflict || rbacError) return; // Prevent edits when locked
+    if (conflictError || syncConflict || rbacError) return;
     updateDraft(id, field, value, baseValue, rowVersion);
     await syncInlineEdit("ProjectAssetLine", id, field, value, baseValue, rowVersion);
     reloadDrafts();
@@ -99,7 +152,7 @@ export function WorkbenchLayout({
 
   const handleCommitDraft = async (id: string, fields: string[], versionToken: string) => {
     try {
-      await commitAssetLineDraft("hd-98-gia-lai", id, {
+      await commitAssetLineDraft(projectId, id, {
         field_keys: fields,
         confirm: true,
         version_token: versionToken
@@ -133,18 +186,16 @@ export function WorkbenchLayout({
     return rows.find((r) => r.project_asset_line_id === activeRowId) || null;
   }, [rows, activeRowId]);
 
-  const { contextData: resolvedContextData } = useAssetLineContext("hd-98-gia-lai", activeRow);
+  const { contextData: resolvedContextData } = useAssetLineContext(projectId, activeRow);
 
-  const { draftStates, reload: reloadDrafts } = useWorkbenchDraftState("hd-98-gia-lai");
+  const { draftStates, reload: reloadDrafts } = useWorkbenchDraftState(projectId);
 
   const draftsCount = Object.keys(drafts).length;
 
   return (
     <div className="workbench-container">
       <WorkbenchHeader
-        projectTitle={projectTitle}
-        status={status}
-        statusLabel={statusLabel}
+        projectTitle={displayName}
       />
 
       {(conflictError || syncConflict) && (
@@ -165,8 +216,7 @@ export function WorkbenchLayout({
           onDismiss={() => setSyncError(null)}
         />
       )}
-      
-      {/* Session lock banner status */}
+
       <WorkbenchSessionStatus
         loading={loading}
         error={error || syncError}
@@ -181,8 +231,7 @@ export function WorkbenchLayout({
           retry();
         }}
       />
-      
-      {/* Inline Toolbar for Undo/Redo */}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-sm) var(--space-lg)", borderBottom: "1px solid var(--border-color)", backgroundColor: "rgba(255,255,255,0.01)" }}>
         <UndoRedoControls
           undoDisabled={undoStack.length === 0}
@@ -191,7 +240,7 @@ export function WorkbenchLayout({
           onRedo={handleRedo}
         />
         <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-          * Double click cell values to enter draft edit mode.
+          Nhấn đúp vào ô để chỉnh sửa nháp.
         </span>
       </div>
 
@@ -212,21 +261,37 @@ export function WorkbenchLayout({
                 </button>
               </div>
             ) : (
-              <AssetGrid
-                rows={rows}
-                onActiveRowChange={handleActiveRowChange}
-                drafts={drafts}
-                onDraftChange={handleDraftChange}
-                draftStates={draftStates}
-                onCommitDraft={handleCommitDraft}
-              />
+              <>
+                <AssetGrid
+                  rows={rows}
+                  onActiveRowChange={handleActiveRowChange}
+                  drafts={drafts}
+                  onDraftChange={handleDraftChange}
+                  draftStates={draftStates}
+                  onCommitDraft={handleCommitDraft}
+                />
+                {hasMore && (
+                  <div style={{ textAlign: "center", padding: "var(--space-md)" }}>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", marginRight: "var(--space-md)" }}>
+                      Đã tải {loadedCount}/{totalCount} dòng
+                    </span>
+                    <button className="action-btn" onClick={loadMore} style={{ fontSize: "var(--font-size-xs)" }}>
+                      Tải thêm
+                    </button>
+                  </div>
+                )}
+                {!hasMore && totalCount > 0 && (
+                  <div style={{ textAlign: "center", padding: "var(--space-md)", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
+                    Đã tải toàn bộ {totalCount} dòng
+                  </div>
+                )}
+              </>
             )
           )}
         </main>
         <WorkbenchRightPanelShell contextData={resolvedContextData} />
       </div>
       <WorkbenchFooter
-        issuesCount={issuesCount}
         draftsCount={draftsCount}
         checkpoint={checkpoint}
         onAutosaveMock={handleCheckpoint}

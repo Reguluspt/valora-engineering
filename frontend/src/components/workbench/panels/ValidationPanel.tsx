@@ -2,33 +2,42 @@ import React from "react";
 import { ValidationIssue } from "./ContextPanelTypes";
 
 interface ValidationPanelProps {
-  issues?: ValidationIssue[];
+  issues?: ValidationIssue[] | null;
 }
 
-export function ValidationPanel({ issues = [] }: ValidationPanelProps) {
+export function ValidationPanel({ issues }: ValidationPanelProps) {
+  if (issues === null || issues === undefined) {
+    return (
+      <div style={{ padding: "var(--space-md)" }}>
+        <h4 className="panel-tab-title">Kiểm tra dữ liệu</h4>
+        <p style={{ color: "var(--text-muted)", fontSize: "var(--font-size-sm)", marginTop: "var(--space-sm)" }}>
+          Chưa có dữ liệu kiểm tra. Chọn một dòng tài sản để kiểm tra.
+        </p>
+      </div>
+    );
+  }
+
   const blockingIssues = issues.filter((i) => i.severity === "blocking" || i.is_blocking);
   const otherIssues = issues.filter((i) => i.severity !== "blocking" && !i.is_blocking);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-      {/* Blocking Issues Banner */}
       {blockingIssues.length > 0 && (
         <div style={{ padding: "var(--space-md)", border: "1px solid var(--status-blocking)", borderRadius: "var(--radius-md)", backgroundColor: "rgba(155, 44, 44, 0.15)" }}>
           <h4 style={{ color: "var(--status-error)", margin: "0 0 var(--space-xs) 0" }}>
-            ❌ Appraisals Gate Blocked
+            Có lỗi chặn thẩm định
           </h4>
           <p style={{ margin: 0, fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-            The following blocking constraints must be resolved before this row can be approved.
+            Các ràng buộc sau phải được giải quyết trước khi phê duyệt.
           </p>
         </div>
       )}
 
-      {/* Issues list group */}
       <div className="panel-tab">
-        <h4 className="panel-tab-title">Validation Details</h4>
+        <h4 className="panel-tab-title">Chi tiết kiểm tra</h4>
         {issues.length === 0 ? (
           <p style={{ color: "var(--status-approved)", fontSize: "var(--font-size-sm)" }}>
-            ✓ Row matches all semantic validation rules.
+            Dòng này đáp ứng tất cả quy tắc kiểm tra.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
@@ -41,14 +50,6 @@ export function ValidationPanel({ issues = [] }: ValidationPanelProps) {
                   <span style={{ fontWeight: 600 }}>{issue.category}</span>
                 </div>
                 <p style={{ margin: "4px 0 0 0" }}>{issue.message}</p>
-                <button
-                  className="action-btn"
-                  style={{ width: "fit-content", marginTop: "var(--space-sm)", fontSize: "var(--font-size-xs)", padding: "2px 6px" }}
-                  disabled
-                  title="Requires session authentication write privilege"
-                >
-                  Resolve Issue [Disabled]
-                </button>
               </div>
             ))}
           </div>

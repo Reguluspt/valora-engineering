@@ -16,7 +16,7 @@ export interface SpecSuggestion {
 }
 
 export interface KnowledgePanelData {
-  current_spec: SpecVersion;
+  current_spec: SpecVersion | null;
   suggestions: SpecSuggestion[];
   conflicts: string[];
 }
@@ -41,20 +41,20 @@ export interface QuoteLine {
 
 export interface AppraisedPriceDecision {
   id: string;
-  selected_unit_price: number;
-  rationale: string;
-  status: string;
+  selected_unit_price: number | null;
+  rationale: string | null;
+  status: string | null;
 }
 
 export interface PriceEvidencePanelData {
-  quote_batch: QuoteBatch;
+  quote_batch: QuoteBatch | null;
   quote_lines: QuoteLine[];
-  appraised_price_decision: AppraisedPriceDecision;
+  appraised_price_decision: AppraisedPriceDecision | null;
 }
 
 export interface LineageData {
-  original_source_project: { id: string; project_code: string };
-  direct_source_project: { id: string; project_code: string };
+  original_source_project: { id: string; project_code: string } | null;
+  direct_source_project: { id: string; project_code: string } | null;
   lineage_path: string[];
 }
 
@@ -68,8 +68,8 @@ export interface ValidationIssue {
 
 export interface AssetLineContext {
   project_asset_line_id: string;
-  knowledge_panel: KnowledgePanelData;
-  price_evidence_panel: PriceEvidencePanelData;
-  lineage: LineageData;
-  validation_issues: ValidationIssue[];
+  knowledge_panel: KnowledgePanelData | null;
+  price_evidence_panel: PriceEvidencePanelData | null;
+  lineage: LineageData | null;
+  validation_issues: ValidationIssue[] | null;
 }

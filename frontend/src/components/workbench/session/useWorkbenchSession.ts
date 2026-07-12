@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { WorkbenchSession } from "./WorkbenchSessionTypes";
 import { createSession, sendHeartbeat } from "../../../api/workbenchSession";
 import { ApiError } from "../../../api/client";
+import { isValidProjectUuid } from "../validators";
 
 export function useWorkbenchSession(projectId: string) {
   const [session, setSession] = useState<WorkbenchSession | null>(null);
@@ -9,42 +10,63 @@ export function useWorkbenchSession(projectId: string) {
   const [error, setError] = useState<string | null>(null);
   const [rbacError, setRbacError] = useState<string | null>(null);
   const [conflictError, setConflictError] = useState<boolean>(false);
-  const [lastHeartbeat, setLastHeartbeat] = useState<string>("N/A");
+  const [lastHeartbeat, setLastHeartbeat] = useState<string>("—");
 
   const sessionRef = useRef<WorkbenchSession | null>(null);
-  sessionRef.current = session;
+  const projectGen = useRef(0);
 
   const initSession = useCallback(async () => {
+    projectGen.current += 1;
+    const gen = projectGen.current;
+
+    if (!projectId || !isValidProjectUuid(projectId)) {
+      setSession(null);
+      sessionRef.current = null;
+      setLoading(false);
+      setError(projectId ? "Mã hồ sơ không hợp lệ" : null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       setRbacError(null);
       setConflictError(false);
-      // Hardcode UUID project ID for API compatibility with mock string
-      const apiProjectId = "00000000-0000-0000-0000-000000000000";
-      const newSession = await createSession({ project_id: apiProjectId });
+      const newSession = await createSession({ project_id: projectId });
+      if (gen !== projectGen.current) return;
+      sessionRef.current = newSession;
       setSession(newSession);
       setLastHeartbeat(new Date().toLocaleTimeString());
     } catch (err: any) {
+      if (gen !== projectGen.current) return;
       if (err instanceof ApiError) {
         if (err.status === 403) {
-          setRbacError("Permission denied: You do not have the required scopes to open a workbench session.");
+          setRbacError("Tài khoản chưa được cấp quyền mở phiên làm việc.");
         } else {
           setError(err.message);
         }
       } else {
-        setError(err.message || "Failed to initialize workbench session");
+        setError(err.message || "Không thể khởi tạo phiên làm việc");
       }
     } finally {
-      setLoading(false);
+      if (gen === projectGen.current) setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
+    setSession(null);
+    sessionRef.current = null;
+    setLoading(true);
+    setError(null);
+    setRbacError(null);
+    setConflictError(false);
     initSession();
+    return () => {
+      projectGen.current += 1;
+      sessionRef.current = null;
+    };
   }, [initSession]);
 
-  // Heartbeat loop
   useEffect(() => {
     if (!session) return;
 
@@ -56,6 +78,8 @@ export function useWorkbenchSession(projectId: string) {
         const updated = await sendHeartbeat(current.id, {
           expected_row_version: current.row_version
         });
+        if (sessionRef.current !== current) return;
+        sessionRef.current = updated;
         setSession(updated);
         setLastHeartbeat(new Date().toLocaleTimeString());
         setConflictError(false);
@@ -65,15 +89,12 @@ export function useWorkbenchSession(projectId: string) {
             setConflictError(true);
             clearInterval(interval);
           } else if (err.status === 403) {
-            setRbacError("Session expired or permission revoked.");
+            setRbacError("Phiên làm việc hết hạn hoặc quyền đã bị thu hồi.");
             clearInterval(interval);
-          } else {
-            // Treat other issues as temporary network loss
-            console.warn("Heartbeat network warning:", err.message);
           }
         }
       }
-    }, 15000); // 15 seconds interval
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [session]);

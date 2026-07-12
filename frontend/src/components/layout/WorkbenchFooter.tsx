@@ -3,7 +3,7 @@ import { AutosaveCheckpoint } from "../workbench/drafts/DraftStateTypes";
 import { t } from "../../i18n";
 
 interface WorkbenchFooterProps {
-  issuesCount: number;
+  issuesCount?: number | null;
   draftsCount?: number;
   checkpoint?: AutosaveCheckpoint;
   onAutosaveMock?: () => void;
@@ -12,15 +12,15 @@ interface WorkbenchFooterProps {
 export function WorkbenchFooter({
   issuesCount,
   draftsCount = 0,
-  checkpoint = { id: "", timestamp: "N/A", status: "idle" },
+  checkpoint = { id: "", timestamp: "—", status: "idle" },
   onAutosaveMock
 }: WorkbenchFooterProps) {
   return (
     <footer className="workbench-footer">
       <div>
         <span>{t("workbench.issuesLabel")}</span>
-        <span style={{ fontWeight: 600, color: issuesCount > 0 ? "var(--status-warning)" : "var(--status-approved)", marginRight: "var(--space-md)" }}>
-          {issuesCount}
+        <span style={{ fontWeight: 600, color: issuesCount != null && issuesCount > 0 ? "var(--status-warning)" : "var(--text-muted)", marginRight: "var(--space-md)" }}>
+          {issuesCount != null ? issuesCount : "—"}
         </span>
 
         {draftsCount > 0 && (
@@ -38,10 +38,10 @@ export function WorkbenchFooter({
         >
           {t("workbench.saveOfficial")} {draftsCount > 0 ? `[${t("status.locked")}]` : ""}
         </button>
-        <button className="action-btn" disabled style={{ marginRight: "var(--space-sm)" }} title="Requires backend session state">
+        <button className="action-btn" disabled style={{ marginRight: "var(--space-sm)" }} title="Yêu cầu phiên làm việc hệ thống">
           Xem trước phê duyệt [{t("status.locked")}]
         </button>
-        <button className="action-btn" disabled title="Requires backend session state">
+        <button className="action-btn" disabled title="Yêu cầu phiên làm việc hệ thống">
           Phân công [{t("status.locked")}]
         </button>
       </div>

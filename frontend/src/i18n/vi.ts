@@ -43,6 +43,7 @@ export const vi = {
   "workbench.unsavedChangesCount": "thay đổi chưa lưu",
   "workbench.sessionActive": "ĐANG HOẠT ĐỘNG",
   "workbench.sessionLocked": "Đã khóa",
+  "workbench.requiresBackendSession": "Yêu cầu phiên làm việc hệ thống",
   "workbench.status.initializing": "Đang khởi tạo phiên làm việc...",
   "workbench.status.stale": "Dữ liệu hồ sơ này đã được thay đổi bởi người dùng khác.",
   "workbench.status.staleAction": "Cập nhật mới",
@@ -198,6 +199,23 @@ export const vi = {
   "status.returned": "Đã trả về",
   "status.completed": "Hoàn tất",
 
+  "grid.status.raw": "Thô",
+  "grid.status.parsed": "Đã phân tích",
+  "grid.status.approved": "Đã duyệt",
+  "grid.status.identity_suggested": "Đề xuất định danh",
+  "grid.status.identity_approved": "Đã định danh",
+  "grid.status.taxonomy_approved": "Đã phân loại",
+  "grid.status.knowledge_matched": "Đã khớp dữ liệu",
+  "grid.status.price_reviewed": "Đã thẩm định giá",
+  "grid.status.locked": "Đã khóa",
+  "grid.status.excluded": "Đã loại",
+  "grid.valid.valid": "Hợp lệ",
+  "grid.valid.warning": "Cảnh báo",
+  "grid.valid.error": "Lỗi",
+  "grid.valid.blocking": "Chặn",
+  "grid.valid.unvalidated": "Chưa kiểm tra",
+  "grid.valid.needs_review": "Cần kiểm tra",
+
   // Empty States
   "empty.noData": "Chưa có dữ liệu",
   "empty.noAssets": "Chưa có tài sản nào",
@@ -206,6 +224,8 @@ export const vi = {
   "empty.noReports": "Chưa có báo cáo nào",
   "empty.uploadExcelDesc": "Hãy tải lên tệp Excel để bắt đầu",
   "empty.selectAssetDesc": "Hãy chọn một dòng tài sản để xem chi tiết",
+  "empty.selectProject": "Vui lòng chọn một hồ sơ từ thanh điều hướng để bắt đầu làm việc.",
+  "empty.unclassified": "Chưa phân loại",
 
   // Confirmation Messages
   "confirm.ask": "Anh/chị có chắc muốn tiếp tục?",
