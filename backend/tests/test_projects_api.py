@@ -22,14 +22,15 @@ from app.modules.project_master_data.models import (
     ProjectWorkflowStatus,
     ProjectAssetLine,
     AuditEvent,
-    Unit,
+    Unit
 )
-
 
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
     Base.metadata.create_all(bind=engine)
     session = Session(bind=engine)
@@ -55,9 +56,7 @@ def client(db_session: Session) -> TestClient:
 
 def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None:
     # 1. Seed org, users, roles, and master data
-    org = OrganizationProfile(
-        legal_name="Proj Org", organization_slug="proj-org", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Proj Org", organization_slug="proj-org", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
@@ -65,35 +64,21 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
         code="admin",
         display_name="Admin",
         permissions=[
-            "project:create",
-            "project:read",
-            "project:update",
-            "project:archive",
-            "project:cancel",
-            "project:file:upload",
-            "project:asset_line:read",
-        ],
+            "project:create", "project:read", "project:update",
+            "project:archive", "project:cancel", "project:file:upload",
+            "project:asset_line:read"
+        ]
     )
     role_viewer = Role(
         code="viewer",
         display_name="Viewer",
-        permissions=["project:read", "project:asset_line:read"],
+        permissions=["project:read", "project:asset_line:read"]
     )
     db_session.add_all([role_admin, role_viewer])
     db_session.commit()
 
-    user_admin = User(
-        organization_id=org.id,
-        email="admin@proj.com",
-        full_name="Proj Admin",
-        status=UserStatus.ACTIVE,
-    )
-    user_viewer = User(
-        organization_id=org.id,
-        email="viewer@proj.com",
-        full_name="Proj Viewer",
-        status=UserStatus.ACTIVE,
-    )
+    user_admin = User(organization_id=org.id, email="admin@proj.com", full_name="Proj Admin", status=UserStatus.ACTIVE)
+    user_viewer = User(organization_id=org.id, email="viewer@proj.com", full_name="Proj Viewer", status=UserStatus.ACTIVE)
     db_session.add_all([user_admin, user_viewer])
     db_session.commit()
 
@@ -110,13 +95,13 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
         organization_id=org.id,
         legal_name="Active Customer",
         status=CustomerStatus.ACTIVE,
-        created_by=user_admin.id,
+        created_by=user_admin.id
     )
     cust_inactive = Customer(
         organization_id=org.id,
         legal_name="Inactive Customer",
         status=CustomerStatus.INACTIVE,
-        created_by=user_admin.id,
+        created_by=user_admin.id
     )
     db_session.add_all([cust_active, cust_inactive])
     db_session.commit()
@@ -131,7 +116,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.post(
         "/api/v1/projects",
         headers=headers_viewer,
-        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_active.id)},
+        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_active.id)}
     )
     assert resp.status_code == 403
 
@@ -139,21 +124,19 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.post(
         "/api/v1/projects",
         headers=headers_admin,
-        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_inactive.id)},
+        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_inactive.id)}
     )
     assert resp.status_code == 422
 
     # 4. Create project with customer from DIFFERENT organization -> 404
-    other_org = OrganizationProfile(
-        legal_name="Other Org", organization_slug="other-org", status=OrganizationStatus.ACTIVE
-    )
+    other_org = OrganizationProfile(legal_name="Other Org", organization_slug="other-org", status=OrganizationStatus.ACTIVE)
     db_session.add(other_org)
     db_session.commit()
     cust_other_org = Customer(
         organization_id=other_org.id,
         legal_name="Other Customer",
         status=CustomerStatus.ACTIVE,
-        created_by=user_admin.id,
+        created_by=user_admin.id
     )
     db_session.add(cust_other_org)
     db_session.commit()
@@ -161,7 +144,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.post(
         "/api/v1/projects",
         headers=headers_admin,
-        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_other_org.id)},
+        json={"code": "P01", "name": "Project 1", "customer_id": str(cust_other_org.id)}
     )
     assert resp.status_code == 404
 
@@ -174,8 +157,8 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
             "name": "Project 1",
             "customer_id": str(cust_active.id),
             "fee_amount": 1000000.0,
-            "fee_currency_id": str(currency.id),
-        },
+            "fee_currency_id": str(currency.id)
+        }
     )
     assert resp.status_code == 201
     proj_id = resp.json()["id"]
@@ -190,7 +173,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.post(
         "/api/v1/projects",
         headers=headers_admin,
-        json={"code": "P01", "name": "Project 2", "customer_id": str(cust_active.id)},
+        json={"code": "P01", "name": "Project 2", "customer_id": str(cust_active.id)}
     )
     assert resp.status_code == 409
 
@@ -204,12 +187,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     assert resp.json()["code"] == "P01"
 
     # Tenant scoping check: other org user cannot see this project
-    other_user = User(
-        organization_id=other_org.id,
-        email="other@test.com",
-        full_name="Other User",
-        status=UserStatus.ACTIVE,
-    )
+    other_user = User(organization_id=other_org.id, email="other@test.com", full_name="Other User", status=UserStatus.ACTIVE)
     db_session.add(other_user)
     db_session.commit()
     ur_other = UserRole(user_id=other_user.id, role_id=role_viewer.id, is_active=True)
@@ -224,7 +202,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.patch(
         f"/api/v1/projects/{proj_id}",
         headers=headers_admin,
-        json={"name": "New Name", "row_version": 999},
+        json={"name": "New Name", "row_version": 999}
     )
     assert resp.status_code == 409
 
@@ -232,16 +210,14 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.patch(
         f"/api/v1/projects/{proj_id}",
         headers=headers_admin,
-        json={"name": "New Name", "row_version": 1},
+        json={"name": "New Name", "row_version": 1}
     )
     assert resp.status_code == 200
     assert resp.json()["name"] == "New Name"
     assert resp.json()["row_version"] == 2
 
     # Verify audit event for ProjectUpdated
-    audit_update = (
-        db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectUpdated").first()
-    )
+    audit_update = db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectUpdated").first()
     assert audit_update is not None
 
     # 8. ProjectAssetLine Mutations
@@ -249,17 +225,17 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.post(
         "/api/v1/projects/{}/asset-lines".format(proj_id),
         headers=headers_admin,
-        json={"asset_name": "Asset 1", "quantity": 5.0, "unit_id": str(unit.id)},
+        json={
+            "asset_name": "Asset 1",
+            "quantity": 5.0,
+            "unit_id": str(unit.id)
+        }
     )
     assert resp.status_code == 201
     line_id = resp.json()["id"]
 
     # Verify audit event for ProjectAssetLineCreated
-    audit_line = (
-        db_session.query(AuditEvent)
-        .filter(AuditEvent.event_name == "ProjectAssetLineCreated")
-        .first()
-    )
+    audit_line = db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectAssetLineCreated").first()
     assert audit_line is not None
 
     # List lines
@@ -271,7 +247,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     resp = client.patch(
         "/api/v1/projects/{}/asset-lines/{}".format(proj_id, line_id),
         headers=headers_admin,
-        json={"quantity": 10.0, "row_version": 1},
+        json={"quantity": 10.0, "row_version": 1}
     )
     assert resp.status_code == 200
     assert resp.json()["quantity"] == 10.0
@@ -286,17 +262,15 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
             "file_size": 2048,
             "mime_type": "application/vnd.ms-excel",
             "storage_object_key": "raw/inv.xlsx",
-            "checksum_sha256": "abcdef123",
-        },
+            "checksum_sha256": "abcdef123"
+        }
     )
     assert resp.status_code == 201
     file_id = resp.json()["id"]
     assert resp.json()["processing_status"] == "pending"
 
     # Verify audit event for ProjectFileUploaded
-    audit_file = (
-        db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectFileUploaded").first()
-    )
+    audit_file = db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectFileUploaded").first()
     assert audit_file is not None
 
     # List files
@@ -311,9 +285,7 @@ def test_projects_api_full_flow(client: TestClient, db_session: Session) -> None
     assert resp.json()["status"] == "archived"
 
     # Verify audit event for ProjectArchived
-    audit_arch = (
-        db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectArchived").first()
-    )
+    audit_arch = db_session.query(AuditEvent).filter(AuditEvent.event_name == "ProjectArchived").first()
     assert audit_arch is not None
 
     # 11. Cancel project
@@ -341,12 +313,8 @@ def test_openapi_loads_and_no_future_routes(client: TestClient) -> None:
 
 def test_project_api_granular_contracts(client: TestClient, db_session: Session) -> None:
     # 1. Seed two organizations and users
-    org1 = OrganizationProfile(
-        legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE
-    )
-    org2 = OrganizationProfile(
-        legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE
-    )
+    org1 = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
     db_session.add_all([org1, org2])
     db_session.commit()
 
@@ -354,24 +322,16 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
         code="admin",
         display_name="Admin",
         permissions=[
-            "project:create",
-            "project:read",
-            "project:update",
-            "project:archive",
-            "project:cancel",
-            "project:file:upload",
-            "project:asset_line:read",
-        ],
+            "project:create", "project:read", "project:update",
+            "project:archive", "project:cancel", "project:file:upload",
+            "project:asset_line:read"
+        ]
     )
     db_session.add(role_admin)
     db_session.commit()
 
-    user_org1 = User(
-        organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE
-    )
-    user_org2 = User(
-        organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE
-    )
+    user_org1 = User(organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE)
+    user_org2 = User(organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE)
     db_session.add_all([user_org1, user_org2])
     db_session.commit()
 
@@ -383,18 +343,8 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     headers_org1 = {"X-User-Id": str(user_org1.id)}
     headers_org2 = {"X-User-Id": str(user_org2.id)}
 
-    cust_org1 = Customer(
-        organization_id=org1.id,
-        legal_name="Cust 1",
-        status=CustomerStatus.ACTIVE,
-        created_by=user_org1.id,
-    )
-    cust_org2 = Customer(
-        organization_id=org2.id,
-        legal_name="Cust 2",
-        status=CustomerStatus.ACTIVE,
-        created_by=user_org2.id,
-    )
+    cust_org1 = Customer(organization_id=org1.id, legal_name="Cust 1", status=CustomerStatus.ACTIVE, created_by=user_org1.id)
+    cust_org2 = Customer(organization_id=org2.id, legal_name="Cust 2", status=CustomerStatus.ACTIVE, created_by=user_org2.id)
     db_session.add_all([cust_org1, cust_org2])
     db_session.commit()
 
@@ -403,7 +353,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.post(
         "/api/v1/projects",
         headers=headers_org1,
-        json={"code": "DUP-CODE", "name": "Project Org 1", "customer_id": str(cust_org1.id)},
+        json={"code": "DUP-CODE", "name": "Project Org 1", "customer_id": str(cust_org1.id)}
     )
     assert resp.status_code == 201
     proj1_id = resp.json()["id"]
@@ -412,7 +362,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.post(
         "/api/v1/projects",
         headers=headers_org2,
-        json={"code": "DUP-CODE", "name": "Project Org 2", "customer_id": str(cust_org2.id)},
+        json={"code": "DUP-CODE", "name": "Project Org 2", "customer_id": str(cust_org2.id)}
     )
     assert resp.status_code == 201
     proj2_id = resp.json()["id"]
@@ -425,7 +375,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.post(
         "/api/v1/projects/{}/asset-lines".format(proj1_id),
         headers=headers_org1,
-        json={"asset_name": "Line 1", "quantity": 10.0, "unit_id": str(unit.id)},
+        json={"asset_name": "Line 1", "quantity": 10.0, "unit_id": str(unit.id)}
     )
     assert resp.status_code == 201
     line_id = resp.json()["id"]
@@ -434,7 +384,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.patch(
         "/api/v1/projects/{}/asset-lines/{}".format(proj1_id, line_id),
         headers=headers_org1,
-        json={"quantity": 15.0, "row_version": 99},
+        json={"quantity": 15.0, "row_version": 99}
     )
     assert resp.status_code == 409
 
@@ -442,7 +392,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.patch(
         "/api/v1/projects/{}/asset-lines/{}".format(proj1_id, line_id),
         headers=headers_org1,
-        json={"quantity": 15.0, "row_version": 1},
+        json={"quantity": 15.0, "row_version": 1}
     )
     assert resp.status_code == 200
     assert resp.json()["quantity"] == 15.0
@@ -465,12 +415,7 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     db_session.add(role_empty)
     db_session.commit()
 
-    user_unprivileged = User(
-        organization_id=org1.id,
-        email="unpriv@test.com",
-        full_name="Unpriv User",
-        status=UserStatus.ACTIVE,
-    )
+    user_unprivileged = User(organization_id=org1.id, email="unpriv@test.com", full_name="Unpriv User", status=UserStatus.ACTIVE)
     db_session.add(user_unprivileged)
     db_session.commit()
 
@@ -492,31 +437,22 @@ def test_project_api_granular_contracts(client: TestClient, db_session: Session)
     resp = client.post(
         "/api/v1/projects/{}/asset-lines".format(proj1_id),
         headers=headers_unpriv,
-        json={"asset_name": "Line 2"},
+        json={"asset_name": "Line 2"}
     )
     assert resp.status_code == 403
 
 
 def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_session: Session):
     # Setup organization, project, unit, user, roles, permissions
-    org = OrganizationProfile(
-        legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE
-    )
+    org = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
     db_session.add(org)
     db_session.commit()
 
-    role_admin = Role(
-        code="admin", display_name="Admin", permissions=["project:asset_line:read", "project:read"]
-    )
+    role_admin = Role(code="admin", display_name="Admin", permissions=["project:asset_line:read", "project:read"])
     db_session.add(role_admin)
     db_session.commit()
 
-    user = User(
-        organization_id=org.id,
-        email="admin@test.com",
-        full_name="Admin User",
-        status=UserStatus.ACTIVE,
-    )
+    user = User(organization_id=org.id, email="admin@test.com", full_name="Admin User", status=UserStatus.ACTIVE)
     db_session.add(user)
     db_session.commit()
 
@@ -528,7 +464,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
         organization_id=org.id,
         legal_name="Cust 1",
         status=CustomerStatus.ACTIVE,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(cust)
     db_session.commit()
@@ -539,7 +475,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
         name="Project 1",
         customer_id=cust.id,
         status=ProjectWorkflowStatus.DRAFT,
-        created_by=user.id,
+        created_by=user.id
     )
     db_session.add(proj)
     db_session.commit()
@@ -556,7 +492,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
         quantity=1.0,
         unit_id=unit.id,
         validation_status="needs_review",
-        review_status="draft",
+        review_status="draft"
     )
     line2 = ProjectAssetLine(
         project_id=proj.id,
@@ -565,7 +501,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
         quantity=3.0,
         unit_id=unit.id,
         validation_status="valid",
-        review_status="approved",
+        review_status="approved"
     )
     line3 = ProjectAssetLine(
         project_id=proj.id,
@@ -574,7 +510,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
         quantity=2.0,
         unit_id=unit.id,
         validation_status="needs_review",
-        review_status="approved",
+        review_status="approved"
     )
     db_session.add_all([line1, line2, line3])
     db_session.commit()
@@ -603,10 +539,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
     assert data["items"][0]["asset_name"] == "Máy phát điện Cummins"
 
     # 3. Test search query "phát điện" (ABB, Cummins)
-    resp = client.get(
-        f"/api/v1/projects/{proj.id}/asset-lines?search=ph%C3%A1t%20%C4%91i%E1%BB%87n",
-        headers=headers,
-    )
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?search=ph%C3%A1t%20%C4%91i%E1%BB%87n", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 2
@@ -615,9 +548,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
     assert any(x["asset_name"] == "Máy phát điện Cummins" for x in data["items"])
 
     # 4. Test validation_status filter "valid"
-    resp = client.get(
-        f"/api/v1/projects/{proj.id}/asset-lines?validation_status=valid", headers=headers
-    )
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?validation_status=valid", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -625,9 +556,7 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
     assert data["items"][0]["asset_name"] == "Bơm ly tâm Ebara"
 
     # 5. Test valuation_status (review_status) filter "approved"
-    resp = client.get(
-        f"/api/v1/projects/{proj.id}/asset-lines?valuation_status=approved", headers=headers
-    )
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines?valuation_status=approved", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 2
@@ -642,53 +571,33 @@ def test_list_project_asset_lines_filters_and_pagination(client: TestClient, db_
     role_empty = Role(code="empty", display_name="Empty", permissions=[])
     db_session.add(role_empty)
     db_session.commit()
-    user_noperm = User(
-        organization_id=org.id,
-        email="noperm@test.com",
-        full_name="No Perm",
-        status=UserStatus.ACTIVE,
-    )
+    user_noperm = User(organization_id=org.id, email="noperm@test.com", full_name="No Perm", status=UserStatus.ACTIVE)
     db_session.add(user_noperm)
     db_session.commit()
     ur_noperm = UserRole(user_id=user_noperm.id, role_id=role_empty.id, is_active=True)
     db_session.add(ur_noperm)
     db_session.commit()
-    resp = client.get(
-        f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user_noperm.id)}
-    )
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user_noperm.id)})
     assert resp.status_code == 403
 
     # 8. Test cross-organization scoping -> 404
-    org2 = OrganizationProfile(
-        legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE
-    )
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
     db_session.add(org2)
     db_session.commit()
-    user2 = User(
-        organization_id=org2.id,
-        email="org2@test.com",
-        full_name="Org 2 User",
-        status=UserStatus.ACTIVE,
-    )
+    user2 = User(organization_id=org2.id, email="org2@test.com", full_name="Org 2 User", status=UserStatus.ACTIVE)
     db_session.add(user2)
     db_session.commit()
     ur2 = UserRole(user_id=user2.id, role_id=role_admin.id, is_active=True)
     db_session.add(ur2)
     db_session.commit()
-    resp = client.get(
-        f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user2.id)}
-    )
+    resp = client.get(f"/api/v1/projects/{proj.id}/asset-lines", headers={"X-User-Id": str(user2.id)})
     assert resp.status_code == 404
 
 
 def test_project_reference_resolution(client: TestClient, db_session: Session) -> None:
     # 1. Setup Orgs, Users, Roles
-    org1 = OrganizationProfile(
-        legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE
-    )
-    org2 = OrganizationProfile(
-        legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE
-    )
+    org1 = OrganizationProfile(legal_name="Org 1", organization_slug="org-1", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2", organization_slug="org-2", status=OrganizationStatus.ACTIVE)
     db_session.add_all([org1, org2])
     db_session.commit()
 
@@ -697,18 +606,9 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     db_session.add_all([role_reader, role_empty])
     db_session.commit()
 
-    user1 = User(
-        organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE
-    )
-    user2 = User(
-        organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE
-    )
-    user_noperm = User(
-        organization_id=org1.id,
-        email="noperm@test.com",
-        full_name="No Perm",
-        status=UserStatus.ACTIVE,
-    )
+    user1 = User(organization_id=org1.id, email="u1@test.com", full_name="User 1", status=UserStatus.ACTIVE)
+    user2 = User(organization_id=org2.id, email="u2@test.com", full_name="User 2", status=UserStatus.ACTIVE)
+    user_noperm = User(organization_id=org1.id, email="noperm@test.com", full_name="No Perm", status=UserStatus.ACTIVE)
     db_session.add_all([user1, user2, user_noperm])
     db_session.commit()
 
@@ -719,18 +619,8 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     db_session.commit()
 
     # Seed customers
-    cust1 = Customer(
-        organization_id=org1.id,
-        legal_name="Cust 1",
-        status=CustomerStatus.ACTIVE,
-        created_by=user1.id,
-    )
-    cust2 = Customer(
-        organization_id=org2.id,
-        legal_name="Cust 2",
-        status=CustomerStatus.ACTIVE,
-        created_by=user2.id,
-    )
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1", status=CustomerStatus.ACTIVE, created_by=user1.id)
+    cust2 = Customer(organization_id=org2.id, legal_name="Cust 2", status=CustomerStatus.ACTIVE, created_by=user2.id)
     db_session.add_all([cust1, cust2])
     db_session.commit()
 
@@ -740,21 +630,21 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
         customer_id=cust1.id,
         code="HD-98-GIA-LAI",
         name="Hồ sơ Gia Lai Số 98",
-        created_by=user1.id,
+        created_by=user1.id
     )
     proj2 = Project(
         organization_id=org2.id,
         customer_id=cust2.id,
         code="HD-98-GIA-LAI",
         name="Hồ sơ Gia Lai Số 98 (Org 2)",
-        created_by=user2.id,
+        created_by=user2.id
     )
     proj3 = Project(
         organization_id=org1.id,
         customer_id=cust1.id,
         code="HD-99-KONTUM",
         name="Hồ sơ Kon Tum Số 99",
-        created_by=user1.id,
+        created_by=user1.id
     )
     db_session.add_all([proj1, proj2, proj3])
     db_session.commit()
@@ -806,7 +696,7 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
     # G. Missing/Unauthorized/Forbidden permissions
     resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai")
     assert resp.status_code == 401
-
+    
     resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai", headers=headers_noperm)
     assert resp.status_code == 403
 
@@ -820,51 +710,31 @@ def test_project_reference_resolution(client: TestClient, db_session: Session) -
         customer_id=cust1.id,
         code="HD 98 GIA LAI SLUG",
         name="Hồ sơ Gia Lai Số 98 Slug A",
-        created_by=user1.id,
+        created_by=user1.id
     )
     dup_proj2 = Project(
         organization_id=org1.id,
         customer_id=cust1.id,
         code="HD_98_GIA_LAI_SLUG",
         name="Hồ sơ Gia Lai Số 98 Slug B",
-        created_by=user1.id,
+        created_by=user1.id
     )
     db_session.add_all([dup_proj1, dup_proj2])
     db_session.commit()
-
+    
     resp = client.get("/api/v1/projects/resolve?ref=hd-98-gia-lai-slug", headers=headers_user1)
     assert resp.status_code == 409
 
 
 def test_project_asset_lines_draft_state(client: TestClient, db_session: Session):
     from app.modules.project_master_data.models import (
-        OrganizationProfile,
-        OrganizationStatus,
-        User,
-        UserStatus,
-        Role,
-        UserRole,
-        Customer,
-        CustomerStatus,
-        Project,
-        ProjectAssetLine,
-        WorkbenchSession,
-        WorkbenchSessionStatus,
-        InlineEditDraft,
-        InlineEditDraftStatus,
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
+        Customer, CustomerStatus, Project, ProjectAssetLine, WorkbenchSession,
+        WorkbenchSessionStatus, InlineEditDraft, InlineEditDraftStatus
     )
-
     # 1. Setup Organizations, Users, Roles
-    org1 = OrganizationProfile(
-        legal_name="Org 1 Drafts",
-        organization_slug="org-1-drafts",
-        status=OrganizationStatus.ACTIVE,
-    )
-    org2 = OrganizationProfile(
-        legal_name="Org 2 Drafts",
-        organization_slug="org-2-drafts",
-        status=OrganizationStatus.ACTIVE,
-    )
+    org1 = OrganizationProfile(legal_name="Org 1 Drafts", organization_slug="org-1-drafts", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2 Drafts", organization_slug="org-2-drafts", status=OrganizationStatus.ACTIVE)
     db_session.add_all([org1, org2])
     db_session.commit()
 
@@ -873,62 +743,28 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
     db_session.add_all([role_read, role_none])
     db_session.commit()
 
-    user1 = User(
-        organization_id=org1.id,
-        email="u1_drafts@test.com",
-        full_name="User 1 Drafts",
-        status=UserStatus.ACTIVE,
-    )
-    user2 = User(
-        organization_id=org2.id,
-        email="u2_drafts@test.com",
-        full_name="User 2 Drafts",
-        status=UserStatus.ACTIVE,
-    )
-    user_noperm = User(
-        organization_id=org1.id,
-        email="u_noperm_drafts@test.com",
-        full_name="No Perm Drafts",
-        status=UserStatus.ACTIVE,
-    )
+    user1 = User(organization_id=org1.id, email="u1_drafts@test.com", full_name="User 1 Drafts", status=UserStatus.ACTIVE)
+    user2 = User(organization_id=org2.id, email="u2_drafts@test.com", full_name="User 2 Drafts", status=UserStatus.ACTIVE)
+    user_noperm = User(organization_id=org1.id, email="u_noperm_drafts@test.com", full_name="No Perm Drafts", status=UserStatus.ACTIVE)
     db_session.add_all([user1, user2, user_noperm])
     db_session.commit()
 
-    db_session.add_all(
-        [
-            UserRole(user_id=user1.id, role_id=role_read.id, is_active=True),
-            UserRole(user_id=user2.id, role_id=role_read.id, is_active=True),
-            UserRole(user_id=user_noperm.id, role_id=role_none.id, is_active=True),
-        ]
-    )
+    db_session.add_all([
+        UserRole(user_id=user1.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user2.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user_noperm.id, role_id=role_none.id, is_active=True)
+    ])
     db_session.commit()
 
-    cust1 = Customer(
-        organization_id=org1.id,
-        legal_name="Cust 1 Drafts",
-        status=CustomerStatus.ACTIVE,
-        created_by=user1.id,
-    )
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1 Drafts", status=CustomerStatus.ACTIVE, created_by=user1.id)
     db_session.add(cust1)
     db_session.commit()
 
-    proj1 = Project(
-        organization_id=org1.id,
-        customer_id=cust1.id,
-        code="PRJ-DRF-1",
-        name="Project Draft 1",
-        created_by=user1.id,
-    )
+    proj1 = Project(organization_id=org1.id, customer_id=cust1.id, code="PRJ-DRF-1", name="Project Draft 1", created_by=user1.id)
     db_session.add(proj1)
     db_session.commit()
 
-    line1 = ProjectAssetLine(
-        project_id=proj1.id,
-        asset_name="Line 1",
-        quantity=1.0,
-        review_status="raw",
-        validation_status="valid",
-    )
+    line1 = ProjectAssetLine(project_id=proj1.id, asset_name="Line 1", quantity=1.0, review_status="raw", validation_status="valid")
     db_session.add(line1)
     db_session.commit()
 
@@ -943,9 +779,7 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
     # B. Missing / Forbidden permissions
     resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state")
     assert resp.status_code == 401
-    resp = client.get(
-        f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_noperm
-    )
+    resp = client.get(f"/api/v1/projects/{proj1.id}/asset-lines/draft-state", headers=headers_noperm)
     assert resp.status_code == 403
 
     # C. Empty/Clean state when no session exists
@@ -957,9 +791,7 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
     assert data["total"] == 0
 
     # D. Active session with no drafts yields clean
-    sess = WorkbenchSession(
-        user_id=user1.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE
-    )
+    sess = WorkbenchSession(user_id=user1.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE)
     db_session.add(sess)
     db_session.commit()
 
@@ -976,7 +808,7 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
         draft_value={"value": "New Name"},
         base_value={"value": "Line 1"},
         base_row_version=line1.row_version,
-        status=InlineEditDraftStatus.DRAFT,
+        status=InlineEditDraftStatus.DRAFT
     )
     db_session.add(draft)
     db_session.commit()
@@ -1008,97 +840,43 @@ def test_project_asset_lines_draft_state(client: TestClient, db_session: Session
 
 def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session):
     from app.modules.project_master_data.models import (
-        OrganizationProfile,
-        OrganizationStatus,
-        User,
-        UserStatus,
-        Role,
-        UserRole,
-        Customer,
-        CustomerStatus,
-        Project,
-        ProjectAssetLine,
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
+        Customer, CustomerStatus, Project, ProjectAssetLine
     )
-
     # 1. Setup Organizations, Users, Roles
-    org1 = OrganizationProfile(
-        legal_name="Org 1 Save Draft",
-        organization_slug="org-1-save-draft",
-        status=OrganizationStatus.ACTIVE,
-    )
-    org2 = OrganizationProfile(
-        legal_name="Org 2 Save Draft",
-        organization_slug="org-2-save-draft",
-        status=OrganizationStatus.ACTIVE,
-    )
+    org1 = OrganizationProfile(legal_name="Org 1 Save Draft", organization_slug="org-1-save-draft", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2 Save Draft", organization_slug="org-2-save-draft", status=OrganizationStatus.ACTIVE)
     db_session.add_all([org1, org2])
     db_session.commit()
 
-    role_edit = Role(
-        code="editor", display_name="Editor", permissions=["project:read", "workbench:edit"]
-    )
+    role_edit = Role(code="editor", display_name="Editor", permissions=["project:read", "workbench:edit"])
     role_read = Role(code="reader", display_name="Reader", permissions=["project:read"])
     role_none = Role(code="empty", display_name="Empty", permissions=[])
     db_session.add_all([role_edit, role_read, role_none])
     db_session.commit()
 
-    user_editor = User(
-        organization_id=org1.id,
-        email="u_editor@test.com",
-        full_name="Editor User",
-        status=UserStatus.ACTIVE,
-    )
-    user_reader = User(
-        organization_id=org1.id,
-        email="u_reader@test.com",
-        full_name="Reader User",
-        status=UserStatus.ACTIVE,
-    )
-    user_other = User(
-        organization_id=org2.id,
-        email="u_other@test.com",
-        full_name="Other User",
-        status=UserStatus.ACTIVE,
-    )
+    user_editor = User(organization_id=org1.id, email="u_editor@test.com", full_name="Editor User", status=UserStatus.ACTIVE)
+    user_reader = User(organization_id=org1.id, email="u_reader@test.com", full_name="Reader User", status=UserStatus.ACTIVE)
+    user_other = User(organization_id=org2.id, email="u_other@test.com", full_name="Other User", status=UserStatus.ACTIVE)
     db_session.add_all([user_editor, user_reader, user_other])
     db_session.commit()
 
-    db_session.add_all(
-        [
-            UserRole(user_id=user_editor.id, role_id=role_edit.id, is_active=True),
-            UserRole(user_id=user_reader.id, role_id=role_read.id, is_active=True),
-            UserRole(user_id=user_other.id, role_id=role_edit.id, is_active=True),
-        ]
-    )
+    db_session.add_all([
+        UserRole(user_id=user_editor.id, role_id=role_edit.id, is_active=True),
+        UserRole(user_id=user_reader.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user_other.id, role_id=role_edit.id, is_active=True)
+    ])
     db_session.commit()
 
-    cust1 = Customer(
-        organization_id=org1.id,
-        legal_name="Cust 1 Save Draft",
-        status=CustomerStatus.ACTIVE,
-        created_by=user_editor.id,
-    )
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1 Save Draft", status=CustomerStatus.ACTIVE, created_by=user_editor.id)
     db_session.add(cust1)
     db_session.commit()
 
-    proj1 = Project(
-        organization_id=org1.id,
-        customer_id=cust1.id,
-        code="PRJ-SVD-1",
-        name="Project Save Draft 1",
-        created_by=user_editor.id,
-    )
+    proj1 = Project(organization_id=org1.id, customer_id=cust1.id, code="PRJ-SVD-1", name="Project Save Draft 1", created_by=user_editor.id)
     db_session.add(proj1)
     db_session.commit()
 
-    line1 = ProjectAssetLine(
-        project_id=proj1.id,
-        asset_name="Line 1",
-        quantity=1.0,
-        review_status="raw",
-        validation_status="valid",
-        row_version=1,
-    )
+    line1 = ProjectAssetLine(project_id=proj1.id, asset_name="Line 1", quantity=1.0, review_status="raw", validation_status="valid", row_version=1)
     db_session.add(line1)
     db_session.commit()
 
@@ -1111,31 +889,19 @@ def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session)
         "field_key": "description",
         "draft_value": "New Mapped Description",
         "base_value": "Line 1",
-        "version_token": "1",
+        "version_token": "1"
     }
-    resp = client.patch(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft",
-        json=payload,
-        headers=headers_other,
-    )
+    resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=payload, headers=headers_other)
     assert resp.status_code == 404
 
     # B. Unauthorized / Forbidden permissions
     resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=payload)
     assert resp.status_code == 401
-    resp = client.patch(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft",
-        json=payload,
-        headers=headers_reader,
-    )
+    resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=payload, headers=headers_reader)
     assert resp.status_code == 403
 
     # C. Safe execution on allowed fields
-    resp = client.patch(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft",
-        json=payload,
-        headers=headers_editor,
-    )
+    resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=payload, headers=headers_editor)
     assert resp.status_code == 200
     data = resp.json()
     assert data["draft_status"] == "saved_draft"
@@ -1151,13 +917,9 @@ def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session)
     unsupported_payload = {
         "field_key": "raw_name",
         "draft_value": "Illegal name change",
-        "version_token": "1",
+        "version_token": "1"
     }
-    resp = client.patch(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft",
-        json=unsupported_payload,
-        headers=headers_editor,
-    )
+    resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=unsupported_payload, headers=headers_editor)
     assert resp.status_code == 400
 
     # E. Conflict detection (stale version checks)
@@ -1165,113 +927,51 @@ def test_save_asset_line_draft_endpoint(client: TestClient, db_session: Session)
         "field_key": "appraised_unit_price",
         "draft_value": 50000,
         "base_value": 0,
-        "version_token": "0",  # line1 version is 1, so 0 is stale
+        "version_token": "0"  # line1 version is 1, so 0 is stale
     }
-    resp = client.patch(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft",
-        json=stale_payload,
-        headers=headers_editor,
-    )
+    resp = client.patch(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft", json=stale_payload, headers=headers_editor)
     assert resp.status_code == 409
 
 
 def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Session):
     from app.modules.project_master_data.models import (
-        OrganizationProfile,
-        OrganizationStatus,
-        User,
-        UserStatus,
-        Role,
-        UserRole,
-        Customer,
-        CustomerStatus,
-        Project,
-        ProjectAssetLine,
-        WorkbenchSession,
-        WorkbenchSessionStatus,
-        InlineEditDraft,
-        InlineEditDraftStatus,
+        OrganizationProfile, OrganizationStatus, User, UserStatus, Role, UserRole,
+        Customer, CustomerStatus, Project, ProjectAssetLine, WorkbenchSession,
+        WorkbenchSessionStatus, InlineEditDraft, InlineEditDraftStatus
     )
-
     # 1. Setup Organizations, Users, Roles
-    org1 = OrganizationProfile(
-        legal_name="Org 1 Commit",
-        organization_slug="org-1-commit",
-        status=OrganizationStatus.ACTIVE,
-    )
-    org2 = OrganizationProfile(
-        legal_name="Org 2 Commit",
-        organization_slug="org-2-commit",
-        status=OrganizationStatus.ACTIVE,
-    )
+    org1 = OrganizationProfile(legal_name="Org 1 Commit", organization_slug="org-1-commit", status=OrganizationStatus.ACTIVE)
+    org2 = OrganizationProfile(legal_name="Org 2 Commit", organization_slug="org-2-commit", status=OrganizationStatus.ACTIVE)
     db_session.add_all([org1, org2])
     db_session.commit()
 
-    role_edit = Role(
-        code="editor", display_name="Editor", permissions=["project:read", "workbench:edit"]
-    )
+    role_edit = Role(code="editor", display_name="Editor", permissions=["project:read", "workbench:edit"])
     role_read = Role(code="reader", display_name="Reader", permissions=["project:read"])
     db_session.add_all([role_edit, role_read])
     db_session.commit()
 
-    user_editor = User(
-        organization_id=org1.id,
-        email="u_editor_commit@test.com",
-        full_name="Editor User",
-        status=UserStatus.ACTIVE,
-    )
-    user_reader = User(
-        organization_id=org1.id,
-        email="u_reader_commit@test.com",
-        full_name="Reader User",
-        status=UserStatus.ACTIVE,
-    )
-    user_other = User(
-        organization_id=org2.id,
-        email="u_other_commit@test.com",
-        full_name="Other User",
-        status=UserStatus.ACTIVE,
-    )
+    user_editor = User(organization_id=org1.id, email="u_editor_commit@test.com", full_name="Editor User", status=UserStatus.ACTIVE)
+    user_reader = User(organization_id=org1.id, email="u_reader_commit@test.com", full_name="Reader User", status=UserStatus.ACTIVE)
+    user_other = User(organization_id=org2.id, email="u_other_commit@test.com", full_name="Other User", status=UserStatus.ACTIVE)
     db_session.add_all([user_editor, user_reader, user_other])
     db_session.commit()
 
-    db_session.add_all(
-        [
-            UserRole(user_id=user_editor.id, role_id=role_edit.id, is_active=True),
-            UserRole(user_id=user_reader.id, role_id=role_read.id, is_active=True),
-            UserRole(user_id=user_other.id, role_id=role_edit.id, is_active=True),
-        ]
-    )
+    db_session.add_all([
+        UserRole(user_id=user_editor.id, role_id=role_edit.id, is_active=True),
+        UserRole(user_id=user_reader.id, role_id=role_read.id, is_active=True),
+        UserRole(user_id=user_other.id, role_id=role_edit.id, is_active=True)
+    ])
     db_session.commit()
 
-    cust1 = Customer(
-        organization_id=org1.id,
-        legal_name="Cust 1 Commit",
-        status=CustomerStatus.ACTIVE,
-        created_by=user_editor.id,
-    )
+    cust1 = Customer(organization_id=org1.id, legal_name="Cust 1 Commit", status=CustomerStatus.ACTIVE, created_by=user_editor.id)
     db_session.add(cust1)
     db_session.commit()
 
-    proj1 = Project(
-        organization_id=org1.id,
-        customer_id=cust1.id,
-        code="PRJ-CMT-1",
-        name="Project Commit 1",
-        created_by=user_editor.id,
-    )
+    proj1 = Project(organization_id=org1.id, customer_id=cust1.id, code="PRJ-CMT-1", name="Project Commit 1", created_by=user_editor.id)
     db_session.add(proj1)
     db_session.commit()
 
-    line1 = ProjectAssetLine(
-        project_id=proj1.id,
-        asset_name="Line 1",
-        quantity=1.0,
-        review_status="raw",
-        validation_status="valid",
-        appraised_unit_price=100.0,
-        row_version=1,
-    )
+    line1 = ProjectAssetLine(project_id=proj1.id, asset_name="Line 1", quantity=1.0, review_status="raw", validation_status="valid", appraised_unit_price=100.0, row_version=1)
     db_session.add(line1)
     db_session.commit()
 
@@ -1280,9 +980,7 @@ def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Sessio
     headers_other = {"X-User-Id": str(user_other.id)}
 
     # A. Seed active user session and inline drafts
-    sess = WorkbenchSession(
-        user_id=user_editor.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE
-    )
+    sess = WorkbenchSession(user_id=user_editor.id, project_id=proj1.id, status=WorkbenchSessionStatus.ACTIVE)
     db_session.add(sess)
     db_session.commit()
 
@@ -1294,51 +992,29 @@ def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Sessio
         draft_value={"value": 150.0},
         base_value={"value": 100.0},
         base_row_version=1,
-        status=InlineEditDraftStatus.DRAFT,
+        status=InlineEditDraftStatus.DRAFT
     )
     db_session.add(draft)
     db_session.commit()
 
     # B. Unauthorized / Forbidden permissions
     payload = {"field_keys": ["appraised_unit_price"], "confirm": True, "version_token": "1"}
-    resp = client.post(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload
-    )
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload)
     assert resp.status_code == 401
-    resp = client.post(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit",
-        json=payload,
-        headers=headers_reader,
-    )
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_reader)
     assert resp.status_code == 403
 
     # C. Cross-org / Scoping checks (Org 2 editor calls Org 1 project commit)
-    resp = client.post(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit",
-        json=payload,
-        headers=headers_other,
-    )
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_other)
     assert resp.status_code == 404
 
     # D. Missing confirm = True fails with 400
-    noconfirm_payload = {
-        "field_keys": ["appraised_unit_price"],
-        "confirm": False,
-        "version_token": "1",
-    }
-    resp = client.post(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit",
-        json=noconfirm_payload,
-        headers=headers_editor,
-    )
+    noconfirm_payload = {"field_keys": ["appraised_unit_price"], "confirm": False, "version_token": "1"}
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=noconfirm_payload, headers=headers_editor)
     assert resp.status_code == 400
 
     # E. Successful commit of allowed fields
-    resp = client.post(
-        f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit",
-        json=payload,
-        headers=headers_editor,
-    )
+    resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_editor)
     assert resp.status_code == 200
     data = resp.json()
     assert data["committed_fields"] == ["appraised_unit_price"]
@@ -1350,7 +1026,5 @@ def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Sessio
     assert line1.row_version == 2
 
     # Verify draft is deleted/cleared
-    leftovers = (
-        db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == sess.id).all()
-    )
+    leftovers = db_session.query(InlineEditDraft).filter(InlineEditDraft.session_id == sess.id).all()
     assert len(leftovers) == 0

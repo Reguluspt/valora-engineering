@@ -21,8 +21,8 @@ from app.core.rbac import derive_effective_permissions
 def validate_description(val: Any) -> Optional[str]:
     if val is None:
         return None
-    # Reject boolean, objects, arrays, numbers
-    if isinstance(val, bool) or isinstance(val, (dict, list, int, float, Decimal)):
+    # Reject all non-string types explicitly
+    if not isinstance(val, str):
         raise HTTPException(
             status_code=400,
             detail={
@@ -33,8 +33,7 @@ def validate_description(val: Any) -> Optional[str]:
                 "retryable": False,
             },
         )
-    val_str = str(val)
-    if len(val_str) > 5000:
+    if len(val) > 5000:
         raise HTTPException(
             status_code=400,
             detail={
@@ -45,7 +44,7 @@ def validate_description(val: Any) -> Optional[str]:
                 "retryable": False,
             },
         )
-    return val_str
+    return val
 
 
 def validate_appraised_unit_price(val: Any) -> Optional[Decimal]:
@@ -196,10 +195,10 @@ def execute_commit_asset_line_draft(
             },
         )
 
-    # Parse version token strictly
+    # Parse version token strictly — must be a strictly positive integer
     try:
         request_version = int(version_token)
-        if request_version < 0:
+        if request_version <= 0:
             raise ValueError()
     except (TypeError, ValueError):
         raise HTTPException(
@@ -337,9 +336,15 @@ def execute_commit_asset_line_draft(
         )
 
     # 6. Load saved drafts matching targeted fields
+    from app.modules.project_master_data.models import InlineEditDraftStatus as _DraftStatus
     drafts = (
         db.query(InlineEditDraft)
-        .filter(InlineEditDraft.session_id == session.id, InlineEditDraft.target_id == line_id)
+        .filter(
+            InlineEditDraft.session_id == session.id,
+            InlineEditDraft.target_type == "ProjectAssetLine",
+            InlineEditDraft.target_id == line_id,
+            InlineEditDraft.status == _DraftStatus.DRAFT,
+        )
         .all()
     )
 
@@ -423,7 +428,7 @@ def execute_commit_asset_line_draft(
         "session_id": str(session.id),
         "project_id": str(project_id),
         "asset_line_id": str(line_id),
-        "field_keys": field_keys,
+        "committed_fields": field_keys,
         "before_values": serializable_before,
         "after_values": serializable_after,
         "draft_base_version": old_version,
@@ -446,12 +451,27 @@ def execute_commit_asset_line_draft(
 
     db.flush()
 
+    # 13. Compute remaining draft state after selected drafts deleted
+    remaining_drafts = (
+        db.query(InlineEditDraft)
+        .filter(
+            InlineEditDraft.session_id == session.id,
+            InlineEditDraft.target_type == "ProjectAssetLine",
+            InlineEditDraft.target_id == line_id,
+            InlineEditDraft.status == _DraftStatus.DRAFT,
+        )
+        .all()
+    )
+    # Exclude the ones we just deleted (still in identity map until flush commit)
+    remaining_keys = {d.field_key for d in remaining_drafts if d not in drafts_to_commit}
+    has_remaining = len(remaining_keys) > 0
+
     return {
         "project_id": project_id,
         "asset_line_id": line_id,
         "committed_fields": field_keys,
-        "draft_status": "clean",
-        "has_saved_draft": False,
+        "draft_status": "saved_draft" if has_remaining else "clean",
+        "has_saved_draft": has_remaining,
         "has_unsaved_changes": False,
         "is_stale": False,
         "committed_at": line.updated_at or datetime.now(timezone.utc),

@@ -10,8 +10,6 @@ from sqlalchemy import or_, func
 from app.db import get_db
 from app.core.rbac import require_permission
 from app.core.audit import log_audit_event
-from app.api.auth import get_correlation_id
-from app.modules.project_master_data.commands import execute_commit_asset_line_draft
 from app.modules.project_master_data.models import (
     User,
     Customer,
@@ -36,19 +34,14 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     ImportBatchStatus,
-    ImportRowValidationStatus,
+    ImportRowValidationStatus
 )
 from app.modules.project_master_data.schemas import (
-    ProjectCreate,
-    ProjectUpdate,
-    ProjectResponse,
-    ProjectAssetLineCreate,
-    ProjectAssetLineUpdate,
-    ProjectAssetLineResponse,
+    ProjectCreate, ProjectUpdate, ProjectResponse,
+    ProjectAssetLineCreate, ProjectAssetLineUpdate, ProjectAssetLineResponse,
     ProjectAssetLinePaginationResponse,
-    ProjectFileCreate,
-    ProjectFileResponse,
-    ProjectResolutionResponse,
+    ProjectFileCreate, ProjectFileResponse,
+    ProjectResolutionResponse
 )
 from app.modules.project_master_data.workbench_schemas import (
     ProjectDraftStateResponse,
@@ -59,8 +52,14 @@ from app.modules.project_master_data.workbench_schemas import (
     AssetLineDraftCommitResponse,
     ProjectAssetImportBatchCreate,
     ProjectAssetImportBatchResponse,
-    ProjectAssetImportStagingRowPaginationResponse,
+    ProjectAssetImportStagingRowPaginationResponse
 )
+from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
+
+
+def get_correlation_id(request: Request) -> str:
+    return request.headers.get("X-Correlation-Id", "")
+
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -69,32 +68,27 @@ router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 # PROJECT ENDPOINTS
 # ==========================================
 
-
 @router.post("", response_model=ProjectResponse, status_code=201)
 def create_project(
     payload: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:create")),
+    current_user: User = Depends(require_permission("project:create"))
 ):
     org_id = current_user.organization_id
 
     # 1. Enforce project code uniqueness per organization
-    dup = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.code == payload.code)
-        .first()
-    )
+    dup = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.code == payload.code
+    ).first()
     if dup:
-        raise HTTPException(
-            status_code=409, detail="Duplicate project code (code already exists in organization)"
-        )
+        raise HTTPException(status_code=409, detail="Duplicate project code (code already exists in organization)")
 
     # 2. Enforce customer relationship within same organization
-    customer = (
-        db.query(Customer)
-        .filter(Customer.organization_id == org_id, Customer.id == payload.customer_id)
-        .first()
-    )
+    customer = db.query(Customer).filter(
+        Customer.organization_id == org_id,
+        Customer.id == payload.customer_id
+    ).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     if customer.status != CustomerStatus.ACTIVE:
@@ -108,14 +102,10 @@ def create_project(
 
     # 4. Signer lookup (if provided)
     if payload.signer_profile_id:
-        signer = (
-            db.query(SignerProfile)
-            .filter(
-                SignerProfile.organization_id == org_id,
-                SignerProfile.id == payload.signer_profile_id,
-            )
-            .first()
-        )
+        signer = db.query(SignerProfile).filter(
+            SignerProfile.organization_id == org_id,
+            SignerProfile.id == payload.signer_profile_id
+        ).first()
         if not signer:
             raise HTTPException(status_code=404, detail="Signer profile not found")
 
@@ -131,7 +121,7 @@ def create_project(
         fee_amount=payload.fee_amount,
         fee_currency_id=payload.fee_currency_id,
         signer_profile_id=payload.signer_profile_id,
-        created_by=current_user.id,
+        created_by=current_user.id
     )
     db.add(project)
     db.commit()
@@ -146,7 +136,7 @@ def create_project(
         organization_id=org_id,
         actor_user_id=current_user.id,
         command_name="CreateProject",
-        payload={"code": project.code},
+        payload={"code": project.code}
     )
     db.commit()
 
@@ -155,68 +145,81 @@ def create_project(
 
 def slugify(text: str) -> str:
     text = text.lower().strip()
-    text = re.sub(r"[^a-z0-9\-]+", "-", text)
-    text = re.sub(r"-+", "-", text)
-    return text.strip("-")
+    text = re.sub(r'[^a-z0-9\-]+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-')
 
 
 @router.get("/resolve", response_model=ProjectResolutionResponse)
 def resolve_project(
     ref: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
 
     # 1. Check if ref is a valid UUID
     try:
         ref_uuid = uuid.UUID(ref)
-        project = (
-            db.query(Project)
-            .filter(Project.organization_id == org_id, Project.id == ref_uuid)
-            .first()
-        )
+        project = db.query(Project).filter(
+            Project.organization_id == org_id,
+            Project.id == ref_uuid
+        ).first()
         if project:
-            return {"project_id": project.id, "display_name": project.name, "matched_by": "id"}
+            return {
+                "project_id": project.id,
+                "display_name": project.name,
+                "matched_by": "id"
+            }
     except ValueError:
         pass
 
     # 2. Try exact match on code (case-insensitive)
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, func.lower(Project.code) == ref.lower())
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        func.lower(Project.code) == ref.lower()
+    ).first()
     if project:
-        return {"project_id": project.id, "display_name": project.name, "matched_by": "code"}
+        return {
+            "project_id": project.id,
+            "display_name": project.name,
+            "matched_by": "code"
+        }
 
     # 3. Try exact match on name (case-insensitive)
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, func.lower(Project.name) == ref.lower())
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        func.lower(Project.name) == ref.lower()
+    ).first()
     if project:
-        return {"project_id": project.id, "display_name": project.name, "matched_by": "name"}
+        return {
+            "project_id": project.id,
+            "display_name": project.name,
+            "matched_by": "name"
+        }
 
     # 4. Try slugified comparison in Python on all org projects
     projects = db.query(Project).filter(Project.organization_id == org_id).all()
     target_slug = slugify(ref)
-
+    
     matches = []
     for p in projects:
         if slugify(p.code) == target_slug:
             matches.append((p, "code_slug"))
         elif slugify(p.name) == target_slug:
             matches.append((p, "name_slug"))
-
+            
     if len(matches) == 1:
         p, match_type = matches[0]
-        return {"project_id": p.id, "display_name": p.name, "matched_by": match_type}
+        return {
+            "project_id": p.id,
+            "display_name": p.name,
+            "matched_by": match_type
+        }
     elif len(matches) > 1:
         raise HTTPException(
             status_code=409,
-            detail="Multiple projects matched this reference. Please specify exact project ID.",
+            detail="Multiple projects matched this reference. Please specify exact project ID."
         )
 
     raise HTTPException(status_code=404, detail="Project not found")
@@ -230,7 +233,7 @@ def list_projects(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
     query = db.query(Project).filter(Project.organization_id == org_id)
@@ -240,7 +243,7 @@ def list_projects(
             or_(
                 Project.code.ilike(f"%{q}%"),
                 Project.name.ilike(f"%{q}%"),
-                Project.description.ilike(f"%{q}%"),
+                Project.description.ilike(f"%{q}%")
             )
         )
     if customer_id:
@@ -257,14 +260,13 @@ def list_projects(
 def get_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -276,22 +278,19 @@ def update_project(
     project_id: uuid.UUID,
     payload: ProjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:update")),
+    current_user: User = Depends(require_permission("project:update"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Enforce optimistic locking / row_version validation
     if project.row_version != payload.row_version:
-        raise HTTPException(
-            status_code=409, detail="Optimistic lock error: Record version mismatch"
-        )
+        raise HTTPException(status_code=409, detail="Optimistic lock error: Record version mismatch")
 
     if payload.fee_currency_id:
         curr = db.query(Currency).filter(Currency.id == payload.fee_currency_id).first()
@@ -299,14 +298,10 @@ def update_project(
             raise HTTPException(status_code=404, detail="Currency not found")
 
     if payload.signer_profile_id:
-        signer = (
-            db.query(SignerProfile)
-            .filter(
-                SignerProfile.organization_id == org_id,
-                SignerProfile.id == payload.signer_profile_id,
-            )
-            .first()
-        )
+        signer = db.query(SignerProfile).filter(
+            SignerProfile.organization_id == org_id,
+            SignerProfile.id == payload.signer_profile_id
+        ).first()
         if not signer:
             raise HTTPException(status_code=404, detail="Signer profile not found")
 
@@ -333,7 +328,7 @@ def update_project(
         entity_id=project.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UpdateProject",
+        command_name="UpdateProject"
     )
     db.commit()
 
@@ -344,14 +339,13 @@ def update_project(
 def archive_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:archive")),
+    current_user: User = Depends(require_permission("project:archive"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -366,7 +360,7 @@ def archive_project(
         entity_id=project.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="ArchiveProject",
+        command_name="ArchiveProject"
     )
     db.commit()
 
@@ -377,14 +371,13 @@ def archive_project(
 def cancel_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:cancel")),
+    current_user: User = Depends(require_permission("project:cancel"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -399,7 +392,7 @@ def cancel_project(
         entity_id=project.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="CancelProject",
+        command_name="CancelProject"
     )
     db.commit()
 
@@ -410,20 +403,18 @@ def cancel_project(
 # PROJECT ASSET LINE ENDPOINTS
 # ==========================================
 
-
 @router.post("/{project_id}/asset-lines", response_model=ProjectAssetLineResponse, status_code=201)
 def create_project_asset_line(
     project_id: uuid.UUID,
     payload: ProjectAssetLineCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:update")),
+    current_user: User = Depends(require_permission("project:update"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -446,7 +437,7 @@ def create_project_asset_line(
         review_status=AssetLineReviewStatus.PENDING,
         validation_status=AssetLineValidationStatus.UNVALIDATED,
         brand_id=payload.brand_id,
-        manufacturer_id=payload.manufacturer_id,
+        manufacturer_id=payload.manufacturer_id
     )
     db.add(line)
     db.commit()
@@ -459,7 +450,7 @@ def create_project_asset_line(
         entity_id=line.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="CreateProjectAssetLine",
+        command_name="CreateProjectAssetLine"
     )
     db.commit()
 
@@ -475,14 +466,13 @@ def list_project_asset_lines(
     validation_status: Optional[str] = None,
     valuation_status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -492,7 +482,7 @@ def list_project_asset_lines(
         query = query.filter(
             or_(
                 ProjectAssetLine.asset_name.ilike(f"%{search}%"),
-                ProjectAssetLine.description.ilike(f"%{search}%"),
+                ProjectAssetLine.description.ilike(f"%{search}%")
             )
         )
     if validation_status:
@@ -508,25 +498,22 @@ def list_project_asset_lines(
         "items": items,
         "total": total,
         "limit": limit,
-        "offset": offset,
+        "offset": offset
     }
 
 
-@router.post(
-    "/{project_id}/asset-imports", response_model=ProjectAssetImportBatchResponse, status_code=201
-)
+@router.post("/{project_id}/asset-imports", response_model=ProjectAssetImportBatchResponse, status_code=201)
 def create_project_asset_import(
     project_id: uuid.UUID,
     payload: ProjectAssetImportBatchCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -540,7 +527,7 @@ def create_project_asset_import(
         valid_rows=0,
         invalid_rows=0,
         warning_rows=0,
-        created_by_user_id=current_user.id,
+        created_by_user_id=current_user.id
     )
     db.add(batch)
     db.commit()
@@ -553,7 +540,7 @@ def create_project_asset_import(
         entity_id=batch.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="CreateProjectAssetImportBatch",
+        command_name="CreateProjectAssetImportBatch"
     )
     db.commit()
 
@@ -564,33 +551,25 @@ def create_project_asset_import(
 def list_project_asset_imports(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    batches = (
-        db.query(ProjectAssetImportBatch)
-        .filter(
-            ProjectAssetImportBatch.project_id == project_id,
-            ProjectAssetImportBatch.organization_id == org_id,
-        )
-        .all()
-    )
+    batches = db.query(ProjectAssetImportBatch).filter(
+        ProjectAssetImportBatch.project_id == project_id,
+        ProjectAssetImportBatch.organization_id == org_id
+    ).all()
 
     return batches
 
 
-@router.get(
-    "/{project_id}/asset-imports/{batch_id}/rows",
-    response_model=ProjectAssetImportStagingRowPaginationResponse,
-)
+@router.get("/{project_id}/asset-imports/{batch_id}/rows", response_model=ProjectAssetImportStagingRowPaginationResponse)
 def list_project_asset_import_rows(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
@@ -598,33 +577,28 @@ def list_project_asset_import_rows(
     offset: int = Query(0, ge=0),
     validation_status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    batch = (
-        db.query(ProjectAssetImportBatch)
-        .filter(
-            ProjectAssetImportBatch.organization_id == org_id,
-            ProjectAssetImportBatch.project_id == project_id,
-            ProjectAssetImportBatch.id == batch_id,
-        )
-        .first()
-    )
+    batch = db.query(ProjectAssetImportBatch).filter(
+        ProjectAssetImportBatch.organization_id == org_id,
+        ProjectAssetImportBatch.project_id == project_id,
+        ProjectAssetImportBatch.id == batch_id
+    ).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
     query = db.query(ProjectAssetImportStagingRow).filter(
         ProjectAssetImportStagingRow.import_batch_id == batch_id,
         ProjectAssetImportStagingRow.organization_id == org_id,
-        ProjectAssetImportStagingRow.project_id == project_id,
+        ProjectAssetImportStagingRow.project_id == project_id
     )
 
     if validation_status:
@@ -639,7 +613,7 @@ def list_project_asset_import_rows(
         "items": items,
         "total": total,
         "limit": limit,
-        "offset": offset,
+        "offset": offset
     }
 
 
@@ -647,40 +621,21 @@ def normalize_header(header: str) -> str:
     if not header:
         return ""
     h = str(header).strip().lower()
-    h = re.sub(r"[\s\-]+", "_", h)
+    h = re.sub(r'[\s\-]+', '_', h)
     return h
 
 
 def map_columns(headers: List[str]) -> dict:
     mapping = {}
     aliases = {
-        "proposed_asset_name": [
-            "asset_name",
-            "ten_tai_san",
-            "tên_tài_sản",
-            "ten_tai_san",
-            "tên_tài_sản",
-            "name",
-        ],
-        "proposed_description": [
-            "description",
-            "mo_ta",
-            "mô_tả",
-            "specification",
-            "thong_so",
-            "thông_số",
-        ],
+        "proposed_asset_name": ["asset_name", "ten_tai_san", "tên_tài_sản", "ten_tai_san", "tên_tài_sản", "name"],
+        "proposed_description": ["description", "mo_ta", "mô_tả", "specification", "thong_so", "thông_số"],
         "proposed_quantity": ["quantity", "so_luong", "số_lượng", "qty"],
         "proposed_unit": ["unit", "don_vi", "đơn_vị"],
         "proposed_raw_price": ["raw_price", "gia_goc", "giá_gốc", "cost", "price"],
-        "proposed_currency": ["currency", "tien_te", "tiền_tệ"],
+        "proposed_currency": ["currency", "tien_te", "tiền_tệ"]
     }
-    aliases["proposed_appraised_unit_price"] = [
-        "appraised_unit_price",
-        "gia_tham_dinh",
-        "giá_thẩm_định",
-        "appraised_price",
-    ]
+    aliases["proposed_appraised_unit_price"] = ["appraised_unit_price", "gia_tham_dinh", "giá_thẩm_định", "appraised_price"]
 
     for i, h in enumerate(headers):
         normalized = normalize_header(h)
@@ -691,41 +646,35 @@ def map_columns(headers: List[str]) -> dict:
     return mapping
 
 
-@router.post(
-    "/{project_id}/asset-imports/{batch_id}/upload", response_model=ProjectAssetImportBatchResponse
-)
+@router.post("/{project_id}/asset-imports/{batch_id}/upload", response_model=ProjectAssetImportBatchResponse)
 def upload_project_asset_import_file(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    batch = (
-        db.query(ProjectAssetImportBatch)
-        .filter(
-            ProjectAssetImportBatch.organization_id == org_id,
-            ProjectAssetImportBatch.project_id == project_id,
-            ProjectAssetImportBatch.id == batch_id,
-        )
-        .first()
-    )
+    batch = db.query(ProjectAssetImportBatch).filter(
+        ProjectAssetImportBatch.organization_id == org_id,
+        ProjectAssetImportBatch.project_id == project_id,
+        ProjectAssetImportBatch.id == batch_id
+    ).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
     filename = file.filename or "import.xlsx"
     if not filename.endswith(".xlsx"):
         raise HTTPException(
-            status_code=400, detail="Định dạng tệp không được hỗ trợ. Vui lòng tải lên tệp .xlsx"
+            status_code=400,
+            detail="Định dạng tệp không được hỗ trợ. Vui lòng tải lên tệp .xlsx"
         )
 
     sanitized_filename = filename.split("/")[-1].split("\\")[-1]
@@ -737,7 +686,8 @@ def upload_project_asset_import_file(
         batch.status = ImportBatchStatus.FAILED
         db.commit()
         raise HTTPException(
-            status_code=400, detail="Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc tệp."
+            status_code=400,
+            detail="Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc tệp."
         )
 
     sheet_name = batch.source_sheet_name or wb.sheetnames[0]
@@ -747,7 +697,7 @@ def upload_project_asset_import_file(
 
     header_row_idx = None
     headers = []
-
+    
     rows = list(ws.iter_rows(values_only=True))
     for r_idx, row in enumerate(rows):
         if any(cell is not None for cell in row):
@@ -758,7 +708,10 @@ def upload_project_asset_import_file(
     if header_row_idx is None:
         batch.status = ImportBatchStatus.FAILED
         db.commit()
-        raise HTTPException(status_code=400, detail="Tệp Excel trống hoặc không chứa dòng tiêu đề.")
+        raise HTTPException(
+            status_code=400,
+            detail="Tệp Excel trống hoặc không chứa dòng tiêu đề."
+        )
 
     mapping = map_columns(headers)
 
@@ -767,7 +720,7 @@ def upload_project_asset_import_file(
 
     staging_rows_created = 0
     max_rows = 5000
-
+    
     db.query(ProjectAssetImportStagingRow).filter(
         ProjectAssetImportStagingRow.import_batch_id == batch_id
     ).delete()
@@ -812,7 +765,7 @@ def upload_project_asset_import_file(
             proposed_unit=proposed.get("proposed_unit"),
             proposed_raw_price=proposed.get("proposed_raw_price"),
             proposed_currency=proposed.get("proposed_currency"),
-            proposed_appraised_unit_price=proposed.get("proposed_appraised_unit_price"),
+            proposed_appraised_unit_price=proposed.get("proposed_appraised_unit_price")
         )
         db.add(staging_row)
         staging_rows_created += 1
@@ -824,7 +777,7 @@ def upload_project_asset_import_file(
     batch.valid_rows = 0
     batch.invalid_rows = 0
     batch.warning_rows = 0
-
+    
     db.commit()
     db.refresh(batch)
 
@@ -835,45 +788,49 @@ def upload_project_asset_import_file(
         entity_id=batch.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UploadProjectAssetImportBatch",
+        command_name="UploadProjectAssetImportBatch"
     )
     db.commit()
 
     return batch
 
 
+
+
+
+
 @router.get("/{project_id}/asset-lines/draft-state", response_model=ProjectDraftStateResponse)
 def get_project_asset_lines_draft_state(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    session = (
-        db.query(WorkbenchSession)
-        .filter(
-            WorkbenchSession.project_id == project_id,
-            WorkbenchSession.user_id == current_user.id,
-            WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE,
-        )
-        .first()
-    )
+    session = db.query(WorkbenchSession).filter(
+        WorkbenchSession.project_id == project_id,
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
 
     if not session:
-        return {"project_id": project_id, "items": [], "total": 0}
+        return {
+            "project_id": project_id,
+            "items": [],
+            "total": 0
+        }
 
-    drafts = db.query(InlineEditDraft).filter(InlineEditDraft.session_id == session.id).all()
+    drafts = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id
+    ).all()
 
     from collections import defaultdict
-
     drafts_by_line = defaultdict(list)
     for d in drafts:
         if d.target_type == "ProjectAssetLine":
@@ -881,18 +838,15 @@ def get_project_asset_lines_draft_state(
 
     items = []
     for line_id, d_list in drafts_by_line.items():
-        line = (
-            db.query(ProjectAssetLine)
-            .filter(ProjectAssetLine.project_id == project_id, ProjectAssetLine.id == line_id)
-            .first()
-        )
+        line = db.query(ProjectAssetLine).filter(
+            ProjectAssetLine.project_id == project_id,
+            ProjectAssetLine.id == line_id
+        ).first()
         if not line:
             continue
 
         changed_fields = [d.field_key for d in d_list]
-        is_stale = any(
-            d.base_row_version is not None and d.base_row_version < line.row_version for d in d_list
-        )
+        is_stale = any(d.base_row_version is not None and d.base_row_version < line.row_version for d in d_list)
         draft_status = "stale" if is_stale else "saved_draft"
         last_saved = max(d.updated_at for d in d_list) if d_list else None
 
@@ -906,37 +860,37 @@ def get_project_asset_lines_draft_state(
                 draft_status=draft_status,
                 changed_fields=changed_fields,
                 last_saved_at=last_saved,
-                last_saved_by=current_user.id,
+                last_saved_by=current_user.id
             )
         )
 
-    return {"project_id": project_id, "items": items, "total": len(items)}
+    return {
+        "project_id": project_id,
+        "items": items,
+        "total": len(items)
+    }
 
 
-@router.patch(
-    "/{project_id}/asset-lines/{line_id}/draft", response_model=AssetLineDraftSaveResponse
-)
+@router.patch("/{project_id}/asset-lines/{line_id}/draft", response_model=AssetLineDraftSaveResponse)
 def save_asset_line_draft(
     project_id: uuid.UUID,
     line_id: uuid.UUID,
     payload: AssetLineDraftSaveRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    line = (
-        db.query(ProjectAssetLine)
-        .filter(ProjectAssetLine.project_id == project_id, ProjectAssetLine.id == line_id)
-        .first()
-    )
+    line = db.query(ProjectAssetLine).filter(
+        ProjectAssetLine.project_id == project_id,
+        ProjectAssetLine.id == line_id
+    ).first()
     if not line:
         raise HTTPException(status_code=404, detail="Asset line not found")
 
@@ -953,36 +907,29 @@ def save_asset_line_draft(
     if base_version < (line.row_version or 1):
         raise HTTPException(status_code=409, detail="Stale row version: Conflict detected")
 
-    session = (
-        db.query(WorkbenchSession)
-        .filter(
-            WorkbenchSession.project_id == project_id,
-            WorkbenchSession.user_id == current_user.id,
-            WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE,
-        )
-        .first()
-    )
+    session = db.query(WorkbenchSession).filter(
+        WorkbenchSession.project_id == project_id,
+        WorkbenchSession.user_id == current_user.id,
+        WorkbenchSession.status == WorkbenchSessionStatus.ACTIVE
+    ).first()
 
     if not session:
         session = WorkbenchSession(
-            user_id=current_user.id, project_id=project_id, status=WorkbenchSessionStatus.ACTIVE
+            user_id=current_user.id,
+            project_id=project_id,
+            status=WorkbenchSessionStatus.ACTIVE
         )
         db.add(session)
         db.commit()
         db.refresh(session)
 
-    draft = (
-        db.query(InlineEditDraft)
-        .filter(
-            InlineEditDraft.session_id == session.id,
-            InlineEditDraft.target_id == line_id,
-            InlineEditDraft.field_key == payload.field_key,
-        )
-        .first()
-    )
+    draft = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id,
+        InlineEditDraft.target_id == line_id,
+        InlineEditDraft.field_key == payload.field_key
+    ).first()
 
     from datetime import datetime, timezone
-
     now = datetime.now(timezone.utc)
 
     draft_val_dict = {"value": payload.draft_value}
@@ -1003,16 +950,11 @@ def save_asset_line_draft(
             base_value=base_val_dict,
             base_row_version=base_version,
             status=InlineEditDraftStatus.DRAFT,
-            updated_at=now,
+            updated_at=now
         )
         db.add(draft)
 
-    max_seq = (
-        db.query(func.max(UndoRedoStackEntry.sequence_no))
-        .filter(UndoRedoStackEntry.session_id == session.id)
-        .scalar()
-        or 0
-    )
+    max_seq = db.query(func.max(UndoRedoStackEntry.sequence_no)).filter(UndoRedoStackEntry.session_id == session.id).scalar() or 0
     stack = UndoRedoStackEntry(
         session_id=session.id,
         sequence_no=max_seq + 1,
@@ -1021,16 +963,15 @@ def save_asset_line_draft(
         field_key=payload.field_key,
         after_value=draft_val_dict,
         before_value=base_val_dict,
-        action_type=UndoRedoActionType.EDIT,
+        action_type=UndoRedoActionType.EDIT
     )
     db.add(stack)
     db.commit()
 
-    all_drafts = (
-        db.query(InlineEditDraft)
-        .filter(InlineEditDraft.session_id == session.id, InlineEditDraft.target_id == line_id)
-        .all()
-    )
+    all_drafts = db.query(InlineEditDraft).filter(
+        InlineEditDraft.session_id == session.id,
+        InlineEditDraft.target_id == line_id
+    ).all()
     changed_fields = [d.field_key for d in all_drafts]
 
     return {
@@ -1042,20 +983,18 @@ def save_asset_line_draft(
         "has_unsaved_changes": False,
         "is_stale": False,
         "changed_fields": changed_fields,
-        "saved_at": now,
+        "saved_at": now
     }
 
 
-@router.post(
-    "/{project_id}/asset-lines/{line_id}/draft/commit", response_model=AssetLineDraftCommitResponse
-)
+@router.post("/{project_id}/asset-lines/{line_id}/draft/commit", response_model=AssetLineDraftCommitResponse)
 def commit_asset_line_draft(
     project_id: uuid.UUID,
     line_id: uuid.UUID,
     payload: AssetLineDraftCommitRequest,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("workbench:edit")),
+    current_user: User = Depends(require_permission("workbench:edit"))
 ):
     correlation_id = get_correlation_id(request)
     try:
@@ -1081,34 +1020,28 @@ def update_project_asset_line(
     project_id: uuid.UUID,
     line_id: uuid.UUID,
     payload: ProjectAssetLineUpdate,
-    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:update")),
+    current_user: User = Depends(require_permission("project:update"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    line = (
-        db.query(ProjectAssetLine)
-        .filter(ProjectAssetLine.project_id == project_id, ProjectAssetLine.id == line_id)
-        .first()
-    )
+    line = db.query(ProjectAssetLine).filter(
+        ProjectAssetLine.project_id == project_id,
+        ProjectAssetLine.id == line_id
+    ).first()
     if not line:
         raise HTTPException(status_code=404, detail="Asset line not found")
 
-    # Reject direct mutations of workbench-gated fields or status fields
-    if (
-        payload.description is not None
-        or payload.appraised_unit_price is not None
-        or payload.review_status is not None
-        or payload.validation_status is not None
-    ):
+    # Reject direct mutations of workbench-gated fields — check field presence not value
+    FORBIDDEN_PATCH_FIELDS = {"description", "appraised_unit_price", "review_status", "validation_status"}
+    forbidden_in_payload = FORBIDDEN_PATCH_FIELDS & payload.model_fields_set
+    if forbidden_in_payload:
         raise HTTPException(
             status_code=400,
             detail={
@@ -1122,9 +1055,7 @@ def update_project_asset_line(
 
     # Optimistic lock check
     if line.row_version != payload.row_version:
-        raise HTTPException(
-            status_code=409, detail="Optimistic lock error: Record version mismatch"
-        )
+        raise HTTPException(status_code=409, detail="Optimistic lock error: Record version mismatch")
 
     if payload.unit_id:
         unit = db.query(Unit).filter(Unit.id == payload.unit_id).first()
@@ -1134,6 +1065,8 @@ def update_project_asset_line(
     # Update line fields
     if payload.asset_name is not None:
         line.asset_name = payload.asset_name
+    if payload.description is not None:
+        line.description = payload.description
     if payload.quantity is not None:
         line.quantity = payload.quantity
     if payload.unit_id is not None:
@@ -1142,15 +1075,21 @@ def update_project_asset_line(
         line.raw_price = payload.raw_price
     if payload.raw_price_currency_id is not None:
         line.raw_price_currency_id = payload.raw_price_currency_id
+    if payload.appraised_unit_price is not None:
+        line.appraised_unit_price = payload.appraised_unit_price
     if payload.appraised_currency_id is not None:
         line.appraised_currency_id = payload.appraised_currency_id
     if payload.brand_id is not None:
         line.brand_id = payload.brand_id
     if payload.manufacturer_id is not None:
         line.manufacturer_id = payload.manufacturer_id
+    if payload.review_status is not None:
+        line.review_status = payload.review_status
+    if payload.validation_status is not None:
+        line.validation_status = payload.validation_status
 
-    # Atomically log audit event with correlation ID
-    correlation_id = get_correlation_id(request)
+    db.commit()
+    db.refresh(line)
 
     log_audit_event(
         db=db,
@@ -1159,20 +1098,9 @@ def update_project_asset_line(
         entity_id=line.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UpdateProjectAssetLine",
-        correlation_id=correlation_id,
-        payload={
-            "project_id": str(project_id),
-            "asset_line_id": str(line_id),
-            "updated_fields": [
-                k
-                for k, v in payload.model_dump(exclude_unset=True).items()
-                if v is not None and k != "row_version"
-            ],
-        },
+        command_name="UpdateProjectAssetLine"
     )
     db.commit()
-    db.refresh(line)
 
     return line
 
@@ -1181,20 +1109,18 @@ def update_project_asset_line(
 # PROJECT FILE METADATA ENDPOINTS
 # ==========================================
 
-
 @router.post("/{project_id}/files", response_model=ProjectFileResponse, status_code=201)
 def create_project_file_metadata(
     project_id: uuid.UUID,
     payload: ProjectFileCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:file:upload")),
+    current_user: User = Depends(require_permission("project:file:upload"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -1208,7 +1134,7 @@ def create_project_file_metadata(
         checksum_sha256=payload.checksum_sha256,
         processing_status=FileProcessingStatus.PENDING,
         extracted_metadata=payload.extracted_metadata,
-        uploaded_by=current_user.id,
+        uploaded_by=current_user.id
     )
     db.add(pfile)
     db.commit()
@@ -1221,7 +1147,7 @@ def create_project_file_metadata(
         entity_id=pfile.id,
         organization_id=org_id,
         actor_user_id=current_user.id,
-        command_name="UploadProjectFile",
+        command_name="UploadProjectFile"
     )
     db.commit()
 
@@ -1232,14 +1158,13 @@ def create_project_file_metadata(
 def list_project_files(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("project:read")),
+    current_user: User = Depends(require_permission("project:read"))
 ):
     org_id = current_user.organization_id
-    project = (
-        db.query(Project)
-        .filter(Project.organization_id == org_id, Project.id == project_id)
-        .first()
-    )
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
