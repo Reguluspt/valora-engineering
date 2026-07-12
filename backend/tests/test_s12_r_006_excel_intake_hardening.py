@@ -886,46 +886,55 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
         finally:
             self.teardown()
 
-    def test_outer_commit_failure(self, monkeypatch):
-        self._setup()
-        try:
-            # Mock outer db commit to fail
-            orig_commit = self.sess.commit
-            fail_commit = False
-            def mock_commit():
-                nonlocal fail_commit
-                if fail_commit:
-                    fail_commit = False # Only fail once
-                    raise RuntimeError("Outer commit database failure")
-                orig_commit()
-            monkeypatch.setattr(self.sess, "commit", mock_commit)
+        def test_outer_commit_failure(self, monkeypatch):
+            self._setup()
+            try:
+                # Mock outer db commit AND savepoint commit to both fail.
+                orig_commit = self.sess.commit
+                fail_commit = False
+                def mock_commit():
+                    nonlocal fail_commit
+                    if fail_commit:
+                        fail_commit = False
+                        raise RuntimeError("Outer commit database failure")
+                    orig_commit()
+                monkeypatch.setattr(self.sess, "commit", mock_commit)
 
-            content = _xlsx(rows=[["asset_name"], ["new1"]])
-            file = FakeUpload("test.xlsx", content)
+                content = _xlsx(rows=[["asset_name"], ["new1"]])
+                file = FakeUpload("test.xlsx", content)
 
-            fail_commit = True
-            with pytest.raises(HTTPException) as exc:
-                upload_excel_file_orchestrator(
-                    db=self.sess,
-                    org_id=self.org.id,
-                    project_id=self.p.id,
-                    batch_id=self.b.id,
-                    file=file,
-                    request=None,
-                    current_user=self.u
-                )
-            assert exc.value.status_code == 500
-            # Verify recovery sequence wrote a commit_failure audit event
-            self.sess.rollback()
-            events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
-            assert any(e.payload.get("error_code") == "commit_failure" for e in events)
+                fail_commit = True
+                with pytest.raises(HTTPException) as exc:
+                    upload_excel_file_orchestrator(
+                        db=self.sess,
+                        org_id=self.org.id,
+                        project_id=self.p.id,
+                        batch_id=self.b.id,
+                        file=file,
+                        request=None,
+                        current_user=self.u
+                    )
+                assert exc.value.status_code == 500
 
-            # Staging preserved
-            if self.engine.url.drivername != 'sqlite':
+                # Verify recovery sequence wrote a commit_failure audit event
+                events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
+                filtered = [e for e in events if e.event_name == "ProjectAssetImportBatchUploadFailed" and e.payload and e.payload.get("error_code") == "commit_failure"]
+                assert len(filtered) == 1, f"Expected 1 commit_failure event, got {len(filtered)}"
+                assert filtered[0].event_name == "ProjectAssetImportBatchUploadFailed"
+                assert filtered[0].payload is not None
+                assert filtered[0].payload["error_code"] == "commit_failure"
+
+                # No success AuditEvent from the rolled-back attempt
+                success = [e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"]
+                assert len(success) == 0
+
+                # Old staging IDs and values preserved
                 rows = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).all()
                 assert len(rows) == 3
-        finally:
-            self.teardown()
+                assert {r.proposed_asset_name for r in rows} == {"Old0", "Old1", "Old2"}
+
+            finally:
+                self.teardown()
 
     def test_outer_commit_failure_with_newer_concurrent_success(self, monkeypatch):
         self._setup()
