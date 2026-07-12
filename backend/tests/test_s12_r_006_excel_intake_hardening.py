@@ -19,7 +19,6 @@ from app.modules.excel_import.application.parse_workbook import (
     parse_workbook_lazy, ParseError
 )
 from app.modules.excel_import.application.import_service import upload_excel_file_orchestrator
-from app.modules.excel_import.application.replace_staging_rows import record_failure_audit
 from app.modules.excel_import.domain import ExcelImportLimits
 from app.modules.project_master_data.models import (
     OrganizationProfile, OrganizationStatus, User, UserStatus,
@@ -82,7 +81,7 @@ class BaseExcelTest:
         self.sess.add(self.p)
         self.sess.commit()
         
-        self.b = ProjectAssetImportBatch(organization_id=self.org.id, project_id=self.p.id, source_filename="old.xlsx", source_sheet_name="S", status=ImportBatchStatus.PARSED, total_rows=3, created_by_user_id=self.u.id)
+        self.b = ProjectAssetImportBatch(organization_id=self.org.id, project_id=self.p.id, source_filename="old.xlsx", source_sheet_name="Sheet1", status=ImportBatchStatus.PARSED, total_rows=3, created_by_user_id=self.u.id)
         self.sess.add(self.b)
         self.sess.commit()
         
@@ -346,18 +345,34 @@ class TestWorkbookResourceLimitsRestored:
                 list(lazy)
         assert exc.value.error_code == "physical_row_limit"
 
-    def test_data_cell_length(self):
-        limits = ExcelImportLimits(max_cell_chars=5)
-        rows = [["asset_name"], ["too_long_value"]]
+    def test_cell_length_boundary_accepted(self):
+        limits = ExcelImportLimits(max_cell_chars=10)
+        rows = [["asset_name"], ["1234567890"]]
+        content = _xlsx(rows=rows)
+        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None, limits=limits) as lazy:
+            res = list(lazy)
+            assert len(res) == 1
+
+    def test_cell_length_boundary_rejected(self):
+        limits = ExcelImportLimits(max_cell_chars=10)
+        rows = [["asset_name"], ["12345678901"]]
         content = _xlsx(rows=rows)
         with pytest.raises(ParseError) as exc:
             with parse_workbook_lazy(FakeUpload("test.xlsx", content), None, limits=limits) as lazy:
                 list(lazy)
         assert exc.value.error_code == "cell_length_limit"
 
-    def test_data_row_length(self):
-        limits = ExcelImportLimits(max_row_chars=10)
-        rows = [["asset_name", "description"], ["val1", "val2"]]
+    def test_row_length_boundary_accepted(self):
+        limits = ExcelImportLimits(max_row_chars=15)
+        rows = [["a", "b"], ["1234567890", "12345"]]
+        content = _xlsx(rows=rows)
+        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None, limits=limits) as lazy:
+            res = list(lazy)
+            assert len(res) == 1
+
+    def test_row_length_boundary_rejected(self):
+        limits = ExcelImportLimits(max_row_chars=15)
+        rows = [["a", "b"], ["1234567890", "123456"]]
         content = _xlsx(rows=rows)
         with pytest.raises(ParseError) as exc:
             with parse_workbook_lazy(FakeUpload("test.xlsx", content), None, limits=limits) as lazy:
@@ -391,136 +406,221 @@ class TestWorkbookResourceLimitsRestored:
                 list(lazy)
         assert exc.value.error_code == "column_limit"
 
-# ── L-1: Raw Persistence Restored ──────────────────────────────────────────
-class TestRawPersistenceRestored:
-    def test_exact_cells_structure(self):
-        content = _xlsx(rows=[["asset_name", "description"], ["v1", "v2"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            cells = row["raw_cells"]
+# ── N-7: Raw Persistence Integration ───────────────────────────────────────
+class TestRawPersistenceRestored(BaseExcelTest):
+    def test_db_raw_persistence_scenarios(self):
+        self._setup()
+        try:
+            def run_upload(rows, filename="test.xlsx"):
+                self.b.status = ImportBatchStatus.CREATED
+                self.b.source_sheet_name = "Sheet1"
+                self.sess.commit()
+                self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).delete()
+                self.sess.commit()
+                
+                content = _xlsx(rows=rows)
+                file = FakeUpload(filename, content)
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u
+                )
+                return self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).order_by(ProjectAssetImportStagingRow.source_row_number).all()
+
+            # 1. Exact cells structure
+            stg = run_upload([["asset_name", "description"], ["v1", "v2"]])
+            assert len(stg) == 1
+            cells = stg[0].raw_values["cells"]
             assert len(cells) == 2
             assert cells[0] == {"column_index": 1, "column_letter": "A", "header": "asset_name", "value": "v1"}
             assert cells[1] == {"column_index": 2, "column_letter": "B", "header": "description", "value": "v2"}
 
-    def test_duplicate_headers(self):
-        content = _xlsx(rows=[["asset_name", "asset_name"], ["v1", "v2"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            cells = row["raw_cells"]
+            # 2. Duplicate headers
+            stg = run_upload([["asset_name", "asset_name"], ["v1", "v2"]])
+            assert len(stg) == 1
+            cells = stg[0].raw_values["cells"]
             assert cells[0]["header"] == "asset_name"
             assert cells[1]["header"] == "asset_name"
 
-    def test_blank_headers(self):
-        content = _xlsx(rows=[["asset_name", "", "description"], ["v1", "v2", "v3"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            cells = row["raw_cells"]
+            # 3. Blank header
+            stg = run_upload([["asset_name", "", "description"], ["v1", "v2", "v3"]])
+            assert len(stg) == 1
+            cells = stg[0].raw_values["cells"]
             assert cells[1]["header"] == ""
             assert cells[1]["value"] == "v2"
 
-    def test_extra_columns(self):
-        content = _xlsx(rows=[["asset_name"], ["v1", "extra_val"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            cells = row["raw_cells"]
-            assert len(cells) == 2
+            # 4. Extra column
+            stg = run_upload([["asset_name"], ["v1", "extra_val"]])
+            assert len(stg) == 1
+            cells = stg[0].raw_values["cells"]
             assert cells[1]["header"] == ""
             assert cells[1]["value"] == "extra_val"
 
-    def test_empty_cells(self):
-        content = _xlsx(rows=[["asset_name", "description"], ["v1", None]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            assert row["mapped_values"]["proposed_description"] == ""
+            # 5. Empty cell
+            stg = run_upload([["asset_name", "description"], ["v1", None]])
+            assert len(stg) == 1
+            assert stg[0].mapped_values["proposed_description"] == ""
 
-    def test_row_order(self):
-        content = _xlsx(rows=[["asset_name"], ["row1"], ["row2"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            res = list(lazy)
-            assert res[0]["mapped_values"]["proposed_asset_name"] == "row1"
-            assert res[1]["mapped_values"]["proposed_asset_name"] == "row2"
+            # 6. First alias wins
+            stg = run_upload([["asset_name", "tên tài sản"], ["v1", "v2"]])
+            assert len(stg) == 1
+            assert stg[0].mapped_values["proposed_asset_name"] == "v1"
 
-    def test_source_row_number(self):
-        content = _xlsx(rows=[["asset_name"], [], ["row1"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            res = list(lazy)
-            assert res[0]["source_row_number"] == 3
+            # 7. Correct source row number and order
+            stg = run_upload([["asset_name"], [], ["row1"], ["row2"]])
+            assert len(stg) == 2
+            assert stg[0].source_row_number == 3
+            assert stg[0].mapped_values["proposed_asset_name"] == "row1"
+            assert stg[1].source_row_number == 4
+            assert stg[1].mapped_values["proposed_asset_name"] == "row2"
+        finally:
+            self.teardown()
 
-    def test_first_alias_wins(self):
-        content = _xlsx(rows=[["asset_name", "tên tài sản"], ["v1", "v2"]])
-        with parse_workbook_lazy(FakeUpload("test.xlsx", content), None) as lazy:
-            row = next(lazy)
-            assert row["mapped_values"]["proposed_asset_name"] == "v1"
+# ── N-1, N-2, N-3: PostgreSQL Concurrency Integration ────────────────────────
+class ControlledSlowFile:
+    def __init__(self, invalid_bytes, read_event, block_event):
+        self.invalid_bytes = invalid_bytes
+        self.read_event = read_event
+        self.block_event = block_event
+        self.bytes_io = io.BytesIO(invalid_bytes)
+        self.has_read = False
 
-# ── L-2: PostgreSQL Concurrency Redesign ────────────────────────────────────
-class TestPGConcurrencyRestructured(BaseExcelTest):
+    def read(self, size=-1):
+        if not self.has_read:
+            self.has_read = True
+            # Signal that worker A entered the orchestrator and holds the lock
+            self.read_event.set()
+            # Wait for main thread to allow worker A to proceed
+            self.block_event.wait()
+        return self.bytes_io.read(size)
+
+class TestPGIsolatedConcurrencyRestored:
     def test_concurrent_upload_serialization(self):
         pg = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
         if not pg or "postgres" not in pg:
             pytest.skip("PostgreSQL concurrency test requires PostgreSQL database environment.")
 
-        # Ensure no metadata drop_all/create_all run in our PG integration test
-        self._setup(db_url=pg)
+        # Dedicated setup: NO create_all / drop_all!
+        engine = create_engine(pg)
+        SessionLocal = sessionmaker(bind=engine)
+        sess = SessionLocal()
+
+        # Track created entities for FK-safe cleanup
+        created_org_id = None
+        created_role_id = None
+        created_u1_id = None
+        created_u2_id = None
+        created_ur_ids = []
+        created_cust_id = None
+        created_proj_id = None
+        created_batch_id = None
+
         try:
-            # Generate unique test identifiers
-            uid_suffix = str(uuid.uuid4())[:8]
-            unique_org_slug = f"org_{uid_suffix}"
-            unique_email_1 = f"user1_{uid_suffix}@t.com"
-            unique_email_2 = f"user2_{uid_suffix}@t.com"
-            unique_role_code = f"role_{uid_suffix}"
-            unique_proj_code = f"proj_{uid_suffix}"
+            uid = str(uuid.uuid4())
+            uid_s = uid[:8]
 
-            # Create test context record set
-            org = OrganizationProfile(legal_name=f"Org {uid_suffix}", organization_slug=unique_org_slug, status=OrganizationStatus.ACTIVE)
-            self.sess.add(org)
-            self.sess.commit()
+            # UUID-suffixed entities
+            org = OrganizationProfile(
+                legal_name=f"Org {uid}",
+                organization_slug=f"org_{uid_s}",
+                status=OrganizationStatus.ACTIVE
+            )
+            sess.add(org)
+            sess.commit()
+            created_org_id = org.id
 
-            role = Role(code=unique_role_code, display_name="Editor", permissions=["project:read", "workbench:edit"])
-            self.sess.add(role)
-            self.sess.commit()
+            role = Role(
+                code=f"role_{uid_s}",
+                display_name=f"Role {uid_s}",
+                permissions=["project:read", "workbench:edit"]
+            )
+            sess.add(role)
+            sess.commit()
+            created_role_id = role.id
 
-            u1 = User(organization_id=org.id, email=unique_email_1, full_name="User 1", status=UserStatus.ACTIVE)
-            u2 = User(organization_id=org.id, email=unique_email_2, full_name="User 2", status=UserStatus.ACTIVE)
-            self.sess.add(u1)
-            self.sess.add(u2)
-            self.sess.commit()
+            u1 = User(
+                organization_id=org.id,
+                email=f"u1_{uid_s}@valora.com",
+                full_name=f"U1 {uid_s}",
+                status=UserStatus.ACTIVE
+            )
+            u2 = User(
+                organization_id=org.id,
+                email=f"u2_{uid_s}@valora.com",
+                full_name=f"U2 {uid_s}",
+                status=UserStatus.ACTIVE
+            )
+            sess.add(u1)
+            sess.add(u2)
+            sess.commit()
+            created_u1_id = u1.id
+            created_u2_id = u2.id
 
-            self.sess.add(UserRole(user_id=u1.id, role_id=role.id, is_active=True))
-            self.sess.add(UserRole(user_id=u2.id, role_id=role.id, is_active=True))
-            self.sess.commit()
+            ur1 = UserRole(user_id=u1.id, role_id=role.id, is_active=True)
+            ur2 = UserRole(user_id=u2.id, role_id=role.id, is_active=True)
+            sess.add(ur1)
+            sess.add(ur2)
+            sess.commit()
+            created_ur_ids = [ur1.id, ur2.id]
 
-            cust = Customer(organization_id=org.id, legal_name="Cust", status=CustomerStatus.ACTIVE, created_by=u1.id)
-            self.sess.add(cust)
-            self.sess.commit()
+            cust = Customer(
+                organization_id=org.id,
+                legal_name=f"Cust {uid_s}",
+                status=CustomerStatus.ACTIVE,
+                created_by=u1.id
+            )
+            sess.add(cust)
+            sess.commit()
+            created_cust_id = cust.id
 
-            proj = Project(organization_id=org.id, customer_id=cust.id, code=unique_proj_code, name="P", status=ProjectWorkflowStatus.DRAFT, created_by=u1.id)
-            self.sess.add(proj)
-            self.sess.commit()
+            proj = Project(
+                organization_id=org.id,
+                customer_id=cust.id,
+                code=f"proj_{uid_s}",
+                name=f"Proj {uid_s}",
+                status=ProjectWorkflowStatus.DRAFT,
+                created_by=u1.id
+            )
+            sess.add(proj)
+            sess.commit()
+            created_proj_id = proj.id
 
-            batch = ProjectAssetImportBatch(organization_id=org.id, project_id=proj.id, source_filename="b.xlsx", source_sheet_name="Sheet1", status=ImportBatchStatus.CREATED, total_rows=0, created_by_user_id=u1.id)
-            self.sess.add(batch)
-            self.sess.commit()
+            batch = ProjectAssetImportBatch(
+                organization_id=org.id,
+                project_id=proj.id,
+                source_filename=f"b_{uid_s}.xlsx",
+                source_sheet_name="Sheet1",
+                status=ImportBatchStatus.CREATED,
+                total_rows=0,
+                created_by_user_id=u1.id
+            )
+            sess.add(batch)
+            sess.commit()
+            created_batch_id = batch.id
 
-            # Pre-capture UUIDs
+            # Capture only IDs before starting workers
             org_id = org.id
             proj_id = proj.id
             batch_id = batch.id
             u1_id = u1.id
             u2_id = u2.id
 
-            # Scenario A: Two successful uploads to same batch
+            # ── Scenario A: Two Successful Uploads to same batch ─────────────────
             barrier = threading.Barrier(2)
             results = []
             exceptions = []
 
-            def worker_success(worker_id, user_id):
-                sess_w = self.SessionLocal()
-                # Load its own current_user inside the thread session
-                current_u = sess_w.query(User).get(user_id)
-                content = _xlsx(rows=[["asset_name"], [f"worker-{worker_id}"]])
-                upload = FakeUpload("b.xlsx", content)
-                barrier.wait()
+            def worker_success(worker_id, user_id, filename, row_val):
+                sess_w = SessionLocal()
                 try:
+                    current_u = sess_w.query(User).get(user_id)
+                    content = _xlsx(rows=[["asset_name"], [row_val]])
+                    upload = FakeUpload(filename, content)
+                    barrier.wait()
                     res = upload_excel_file_orchestrator(
                         db=sess_w,
                         org_id=org_id,
@@ -531,15 +631,16 @@ class TestPGConcurrencyRestructured(BaseExcelTest):
                         current_user=current_u,
                         correlation_id=f"corr-success-{worker_id}"
                     )
-                    results.append((worker_id, "success", res.total_rows))
+                    results.append((worker_id, "success", res.total_rows, res.source_filename))
                 except Exception as e:
                     exceptions.append(e)
-                    results.append((worker_id, "failure", str(e)))
+                    results.append((worker_id, "failure", str(e), None))
                 finally:
                     sess_w.close()
 
-            t1 = threading.Thread(target=worker_success, args=(1, u1_id))
-            t2 = threading.Thread(target=worker_success, args=(2, u2_id))
+            # Using different filenames and row sets
+            t1 = threading.Thread(target=worker_success, args=(1, u1_id, f"w1_{uid_s}.xlsx", "worker-1-row"))
+            t2 = threading.Thread(target=worker_success, args=(2, u2_id, f"w2_{uid_s}.xlsx", "worker-2-row"))
             t1.start()
             t2.start()
             t1.join()
@@ -549,70 +650,47 @@ class TestPGConcurrencyRestructured(BaseExcelTest):
             assert len(results) == 2
             assert all(r[1] == "success" for r in results)
 
-            # Scenario B: Slow stale failure followed by newer success
-            # We configure Thread 1 (failing) to lock the batch, block Thread 2, write failure, then Thread 2 succeeds
-            barrier_stale = threading.Barrier(2)
-            event_a_locked = threading.Event()
-            event_b_blocked = threading.Event()
+            # Final filename, staging rows, counts must match one complete worker generation (no mixed rows)
+            sess.expire_all()
+            final_batch = sess.query(ProjectAssetImportBatch).get(batch_id)
+            assert final_batch.status == ImportBatchStatus.PARSED
+            
+            staging_rows = sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).all()
+            assert len(staging_rows) == 1
+            final_row_val = staging_rows[0].proposed_asset_name
+            assert final_row_val in ("worker-1-row", "worker-2-row")
+            if final_row_val == "worker-1-row":
+                assert final_batch.source_filename == f"w1_{uid_s}.xlsx"
+            else:
+                assert final_batch.source_filename == f"w2_{uid_s}.xlsx"
+
+            # Assert exactly two success AuditEvents
+            events = sess.query(AuditEvent).filter_by(entity_id=batch_id).all()
+            success_events = [e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"]
+            assert len(success_events) == 2
+
+            # ── Scenario B: Slow Stale Failure followed by newer Success ─────────
+            # Reset batch for Scenario B
+            final_batch.status = ImportBatchStatus.CREATED
+            sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).delete()
+            sess.query(AuditEvent).filter_by(entity_id=batch_id).delete()
+            sess.commit()
+
+            read_event = threading.Event()
+            block_event = threading.Event()
             stale_results = []
             stale_exceptions = []
 
-            # We use monkeypatch/mocks to control Thread A's execution flow
-            # Let's write Thread A that fails, and Thread B that succeeds
-            def worker_stale_fail(user_id):
-                sess_w = self.SessionLocal()
-                current_u = sess_w.query(User).get(user_id)
-                
-                # Mock a slow upload that fails
-                # Thread A locks first, signals Thread B to proceed to query, then fails
-                barrier_stale.wait()
-                
-                # Let's acquire lock
-                batch_locked = sess_w.query(ProjectAssetImportBatch).filter_by(id=batch_id).with_for_update().first()
-                assert batch_locked is not None
-                
-                event_a_locked.set()
-                event_b_blocked.wait()
-                time.sleep(0.1) # ensure Thread B is blocked on DB lock query
-                
-                # Now fail the upload
+            def worker_stale_fail():
+                sess_w = SessionLocal()
                 try:
-                    # trigger ParseError
-                    raise ParseError(400, "invalid_xlsx", "Stale Failure Proof")
-                except ParseError as pe:
-                    # Orchestrator error behavior manual replication for controlled lock flow
-                    sp = sess_w.begin_nested()
-                    sp.rollback()
-                    record_failure_audit(
-                        db=sess_w,
-                        org_id=org_id,
-                        batch_id=batch_id,
-                        actor_id=current_u.id,
-                        sanitized_filename="b.xlsx",
-                        requested_sheet="Sheet1",
-                        error_code=pe.error_code,
-                        previous_row_count=1,
-                        correlation_id="stale-fail-corr"
-                    )
-                    sess_w.commit()
-                    stale_results.append(("stale_fail", "failure"))
-                finally:
-                    sess_w.close()
-
-            def worker_newer_success(user_id):
-                sess_w = self.SessionLocal()
-                current_u = sess_w.query(User).get(user_id)
-                content = _xlsx(rows=[["asset_name"], ["newer-success-data"]])
-                upload = FakeUpload("b.xlsx", content)
-                barrier_stale.wait()
-                
-                # Wait until Thread A holds lock
-                event_a_locked.wait()
-                # Signal we are about to query and block
-                event_b_blocked.set()
-                
-                try:
-                    res = upload_excel_file_orchestrator(
+                    current_u = sess_w.query(User).get(u1_id)
+                    # Controlled slow-failing file-like object (invalid zip bytes)
+                    controlled_file = ControlledSlowFile(b"corrupt-zip-bytes", read_event, block_event)
+                    upload = FakeUpload(f"b_stale_{uid_s}.xlsx", b"")
+                    upload.file = controlled_file
+                    
+                    upload_excel_file_orchestrator(
                         db=sess_w,
                         org_id=org_id,
                         project_id=proj_id,
@@ -620,64 +698,193 @@ class TestPGConcurrencyRestructured(BaseExcelTest):
                         file=upload,
                         request=None,
                         current_user=current_u,
-                        correlation_id="newer-success-corr"
+                        correlation_id=f"corr-stale-{uid_s}"
                     )
-                    stale_results.append(("newer_success", "success", res.total_rows))
+                    stale_results.append(("worker_stale", "success"))
+                except HTTPException as e:
+                    stale_results.append(("worker_stale", "http_error", e.status_code))
                 except Exception as e:
                     stale_exceptions.append(e)
-                    stale_results.append(("newer_success", "failure", str(e)))
+                    stale_results.append(("worker_stale", "unexpected_error", str(e)))
                 finally:
                     sess_w.close()
 
-            t_fail = threading.Thread(target=worker_stale_fail, args=(u1_id,))
-            t_succ = threading.Thread(target=worker_newer_success, args=(u2_id,))
+            def worker_newer_success():
+                # Wait until worker A is inside orchestrator holding batch lock
+                read_event.wait()
+                
+                sess_w = SessionLocal()
+                try:
+                    current_u = sess_w.query(User).get(u2_id)
+                    content = _xlsx(rows=[["asset_name"], ["success-final-val"]])
+                    upload = FakeUpload(f"b_success_{uid_s}.xlsx", content)
+                    
+                    # This call will block on batch FOR UPDATE query until worker A releases lock
+                    # We trigger block_event after starting worker B to resume worker A
+                    # Wait 0.2s after starting thread to ensure it is blocked
+                    upload_excel_file_orchestrator(
+                        db=sess_w,
+                        org_id=org_id,
+                        project_id=proj_id,
+                        batch_id=batch_id,
+                        file=upload,
+                        request=None,
+                        current_user=current_u,
+                        correlation_id=f"corr-success-{uid_s}"
+                    )
+                    stale_results.append(("worker_success", "success"))
+                except Exception as e:
+                    stale_exceptions.append(e)
+                    stale_results.append(("worker_success", "failure", str(e)))
+                finally:
+                    sess_w.close()
+
+            t_fail = threading.Thread(target=worker_stale_fail)
+            t_succ = threading.Thread(target=worker_newer_success)
             t_fail.start()
             t_succ.start()
+
+            # Ensure worker A holds lock
+            read_event.wait()
+            time.sleep(0.2)
+            # Release worker A to fail
+            block_event.set()
+
             t_fail.join()
             t_succ.join()
 
             assert stale_exceptions == []
-            
-            # Verify final batch status is PARSED
-            self.sess.refresh(batch)
-            assert batch.status == ImportBatchStatus.PARSED
-            assert batch.total_rows == 1
+            # One HTTP 400 failure and one success
+            assert ("worker_stale", "http_error", 400) in stale_results
+            assert ("worker_success", "success") in stale_results
 
-            # Staging belongs to success
-            stg = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).all()
-            assert len(stg) == 1
-            assert stg[0].proposed_asset_name == "newer-success-data"
+            # Assert final staging and batch belong exclusively to success worker B
+            sess.expire_all()
+            final_batch_b = sess.query(ProjectAssetImportBatch).get(batch_id)
+            assert final_batch_b.status == ImportBatchStatus.PARSED
+            assert final_batch_b.source_filename == f"b_success_{uid_s}.xlsx"
 
-            # Both AuditEvents exist
-            events = self.sess.query(AuditEvent).filter_by(entity_id=batch_id).all()
-            event_names = [e.event_name for e in events]
+            stg_b = sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).all()
+            assert len(stg_b) == 1
+            assert stg_b[0].proposed_asset_name == "success-final-val"
+
+            # Assert real failure and success AuditEvents by event_name
+            events_b = sess.query(AuditEvent).filter_by(entity_id=batch_id).all()
+            event_names = [e.event_name for e in events_b]
             assert "ProjectAssetImportBatchUploadFailed" in event_names
             assert "ProjectAssetImportBatchUploaded" in event_names
 
-            # Cleanup only test-owned records
-            self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).delete()
-            self.sess.query(AuditEvent).filter_by(entity_id=batch_id).delete()
-            self.sess.query(ProjectAssetImportBatch).filter_by(id=batch_id).delete()
-            self.sess.query(Project).filter_by(id=proj_id).delete()
-            self.sess.query(Customer).filter_by(id=cust.id).delete()
-            self.sess.query(UserRole).filter(UserRole.user_id.in_([u1_id, u2_id])).delete()
-            self.sess.query(User).filter(User.id.in_([u1_id, u2_id])).delete()
-            self.sess.query(Role).filter_by(code=unique_role_code).delete()
-            self.sess.query(OrganizationProfile).filter_by(id=org_id).delete()
-            self.sess.commit()
+        finally:
+            # Clean only test-owned rows in FK-safe order
+            if sess:
+                try:
+                    if created_batch_id:
+                        sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=created_batch_id).delete()
+                        sess.query(AuditEvent).filter_by(entity_id=created_batch_id).delete()
+                        sess.query(ProjectAssetImportBatch).filter_by(id=created_batch_id).delete()
+                    if created_proj_id:
+                        sess.query(Project).filter_by(id=created_proj_id).delete()
+                    if created_cust_id:
+                        sess.query(Customer).filter_by(id=created_cust_id).delete()
+                    if created_ur_ids:
+                        sess.query(UserRole).filter(UserRole.id.in_(created_ur_ids)).delete()
+                    if created_u1_id or created_u2_id:
+                        ids = [i for i in [created_u1_id, created_u2_id] if i is not None]
+                        sess.query(User).filter(User.id.in_(ids)).delete()
+                    if created_role_id:
+                        sess.query(Role).filter_by(id=created_role_id).delete()
+                    if created_org_id:
+                        sess.query(OrganizationProfile).filter_by(id=created_org_id).delete()
+                    sess.commit()
+                except Exception as cleanup_err:
+                    print(f"Cleanup error: {cleanup_err}")
+                finally:
+                    sess.close()
 
+# ── N-5: Unique Fault & Exception Verification Tests ─────────────────────────
+class TestTransactionFaultsCompleted(BaseExcelTest):
+    def test_staging_flush_failure(self, monkeypatch):
+        self._setup()
+        try:
+            # Mock staging rows database insert/flush failure
+            import app.modules.excel_import.application.import_service as service_mod
+            def mock_replace(*args, **kwargs):
+                raise RuntimeError("Staging DB Flush Failed")
+            monkeypatch.setattr(service_mod, "replace_staging_rows", mock_replace)
+
+            content = _xlsx(rows=[["asset_name"], ["new1"]])
+            file = FakeUpload("test.xlsx", content)
+
+            with pytest.raises(HTTPException) as exc:
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u
+                )
+            assert exc.value.status_code == 500
+            # Preserves original exception
+            assert exc.value.detail == "Lỗi hệ thống khi xử lý tệp Excel."
+
+            # Exact old staging IDs and values preserved
+            rows = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).order_by(ProjectAssetImportStagingRow.source_row_number).all()
+            assert len(rows) == 3
+            assert [r.id for r in rows] == self.seeded_staging_ids
+            assert [r.proposed_asset_name for r in rows] == ["O0", "O1", "O2"]
+
+            # Batch properties untouched
+            self.sess.refresh(self.b)
+            assert self.b.status == ImportBatchStatus.FAILED
+            assert self.b.source_filename == "old.xlsx"
+            assert self.b.source_sheet_name == "Sheet1"
+            assert self.b.total_rows == 3
         finally:
             self.teardown()
 
-# ── L-4: Complete Transaction Fault Tests ────────────────────────────────────
-class TestTransactionFaultsCompleted(BaseExcelTest):
+    def test_success_audit_event_failure(self, monkeypatch):
+        self._setup()
+        try:
+            # Mock success AuditEvent logging to fail (flush error)
+            import app.modules.excel_import.application.replace_staging_rows as rs_mod
+            def mock_audit(*args, **kwargs):
+                if kwargs.get("event_name") == "ProjectAssetImportBatchUploaded":
+                    raise RuntimeError("AuditEvent db flush failed")
+            monkeypatch.setattr(rs_mod, "log_audit_event", mock_audit)
+
+            content = _xlsx(rows=[["asset_name"], ["new1"]])
+            file = FakeUpload("test.xlsx", content)
+
+            with pytest.raises(HTTPException) as exc:
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u
+                )
+            assert exc.value.status_code == 500
+
+            # Staging preserved
+            rows = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).order_by(ProjectAssetImportStagingRow.source_row_number).all()
+            assert len(rows) == 3
+            assert [r.proposed_asset_name for r in rows] == ["O0", "O1", "O2"]
+
+            # Batch properties untouched
+            self.sess.refresh(self.b)
+            assert self.b.status == ImportBatchStatus.FAILED
+            assert self.b.source_filename == "old.xlsx"
+        finally:
+            self.teardown()
+
     def test_outer_commit_failure(self, monkeypatch):
         self._setup()
         try:
-            self.b.source_sheet_name = None
-            self.sess.commit()
-
-            # Mock outer commit failure during the core upload
+            # Mock outer db commit to fail
             orig_commit = self.sess.commit
             fail_commit = False
             def mock_commit():
@@ -703,34 +910,86 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
                     current_user=self.u
                 )
             assert exc.value.status_code == 500
-
-            # Verify recovery behavior wrote a commit_failure audit event
-            fail_commit = False
+            # Verify recovery sequence wrote a commit_failure audit event
             self.sess.rollback()
             events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
             assert any(e.payload.get("error_code") == "commit_failure" for e in events)
 
-            # Original staging rows intact
+            # Staging preserved
             if self.engine.url.drivername != 'sqlite':
                 rows = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).all()
                 assert len(rows) == 3
         finally:
             self.teardown()
 
+    def test_outer_commit_failure_with_newer_concurrent_success(self, monkeypatch):
+        self._setup()
+        try:
+            import sys
+            service_mod = sys.modules["app.modules.excel_import.application.import_service"]
+            
+            # Mock outer commit to fail
+            orig_commit = self.sess.commit
+            fail_commit = False
+            def mock_commit():
+                nonlocal fail_commit
+                if fail_commit:
+                    fail_commit = False
+                    raise RuntimeError("Outer commit database failure")
+                orig_commit()
+            monkeypatch.setattr(self.sess, "commit", mock_commit)
+
+            # Concurrent success updates batch to PARSED during recovery rollback window
+            orig_recover = service_mod._recover_commit_failure
+            def mock_recover(*args, **kwargs):
+                sess_c = self.SessionLocal()
+                try:
+                    batch_c = sess_c.query(ProjectAssetImportBatch).filter_by(id=self.b.id).first()
+                    batch_c.status = ImportBatchStatus.PARSED
+                    batch_c.source_filename = "newer_success.xlsx"
+                    sess_c.commit()
+                finally:
+                    sess_c.close()
+                # Run actual recovery, which should see changed fingerprint and abort
+                orig_recover(*args, **kwargs)
+
+            monkeypatch.setattr(service_mod, "_recover_commit_failure", mock_recover)
+
+            content = _xlsx(rows=[["asset_name"], ["new1"]])
+            file = FakeUpload("test.xlsx", content)
+
+            fail_commit = True
+            with pytest.raises(HTTPException) as exc:
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u
+                )
+            assert exc.value.status_code == 500
+
+            # Verify that final newer success state survives
+            self.sess.rollback()
+            self.sess.refresh(self.b)
+            assert self.b.status == ImportBatchStatus.PARSED
+            assert self.b.source_filename == "newer_success.xlsx"
+        finally:
+            self.teardown()
+
     def test_failure_audit_event_flush_failure(self, monkeypatch):
         self._setup()
         try:
-            self.b.source_sheet_name = None
-            self.sess.commit()
-
             # Mock log_audit_event failure on failure logging
             import app.modules.excel_import.application.replace_staging_rows as rs_mod
-            def mock_audit(*a, **kw):
-                if kw.get("event_name") == "ProjectAssetImportBatchUploadFailed":
+            def mock_audit(*args, **kwargs):
+                if kwargs.get("event_name") == "ProjectAssetImportBatchUploadFailed":
                     raise RuntimeError("Failure Audit Flush Failed")
             monkeypatch.setattr(rs_mod, "log_audit_event", mock_audit)
 
-            # Trigger a ParseError (10001 chars cell exceeds 10000 chars cell length limit)
+            # Trigger ParseError (cell value > limits)
             content = _xlsx(rows=[["asset_name"], ["v" * 10001]])
             file = FakeUpload("test.xlsx", content)
 
@@ -745,16 +1004,14 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
                     current_user=self.u
                 )
             assert exc.value.status_code == 400
-            assert exc.value.detail != "Failure Audit Flush Failed" # original exception not masked
+            # Original exception detail preserved, not masked by audit event failure
+            assert exc.value.detail != "Failure Audit Flush Failed"
         finally:
             self.teardown()
 
     def test_failure_audit_event_commit_failure(self, monkeypatch):
         self._setup()
         try:
-            self.b.source_sheet_name = None
-            self.sess.commit()
-
             # Mock db commit failure during failure audit logging
             orig_commit = self.sess.commit
             fail_commit = False
@@ -764,7 +1021,7 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
                 orig_commit()
             monkeypatch.setattr(self.sess, "commit", mock_commit)
 
-            # Trigger a ParseError
+            # Trigger ParseError
             content = _xlsx(rows=[["asset_name"], ["v" * 10001]])
             file = FakeUpload("test.xlsx", content)
 
@@ -783,7 +1040,66 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
         finally:
             self.teardown()
 
-# ── L-5: ProjectAssetLine Immutability Snapshot Proofs ──────────────────────
+    def test_closed_savepoint_safety(self, monkeypatch):
+        self._setup()
+        try:
+            import sys
+            service_mod = sys.modules["app.modules.excel_import.application.import_service"]
+            
+            # Record status during execution
+            class SavepointTracker:
+                def __init__(self, sp):
+                    self.sp = sp
+                    self.rolled_back = False
+                def rollback(self):
+                    self.rolled_back = True
+                    self.sp.rollback()
+                def commit(self):
+                    self.sp.commit()
+
+            orig_nested = self.sess.begin_nested
+            tracker = None
+            def mock_nested():
+                nonlocal tracker
+                sp = orig_nested()
+                tracker = SavepointTracker(sp)
+                return tracker
+            monkeypatch.setattr(self.sess, "begin_nested", mock_nested)
+
+            # Trigger an orchestrator run that fails during openpyxl parsing (iterator failure)
+            class FaultIterator:
+                def __init__(self):
+                    self.resolved_sheet = "Sheet1"
+                    self.column_count = 1
+                def __iter__(self): return self
+                def __next__(self): raise ParseError(400, "invalid_xlsx", "Fault")
+                def close(self): pass
+                def __enter__(self): return self
+                def __exit__(self, *a): pass
+
+            monkeypatch.setattr(service_mod, "parse_workbook_lazy", lambda *a, **kw: FaultIterator())
+            
+            content = _xlsx(rows=[["asset_name"], ["v"]])
+            file = FakeUpload("test.xlsx", content)
+
+            with pytest.raises(HTTPException) as exc:
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u
+                )
+            assert exc.value.status_code == 400
+            # Verifies savepoint was rolled back and not committed
+            assert tracker is not None
+            assert tracker.rolled_back
+        finally:
+            self.teardown()
+
+# ── N-5: ProjectAssetLine Immutability Snapshot Proofs ──────────────────────
 class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
     def test_line_immutable_snapshots(self, monkeypatch):
         self._setup()
@@ -797,7 +1113,7 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             content = _xlsx(rows=[["asset_name"], ["new1"]])
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
             assert resp.status_code == 200
             after1 = self.sess.query(ProjectAssetLine).get(self.al_id)
@@ -806,7 +1122,7 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             # 2. Invalid ZIP
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", b"invalid-zip", "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", b"invalid-zip", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
             assert resp.status_code == 400
             after2 = self.sess.query(ProjectAssetLine).get(self.al_id)
@@ -816,7 +1132,6 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             limits = ExcelImportLimits(max_data_rows=5, max_physical_rows=10)
             rows = [["asset_name"]] + [["v"] for _ in range(6)]
             content_large = _xlsx(rows=rows)
-            # Patch default limits temporarily in both import_service and parse_workbook
             import sys
             service_mod = sys.modules["app.modules.excel_import.application.import_service"]
             parse_mod = sys.modules["app.modules.excel_import.application.parse_workbook"]
@@ -824,7 +1139,7 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             monkeypatch.setattr(parse_mod, "DEFAULT_LIMITS", limits)
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", content_large, "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", content_large, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
             assert resp.status_code == 413
             after3 = self.sess.query(ProjectAssetLine).get(self.al_id)
@@ -844,7 +1159,7 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             monkeypatch.setattr(service_mod, "parse_workbook_lazy", lambda *a, **kw: ExceptionIterator())
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
             assert resp.status_code == 500
             after4 = self.sess.query(ProjectAssetLine).get(self.al_id)
@@ -857,12 +1172,10 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             def mock_audit_fail(*a, **kw):
                 raise RuntimeError("Success Audit log failure")
             monkeypatch.setattr(rs_mod, "log_audit_event", mock_audit_fail)
-            print("MOCK FUN IS:", rs_mod.log_audit_event)
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
-            print("STATUS:", resp.status_code, "BODY:", resp.text)
             assert resp.status_code == 500
             after5 = self.sess.query(ProjectAssetLine).get(self.al_id)
             assert (after5.id, after5.asset_name, after5.quantity, after5.row_version) == snapshot_before
@@ -874,10 +1187,11 @@ class TestProjectAssetLineImmutabilityExpanded(BaseExcelTest):
             monkeypatch.setattr(self.sess, "commit", mock_commit_fail)
             resp = self.client.post(
                 f"/api/v1/projects/{self.p.id}/asset-imports/{self.b.id}/upload",
-                files={"file": ("test.xlsx", content, "app/vnd...xlsx")},
+                files={"file": ("test.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
                 headers={"X-User-Id": str(self.u.id)})
             assert resp.status_code == 500
             after6 = self.sess.query(ProjectAssetLine).get(self.al_id)
             assert (after6.id, after6.asset_name, after6.quantity, after6.row_version) == snapshot_before
         finally:
             self.teardown()
+

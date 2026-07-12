@@ -205,9 +205,9 @@ To protect against system degradation, Denial of Service (DoS), data inconsisten
 
 ### D. Transaction Safety and Concurrency Control
 - **Pessimistic Concurrency**: Acquires a pessimistic row-level write lock (`SELECT ... FOR UPDATE`) on the `ProjectAssetImportBatch` record immediately when the upload begins.
-- **Separate-Session Semantics**: Concurrency is managed in isolated database sessions to guarantee serializable transaction behavior.
+- **Separate-Session Semantics**: same-batch upload operations are serialized by a PostgreSQL row lock.
 - **Transactional Savepoint Atomicity**: All spreadsheet parsing and staging row replacements run within a nested transaction savepoint (`db.begin_nested()`). Any validation limit breach or runtime exception rolls back all modifications to this savepoint, leaving previously imported staging rows intact.
-- **Audit Event Persistence & Serialization**: Both upload success and parser failure audit events are persisted atomically to the database. Failure logs include the exception code and previous staging row count. Stale failures from older concurrent generation processes are prevented from overwriting newer successfully parsed states.
+- **Audit Event Persistence & Serialization**: Both upload success and parser failure audit events are persisted atomically to the database. Failure logs include the exception code and previous staging row count. Stale failures from older concurrent generation processes are prevented from overwriting newer successfully parsed states by checking a pre-operation batch fingerprint. If a commit failure occurs on savepoint release, the transaction rolls back, and the recovery worker reacquires the lock `FOR UPDATE` to verify the fingerprint remains unchanged before writing the failure event.
 - **Official Data Immutability**: All existing `ProjectAssetLine` records, their IDs, quantities, names, and version fields remain strictly immutable throughout the Excel ingestion transaction. Any transaction fault or outer commit failure rollback guarantees that no partial changes or draft states leak to ProjectAssetLine.
 
 
