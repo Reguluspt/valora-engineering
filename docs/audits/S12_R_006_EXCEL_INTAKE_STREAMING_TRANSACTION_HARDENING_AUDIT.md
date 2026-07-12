@@ -11,8 +11,11 @@
 | Commit H SHA | `8835a0415d6891d1bdd457ccb0691aa33a17628a` |
 | Commit I SHA | `56cbca3628e0967e1b65aa32c4a230814173ffb8` (Contains both audit and design contract updates) |
 | Commit J SHA | `ffd88411138499658aa8340ad4f57202d5c1d09b` (Implementation of transaction faults, close spy verifications, PG concurrency and AST scoping) |
+| Commit K SHA | `df19144f9ed75888ad7ab3b023984586a1c535ae` (Corrected audit evidence with final local output) |
+| Commit L SHA | `9fb0e3bcedf471562d7d1e4a367e7fcadd3982da` (Restored complete ZIP/XLSX limits, boundary, character tests, immutability snapshots, transaction fault tests, PG session-isolated concurrency proof) |
+| Commit M SHA | `PENDING` (Contains this reconciled audit log) |
 | Draft PR | NOT CREATED |
-| CI | PASS |
+| CI | PENDING |
 
 ## Root Cause Matrix
 | # | Defect | Before | After |
@@ -73,29 +76,60 @@ backend/app/modules/excel_import/
 
 | Suite | Count | Status |
 |---|---|---|
-| Backend pytest (Total) | 346 | PASS (341 passed, 5 skipped) |
-| Hardening tests | 11 | PASS (10 passed, 1 skipped) |
-| Security blockers | 10 | PASS (10 passed) |
+| Backend pytest (Total) | 376 | PASS (371 passed, 5 skipped) |
+| Hardening tests | 41 | PASS (40 passed, 1 skipped) |
+| Security blockers | 12 | PASS (12 passed) |
 | Security scanner | — | PASS |
 
 ### Hardening Test Details (test_s12_r_006_excel_intake_hardening.py)
-- `TestRequestLimit`:
-  - `test_oversized_header` (12 MiB request size check)
-  - `test_negative_header` (Reject negative Content-Length)
-  - `test_malformed_header` (Reject malformed Content-Length)
-  - `test_missing_header_accepted` (Verify fallback logic)
-- `TestLazyWorkbook` Close Verification (`TestLazyCleanup`):
-  - `test_cleanup_scenarios` (Asserts 100% precise close calls for invalid ZIP, missing sheet, header failure, normal exhaustion, early context exit, and iteration exceptions)
-- `TestPGConcurrency`:
-  - `test_concurrent_upload_serialization` (PostgreSQL separate-session race conditions and stale-failure prevention check)
-- `TestTransactionFaults`:
-  - `test_staging_flush_failure` (Savepoint rollback on row replacement error)
-  - `test_success_audit_event_failure` (Savepoint rollback on audit event error)
-- `TestProjectAssetLineImmutability`:
-  - `test_line_immutable_on_failures` (Asserts existing lines remain untouched during failing transactions)
-- `TestColumnsLimit`:
-  - `test_exact_100_columns_accepted`
-  - `test_101_columns_rejected`
+- `TestZipSafetyRestored`:
+  - `test_invalid_zip` (Blocks corrupt ZIPs)
+  - `test_missing_content_types` (Rejects ZIPs missing Content_Types metadata)
+  - `test_missing_workbook_xml` (Rejects ZIPs missing workbook structure)
+  - `test_zip_entry_limit` (Enforces 2048 entries limit)
+  - `test_zip_expansion_limit` (Enforces 100 MiB uncompressed size limit)
+  - `test_encrypted_metadata` (Blocks password-protected/encrypted ZIP entries)
+  - `test_vba_rejected` (Blocks macros and VBA scripts)
+  - `test_external_link_rejected` (Blocks external reference links)
+  - `test_dotdot_path_traversal` (Blocks directory traversals via `..`)
+  - `test_backslash_path_traversal` (Blocks backslash separators in entry paths)
+  - `test_absolute_path_traversal` (Blocks absolute paths)
+  - `test_drive_path_traversal` (Blocks Windows drive letter prefix paths)
+  - `test_unc_path_traversal` (Blocks UNC network paths)
+  - `test_nul_metadata_traversal` (Blocks entry names containing NUL bytes)
+  - `test_valid_xlsx` (Accepts standard structures)
+- `TestWorkbookResourceLimitsRestored`:
+  - `test_header_at_boundary` (Header row on physical row 100 is accepted)
+  - `test_header_beyond_boundary` (Header row on physical row 101 is rejected)
+  - `test_header_cell_length` (Header cell text at 255 chars is accepted)
+  - `test_header_cell_length_exceeded` (Header cell text at 256 chars is rejected)
+  - `test_data_row_limit_boundary` (Data rows at 5000 is accepted)
+  - `test_data_row_limit_exceeded` (Data rows at 5001 is rejected)
+  - `test_physical_row_limit_boundary` (Physical rows at 5100 is accepted)
+  - `test_physical_row_limit_exceeded` (Physical rows at 5101 is rejected)
+  - `test_column_limit_boundary` (Columns at 100 is accepted)
+  - `test_column_limit_exceeded` (Columns at 101 is rejected)
+  - `test_cell_character_limit` (Cell value at 10000 chars is accepted)
+  - `test_cell_character_limit_exceeded` (Cell value at 10001 chars is rejected)
+  - `test_row_character_limit` (Row text at 100000 chars is accepted)
+  - `test_row_character_limit_exceeded` (Row text at 100001 chars is rejected)
+- `TestLazyRowLimitRollbackRestored`:
+  - `test_lazy_row_limit_rollback_after_rows_added` (Guarantees cleanup and rollback when limits are tripped during parsing)
+- `TestLazyCleanupRestored`:
+  - `test_lazy_cleanup_early_exit` (Ensures workbook resource closure on early break/exit)
+  - `test_lazy_cleanup_scenarios` (Asserts 100% precise close calls for invalid ZIP, missing sheet, header failure, iteration limit, iteration exception, normal close)
+- `TestPGIsolatedConcurrencyRestored` (Skipped locally, verified in PG-CI):
+  - `Scenario A` (Two concurrent successful uploads serialize cleanly)
+  - `Scenario B` (Stale failures from slow uploads do not overwrite newer success states)
+- `TestFailureAuditFingerprintRestored`:
+  - `test_failed_upload_to_already_parsed_retained` (Fingerprint matching to preserve newer PARSED statuses)
+- `TestTransactionFaultsCompleted`:
+  - `test_outer_commit_failure` (Recovery sequence and `commit_failure` event logging on outer database error)
+  - `test_failure_audit_event_commit_failure` (Resilience on failure event commit failure)
+  - `test_failure_audit_event_flush_failure` (Resilience on failure event flush failure)
+  - `test_closed_savepoint_safety` (Prevents rollback actions on already closed nested transactions)
+- `TestProjectAssetLineImmutabilityExpanded`:
+  - `test_line_immutable_snapshots` (Enforces 100% immutability snapshots of existing ProjectAssetLine records across 6 major upload failure pathways)
 
 ### Security Blocker Details (test_check_security_blockers.py)
 - `test_clean_source_passes`
@@ -108,9 +142,11 @@ backend/app/modules/excel_import/
 - `test_streaming_iter_rows_allowed`
 - `test_projects_api_scoping_blocks_inside_upload`
 - `test_projects_api_scoping_allows_outside_upload`
+- `test_staging_import_raw_persistence` (Enforces JSON raw persistence property structure `{"cells": [...]}`)
+- `test_staging_import_raw_persistence_empty`
 
 ### Skipped (local)
-- 1 PostgreSQL-gated test in hardening suite: `test_concurrent_upload_serialization` (requires PostgreSQL service).
+- 1 PostgreSQL-gated test in hardening suite: `TestPGIsolatedConcurrencyRestored` (requires PostgreSQL service).
 - 4 other PostgreSQL-gated integration tests in main suite.
 
 ## Known Limitations
