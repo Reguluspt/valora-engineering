@@ -998,7 +998,7 @@ def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Sessio
     db_session.commit()
 
     # B. Unauthorized / Forbidden permissions
-    payload = {"field_keys": ["appraised_unit_price"], "confirm": True}
+    payload = {"field_keys": ["appraised_unit_price"], "confirm": True, "version_token": "1"}
     resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload)
     assert resp.status_code == 401
     resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=payload, headers=headers_reader)
@@ -1009,7 +1009,7 @@ def test_commit_asset_line_draft_endpoint(client: TestClient, db_session: Sessio
     assert resp.status_code == 404
 
     # D. Missing confirm = True fails with 400
-    noconfirm_payload = {"field_keys": ["appraised_unit_price"], "confirm": False}
+    noconfirm_payload = {"field_keys": ["appraised_unit_price"], "confirm": False, "version_token": "1"}
     resp = client.post(f"/api/v1/projects/{proj1.id}/asset-lines/{line1.id}/draft/commit", json=noconfirm_payload, headers=headers_editor)
     assert resp.status_code == 400
 
