@@ -12,8 +12,10 @@
 | Previous audit SHA | `77f5e9a4c546ea45662bb5c29509bbaeb253d14a` |
 | Corrective implementation SHA | `94b8030dda5bd8d7af39a4796439549905256bef` |
 | Corrective audit SHA | `16c6a61f0457bd3ef51478f56c4fc8753aef79cb` |
-| **Micro-corrective code SHA** | `PENDING` (Commit E) |
-| **Micro-corrective audit SHA** | `PENDING` (Commit F) |
+| **Micro-corrective code SHA** | `c6a1e403c8b40131f792dcc55992306a085c70bd` (Commit E) |
+| **Micro-corrective audit SHA** | `dc5854ca6812d9f6782fb5d6f0a7ee6562504a34` (Commit F) |
+| **Coverage pass code SHA** | `4a140fcb8d25662687a3f44c8603d0948035f9f5` (Commit G) |
+| **Coverage pass audit SHA** | `PENDING` (Commit H) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 
@@ -121,8 +123,8 @@ Deleted:
 | Gate | Result |
 |---|---|
 | Backend ruff | PASS |
-| Backend pytest | **322 passed, 4 skipped, 0 failed** (includes 3 security blocker tests) |
-| Security scanner | PASS (critical blockers enforced: slug + all-zero UUID) |
+| Backend pytest | **322 passed, 4 skipped, 0 failed** (includes 8 security checks + 3 blocker tests) |
+| Security scanner | PASS (fail-closed critical blockers enforced: slug + all-zero UUID) |
 | Alembic heads | PASS (single: `db5977424e7b`) |
 | Worker ruff | PASS |
 | Worker pytest | 1 passed |
@@ -131,11 +133,20 @@ Deleted:
 | Frontend vitest | **44 passed (10 test files)** |
 | npm audit | 0 vulnerabilities |
 
-### Added Tests
-| Test | Type | Count | Scope |
-|---|---|---|---|
-| `validators.test.tsx` | Frontend unit | 5 | UUID validation: valid, uppercase, malformed, empty, all-zero |
-| `test_check_security_blockers.py` | Backend security | 3 | Slug blocker, UUID blocker, clean source passes |
+### Test File Inventory
+| File | Tests | Type |
+|---|---|---|
+| `validators.test.tsx` | 5 | UUID validation unit |
+| `test_check_security_blockers.py` | 3 | Security blocker enforcement |
+| `useProjectAssetLines.test.ts` | 10 | Mapping + pagination (mocked) |
+| `useAssetLineContext.test.ts` | 2 | Context null panels |
+| `useWorkbenchDraftSync.test.ts` | 3 | Draft sync hooks |
+| `useWorkbenchDraftState.test.ts` | 2 | Draft state |
+| `projects.test.ts` | 2 | API serialization |
+| `client.test.ts` | 7 | API client |
+| `i18n.test.ts` | 4 | Translation keys |
+| `AssetGrid.commit.test.tsx` | 4 | Commit confirmation |
+| `errorRegistry.test.ts` | 5 | Error mapping |
 
 ### Skipped Tests
 4 PostgreSQL-gated (local dev): `test_auth_endpoints.py:737`, `test_s12_r_004_official_mutation.py:1049`, `test_workbench_api.py:696`, `test_workbench_api.py:980`
@@ -178,5 +189,5 @@ SKIPPED — REQUIRES CI WITH POSTGRESQL
 
 ## Final Verdict
 ```text
-FINAL MICRO-CORRECTIVE COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+BEHAVIORAL COVERAGE PASS COMPLETE — READY FOR INDEPENDENT RE-AUDIT
 ```
