@@ -195,8 +195,6 @@ function WorkbenchLayoutInner({
     <div className="workbench-container">
       <WorkbenchHeader
         projectTitle={displayName}
-        status="draft"
-        statusLabel="Bản nháp"
       />
 
       {(conflictError || syncConflict) && (
@@ -293,7 +291,6 @@ function WorkbenchLayoutInner({
         <WorkbenchRightPanelShell contextData={resolvedContextData} />
       </div>
       <WorkbenchFooter
-        issuesCount={0}
         draftsCount={draftsCount}
         checkpoint={checkpoint}
         onAutosaveMock={handleCheckpoint}

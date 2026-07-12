@@ -179,27 +179,27 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                 <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left", width: "60px" }} onClick={() => handleSortChange("line_no")}>
                   # {sortState.field === "line_no" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
                 </th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left" }} onClick={() => handleSortChange("raw_name")}>
-                  Raw Name {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Normalized Name</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Canonical Asset</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Variant</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Taxonomy Path</th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "80px" }} onClick={() => handleSortChange("quantity")}>
-                  Qty {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Unit</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 1</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 2</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Quote 3</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Currency</th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
-                  Price {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
-                </th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Validation</th>
-                <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Review</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left" }} onClick={() => handleSortChange("raw_name")}>
+                    Tên gốc {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tên chuẩn hóa</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tài sản chuẩn</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Biến thể</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Phân loại</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "80px" }} onClick={() => handleSortChange("quantity")}>
+                    SL {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Đơn vị</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 1</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 2</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 3</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Tiền tệ</th>
+                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
+                    Giá TĐ {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra DL</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra</th>
               </tr>
             </thead>
           </table>
@@ -289,7 +289,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                           onSave={(newVal) => {
                             if (onDraftChange && row.row_version != null) {
                               const numericVal = parseInt(newVal.replace(/,/g, ""), 10);
-                              onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price ?? 0, row.row_version);
+                              onDraftChange(row.project_asset_line_id, "appraised_price", isNaN(numericVal) ? newVal : numericVal, row.appraised_price, row.row_version);
                             }
                           }}
                         />

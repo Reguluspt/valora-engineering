@@ -43,6 +43,7 @@ export const vi = {
   "workbench.unsavedChangesCount": "thay đổi chưa lưu",
   "workbench.sessionActive": "ĐANG HOẠT ĐỘNG",
   "workbench.sessionLocked": "Đã khóa",
+  "workbench.requiresBackendSession": "Yêu cầu phiên làm việc hệ thống",
   "workbench.status.initializing": "Đang khởi tạo phiên làm việc...",
   "workbench.status.stale": "Dữ liệu hồ sơ này đã được thay đổi bởi người dùng khác.",
   "workbench.status.staleAction": "Cập nhật mới",

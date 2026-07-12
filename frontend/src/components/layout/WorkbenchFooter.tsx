@@ -3,7 +3,7 @@ import { AutosaveCheckpoint } from "../workbench/drafts/DraftStateTypes";
 import { t } from "../../i18n";
 
 interface WorkbenchFooterProps {
-  issuesCount: number;
+  issuesCount?: number | null;
   draftsCount?: number;
   checkpoint?: AutosaveCheckpoint;
   onAutosaveMock?: () => void;
@@ -19,8 +19,8 @@ export function WorkbenchFooter({
     <footer className="workbench-footer">
       <div>
         <span>{t("workbench.issuesLabel")}</span>
-        <span style={{ fontWeight: 600, color: issuesCount > 0 ? "var(--status-warning)" : "var(--status-approved)", marginRight: "var(--space-md)" }}>
-          {issuesCount}
+        <span style={{ fontWeight: 600, color: issuesCount != null && issuesCount > 0 ? "var(--status-warning)" : "var(--text-muted)", marginRight: "var(--space-md)" }}>
+          {issuesCount != null ? issuesCount : "—"}
         </span>
 
         {draftsCount > 0 && (

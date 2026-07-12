@@ -14,6 +14,14 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
     return currentPath.startsWith(path);
   };
 
+  const handleWorkbenchClick = () => {
+    if (currentPath.startsWith("/workbench/projects/")) {
+      onNavigate(currentPath);
+    } else {
+      onNavigate("/workbench/projects");
+    }
+  };
+
   return (
     <AstryxAppShell>
       <SideNav>
@@ -24,7 +32,7 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
           <SideNavItem
             isSelected={getLinkActive("/workbench/projects")}
             label={t("nav.workbench")}
-            onClick={() => onNavigate("/workbench/projects")}
+            onClick={handleWorkbenchClick}
           />
           <SideNavItem
             isSelected={getLinkActive("/workbench/queue") || getLinkActive("/queue")}
@@ -37,10 +45,6 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
             onClick={() => onNavigate("/workbench/validation")}
           />
         </SideNavSection>
-        <div style={{ marginTop: "auto", padding: "var(--space-md) var(--space-lg)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", borderTop: "1px solid var(--border-color)" }}>
-          <p style={{ margin: "0 0 var(--space-xs) 0" }}>{t("auth.roleLabel")}: {t("auth.role.appraiser")}</p>
-          <p style={{ margin: 0 }}>{t("auth.orgLabel")}: {t("auth.org.gialai")}</p>
-        </div>
       </SideNav>
       <section className="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {children}

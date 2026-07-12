@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { resolveProjectReference } from "../../../api/projects";
+import { isValidProjectUuid } from "../validators";
 
 export type ResolutionState = "idle" | "loading" | "ready" | "error";
 
@@ -11,18 +12,20 @@ export interface ResolvedProject {
   retry: () => void;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
-
 export function useResolvedProject(routeRef: string | null): ResolvedProject {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [state, setState] = useState<ResolutionState>("idle");
   const [error, setError] = useState<ResolvedProject["error"]>(null);
   const [retryCounter, setRetryCounter] = useState(0);
+  const generationRef = { current: 0 };
 
   const resolve = useCallback(async () => {
+    generationRef.current += 1;
+    const gen = generationRef.current;
+
     if (!routeRef) {
+      if (gen !== generationRef.current) return;
       setProjectId(null);
       setDisplayName(null);
       setState("idle");
@@ -30,15 +33,9 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       return;
     }
 
-    if (UUID_RE.test(routeRef) && routeRef !== ZERO_UUID) {
-      setProjectId(routeRef);
-      setDisplayName("Hồ sơ");
-      setState("ready");
-      setError(null);
-      return;
-    }
-
-    if (routeRef === ZERO_UUID) {
+    const trimmed = routeRef.trim();
+    if (!trimmed) {
+      if (gen !== generationRef.current) return;
       setState("error");
       setError({
         title: "Mã hồ sơ không hợp lệ",
@@ -48,16 +45,39 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       return;
     }
 
+    if (isValidProjectUuid(trimmed)) {
+      if (gen !== generationRef.current) return;
+      setProjectId(trimmed);
+      setDisplayName("Hồ sơ");
+      setState("ready");
+      setError(null);
+      return;
+    }
+
+    if (UUID_RE.test(trimmed) && !isValidProjectUuid(trimmed)) {
+      if (gen !== generationRef.current) return;
+      setState("error");
+      setError({
+        title: "Mã hồ sơ không hợp lệ",
+        message: "Không thể sử dụng mã hồ sơ rỗng.",
+        nextAction: "Vui lòng chọn một hồ sơ từ danh sách.",
+      });
+      return;
+    }
+
+    if (gen !== generationRef.current) return;
     setState("loading");
     setError(null);
 
     try {
-      const res = await resolveProjectReference(routeRef);
+      const res = await resolveProjectReference(trimmed);
+      if (gen !== generationRef.current) return;
       setProjectId(res.project_id);
       setDisplayName(res.display_name);
       setState("ready");
       setError(null);
     } catch (err: any) {
+      if (gen !== generationRef.current) return;
       setState("error");
       if (err.status === 404) {
         setError({
@@ -97,3 +117,5 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
 
   return { projectId, displayName, state, error, retry };
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

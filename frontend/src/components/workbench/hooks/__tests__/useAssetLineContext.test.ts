@@ -70,7 +70,7 @@ describe("useAssetLineContext hook tests", () => {
     expect(setContextData).toHaveBeenCalledWith(undefined);
   });
 
-  it("correctly constructs truthful context panel structures from selected row details", () => {
+  it("returns null panels for unavailable data — no fabricated entities", () => {
     const setContextData = vi.fn();
     const setLoading = vi.fn();
     const setErrorMsg = vi.fn();
@@ -88,18 +88,10 @@ describe("useAssetLineContext hook tests", () => {
 
     expect(resolvedData.project_asset_line_id).toBe("row-123");
 
-    // Knowledge: only raw_name as "Tên gốc", no fabricated attributes
-    expect(resolvedData.knowledge_panel.current_spec.attribute_values["Tên gốc"]).toBe("Cáp điện Cadivi 2x1.5");
-
-    // Price: null quote_batch, empty quotes, appraised_price_decision present
-    expect(resolvedData.price_evidence_panel.quote_batch).toBeNull();
-    expect(resolvedData.price_evidence_panel.quote_lines).toEqual([]);
-    expect(resolvedData.price_evidence_panel.appraised_price_decision.selected_unit_price).toBe(14500);
-
-    // Lineage: null — no fabricated IDs
+    // All panels are null — no fabricated technical specs, decisions, or IDs
+    expect(resolvedData.knowledge_panel).toBeNull();
+    expect(resolvedData.price_evidence_panel).toBeNull();
     expect(resolvedData.lineage).toBeNull();
-
-    // Validation: null — unknown state
     expect(resolvedData.validation_issues).toBeNull();
 
     // Guardrail check: row_version / version_token must not be exposed

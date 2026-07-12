@@ -1,20 +1,24 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchProjectAssetLines, ProjectAssetLineResponse } from "../../../api/assetLines";
 import { AssetLineGridRow } from "../AssetGridTypes";
 import { getFriendlyErrorFromUnknown } from "../../../errors/errorRegistry";
 
 const PAGE_SIZE = 50;
 
-function toIntSafe(val: string | undefined): number | null {
+function parseVersionToken(val: string | undefined): number | null {
   if (val === undefined || val === null) return null;
-  const parsed = parseInt(val, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  if (typeof val !== "string") return null;
+  if (val === "") return null;
+  if (!/^[1-9]\d*$/.test(val)) return null;
+  const parsed = Number(val);
+  if (!Number.isSafeInteger(parsed)) return null;
+  return parsed;
 }
 
-export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[]): AssetLineGridRow[] {
+export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[], offset: number): AssetLineGridRow[] {
   return items.map((item, idx) => ({
     project_asset_line_id: item.id,
-    line_no: idx + 1,
+    line_no: offset + idx + 1,
     raw_name: item.asset_name,
     normalized_name: null,
     canonical_asset: null,
@@ -30,7 +34,7 @@ export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[]): Asse
     currency: null,
     validation_status: (item.validation_status as any) === "needs_review" ? "warning" : (item.validation_status as any),
     review_status: (item.review_status as any),
-    row_version: toIntSafe(item.version_token) ?? null,
+    row_version: parseVersionToken(item.version_token),
   }));
 }
 
@@ -42,51 +46,72 @@ export function useProjectAssetLines(projectId: string) {
   const [friendlyError, setFriendlyError] = useState<{ title: string; message: string; nextAction: string } | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(false);
+  const loadingMoreRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const projectGen = useRef(0);
 
-  const loadFirstPage = useCallback(async () => {
-    if (!projectId) return;
+  const resetState = useCallback(() => {
+    setRows([]);
     setLoading(true);
+    setLoadingMore(false);
+    loadingMoreRef.current = false;
     setErrorMsg(null);
     setFriendlyError(null);
+    setTotalCount(0);
+    setHasMore(false);
+  }, []);
+
+  const loadPage = useCallback(async (offset: number) => {
+    if (!projectId) return;
+    const gen = projectGen.current;
 
     try {
-      const res = await fetchProjectAssetLines(projectId, { limit: PAGE_SIZE, offset: 0 });
-      const mappedRows = mapAssetLinesToGridRows(res.items);
-      setRows(mappedRows);
+      const res = await fetchProjectAssetLines(projectId, { limit: PAGE_SIZE, offset });
+      if (gen !== projectGen.current) return;
+
+      const mappedRows = mapAssetLinesToGridRows(res.items, offset);
+      if (offset === 0) {
+        setRows(mappedRows);
+      } else {
+        setRows((prev) => {
+          const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
+          const newRows = mappedRows.filter((r) => !existingIds.has(r.project_asset_line_id));
+          return [...prev, ...newRows];
+        });
+      }
       setTotalCount(res.total);
-      setHasMore(res.total > PAGE_SIZE);
+      setHasMore(offset + res.items.length < res.total);
     } catch (err: any) {
+      if (gen !== projectGen.current) return;
       setErrorMsg(err.message || "Không thể tải danh sách tài sản");
       setFriendlyError(getFriendlyErrorFromUnknown(err));
     } finally {
-      setLoading(false);
+      if (gen === projectGen.current) {
+        setLoading(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
+      }
     }
   }, [projectId]);
 
-  const loadMore = useCallback(async () => {
-    if (!projectId || loadingMore || !hasMore) return;
-    setLoadingMore(true);
-
-    try {
-      const res = await fetchProjectAssetLines(projectId, { limit: PAGE_SIZE, offset: rows.length });
-      const mappedRows = mapAssetLinesToGridRows(res.items);
-      setRows((prev) => {
-        const existingIds = new Set(prev.map((r) => r.project_asset_line_id));
-        const newRows = mappedRows.filter((r) => !existingIds.has(r.project_asset_line_id));
-        return [...prev, ...newRows];
-      });
-      setTotalCount(res.total);
-      setHasMore(rows.length + mappedRows.length < res.total);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Không thể tải thêm dữ liệu");
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [projectId, loadingMore, hasMore, rows.length]);
-
   useEffect(() => {
-    loadFirstPage();
-  }, [loadFirstPage]);
+    resetState();
+    projectGen.current += 1;
+
+    setLoading(true);
+    loadPage(0);
+
+    return () => {
+      projectGen.current += 1;
+    };
+  }, [projectId, loadPage, resetState]);
+
+  const loadMore = useCallback(async () => {
+    if (!projectId || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    await loadPage(rows.length);
+  }, [projectId, hasMore, rows.length, loadPage]);
 
   return {
     rows,
@@ -98,6 +123,6 @@ export function useProjectAssetLines(projectId: string) {
     hasMore,
     loadedCount: rows.length,
     totalCount,
-    retry: loadFirstPage,
+    retry: () => { projectGen.current += 1; loadPage(0); },
   };
 }

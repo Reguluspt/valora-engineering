@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
-import { useResolvedProject } from "./components/workbench/project-context";
 
 import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
 
@@ -57,12 +56,11 @@ export function App() {
         <div style={{ padding: "var(--space-xl)" }}>
           <h2 style={{ color: "#fff" }}>Bảng lỗi cần xử lý</h2>
           <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
-            Tổng quan các cảnh báo và lỗi cần xử lý.
+            Chưa có dữ liệu kiểm tra.
           </p>
           <div style={{ border: "1px solid var(--border-color)", padding: "var(--space-lg)", borderRadius: "var(--radius-lg)" }}>
-            <h3>Không có lỗi nghiêm trọng</h3>
             <p style={{ color: "var(--text-muted)" }}>
-              Tất cả các ràng buộc dự án đã được xác minh và hoàn tất.
+              Kết quả kiểm tra sẽ được hiển thị khi dữ liệu được cung cấp từ hệ thống.
             </p>
           </div>
         </div>

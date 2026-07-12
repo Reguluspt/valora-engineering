@@ -18,6 +18,18 @@ CRITICAL_BLOCKERS = [
         "name": "Dangerous wildcard production CORS",
         "pattern": r"allow_origins\s*=\s*\[\s*['\"]\*['\"]\s*\]",
         "exts": (".py",)
+    },
+    {
+        "name": "Hard-coded project slug in runtime source",
+        "pattern": r"hd-98-gia-lai",
+        "exts": (".ts", ".tsx", ".py", ".yml", ".json"),
+        "description": "The remediation slug must never reappear in production runtime code."
+    },
+    {
+        "name": "All-zero UUID runtime fallback",
+        "pattern": r"00000000-0000-0000-0000-000000000000",
+        "exts": (".ts", ".tsx", ".py"),
+        "description": "All-zero UUID must never be sent as a project or session identifier."
     }
 ]
 

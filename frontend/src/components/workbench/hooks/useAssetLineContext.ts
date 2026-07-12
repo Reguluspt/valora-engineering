@@ -20,31 +20,13 @@ export function useAssetLineContext(
     setErrorMsg(null);
 
     try {
-      const attrs: Record<string, string> = {};
-      if (selectedRow.raw_name) attrs["Tên gốc"] = selectedRow.raw_name;
+      const rawFields: Record<string, string> = {};
+      if (selectedRow.raw_name) rawFields["raw_name"] = selectedRow.raw_name;
 
       const data: AssetLineContext = {
         project_asset_line_id: selectedRow.project_asset_line_id,
-        knowledge_panel: {
-          current_spec: {
-            technical_specification_id: `spec-${selectedRow.project_asset_line_id}`,
-            version_id: "v-1",
-            status: "active",
-            attribute_values: attrs,
-          },
-          suggestions: [],
-          conflicts: []
-        },
-        price_evidence_panel: {
-          quote_batch: null,
-          quote_lines: [],
-          appraised_price_decision: selectedRow.appraised_price != null ? {
-            id: `apd-${selectedRow.project_asset_line_id}`,
-            selected_unit_price: selectedRow.appraised_price,
-            rationale: null,
-            status: selectedRow.review_status as string,
-          } : null,
-        },
+        knowledge_panel: null,
+        price_evidence_panel: null,
         lineage: null,
         validation_issues: null,
       };
