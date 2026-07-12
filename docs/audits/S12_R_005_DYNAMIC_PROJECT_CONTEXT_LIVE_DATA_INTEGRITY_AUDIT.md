@@ -18,8 +18,10 @@
 | **Coverage pass audit SHA** | `ee176d86bfc9ca1a0896ef3a03a551e47550ba2f` (Commit H) |
 | **Behavioral proof code SHA** | `1ae4816f08cf375f047bd54b58e36ddf59ba0954` (Commit I) |
 | **Behavioral proof audit SHA** | `a31e4c0652e5519eb54e3dc9207ad0e4bb9d24b9` (Commit J) |
-| **Session/pagination proof code SHA** | `da2417245fa596a2b6896c0c60b49ce1d42b9db9` (Commit K) |
-| **Session/pagination proof audit SHA** | `PENDING` (Commit L) |
+| **Session/pagination proof code SHA** | `da24172478afa44cc36bcbd0e93db61b99fd61ae` (Commit K) |
+| **Session/pagination proof audit SHA** | `16d8b6930d4e426bd94f5ece52276a1f925bea6b` (Commit L) |
+| **Correction code SHA** | `e0ae061` (Commit M) |
+| **Correction audit SHA** | `PENDING` (Commit N) |
 | Draft PR | NOT CREATED |
 | CI | PENDING |
 
@@ -134,7 +136,10 @@ Deleted:
 | Worker pytest | 1 passed |
 | Frontend lint | PASS |
 | Frontend build | PASS |
-| Frontend vitest | **75 passed (15 test files)** |
+| Frontend vitest | **80 passed (15 test files)** |
+| `useWorkbenchSession.lifecycle.test.tsx` | 10 | Lifecycle (heartbeat, stale, unmount, A-B) |
+| `useProjectAssetLines.lifecycle.test.ts` | 12 | Lifecycle (concurrent loadMore + dedup/offset) |
+| `useResolvedProject.test.tsx` | 8 | Lifecycle (act-based unmount) |
 | npm audit | 0 vulnerabilities |
 
 ### Test File Inventory
@@ -205,5 +210,5 @@ SKIPPED — REQUIRES CI WITH POSTGRESQL
 
 ## Final Verdict
 ```text
-SESSION AND PAGINATION PROOF COMPLETE — READY FOR INDEPENDENT RE-AUDIT
+TEST EVIDENCE CORRECTED — READY FOR INDEPENDENT RE-AUDIT
 ```
