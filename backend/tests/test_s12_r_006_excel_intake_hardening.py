@@ -9,7 +9,7 @@ import openpyxl
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -50,6 +50,18 @@ class BaseExcelTest:
     def _setup(self, db_url="sqlite:///:memory:"):
         if db_url == "sqlite:///:memory:":
             self.engine = create_engine(db_url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+            # pysqlite does not honor SAVEPOINT/RELEASE under its default isolation
+            # control; without this recipe RELEASE permanently commits and outer
+            # Session.rollback cannot restore prior staging generations. Mirrors
+            # SQLAlchemy's documented SQLite savepoint recipe so local SQLite
+            # tests share PostgreSQL nested-transaction semantics.
+            @event.listens_for(self.engine, "connect")
+            def _sqlite_disable_isolation(dbapi_connection, connection_record):
+                dbapi_connection.isolation_level = None
+
+            @event.listens_for(self.engine, "begin")
+            def _sqlite_emit_begin(conn):
+                conn.exec_driver_sql("BEGIN")
         else:
             self.engine = create_engine(db_url)
         Base.metadata.create_all(bind=self.engine)
@@ -886,85 +898,166 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
         finally:
             self.teardown()
 
-        def test_outer_commit_failure(self, monkeypatch):
-            self._setup()
-            try:
-                # Mock outer db commit AND savepoint commit to both fail.
-                orig_commit = self.sess.commit
-                fail_commit = False
-                def mock_commit():
-                    nonlocal fail_commit
-                    if fail_commit:
-                        fail_commit = False
-                        raise RuntimeError("Outer commit database failure")
-                    orig_commit()
-                monkeypatch.setattr(self.sess, "commit", mock_commit)
+    def test_outer_commit_failure(self, monkeypatch):
+        """Outer Session.commit fails after nested savepoint RELEASE.
 
-                content = _xlsx(rows=[["asset_name"], ["new1"]])
-                file = FakeUpload("test.xlsx", content)
-
-                fail_commit = True
-                with pytest.raises(HTTPException) as exc:
-                    upload_excel_file_orchestrator(
-                        db=self.sess,
-                        org_id=self.org.id,
-                        project_id=self.p.id,
-                        batch_id=self.b.id,
-                        file=file,
-                        request=None,
-                        current_user=self.u
-                    )
-                assert exc.value.status_code == 500
-
-                # Verify recovery sequence wrote a commit_failure audit event
-                events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
-                filtered = [e for e in events if e.event_name == "ProjectAssetImportBatchUploadFailed" and e.payload and e.payload.get("error_code") == "commit_failure"]
-                assert len(filtered) == 1, f"Expected 1 commit_failure event, got {len(filtered)}"
-                assert filtered[0].event_name == "ProjectAssetImportBatchUploadFailed"
-                assert filtered[0].payload is not None
-                assert filtered[0].payload["error_code"] == "commit_failure"
-
-                # No success AuditEvent from the rolled-back attempt
-                success = [e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"]
-                assert len(success) == 0
-
-                # Old staging IDs and values preserved
-                rows = self.sess.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=self.b.id).all()
-                assert len(rows) == 3
-                assert {r.proposed_asset_name for r in rows} == {"Old0", "Old1", "Old2"}
-
-            finally:
-                self.teardown()
-
-    def test_outer_commit_failure_with_newer_concurrent_success(self, monkeypatch):
+        Only the outer session commit is faulted. Nested SessionTransaction.commit
+        (savepoint RELEASE) still succeeds so replacement is prepared, then outer
+        failure must roll the generation back and record commit_failure recovery.
+        """
         self._setup()
         try:
-            import sys
-            service_mod = sys.modules["app.modules.excel_import.application.import_service"]
-            
-            # Mock outer commit to fail
+            # Outer transaction is already autobegun after setup / TestClient init.
+            # Nested savepoint RELEASE + outer Session.commit is the path under test.
             orig_commit = self.sess.commit
             fail_commit = False
+
             def mock_commit():
                 nonlocal fail_commit
                 if fail_commit:
                     fail_commit = False
                     raise RuntimeError("Outer commit database failure")
-                orig_commit()
+                return orig_commit()
+
             monkeypatch.setattr(self.sess, "commit", mock_commit)
 
-            # Concurrent success updates batch to PARSED during recovery rollback window
+            content = _xlsx(rows=[["asset_name"], ["new1"]])
+            file = FakeUpload("test.xlsx", content)
+
+            # Capture pre-attempt generation evidence before the failed upload.
+            pre_ids = list(self.seeded_staging_ids)
+            pre_names = ["O0", "O1", "O2"]
+            pre_filename = self.b.source_filename
+            pre_sheet = self.b.source_sheet_name
+            pre_total = self.b.total_rows
+
+            fail_commit = True
+            with pytest.raises(HTTPException) as exc:
+                upload_excel_file_orchestrator(
+                    db=self.sess,
+                    org_id=self.org.id,
+                    project_id=self.p.id,
+                    batch_id=self.b.id,
+                    file=file,
+                    request=None,
+                    current_user=self.u,
+                )
+            assert exc.value.status_code == 500
+            assert exc.value.detail == "Lỗi hệ thống khi xử lý tệp Excel."
+
+            # Session may be left after recovery commit; refresh generation state.
+            self.sess.expire_all()
+
+            events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
+            filtered = [
+                e for e in events
+                if e.event_name == "ProjectAssetImportBatchUploadFailed"
+                and e.payload
+                and e.payload.get("error_code") == "commit_failure"
+            ]
+            assert len(filtered) == 1, f"Expected 1 commit_failure event, got {len(filtered)}"
+            assert filtered[0].payload["error_code"] == "commit_failure"
+
+            # No success AuditEvent from the rolled-back attempt.
+            success = [e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"]
+            assert len(success) == 0
+
+            # Original staging generation fully preserved (IDs + values).
+            rows = (
+                self.sess.query(ProjectAssetImportStagingRow)
+                .filter_by(import_batch_id=self.b.id)
+                .order_by(ProjectAssetImportStagingRow.source_row_number)
+                .all()
+            )
+            assert [r.id for r in rows] == pre_ids
+            assert [r.proposed_asset_name for r in rows] == pre_names
+
+            # Batch generation-sensitive metadata preserved; status records failure.
+            self.sess.refresh(self.b)
+            assert self.b.source_filename == pre_filename == "old.xlsx"
+            assert self.b.source_sheet_name == pre_sheet == "Sheet1"
+            assert self.b.total_rows == pre_total == 3
+            assert self.b.status == ImportBatchStatus.FAILED
+        finally:
+            self.teardown()
+
+    def test_outer_commit_failure_with_newer_concurrent_success(self, monkeypatch):
+        """Stale outer-commit recovery must not overwrite a newer successful generation.
+
+        SQLite StaticPool cannot host a true second connection, so the concurrent
+        newer generation is applied on the same session with the real commit path
+        inside the recovery window (after the failed attempt rolled back, before
+        fingerprint comparison). Production PostgreSQL concurrency remains covered
+        by TestPGIsolatedConcurrencyRestored.
+        """
+        self._setup()
+        try:
+            import sys
+            service_mod = sys.modules["app.modules.excel_import.application.import_service"]
+
+            orig_commit = self.sess.commit
+            fail_commit = False
+
+            def mock_commit():
+                nonlocal fail_commit
+                if fail_commit:
+                    fail_commit = False
+                    raise RuntimeError("Outer commit database failure")
+                return orig_commit()
+
+            monkeypatch.setattr(self.sess, "commit", mock_commit)
+
+            newer_staging_ids: list = []
             orig_recover = service_mod._recover_commit_failure
+
             def mock_recover(*args, **kwargs):
-                sess_c = self.SessionLocal()
-                try:
-                    batch_c = sess_c.query(ProjectAssetImportBatch).filter_by(id=self.b.id).first()
-                    batch_c.status = ImportBatchStatus.PARSED
-                    batch_c.source_filename = "newer_success.xlsx"
-                    sess_c.commit()
-                finally:
-                    sess_c.close()
-                # Run actual recovery, which should see changed fingerprint and abort
+                # Window after failed-attempt rollback: land a full newer generation.
+                batch_c = (
+                    self.sess.query(ProjectAssetImportBatch)
+                    .filter_by(id=self.b.id)
+                    .first()
+                )
+                batch_c.status = ImportBatchStatus.PARSED
+                batch_c.source_filename = "newer_success.xlsx"
+                batch_c.source_sheet_name = "NewerSheet"
+                batch_c.total_rows = 2
+                self.sess.query(ProjectAssetImportStagingRow).filter_by(
+                    import_batch_id=self.b.id
+                ).delete()
+                for i, name in enumerate(["N0", "N1"]):
+                    row = ProjectAssetImportStagingRow(
+                        organization_id=self.org.id,
+                        project_id=self.p.id,
+                        import_batch_id=self.b.id,
+                        source_row_number=i + 1,
+                        raw_values={
+                            "cells": [{
+                                "column_index": 1,
+                                "column_letter": "A",
+                                "header": "asset_name",
+                                "value": name,
+                            }]
+                        },
+                        mapped_values={"proposed_asset_name": name},
+                        normalized_preview={},
+                        validation_status="valid",
+                        proposed_asset_name=name,
+                    )
+                    self.sess.add(row)
+                    self.sess.flush()
+                    newer_staging_ids.append(row.id)
+                self.sess.add(AuditEvent(
+                    organization_id=self.org.id,
+                    actor_user_id=self.u.id,
+                    command_name="ReplaceStagingRows",
+                    event_name="ProjectAssetImportBatchUploaded",
+                    entity_type="ProjectAssetImportBatch",
+                    entity_id=self.b.id,
+                    payload={"filename": "newer_success.xlsx", "row_count": 2},
+                ))
+                # Commit via real session commit (fail flag already cleared).
+                orig_commit()
+                # Production recovery must observe mismatched fingerprint and abort.
                 orig_recover(*args, **kwargs)
 
             monkeypatch.setattr(service_mod, "_recover_commit_failure", mock_recover)
@@ -981,15 +1074,41 @@ class TestTransactionFaultsCompleted(BaseExcelTest):
                     batch_id=self.b.id,
                     file=file,
                     request=None,
-                    current_user=self.u
+                    current_user=self.u,
                 )
             assert exc.value.status_code == 500
 
-            # Verify that final newer success state survives
-            self.sess.rollback()
+            self.sess.expire_all()
             self.sess.refresh(self.b)
             assert self.b.status == ImportBatchStatus.PARSED
             assert self.b.source_filename == "newer_success.xlsx"
+            assert self.b.source_sheet_name == "NewerSheet"
+            assert self.b.total_rows == 2
+
+            rows = (
+                self.sess.query(ProjectAssetImportStagingRow)
+                .filter_by(import_batch_id=self.b.id)
+                .order_by(ProjectAssetImportStagingRow.source_row_number)
+                .all()
+            )
+            assert [r.id for r in rows] == newer_staging_ids
+            assert [r.proposed_asset_name for r in rows] == ["N0", "N1"]
+
+            events = self.sess.query(AuditEvent).filter_by(entity_id=self.b.id).all()
+            success = [
+                e for e in events if e.event_name == "ProjectAssetImportBatchUploaded"
+            ]
+            assert len(success) == 1
+            assert success[0].payload["filename"] == "newer_success.xlsx"
+
+            stale_failures = [
+                e for e in events
+                if e.event_name == "ProjectAssetImportBatchUploadFailed"
+                and e.payload
+                and e.payload.get("error_code") == "commit_failure"
+            ]
+            assert len(stale_failures) == 0, "stale commit_failure must not attach to newer generation"
+            assert self.b.status != ImportBatchStatus.FAILED
         finally:
             self.teardown()
 
