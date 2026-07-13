@@ -262,3 +262,29 @@ No — final Sprint 11 acceptance and readiness audit only. (A minor status upda
 - No `row_version`/`session_id` rendered to users: **Yes**
 - No raw technical errors exposed to users: **Yes**
 - No new English user-facing labels introduced: **Yes**
+
+---
+
+## Remediation / current-state addendum (S12-R-007 — 2026-07-13)
+
+### Original status at audit time
+- Final Status **PASS** and Live Workbench Loop Readiness **READY** described Sprint 11 closure as of that PR.
+- Document contained local `file:///` links to workspace paths (not portable authority links).
+
+### Statements superseded or re-scoped
+| Historical statement | Current interpretation |
+|---|---|
+| Live Workbench Loop **READY** as ongoing approval | **Historical only** — S12-R re-gated auth, tenant, mutation, data integrity, Excel safety |
+| Sprint 11 acceptance implies safe Excel intake | **False today** — Excel hardening completed later in S12-R-006 |
+| `file:///` paths as references | **Non-authoritative**; use repo-relative paths |
+
+### Replacement sources
+- S12-R-001…006 audits and merge commits on `main` (PRs #1–#6)
+- `docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md` §12
+- `docs/VALORA_PROJECT_HANDOFF.md`
+
+### Current state
+Sprint 11 functional loop remains in the codebase and is a valid historical milestone. It is **not** a substitute for S12-R closure or S12-PR-003 authorization.
+
+### Evidence limitations
+This addendum does not re-run Sprint 11 CI. It only re-labels authority so agents do not treat historical READY as current slice approval.

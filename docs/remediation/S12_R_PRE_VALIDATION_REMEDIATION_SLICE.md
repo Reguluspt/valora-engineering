@@ -559,3 +559,79 @@ Chỉ sau khi `S12-R-007` đạt PASS:
    - human review trước apply;
    - không mutation official data trong parser/validator;
    - AI chỉ đề xuất, không phê duyệt hoặc tự commit.
+
+---
+
+# 12. Current reconciliation (S12-R-007) — 2026-07-13
+
+**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`  
+**Active task:** S12-R-007 Documentation Reconciliation & Final Acceptance  
+**Overall slice disposition:** `BLOCKING` until R007 Draft PR CI + independent audit PASS  
+**Do not declare overall S12-R PASS from this documentation-only pre-PR state.**
+
+## 12.1 R001–R006 mapping (merged)
+
+| Task | Merge subject / SHA on main | PR | Evidence types |
+|---|---|---|---|
+| S12-R-001 | `6c64305` Repository Baseline & CI Gate Repair | #1 | code, unit, CI gates, audit |
+| S12-R-002 | `b025b97` Authentication Identity Boundary Hardening | #2 | code, unit, auth tests, audit |
+| S12-R-003 | `c46ea1c` Workbench project and session tenant scoping | #3 | code, unit, tenant tests, audit |
+| S12-R-004 | `e683757` Official mutation command atomic audit gate | #4 | code, unit, mutation/audit tests, audit |
+| S12-R-005 | `ff40fda` Dynamic project context live data integrity | #5 | code, unit/frontend, audit |
+| S12-R-006 | `54872c7` Excel Intake Streaming & Transaction Hardening | #6 | code, unit, PG CI (375/0 skip historical code-bearing), audit |
+
+Historical R-006 code-bearing CI (branch head before squash, documented in R006 audit): backend **375 passed, 0 skipped, 27 warnings**, including:
+
+```text
+tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization
+```
+
+## 12.2 Role of R007
+
+- Reconcile README / CODEX / guardrails / handoff / historical audits with post-merge reality.
+- Publish final acceptance matrix dispositions with evidence pointers.
+- **Does not** implement Validation Engine or change runtime behavior.
+
+## 12.3 Final acceptance matrix (slice-level)
+
+| # | Area | Disposition | Source / PR | Evidence type | Limitation | Owner / target if deferred |
+|---|---|---|---|---|---|---|
+| 1 | default/CI baseline | FIXED | R-001 `6c64305` #1 | CI workflows + audit | Branch protection is repo-admin operational | — |
+| 2 | authentication | FIXED | R-002 `b025b97` #2 | unit + auth tests + audit | Test overrides remain for fixtures | — |
+| 3 | tenant isolation | FIXED | R-003 `c46ea1c` #3 | unit + API tests + audit | Enumerate-safe 404 patterns | — |
+| 4 | official mutation command | FIXED | R-004 `e683757` #4 | command path + tests + audit | Only allowlisted fields | — |
+| 5 | human confirmation | FIXED | R-004 + S11-PR-006 | API + frontend gate tests | UX copy may evolve | — |
+| 6 | version safety | FIXED | R-004 | optimistic lock tests | Requires correct client version token | — |
+| 7 | atomic audit | FIXED | R-004 | same-transaction audit tests | Payload schema evolution possible | — |
+| 8 | dynamic project context | FIXED | R-005 `ff40fda` #5 | frontend resolve + tests | No fabricated slug fallbacks | — |
+| 9 | fabricated-data removal | FIXED | R-005 | live data integrity tests | Panels still limited by backend domains | — |
+| 10 | pagination/race safety | FIXED | R-005 + asset-lines API | pagination tests | Large datasets still need performance SLOs | DEFERRED product SLO owner |
+| 11 | Vietnamese UX | FIXED | S10 + S11 | i18n/error registry tests | Ongoing label coverage | — |
+| 12 | Astryx compliance | FIXED | S10 | design mapping + shell | Token drift needs design review | design owner ongoing |
+| 13 | Excel bounded streaming | FIXED | R-006 `54872c7` #6 | parser + security scanner + tests | Local SQLite fixture recipe for savepoints | — |
+| 14 | ZIP/XLSX security | FIXED | R-006 | zip safety tests + scanner | Threat model may expand | security review ongoing |
+| 15 | resource limits | FIXED | R-006 | limit boundary tests | Limits versioned in domain policy | — |
+| 16 | positional raw values | FIXED | R-006 + contract | raw persistence tests | Contract addendum must stay authoritative | — |
+| 17 | failure preservation | FIXED | R-006 | transaction fault tests | PG multi-connection proof via CI | — |
+| 18 | PostgreSQL concurrency | FIXED | R-006 CI | PG concurrency test PASS in CI | Local skip without PG still expected | — |
+| 19 | ProjectAssetLine immutability (intake) | FIXED | R-006 | immutability snapshot tests | Apply path still deferred | S12 apply PR later |
+| 20 | documentation consistency | ACCEPTED WITH ADR | R-007 (this pass) | docs recon + local gates | Needs Draft PR CI + independent audit | R007 independent auditor |
+
+Disposition key: `FIXED` = implemented + evidenced on main for the cited task; `ACCEPTED WITH ADR` / process acceptance still open; `DEFERRED` = known remaining work; `BLOCKED` = cannot proceed.
+
+## 12.4 Remaining / deferred work
+
+| Item | Disposition | Target |
+|---|---|---|
+| S12-R-007 Draft PR + CI + independent audit | BLOCKED (process) | R007 PR owner / auditor |
+| S12-PR-003 Staging Validation Engine | DEFERRED / blocked on R007 | next engineering task |
+| Apply staging → official lines | DEFERRED | post-validation PR |
+| AI-assisted mapping | DEFERRED | later advisory-only PR |
+| Production certification | DEFERRED | Sprint 8+ / ops |
+
+## 12.5 Conditions to start S12-PR-003
+
+1. S12-R-007 documentation head has green Draft PR CI.  
+2. Independent audit PASS for documentation reconciliation / slice closure.  
+3. This file and `docs/VALORA_PROJECT_HANDOFF.md` mark S12-PR-003 unblocked.  
+4. New branch from updated `main` — no reuse of R006/R007 branches for implementation.
