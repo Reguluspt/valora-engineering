@@ -166,3 +166,34 @@ No direct visible UI change. Frontend API contract methods were added, but no us
 - No raw technical errors exposed to users: **Yes**
 - No local file paths exposed to users: **Yes**
 - No new English user-facing labels introduced: **Yes**
+
+---
+
+## Remediation / current-state addendum (S12-R-007 — 2026-07-13)
+
+### Original status at audit time
+- Introduced Excel import **batch + staging model** and API create/list contracts.
+- Test counts cited at the time (e.g. ~208 backend) are **historical**.
+- Parser streaming, auth hardening, and transaction semantics were still future work.
+
+### Statements superseded or extended
+| Historical / incomplete topic | Superseding work |
+|---|---|
+| Staging-only boundary | Still true; reinforced by R-006 immutability tests |
+| Raw values shape | Current: positional `raw_values.cells[]` with column_index/letter/header/value (R-006 + contract addendum) |
+| Auth model | Session/token identity (R-002); not client identity headers |
+| Upload/parser resource safety | R-006 streaming + limits + ZIP safety |
+| Transactional re-upload | R-006 nested savepoint + fingerprint recovery |
+| CI/backend counts | R-006 code-bearing CI: **375 passed, 0 skipped** (historical branch head) |
+
+### Replacement sources
+- `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` (incl. hardening addendum)
+- `backend/app/modules/excel_import/`
+- `docs/audits/S12_R_006_EXCEL_INTAKE_STREAMING_TRANSACTION_HARDENING_AUDIT.md`
+- main SHA `54872c764399182efae496e89dae9bd6ebdba9af`
+
+### Current state
+S12-PR-001 remains the correct **contract origin** for staging tables/APIs. Runtime intake safety is defined by **S12-R-006** on current `main`.
+
+### Evidence limitations
+This addendum does not rewrite PR-001 git history. Validation Engine (S12-PR-003) remains **not started**.

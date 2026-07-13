@@ -1,195 +1,152 @@
-# CODEX.md — Valora Engineering Rules
+# CODEX.md — Valora Engineering Rules for Coding Agents
 
-**Created:** 2026-07-06  
-**Applies to:** All Codex-generated code in the Valora repository  
-**Source of truth:** Valora Design Book v1.2-final
+**Created:** 2026-07-06
+**Last reconciled:** 2026-07-13 (S12-R-007)
+**Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
 
-Valora Design Book v1.2-final is the only source of truth for domain behavior.
-
-Codex must not invent domain behavior.
-
-When ambiguity appears:
+Domain behavior must come from:
 
 ```text
-1. Check v1.2-final full package.
-2. Check the corresponding completed slice.
-3. Check v1.2-rc consolidation.
-4. If still unclear, stop and request an ADR or Design Change Request.
+1. Valora Design Book v1.2-final + v1.3 MVP completion addendum
+2. docs/design/* contracts
+3. docs/adr/* decisions
+4. docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md (for S12-R gates)
+5. docs/VALORA_PROJECT_HANDOFF.md
 ```
+
+Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
+
+Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` are **historical foundation records**, not the active phase description.
 
 ## 2. Current Engineering Phase
 
-Current phase:
-
 ```text
-Engineering Phase / Sprint 0
+Engineering Phase / S12-R Remediation Closure
+Active task: S12-R-007 — Documentation Reconciliation & Final Acceptance
 ```
 
-Sprint 0 is repository foundation only.
-
-## 3. Sprint 0 Allowed Scope
-
-Codex may implement:
+### Active task rules (S12-R-007)
 
 ```text
-monorepo structure
-Docker/dev environment
-FastAPI skeleton
-React skeleton
-worker skeleton
-PostgreSQL/Redis/S3-compatible storage wiring
-CI skeleton
-lint/test baseline
-environment config
-health checks
-empty DDD module boundaries
-documentation and guardrails
+Documentation / audit reconciliation only.
+No production code, tests, migrations, workflows, config, or dependency changes
+unless a separate implementation task explicitly authorizes them.
 ```
 
-## 4. Sprint 0 Forbidden Scope
-
-Codex must not implement:
+### Next task (blocked until R007 acceptance)
 
 ```text
-Project CRUD
-Master Data CRUD
-Taxonomy logic
-Asset identity logic
-Knowledge logic
-Evidence logic
-Workflow logic
-Workbench business UI
-Document rendering
-Document Intelligence/OCR
-AI provider integration
-AI task execution
-Security business logic beyond skeleton
-database domain models
-business migrations
-approval workflows
-permission override logic
+S12-PR-003 — Excel Staging Validation Engine
 ```
 
-## 5. Hard Rules
-
-Codex must follow these rules:
+May start **only after**:
 
 ```text
-No business/domain logic unless explicitly assigned.
-No hidden assumptions.
-No schema invented outside Design Book.
-No AI auto-approval.
-No official data mutation without command/audit path.
-No tenant boundary bypass.
-No secrets committed.
-No hard-coded credentials except local placeholder values in .env.example.
-No unrelated file changes.
-No skipped tests.
-No broad refactors unless requested.
-No deleting existing guardrails.
+1. S12-R-007 Draft PR CI is green on the documentation head
+2. Independent audit PASS for S12-R-007 / slice closure
+3. Project handoff and remediation slice mark S12-PR-003 as unblocked
 ```
 
-## 6. Domain Non-Negotiables
+Do **not** start S12-PR-003 inside an R007 session.
 
-These are permanent Valora rules:
+## 3. Permanent Hard Rules
+
+```text
+No domain invention outside Design Book / ADR / approved contract.
+No AI auto-approval or auto-apply of official data.
+ADR 0028 restricted Workbench fields (description, appraised_unit_price,
+  review_status, validation_status) require draft-commit command path + authorization
+  + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
+Non-restricted ProjectAssetLine fields may use direct PATCH under project:update and are
+  outside the R004 Human Commit Gate / atomic-command guarantee.
+Excel intake still never mutates official ProjectAssetLine rows.
+No tenant boundary bypass (organization_id / project / session fail-closed).
+No secrets committed; no production credentials in repo.
+No unbounded whole-file materialization on Excel runtime path
+  (no bare .read(), no BytesIO(file.read()), no list(ws.iter_rows())).
+Excel intake mutates only import batch + staging — never ProjectAssetLine.
+Local PostgreSQL skips are NOT PASS.
+No skipped tests to hide failures.
+No unrelated refactors or formatting churn.
+No deleting or weakening guardrails.
+Vietnamese client-facing copy must keep correct diacritics.
+Astryx compliance for Workbench UI.
+```
+
+## 4. Domain Non-Negotiables
 
 ```text
 Valora Workbench is the main workspace.
 Word/Excel are input/output, not source of truth.
 Market Quote is not Appraised Price.
 AI suggests; human reviews; system audits.
-AI cannot approve official data.
 Evidence is immutable or append-only.
 ReviewDecision is append-only.
-Organization/tenant boundaries are enforced.
-No official data change without authorization, workflow approval where applicable, and audit trail.
+Organization/tenant boundaries are enforced server-side.
 ```
 
-## 7. Required Output After Every Task
+## 5. Evidence Semantics
 
-Codex must report:
+```text
+Local SQLite/unit results: development evidence only.
+PostgreSQL behavior: requires CI (or local) run with PostgreSQL service.
+Audit PASS for a historical PR does not imply current slice READY.
+Do not treat skipped tests as passed.
+Do not claim Draft PR / Ready / merge without explicit authorization.
+```
+
+## 6. Required Output After Every Task
 
 ```text
 Task ID
 Files changed
-Design source used
-Tests run
+Design/ADR sources
+Tests/gates run (raw counts)
 Known limitations
-Whether sprint scope was respected
+Whether scope was respected
 Whether any ADR is needed
+Git SHAs (local/remote) when pushing
 ```
 
-## 8. Stop Conditions
+## 7. Stop Conditions
 
-Codex must stop and ask for clarification when:
+Stop and ask when:
 
 ```text
-A domain rule is missing.
-A data model is unclear.
-A permission rule is ambiguous.
-The task requires changing architecture.
-The task requires implementing outside current sprint.
-The task requires adding a new dependency with architectural impact.
-The task appears to conflict with v1.2-final.
-A secret, credential, or production config is needed.
+Domain rule missing or Design Book conflict.
+Permission / tenant rule ambiguous.
+Architecture change required without ADR.
+Task requires work outside the assigned task ID.
+New dependency with architectural impact.
+Secret/credential/production config required.
+Starting baseline SHA does not match the task prompt.
+Protected files are involved (e.g. unauthorized onboarding artifacts).
 ```
 
-## 9. Pull Request Behavior
-
-Each Codex PR must be small and reviewable.
-
-Preferred PR size:
+## 8. Pull Request Behavior
 
 ```text
-one task
-one responsibility
-tests included
-no unrelated cleanup
+One task, one responsibility, reviewable size.
+Tests or explicit N/A for docs-only.
+No silent refactors.
+User/owner controls Draft PR creation, Ready, squash, and merge
+unless a task explicitly authorizes otherwise.
 ```
 
-## 10. Test Requirement
-
-Every implementation task must include tests or explicitly state why tests are not applicable.
-
-For Sprint 0, at minimum:
+## 9. Security Requirement
 
 ```text
-backend /health test
-worker config test
-frontend build/lint
-CI smoke checks
+deny by default
+least privilege
+server-side authorization
+no X-User-Id identity spoofing in production paths
+short-lived tokens + refresh rotation where auth applies
+no sensitive payload logging
+append-only audit events
 ```
 
-## 11. Security Requirement
+## 10. Historical note (Sprint 0)
 
-Codex must not:
-
-```text
-commit plaintext secrets
-disable security checks
-weaken guardrails
-create cross-tenant shortcuts
-log sensitive payloads
-store tokens in code
-expose hidden config values
-```
-
-## 12. ADR Requirement
-
-Create or request an ADR when:
-
-```text
-new architectural dependency is introduced
-repository structure changes materially
-a Design Book ambiguity must be resolved
-a security tradeoff is required
-a convention becomes permanent
-```
-
-## 13. Final Reminder
-
-Codex is an implementation assistant, not a domain designer.
-
-If a behavior is not in the Design Book, Codex must not create it.
+Sprint 0 originally constrained the repository to foundation-only work. That phase is **complete and historical**. Do not re-apply Sprint 0 “no business logic” as the current repository status. Current constraints are the S12-R / Design Book / ADR set above.

@@ -161,3 +161,36 @@ No direct visible UI change. Excel upload/parser intake API and frontend API met
 - No raw parser stack traces exposed to users: **Yes**
 - No local file paths stored or exposed: **Yes**
 - No new English user-facing labels introduced: **Yes**
+
+---
+
+## Remediation / current-state addendum (S12-R-007 — 2026-07-13)
+
+### Original status at audit time
+- First Excel upload/parser intake landed (often described as inline in `projects.py`).
+- Audit referenced local `file:///` paths and contemporaneous test counts (~209 backend / 21 frontend).
+- Described organization scoping with **`X-User-Id` authentication headers** (pre-R-002 production identity model).
+- Raw values described as header-keyed maps; silent truncate / overwrite behaviors were remediation targets.
+
+### Statements superseded
+| Historical statement | Current authority |
+|---|---|
+| Production identity via `X-User-Id` | **Superseded by S12-R-002** — authenticated session/token; tests may still override deps |
+| Parser primarily inline in `projects.py` | **Superseded by S12-R-006** module `backend/app/modules/excel_import/` (`parse_workbook`, `replace_staging_rows`, `import_service`) |
+| Raw values keyed only by normalized headers | **Superseded** — positional `raw_values.cells` structure |
+| Soft truncate at 5000 / weak limits | **Superseded** — hard limits with typed `ParseError` codes (413/400) |
+| Overwrite staging before successful commit | **Superseded** — nested savepoint; failure preserves prior generation |
+| Local filesystem `file:///` links | Non-portable; use repo-relative paths |
+| Test counts ~209 / 21 | Historical only; current suite larger (see R-006 CI 375/0) |
+
+### Replacement sources
+- S12-R-002 audit + merge `b025b97` (#2)
+- S12-R-006 audit + merge `54872c7` (#6)
+- `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md`
+- Security scanner rules in `backend/tests/check_security.py`
+
+### Current state
+S12-PR-002 is the historical introduction of upload intake. **Current production intake behavior on `main` is the R-006 hardened path.**
+
+### Evidence limitations
+Do not implement Validation Engine from this audit. S12-PR-003 remains blocked on S12-R-007 process gates.
