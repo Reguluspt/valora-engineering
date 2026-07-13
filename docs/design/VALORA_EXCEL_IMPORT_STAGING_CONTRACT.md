@@ -180,3 +180,34 @@ To enable ingestion of Excel spreadsheets into the staging model, the following 
 - **Batch Counters**: The upload endpoint returns the updated `ProjectAssetImportBatchResponse` with modified `status` (`parsed`) and updated `total_rows`.
 - **Immutability**: Staging ingestion remains decoupled from official data. No mutations occur on the `ProjectAssetLine` table.
 
+## 13. S12-R-006: Hardened Security, Limits, and Concurrency Policies
+To protect against system degradation, Denial of Service (DoS), data inconsistency, and race conditions, the following strict intake policies are enforced:
+
+### A. HTTP Request-Size Validation
+- Enforces strict Content-Length checks at the boundary of request validation.
+- Missing headers default to safe streaming up to a strict 10 MiB file size limit.
+- Negative or malformed Content-Length values are immediately rejected with an HTTP 400 response.
+- Content-Length values exceeding 12 MiB (12,582,912 bytes) are rejected immediately with an HTTP 413 response.
+- Enforces an actual file size cap of 10 MiB (10,485,760 bytes) and a spool-to-disk threshold of 1 MiB (1,048,576 bytes).
+
+### B. ZIP Archive Security and Expansion Limits
+- ZIP entries are capped at 2,048 members.
+- Total uncompressed ZIP expansion size is capped at 100 MiB.
+- Attempts to upload encrypted archives, external links, macro/VBA parts, or unsafe directory paths (`..`, absolute paths) are blocked with a friendly Vietnamese validation error.
+
+### C. Spreadsheet Row, Column, and Character Limits
+- Capped at exactly 100 columns. Any sheet containing 101 or more columns is rejected.
+- Capped at exactly 5,000 data rows. Any sheet containing 5,001 or more data rows is rejected.
+- Capped at a maximum physical row limit of 5,100 rows.
+- Capped at 10,000 characters per cell.
+- Capped at 100,000 characters per row.
+- The parser scans for headers up to a maximum of 100 rows. Genuinely blank rows preceding the header row are skipped and do not count toward data rows, but the header row must reside within the first 100 physical rows.
+
+### D. Transaction Safety and Concurrency Control
+- **Pessimistic Concurrency**: Acquires a pessimistic row-level write lock (`SELECT ... FOR UPDATE`) on the `ProjectAssetImportBatch` record immediately when the upload begins.
+- **Separate-Session Semantics**: same-batch upload operations are serialized by a PostgreSQL row lock.
+- **Transactional Savepoint Atomicity**: All spreadsheet parsing and staging row replacements run within a nested transaction savepoint (`db.begin_nested()`). Any validation limit breach or runtime exception rolls back all modifications to this savepoint, leaving previously imported staging rows intact.
+- **Audit Event Persistence & Serialization**: Both upload success and parser failure audit events are persisted atomically to the database. Failure logs include the exception code and previous staging row count. Stale failures from older concurrent generation processes are prevented from overwriting newer successfully parsed states by checking a pre-operation batch fingerprint. If a commit failure occurs on savepoint release, the transaction rolls back, and the recovery worker reacquires the lock `FOR UPDATE` to verify the fingerprint remains unchanged before writing the failure event.
+- **Official Data Immutability**: All existing `ProjectAssetLine` records, their IDs, quantities, names, and version fields remain strictly immutable throughout the Excel ingestion transaction. Any transaction fault or outer commit failure rollback guarantees that no partial changes or draft states leak to ProjectAssetLine.
+
+

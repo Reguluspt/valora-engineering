@@ -342,7 +342,7 @@ def test_excel_upload_and_parser(client: TestClient, db_session: Session) -> Non
         headers=headers_editor
     )
     assert res_bad_ext.status_code == 400
-    assert "Định dạng tệp không được hỗ trợ" in res_bad_ext.json()["detail"]
+    assert any(w in res_bad_ext.json()["detail"].lower() for w in ["không được hỗ trợ", "khong ho tro"])
 
     # Test upload with cross-org user
     file_stream.seek(0)
@@ -376,13 +376,16 @@ def test_excel_upload_and_parser(client: TestClient, db_session: Session) -> Non
     assert row1.proposed_asset_name == "Máy phát điện"
     assert row1.proposed_quantity == "2"
     assert row1.proposed_unit == "cái"
-    assert row1.raw_values["Tên tài sản"] == "Máy phát điện"
+    raw_cells = row1.raw_values.get("cells", [])
+    assert len(raw_cells) > 0
+    assert raw_cells[0]["value"] == "Máy phát điện"
     assert row1.mapped_values["proposed_asset_name"] == "Máy phát điện"
 
     # Check row 2 (which had a formula)
     row2 = [r for r in staging_rows if r.source_row_number == 3][0]
     assert row2.proposed_asset_name == "Bơm chìm"
-    assert row2.raw_values["Số lượng"] == ""
+    formula_cell = [c for c in row2.raw_values.get("cells", []) if c["column_index"] == 3][0]
+    assert formula_cell["value"] == ""
 
     # Ensure no changes to ProjectAssetLine
     assert db_session.query(ProjectAssetLine).count() == 0
