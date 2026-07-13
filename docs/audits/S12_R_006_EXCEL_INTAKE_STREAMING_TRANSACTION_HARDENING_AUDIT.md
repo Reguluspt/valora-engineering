@@ -1,7 +1,10 @@
 # S12-R-006 — Excel Intake Streaming & Transaction Hardening Audit
 
 ## Status
-`S12-R-006 LOCAL IMPLEMENTATION COMPLETE — AWAITING POSTGRESQL CI VERIFICATION`
+```text
+DRAFT PR CI VALIDATED - AWAITING FINAL DOCUMENTATION-HEAD CI
+AND INDEPENDENT AUDIT
+```
 
 ## Git Baseline
 | Item | Value |
@@ -12,14 +15,39 @@
 | Commit S SHA | `219e711774ed72c2ec6fed3c7447c35a2bfce7ac` |
 | Commit R SHA (prior remote HEAD) | `d30ca7a98241e62303911276a12e3de453568dd6` |
 | Commit T SHA (test collection restore) | `472ceb132536f3e8d8c055478f8d17a4acb10686` |
-| Commit U SHA | this audit-only reconciliation commit (see branch HEAD after push) |
-| Draft PR | NOT CREATED |
-| CI | PENDING — PostgreSQL-gated tests not verified in this local run |
-| **Backend pytest** | **370 passed, 5 skipped, 20 warnings** (zero failures) |
-| **PostgreSQL** | **LOCALLY SKIPPED — REQUIRES CI WITH POSTGRESQL** |
+| Commit U SHA (prior audit reconcile) | `23b1d87cd35480860047509aff3e63efca176f21` |
+| Code-bearing PR-head SHA (tested in CI) | `23b1d87cd35480860047509aff3e63efca176f21` |
+| Draft PR | **#6** — https://github.com/Reguluspt/valora-engineering/pull/6 |
+| Code-bearing CI | **SUCCESS** (run `29247596512`) |
+| Documentation-head CI | **NOT YET** — this audit commit will trigger a new run; do not claim it passed |
+| Independent audit | **PENDING** |
 
 ### Lineage note
-Order is forward-only: `… → Q → S → R → T → U`. Earlier corrective commits were not rewritten.
+Order is forward-only: `… → Q → S → R → T → U → (this CI-evidence audit commit)`. Earlier corrective commits were not rewritten.
+
+## Draft PR and CI evidence (code-bearing head)
+
+| Item | Value |
+|---|---|
+| Draft PR | https://github.com/Reguluspt/valora-engineering/pull/6 |
+| Workflow | CI |
+| Run ID | `29247596512` |
+| Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29247596512 |
+| Run number | 89 |
+| Tested SHA | `23b1d87cd35480860047509aff3e63efca176f21` |
+| Overall conclusion | **SUCCESS** |
+| Job `backend` | **SUCCESS** |
+| Job `worker` | **SUCCESS** |
+| Job `frontend` | **SUCCESS** |
+
+### Distinction: local vs code-bearing CI
+
+| Environment | Backend pytest | Notes |
+|---|---|---|
+| Local (SQLite / no PG service) | **370 passed, 5 skipped, 20 warnings** | Five PG-gated tests skipped locally |
+| Code-bearing PR-head CI (PostgreSQL 16) | **375 passed, 0 skipped, 27 warnings** | All five previously local skips executed and passed |
+
+Local skips are historical local evidence only. For SHA `23b1d87cd35480860047509aff3e63efca176f21`, **PostgreSQL-gated tests are not pending**: they ran in CI with **0 skipped**.
 
 ## Corrective work in Commit T
 | Defect | Evidence | Fix |
@@ -88,7 +116,47 @@ tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::
 tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::test_outer_commit_failure_with_newer_concurrent_success
 ```
 
-## Local gate results (raw observed)
+## Code-bearing CI results (SHA `23b1d87…`, run `29247596512`)
+
+### PostgreSQL
+- PostgreSQL 16 service container started successfully and became healthy before migrations and tests.
+- Alembic executed against PostgreSQL.
+- Pytest collected **375** backend tests.
+- Final backend result: **375 passed, 0 skipped, 27 warnings**.
+- All five tests previously skipped locally executed in CI.
+- S12-R-006 PostgreSQL concurrency test executed and **passed**:
+  ```text
+  tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization
+  ```
+- PostgreSQL concurrency/isolation requirements for this SHA are **satisfied**.
+
+### Backend job — SUCCESS
+| Gate | Result |
+|---|---|
+| Ruff | All checks passed |
+| Alembic upgrade | PASS |
+| Alembic single head | PASS |
+| Backend pytest | **375 passed, 0 skipped, 27 warnings** |
+| Python dependency audit | No known vulnerabilities found |
+| Security policy and secret scan | PASS |
+| Critical security blockers | PASS |
+
+### Worker job — SUCCESS
+| Gate | Result |
+|---|---|
+| Ruff | PASS |
+| Pytest | **1 passed** |
+| Dependency audit | No known vulnerabilities found |
+
+### Frontend job — SUCCESS
+| Gate | Result |
+|---|---|
+| Lint | PASS |
+| Production build | PASS |
+| Vitest | **80 passed** across **15** files |
+| npm audit | **0 vulnerabilities** |
+
+## Local gate results (historical, pre-CI evidence)
 
 | Gate | Result |
 |---|---|
@@ -99,7 +167,7 @@ tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::
 | Security blockers | **12 passed** |
 | Security scanner `check_security.py` | Scan passed |
 | Alembic heads | `db5977424e7b (head)` single head |
-| Full backend pytest | **370 passed, 5 skipped, 20 warnings** |
+| Full backend pytest (local) | **370 passed, 5 skipped, 20 warnings** |
 | Worker ruff | All checks passed |
 | Worker pytest | **1 passed** |
 | Frontend lint (`tsc --noEmit`) | pass |
@@ -107,17 +175,17 @@ tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::
 | Frontend vitest | **15 files / 80 tests passed** |
 | npm audit (`--omit=dev`) | **0 vulnerabilities** |
 
-### Exact PostgreSQL skips (local)
+### Local PostgreSQL skips (local environment only; executed in CI for tested SHA)
 ```text
-SKIPPED LOCALLY — REQUIRES CI WITH POSTGRESQL
-tests/test_auth_endpoints.py::... (line 737) PostgreSQL not available
-tests/test_s12_r_004_official_mutation.py (line 1049) No PostgreSQL URL configured
+LOCAL ONLY (not applicable to code-bearing CI result for 23b1d87):
+tests/test_auth_endpoints.py (line 737)
+tests/test_s12_r_004_official_mutation.py (line 1049)
 tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization
-tests/test_workbench_api.py (line 696) concurrent integration test
-tests/test_workbench_api.py (line 980) unexpected-error rollback test
+tests/test_workbench_api.py (line 696)
+tests/test_workbench_api.py (line 980)
 ```
 
-These skips are **not** counted as PASS.
+Code-bearing CI: **0 skipped**. Do not treat the local skip list as current CI status for SHA `23b1d87cd35480860047509aff3e63efca176f21`.
 
 ## Preservation evidence (Commit T tests)
 
@@ -138,12 +206,14 @@ These skips are **not** counted as PASS.
 - `TestProjectAssetLineImmutabilityExpanded::test_line_immutable_snapshots` remains in suite and passed (6 failure-path snapshots)
 
 ## Remaining limitations
-1. PostgreSQL concurrency and integration tests are **not** executed in this local environment; CI with PostgreSQL is required before claiming full environment parity.
-2. Draft PR is intentionally **not** created by this task.
-3. SQLite StaticPool cannot host a true second DB connection; newer-success concurrency is simulated in the recovery window on the same session with the real commit path. True multi-connection serialization remains the PG-gated test.
-4. Untracked handoff / foreign onboarding files outside this task were left untouched.
+1. This document records code-bearing CI for SHA `23b1d87…` only. The audit-evidence commit that updates this file will produce a **new documentation-head CI run**, which is **not** claimed PASS here.
+2. Independent audit remains **pending**.
+3. Draft PR #6 must **not** be marked Ready for review or merged by this pass.
+4. SQLite StaticPool local newer-success simulation remains a local fixture detail; true multi-connection serialization is proven by the PG concurrency test in CI.
+5. Protected untracked onboarding report outside this task remains untouched.
 
 ## Final Verdict
 ```text
-S12-R-006 LOCAL IMPLEMENTATION COMPLETE — AWAITING POSTGRESQL CI VERIFICATION
+DRAFT PR CI VALIDATED - AWAITING FINAL DOCUMENTATION-HEAD CI
+AND INDEPENDENT AUDIT
 ```
