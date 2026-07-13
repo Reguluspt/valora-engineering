@@ -8,38 +8,32 @@
 |---|---|
 | Main baseline SHA | `ff40fda18a399afb01a76c6489aebf2f7cfd2d14` |
 | Branch | `s12-r-006-excel-intake-streaming-transaction-hardening` |
-| Commit H SHA | `8835a0415d6891d1bdd457ccb0691aa33a17628a` |
-| Commit I SHA | `56cbca3628e0967e1b65aa32c4a230814173ffb8` |
-| Commit J SHA | `ffd88411138499658aa8340ad4f57202d5c1d09b` |
-| Commit K SHA | `df19144f9ed75888ad7ab3b023984586a1c535ae` |
-| Commit L SHA | `9fb0e3bcedf471562d7d1e4a367e7fcadd3982da` |
-| Commit M SHA | `35b2363ecc6a7c10b915df7d164cdd34ef1fe7a3` |
-| Commit N SHA (Recovery) | `82724aa1740d79f2b88da471eb3679d297dafa6d` |
-| Commit O SHA | `936587a4c8185e211eb7e930aa63fbab69a2578d` |
-| Commit P SHA | `09bd3611891c5d5d7e9181b2680cc22caba1bf17` (corrected fingerprint, PG timeouts, multi-row) |
 | Commit Q SHA | `1bbcefcbbf19df181c685e40b2da7d85aeb84c79` |
-| Commit R SHA | `PENDING` (contains this reconciled audit log) |
+| Commit S SHA | `219e711774ed72c2ec6fed3c7447c35a2bfce7ac` |
+| Commit R SHA (prior remote HEAD) | `d30ca7a98241e62303911276a12e3de453568dd6` |
+| Commit T SHA (test collection restore) | `472ceb132536f3e8d8c055478f8d17a4acb10686` |
+| Commit U SHA | this audit-only reconciliation commit (see branch HEAD after push) |
 | Draft PR | NOT CREATED |
-| CI | PENDING |
-| **Backend pytest** | **369 passed, 5 skipped, 20 warnings** (zero failures) |
+| CI | PENDING — PostgreSQL-gated tests not verified in this local run |
+| **Backend pytest** | **370 passed, 5 skipped, 20 warnings** (zero failures) |
 | **PostgreSQL** | **LOCALLY SKIPPED — REQUIRES CI WITH POSTGRESQL** |
 
-## Root Cause Matrix
-| # | Defect | Before | After |
-|---|---|---|---|
-| 1 | Whole-file materialization | `spool.read()` + `BytesIO(file_bytes)` | SpooledTempFile fed directly to zipfile + openpyxl |
-| 2 | Request limit unenforced | `max_request_bytes` unused | Content-Length enforced on upload; actual byte counting authoritative |
-| 3 | Wrong sheet name storage | `file.filename` as sheet name | Parser returns resolved sheet name; persisted correctly |
-| 4 | Post-commit refresh | `db.refresh()` after success commit | Flush before commit; no fallible op after commit |
-| 5 | Generic error classification | `parse_error`+`resource_limit` for everything | Typed `ParseError` with `error_code`+`limit_category` |
-| 6 | Weak ZIP path validation | `startswith("/")` only | Normalized separators, Windows drive, UNC, NUL, `..` per component |
-| 7 | Non-proof encrypted test | `setpassword()` doesn't encrypt entries | Validated `flag_bits & 0x1` |
-| 8 | Incomplete limit tests | Missing boundary cases | Added: header at boundary, physical row, cell/row length, 5000/5001 proof |
-| 9 | Missing mapping tests | No positional/alias tests | Added: column index, letter, extra column, first-alias-wins |
-| 10 | No fault-injection tests | Only happy-path | Added: extension/ZIP/sheet/limit/exception failure preservation |
-| 11 | Narrow static scanner | Only blocked `file.file.read()` | Blocks any `.read()` without args + `BytesIO(.read())` |
-| 12 | Stale design contract | No hardening addendum | Section 13 addendum added |
-| 13 | Inaccurate audit | Wrong file paths, test counts | Corrected herein |
+### Lineage note
+Order is forward-only: `… → Q → S → R → T → U`. Earlier corrective commits were not rewritten.
+
+## Corrective work in Commit T
+| Defect | Evidence | Fix |
+|---|---|---|
+| `test_outer_commit_failure` nested inside `test_success_audit_event_failure` | pytest collected only one outer-commit test; hardening suite 38 pass + 1 skip | Moved method to class-level indent so both node IDs collect |
+| Incorrect staging name assertions (`Old0` vs seeded `O0`) | Would fail after collection restore | Assert exact seeded IDs + `O0/O1/O2` + batch metadata |
+| pysqlite SAVEPOINT/RELEASE permanently committed outer work | RELEASE left replacement visible after `Session.rollback()`; fingerprint mismatch; zero `commit_failure` audits | Apply SQLAlchemy documented SQLite savepoint recipe on in-memory test engine only (`isolation_level=None` + explicit `BEGIN`) |
+| Weak newer-success proof | Only checked filename/status | Assert full newer generation (sheet, total_rows, staging IDs/values, success audit) and zero stale `commit_failure` events |
+
+No production runtime change was required. Transaction path in `import_service.py` already:
+1. captures pre-fingerprint before replacement;
+2. uses nested savepoint for replace + success audit;
+3. outer `db.commit()`;
+4. on post-savepoint failure: `db.rollback()` then `_recover_commit_failure` with fingerprint equality guard.
 
 ## Architecture
 ```
@@ -51,6 +45,11 @@ backend/app/modules/excel_import/
   application/replace_staging_rows.py    — atomic replacement + failure audit
   application/import_service.py          — upload transaction and concurrency orchestration
 ```
+
+API adapter: `backend/app/api/projects.py`  
+Primary tests: `backend/tests/test_s12_r_006_excel_intake_hardening.py`  
+Security: `backend/tests/test_check_security_blockers.py`, `backend/tests/check_security.py`  
+Design contract: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md`
 
 ## Error Taxonomy
 | error_code | Status | limit_category |
@@ -72,89 +71,77 @@ backend/app/modules/excel_import/
 | column_limit | 400 | columns |
 | cell_length_limit | 400 | — |
 | row_length_limit | 400 | — |
+| commit_failure | 500 | — |
+| unexpected_error | 500 | — |
 
 ## Transaction Sequence
 1. Tenant-scope + `with_for_update()` row lock on the batch record
-2. Delete old staging + insert new + update batch + success audit in ONE nested transaction savepoint (`db.begin_nested()`)
-3. Single outer `db.commit()`
-4. On failure: rollback savepoint (old staging preserved), refresh batch to avoid stale updates, and record failure AuditEvent in outer transaction if it does not overwrite a newer generation state.
+2. Capture generation fingerprint (status, filename, sheet, total_rows, staging row IDs, latest success audit id)
+3. Delete old staging + insert new + update batch + success audit in ONE nested transaction savepoint (`db.begin_nested()`)
+4. RELEASE savepoint, then single outer `db.commit()`
+5. On pre-release failure: rollback savepoint (old staging preserved), record failure AuditEvent if safe
+6. On post-release outer commit failure: outer `db.rollback()`, re-lock batch, recompute fingerprint; if equal to pre-fingerprint log `commit_failure`; if mismatched (newer generation) abort failure logging
 
-## Test Results
+## Collected commit-failure node IDs
+```text
+tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::test_outer_commit_failure
+tests/test_s12_r_006_excel_intake_hardening.py::TestTransactionFaultsCompleted::test_outer_commit_failure_with_newer_concurrent_success
+```
 
-| Suite | Count | Status |
-|---|---|---|
-| Backend pytest (Total) | 376 | PASS (371 passed, 5 skipped) |
-| Hardening tests | 41 | PASS (40 passed, 1 skipped) |
-| Security blockers | 12 | PASS (12 passed) |
-| Security scanner | — | PASS |
+## Local gate results (raw observed)
 
-### Hardening Test Details (test_s12_r_006_excel_intake_hardening.py)
-- `TestZipSafetyRestored`:
-  - `test_invalid_zip` (Blocks corrupt ZIPs)
-  - `test_missing_content_types` (Rejects ZIPs missing Content_Types metadata)
-  - `test_missing_workbook_xml` (Rejects ZIPs missing workbook structure)
-  - `test_zip_entry_limit` (Enforces 2048 entries limit)
-  - `test_zip_expansion_limit` (Enforces 100 MiB uncompressed size limit)
-  - `test_encrypted_metadata` (Blocks password-protected/encrypted ZIP entries)
-  - `test_vba_rejected` (Blocks macros and VBA scripts)
-  - `test_external_link_rejected` (Blocks external reference links)
-  - `test_dotdot_path_traversal` (Blocks directory traversals via `..`)
-  - `test_backslash_path_traversal` (Blocks backslash separators in entry paths)
-  - `test_absolute_path_traversal` (Blocks absolute paths)
-  - `test_drive_path_traversal` (Blocks Windows drive letter prefix paths)
-  - `test_unc_path_traversal` (Blocks UNC network paths)
-  - `test_nul_metadata_traversal` (Blocks entry names containing NUL bytes)
-  - `test_valid_xlsx` (Accepts standard structures)
-- `TestWorkbookResourceLimitsRestored`:
-  - `test_header_at_boundary` (Header row on physical row 100 is accepted)
-  - `test_header_beyond_boundary` (Header row on physical row 101 is rejected)
-  - `test_header_cell_length` (Header cell text at 255 chars is accepted)
-  - `test_header_cell_length_exceeded` (Header cell text at 256 chars is rejected)
-  - `test_data_row_limit_boundary` (Data rows at 5000 is accepted)
-  - `test_data_row_limit_exceeded` (Data rows at 5001 is rejected)
-  - `test_physical_row_limit_boundary` (Physical rows at 5100 is accepted)
-  - `test_physical_row_limit_exceeded` (Physical rows at 5101 is rejected)
-  - `test_column_limit_boundary` (Columns at 100 is accepted)
-  - `test_column_limit_exceeded` (Columns at 101 is rejected)
-  - `test_cell_length_boundary_accepted` (Cell at 10 chars is accepted)
-  - `test_cell_length_boundary_rejected` (Cell at 11 chars is rejected)
-  - `test_row_length_boundary_accepted` (Row at 15 chars is accepted)
-  - `test_row_length_boundary_rejected` (Row at 16 chars is rejected)
-  - `test_column_limit_boundary` (Columns at 100 accepted)
-  - `test_column_limit_exceeded` (Columns at 101 rejected)
-- `TestRawPersistenceRestored`:
-  - `test_db_raw_persistence_scenarios` (Database-backed raw cell persistence including duplicates, blanks, extra columns, empty cells, first-alias-wins, row ordering)
-- `TestPGIsolatedConcurrencyRestored` (Skipped locally, verified in PG-CI):
-  - `Scenario A` (Two concurrent successful uploads serialize cleanly)
-  - `Scenario B` (Stale failures from slow uploads do not overwrite newer success states)
-- `TestFailureAuditFingerprintRestored`:
-  - `test_failed_upload_to_already_parsed_retained` (Fingerprint matching preserves newer PARSED statuses)
-- `TestTransactionFaultsCompleted`:
-  - `test_outer_commit_failure` (Recovery sequence and `commit_failure` event logging on outer database error)
-  - `test_failure_audit_event_commit_failure` (Resilience on failure event commit failure)
-  - `test_failure_audit_event_flush_failure` (Resilience on failure event flush failure)
-  - `test_closed_savepoint_safety` (Prevents rollback actions on already closed nested transactions)
-- `TestProjectAssetLineImmutabilityExpanded`:
-  - `test_line_immutable_snapshots` (Enforces 100% immutability snapshots of existing ProjectAssetLine records across 6 major upload failure pathways)
+| Gate | Result |
+|---|---|
+| Backend ruff (`app` + `tests`) | All checks passed |
+| Hardening collect-only | **40 tests collected** |
+| Hardening suite | **39 passed, 1 skipped** |
+| Both outer-commit tests | **2 passed** |
+| Security blockers | **12 passed** |
+| Security scanner `check_security.py` | Scan passed |
+| Alembic heads | `db5977424e7b (head)` single head |
+| Full backend pytest | **370 passed, 5 skipped, 20 warnings** |
+| Worker ruff | All checks passed |
+| Worker pytest | **1 passed** |
+| Frontend lint (`tsc --noEmit`) | pass |
+| Frontend build | pass (vite 6.4.3) |
+| Frontend vitest | **15 files / 80 tests passed** |
+| npm audit (`--omit=dev`) | **0 vulnerabilities** |
 
-### Security Blocker Details (test_check_security_blockers.py)
-- `test_clean_source_passes`
-- `test_unbounded_read_blocked`
-- `test_unbounded_read_allowed_outside_scope`
-- `test_bytesio_copy_blocked`
-- `test_bytesio_copy_allowed_outside_scope`
-- `test_list_iter_rows_blocked`
-- `test_chunked_read_allowed`
-- `test_streaming_iter_rows_allowed`
-- `test_projects_api_scoping_blocks_inside_upload`
-- `test_projects_api_scoping_allows_outside_upload`
-- `test_staging_import_raw_persistence` (Enforces JSON raw persistence property structure `{"cells": [...]}`)
-- `test_staging_import_raw_persistence_empty`
+### Exact PostgreSQL skips (local)
+```text
+SKIPPED LOCALLY — REQUIRES CI WITH POSTGRESQL
+tests/test_auth_endpoints.py::... (line 737) PostgreSQL not available
+tests/test_s12_r_004_official_mutation.py (line 1049) No PostgreSQL URL configured
+tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization
+tests/test_workbench_api.py (line 696) concurrent integration test
+tests/test_workbench_api.py (line 980) unexpected-error rollback test
+```
 
-### Skipped (local)
-- 1 PostgreSQL-gated test in hardening suite: `TestPGIsolatedConcurrencyRestored` (requires PostgreSQL service).
-- 4 other PostgreSQL-gated integration tests in main suite.
-- **Total backend pytest: 370 passed, 5 skipped, 20 warnings.**
+These skips are **not** counted as PASS.
+
+## Preservation evidence (Commit T tests)
+
+### Normal outer-commit failure (`test_outer_commit_failure`)
+- Original staging IDs (`seeded_staging_ids`) and values `O0/O1/O2` retained after failed outer commit
+- No `ProjectAssetImportBatchUploaded` success audit retained from the failed attempt
+- Exactly one `ProjectAssetImportBatchUploadFailed` with `error_code=commit_failure`
+- Batch filename/sheet/total_rows remain pre-attempt; status becomes `FAILED` via recovery audit path
+- Orchestrator returns HTTP 500 with Vietnamese system error detail
+
+### Newer-success protection (`test_outer_commit_failure_with_newer_concurrent_success`)
+- After failed attempt rollback window, a full newer generation is landed (filename, sheet, total_rows=2, staging N0/N1, success audit)
+- Recovery fingerprint mismatch prevents stale `commit_failure` logging
+- Final batch remains `PARSED` / `newer_success.xlsx` / `NewerSheet` / total_rows=2
+- Zero stale `commit_failure` AuditEvents on the newer generation
+
+### ProjectAssetLine immutability
+- `TestProjectAssetLineImmutabilityExpanded::test_line_immutable_snapshots` remains in suite and passed (6 failure-path snapshots)
+
+## Remaining limitations
+1. PostgreSQL concurrency and integration tests are **not** executed in this local environment; CI with PostgreSQL is required before claiming full environment parity.
+2. Draft PR is intentionally **not** created by this task.
+3. SQLite StaticPool cannot host a true second DB connection; newer-success concurrency is simulated in the recovery window on the same session with the real commit path. True multi-connection serialization remains the PG-gated test.
+4. Untracked handoff / foreign onboarding files outside this task were left untouched.
 
 ## Final Verdict
 ```text
