@@ -1,9 +1,9 @@
 # Valora Engineering
 
-**Phase:** Engineering — post S12-R remediation  
-**Baseline `main`:** `54872c764399182efae496e89dae9bd6ebdba9af` (S12-R-006 squash-merge #6)  
-**Active task:** `S12-R-007` — Documentation Reconciliation & Final Acceptance  
-**Next approved task (not started):** `S12-PR-003` — Excel Staging Validation Engine  
+**Phase:** Engineering — post S12-R remediation
+**Baseline `main`:** `54872c764399182efae496e89dae9bd6ebdba9af` (S12-R-006 squash-merge #6)
+**Active task:** `S12-R-007` — Documentation Reconciliation & Final Acceptance
+**Next approved task (not started):** `S12-PR-003` — Excel Staging Validation Engine
 
 ## Product goal
 
@@ -49,7 +49,8 @@ excel_import/                  streaming parser + atomic staging replacement
 ### Non-negotiable invariants
 
 - Tenant isolation: `organization_id` + project/session scope; **fail closed**.
-- Official mutation: authenticated command path + RBAC + human confirmation + version safety + **atomic audit**.
+- **ADR 0028 restricted Workbench fields** (`description`, `appraised_unit_price`, `review_status`, `validation_status`): authenticated draft-commit command path + RBAC + human confirmation + version safety + **atomic audit**. Direct PATCH of those fields is rejected.
+- **Non-restricted** official line fields (e.g. asset name, quantity, unit, raw price/currency, appraised currency, brand, manufacturer) may still be updated via direct `PATCH` under `project:update` with optimistic locking; that path is **outside** the R004 Human Commit Gate / atomic-command guarantee (audit may be append-after-commit, not the R004 single-command transaction model).
 - Excel intake writes **only** import batch + staging rows — **never** mutates official `ProjectAssetLine`.
 - Parser: bounded/chunked streaming, secure ZIP/XLSX validation, explicit limits, positional `raw_values.cells`.
 - Staging replacement: nested savepoint + outer commit; failure preserves prior generation; fingerprint guard against stale failure overwrite.
@@ -97,7 +98,7 @@ cd worker && python -m pytest -q
 cd frontend && npm run lint
 cd frontend && npm run build
 cd frontend && npm test
-cd frontend && npm audit --omit=dev
+cd frontend && npm audit --audit-level=high
 ```
 
 Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not CI evidence.

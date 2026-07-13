@@ -1,8 +1,8 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
-**Created:** 2026-07-06  
-**Last reconciled:** 2026-07-13 (S12-R-007)  
-**Applies to:** All agent-generated work in the Valora repository  
+**Created:** 2026-07-06
+**Last reconciled:** 2026-07-13 (S12-R-007)
+**Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
 
@@ -56,8 +56,12 @@ Do **not** start S12-PR-003 inside an R007 session.
 ```text
 No domain invention outside Design Book / ADR / approved contract.
 No AI auto-approval or auto-apply of official data.
-No official data mutation without command path + authorization + human confirmation
-  + version safety + atomic audit.
+ADR 0028 restricted Workbench fields (description, appraised_unit_price,
+  review_status, validation_status) require draft-commit command path + authorization
+  + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
+Non-restricted ProjectAssetLine fields may use direct PATCH under project:update and are
+  outside the R004 Human Commit Gate / atomic-command guarantee.
+Excel intake still never mutates official ProjectAssetLine rows.
 No tenant boundary bypass (organization_id / project / session fail-closed).
 No secrets committed; no production credentials in repo.
 No unbounded whole-file materialization on Excel runtime path

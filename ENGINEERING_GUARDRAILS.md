@@ -1,8 +1,8 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
-**Created:** 2026-07-06  
-**Last reconciled:** 2026-07-13 (S12-R-007)  
-**Applies to:** All engineering work after Design Book v1.2-final  
+**Created:** 2026-07-06
+**Last reconciled:** 2026-07-13 (S12-R-007)
+**Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
 
@@ -125,19 +125,37 @@ audit logs are append-only
 
 ## 6. Official Mutation Guardrails
 
-Do not introduce data mutation paths that bypass:
+### ADR 0028 restricted Workbench-gated fields
+
+These fields must **not** be mutated via direct PATCH. They require the draft-commit command path:
+
+```text
+description
+appraised_unit_price
+review_status
+validation_status
+```
+
+For those fields, do not introduce mutation paths that bypass:
 
 ```text
 authenticated actor
 permission check
-workflow/project state check
-exact optimistic version match (where applicable)
-human confirmation for official Workbench commits
+workflow/project state check (e.g. Project.status == DRAFT for commit)
+exact optimistic version match
+human confirmation (Workbench Human Commit Gate)
 command/application service
-atomic AuditEvent in the same transaction
+atomic AuditEvent in the same transaction as the official write
 ```
 
-Excel upload/parser/validation must not mutate `ProjectAssetLine`.
+### Non-restricted official fields
+
+Direct `PATCH /asset-lines/{id}` under `project:update` may still update non-restricted fields
+(e.g. asset_name, quantity, unit_id, raw_price, currencies, brand_id, manufacturer_id) with
+optimistic locking. That path is **outside** the R004 Human Commit Gate and does **not** share
+the R004 single-command atomic-audit guarantee. Do not document it as blocked or as R004-gated.
+
+Excel upload/parser/validation must not mutate `ProjectAssetLine` at all (staging only).
 
 ## 7. File / Excel Guardrails
 
@@ -201,7 +219,7 @@ implements invented domain logic
 lacks required tests (or docs-only justification)
 introduces secrets
 weakens security or tenant isolation
-bypasses official mutation / human commit gates
+bypasses ADR 0028 restricted-field human commit / command gates
 creates irreversible data mutation without audit
 treats local PG skips as PASS
 starts S12-PR-003 before S12-R closure criteria are met

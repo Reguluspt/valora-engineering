@@ -1,8 +1,8 @@
 # Valora Project Handoff (Canonical)
 
-**Status:** Canonical handoff for coding agents  
-**Reconciled:** 2026-07-13 — S12-R-007  
-**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`  
+**Status:** Canonical handoff for coding agents
+**Reconciled:** 2026-07-13 — S12-R-007
+**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`
 **Do not use** protected untracked onboarding artifacts as authority.
 
 ---
@@ -51,21 +51,37 @@ Local infra: PostgreSQL 16, Redis 7, MinIO via `docker-compose.yml`.
 - All project/session/import resources scoped by `organization_id` (+ project where applicable).
 - Cross-tenant access → safe `404` / deny-by-default.
 
-## 6. Human Commit Gate and official mutation
+## 6. Human Commit Gate and official mutation (ADR 0028 scope)
 
-Official `ProjectAssetLine` field changes go through:
+**Restricted Workbench-gated fields** (only):
 
-1. Draft edit path  
-2. Human confirmation  
-3. Single application command (`commit_asset_line_draft` pattern)  
-4. Permission + workflow state + exact optimistic version  
-5. Atomic `AuditEvent` in the same transaction  
+```text
+description
+appraised_unit_price
+review_status
+validation_status
+```
 
-Direct PATCH bypass of official fields is blocked (S12-R-004).
+For those fields, official changes go through:
+
+1. Draft edit path
+2. Human confirmation
+3. Single application command (`commit_asset_line_draft` pattern)
+4. Permission + workflow state + exact optimistic version
+5. Atomic `AuditEvent` in the same transaction
+
+Direct PATCH of those four fields is rejected with 400 (S12-R-004 / ADR 0028).
+
+**Non-restricted fields** (examples: `asset_name`, `quantity`, `unit_id`, `raw_price`,
+`raw_price_currency_id`, `appraised_currency_id`, `brand_id`, `manufacturer_id`) may still be
+updated via direct `PATCH` under `project:update` with optimistic locking. That path is
+**outside** the R004 Human Commit Gate and atomic-command guarantee.
+
+Excel intake never mutates official `ProjectAssetLine` (staging only).
 
 ## 7. Excel staging / parser / transaction model
 
-Contract: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md`  
+Contract: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md`
 Implementation: `backend/app/modules/excel_import/`
 
 ```text
@@ -77,21 +93,21 @@ On failure: rollback preserve prior staging; optional failure audit with fingerp
 
 Invariants:
 
-- Staging-only; **no** `ProjectAssetLine` mutation  
-- Bounded streaming + ZIP/XLSX safety + resource limits  
-- Positional `raw_values.cells` (duplicate/blank headers preserved)  
-- First-alias-wins mapping for known columns  
+- Staging-only; **no** `ProjectAssetLine` mutation
+- Bounded streaming + ZIP/XLSX safety + resource limits
+- Positional `raw_values.cells` (duplicate/blank headers preserved)
+- First-alias-wins mapping for known columns
 
 ## 8. Progress snapshot
 
 ### Sprint 11 (historical)
 
-Live Workbench loop (asset lines, draft, human commit UI/API) merged.  
+Live Workbench loop (asset lines, draft, human commit UI/API) merged.
 **Historical READY labels are not current slice approval** — S12-R re-gated security and data integrity.
 
 ### S12-PR-001 / S12-PR-002 (historical)
 
-Staging model + initial upload/parser.  
+Staging model + initial upload/parser.
 Superseded in part by S12-R-002…006 for auth, transaction, streaming, and raw value shape.
 
 ### S12-R-001 … S12-R-006 (merged on `main`)
@@ -109,7 +125,7 @@ R-006 code-bearing CI historical evidence (pre-squash): **375 passed, 0 skipped*
 
 ### S12-R-007 (this handoff cycle)
 
-Documentation reconciliation and final acceptance matrix.  
+Documentation reconciliation and final acceptance matrix.
 **Does not** implement Validation Engine.
 
 ## 9. Next approved task
@@ -122,26 +138,26 @@ Only after S12-R-007 Draft PR CI + independent audit close the remediation slice
 
 Validation Engine must:
 
-- operate on **staging rows only**  
-- not apply to official lines  
-- not introduce AI auto-approve  
+- operate on **staging rows only**
+- not apply to official lines
+- not introduce AI auto-approve
 
 ## 10. Out of scope (still)
 
-- Apply staging → `ProjectAssetLine`  
-- AI provider runtime  
-- PDF/Word product reporting  
-- CRM/revenue dashboards  
-- Production certification  
+- Apply staging → `ProjectAssetLine`
+- AI provider runtime
+- PDF/Word product reporting
+- CRM/revenue dashboards
+- Production certification
 
 ## 11. Safe onboarding for the next agent
 
-1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff.  
-2. Verify `git rev-parse origin/main` against the task baseline.  
-3. Create a **new** branch from clean `main` for the assigned task ID.  
-4. Prefer code + tests + CI over stale audit prose.  
-5. Never touch protected untracked onboarding files outside scope.  
-6. Never treat local PG skips as PASS.  
+1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff.
+2. Verify `git rev-parse origin/main` against the task baseline.
+3. Create a **new** branch from clean `main` for the assigned task ID.
+4. Prefer code + tests + CI over stale audit prose.
+5. Never touch protected untracked onboarding files outside scope.
+6. Never treat local PG skips as PASS.
 7. Do not start S12-PR-003 until R007 acceptance criteria say so.
 
 ## 12. Key paths

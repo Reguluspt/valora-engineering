@@ -1,11 +1,11 @@
 # S12-R — Pre-Validation Remediation Slice
 
-**Tên đầy đủ:** Security, Workbench Routing & Excel Intake Hardening  
-**Mã slice:** `S12-R`  
-**Trạng thái:** `BLOCKING / REQUIRED`  
-**Base branch đề xuất:** `s12-pr-002-excel-file-upload-parser-intake`  
-**Blocked task:** `S12-PR-003 — Excel Staging Validation Engine`  
-**Ngày tạo:** 2026-07-11  
+**Tên đầy đủ:** Security, Workbench Routing & Excel Intake Hardening
+**Mã slice:** `S12-R`
+**Trạng thái:** `BLOCKING / REQUIRED`
+**Base branch đề xuất:** `s12-pr-002-excel-file-upload-parser-intake`
+**Blocked task:** `S12-PR-003 — Excel Staging Validation Engine`
+**Ngày tạo:** 2026-07-11
 **Design authority:** Valora Design Book v1.3, Astryx Design System, Valora engineering guardrails và các ADR hiện hành.
 
 ---
@@ -564,10 +564,17 @@ Chỉ sau khi `S12-R-007` đạt PASS:
 
 # 12. Current reconciliation (S12-R-007) — 2026-07-13
 
-**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`  
-**Active task:** S12-R-007 Documentation Reconciliation & Final Acceptance  
-**Overall slice disposition:** `BLOCKING` until R007 Draft PR CI + independent audit PASS  
-**Do not declare overall S12-R PASS from this documentation-only pre-PR state.**
+**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`
+**Active task:** S12-R-007 Documentation Reconciliation & Final Acceptance
+**Overall slice disposition:** `BLOCKING` until R007 Draft PR CI + independent audit PASS
+**Do not declare overall S12-R PASS from documentation-only state.** Independent re-audit still required after corrective documentation pass.
+
+### ADR 0028 restricted-field scope note
+
+Original slice wording that "every official change goes through Human Commit Gate" is **broader than runtime/ADR**.
+Authoritative scope is ADR 0028: only `description`, `appraised_unit_price`, `review_status`, `validation_status`
+are Workbench-gated via the draft-commit command. Non-restricted direct PATCH under `project:update` remains.
+Excel intake still never mutates official `ProjectAssetLine`.
 
 ## 12.1 R001–R006 mapping (merged)
 
@@ -599,10 +606,10 @@ tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestore
 | 1 | default/CI baseline | FIXED | R-001 `6c64305` #1 | CI workflows + audit | Branch protection is repo-admin operational | — |
 | 2 | authentication | FIXED | R-002 `b025b97` #2 | unit + auth tests + audit | Test overrides remain for fixtures | — |
 | 3 | tenant isolation | FIXED | R-003 `c46ea1c` #3 | unit + API tests + audit | Enumerate-safe 404 patterns | — |
-| 4 | official mutation command | FIXED | R-004 `e683757` #4 | command path + tests + audit | Only allowlisted fields | — |
-| 5 | human confirmation | FIXED | R-004 + S11-PR-006 | API + frontend gate tests | UX copy may evolve | — |
-| 6 | version safety | FIXED | R-004 | optimistic lock tests | Requires correct client version token | — |
-| 7 | atomic audit | FIXED | R-004 | same-transaction audit tests | Payload schema evolution possible | — |
+| 4 | official mutation command (ADR 0028 restricted fields only) | FIXED | R-004 `e683757` #4 + ADR 0028 | command path + forbidden PATCH tests | Non-restricted fields still use direct PATCH under project:update | — |
+| 5 | human confirmation (restricted fields) | FIXED | R-004 + S11-PR-006 | API + frontend gate tests | Applies to description/appraised_unit_price/review_status/validation_status | — |
+| 6 | version safety | FIXED | R-004 | optimistic lock tests | Required on restricted commit path; also used on direct PATCH | — |
+| 7 | atomic audit (restricted commit path) | FIXED | R-004 | same-transaction audit tests | Non-restricted PATCH audit is not the R004 atomic-command model | — |
 | 8 | dynamic project context | FIXED | R-005 `ff40fda` #5 | frontend resolve + tests | No fabricated slug fallbacks | — |
 | 9 | fabricated-data removal | FIXED | R-005 | live data integrity tests | Panels still limited by backend domains | — |
 | 10 | pagination/race safety | FIXED | R-005 + asset-lines API | pagination tests | Large datasets still need performance SLOs | DEFERRED product SLO owner |
@@ -615,9 +622,9 @@ tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestore
 | 17 | failure preservation | FIXED | R-006 | transaction fault tests | PG multi-connection proof via CI | — |
 | 18 | PostgreSQL concurrency | FIXED | R-006 CI | PG concurrency test PASS in CI | Local skip without PG still expected | — |
 | 19 | ProjectAssetLine immutability (intake) | FIXED | R-006 | immutability snapshot tests | Apply path still deferred | S12 apply PR later |
-| 20 | documentation consistency | ACCEPTED WITH ADR | R-007 (this pass) | docs recon + local gates | Needs Draft PR CI + independent audit | R007 independent auditor |
+| 20 | documentation consistency / R007 final acceptance | BLOCKED | R-007 | docs recon + Draft PR CI | Independent re-audit still required after corrective pass | R007 independent auditor |
 
-Disposition key: `FIXED` = implemented + evidenced on main for the cited task; `ACCEPTED WITH ADR` / process acceptance still open; `DEFERRED` = known remaining work; `BLOCKED` = cannot proceed.
+Disposition key: only `FIXED`, `ACCEPTED WITH ADR`, `DEFERRED`, or `BLOCKED`. Totals for this 20-row matrix after corrective recon: **FIXED 19**, **ACCEPTED WITH ADR 0**, **BLOCKED 1** (row 20). Deferred product work (S12-PR-003, apply, AI, prod cert) is listed separately outside these 20 rows.
 
 ## 12.4 Remaining / deferred work
 
@@ -631,7 +638,7 @@ Disposition key: `FIXED` = implemented + evidenced on main for the cited task; `
 
 ## 12.5 Conditions to start S12-PR-003
 
-1. S12-R-007 documentation head has green Draft PR CI.  
-2. Independent audit PASS for documentation reconciliation / slice closure.  
-3. This file and `docs/VALORA_PROJECT_HANDOFF.md` mark S12-PR-003 unblocked.  
+1. S12-R-007 documentation head has green Draft PR CI.
+2. Independent audit PASS for documentation reconciliation / slice closure.
+3. This file and `docs/VALORA_PROJECT_HANDOFF.md` mark S12-PR-003 unblocked.
 4. New branch from updated `main` — no reuse of R006/R007 branches for implementation.
