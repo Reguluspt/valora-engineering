@@ -2,7 +2,7 @@
 
 ## Status
 ```text
-S12-R-007 LOCAL DOCUMENTATION RECONCILIATION COMPLETE — AWAITING DRAFT PR, POSTGRESQL CI, AND INDEPENDENT AUDIT
+S12-R-007 DRAFT PR CI VALIDATED — AWAITING FINAL DOCUMENTATION-HEAD CI AND INDEPENDENT AUDIT
 ```
 
 | Field | Value |
@@ -13,8 +13,13 @@ S12-R-007 LOCAL DOCUMENTATION RECONCILIATION COMPLETE — AWAITING DRAFT PR, POS
 | Out of scope | Production code, tests, migrations, workflows, config, deps, S12-PR-003 implementation |
 | Starting `main` SHA | `54872c764399182efae496e89dae9bd6ebdba9af` |
 | Branch | `s12-r-007-documentation-reconciliation-final-acceptance` |
-| Draft PR | **PENDING** |
-| Draft PR CI | **PENDING** |
+| Draft PR | **#7** — https://github.com/Reguluspt/valora-engineering/pull/7 |
+| PR base / head | `main` ← `s12-r-007-documentation-reconciliation-final-acceptance` |
+| PR state | **open + draft=true** |
+| Code-bearing SHA tested | `4d683b184c7bb7456bfdbbdaa0ab1cbb2c7e4c9e` |
+| Authoritative code-bearing CI | run **29254007448** (#94) **SUCCESS** |
+| Code-bearing CI URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29254007448 |
+| Documentation-head CI | **PENDING** for the audit-evidence commit that records this section |
 | Independent audit | **PENDING** |
 
 ## Authority inventory (read)
@@ -49,12 +54,17 @@ docs/audits/S12_PR_001_EXCEL_IMPORT_CONTRACT_STAGING_MODEL_AUDIT.md
 docs/audits/S12_PR_002_EXCEL_FILE_UPLOAD_PARSER_INTAKE_AUDIT.md
 ```
 
-### Commit B (this file only)
+### Commit B (pre-PR audit)
 ```text
 docs/audits/S12_R_007_DOCUMENTATION_RECONCILIATION_FINAL_ACCEPTANCE_AUDIT.md
 ```
 
-`PR_RULES.md`: **intentionally unchanged** (no stale gate-lowering statements requiring edit; Sprint 0 examples remain historical PR guidance).
+### Commit C (this CI-evidence update)
+```text
+docs/audits/S12_R_007_DOCUMENTATION_RECONCILIATION_FINAL_ACCEPTANCE_AUDIT.md
+```
+
+`PR_RULES.md`: **intentionally unchanged**.
 
 ## Stale-claim inventory and disposition
 
@@ -93,11 +103,11 @@ Mirrored from remediation §12.3 (20 rows):
 | 15 | resource limits | FIXED | R-006 | limit tests | versioned policy |
 | 16 | positional raw values | FIXED | R-006 | raw tests | contract authority |
 | 17 | failure preservation | FIXED | R-006 | fault tests | — |
-| 18 | PostgreSQL concurrency | FIXED | R-006 CI | PG test in CI | local skip without PG |
+| 18 | PostgreSQL concurrency | FIXED | R-006 + R007 CI | PG test in CI (0 skips) | local skip without PG |
 | 19 | ProjectAssetLine immutability | FIXED | R-006 | immutability tests | apply deferred |
-| 20 | documentation consistency | ACCEPTED WITH ADR/process | R-007 | this recon | needs Draft PR CI + independent audit |
+| 20 | documentation consistency | ACCEPTED WITH process | R-007 | recon + Draft PR CI | needs documentation-head CI + independent audit |
 
-**Totals:** FIXED **19** · ACCEPTED WITH process **1** · DEFERRED (called out outside matrix rows) Validation Engine / apply / AI / prod cert · BLOCKED process gates for overall S12-R PASS.
+**Totals:** FIXED **19** · ACCEPTED WITH process **1** · DEFERRED Validation Engine / apply / AI / prod cert · BLOCKED process gates for overall S12-R PASS until independent audit.
 
 ## Static scan summary
 
@@ -143,36 +153,95 @@ tests/test_workbench_api.py:696
 tests/test_workbench_api.py:980
 ```
 
-## Historical R-006 CI evidence (baseline, not this branch)
+## Draft PR and code-bearing CI evidence (2026-07-13)
 
 | Item | Value |
 |---|---|
-| Nature | Historical code-bearing CI for R-006 branch head before/around squash-merge |
+| Draft PR | https://github.com/Reguluspt/valora-engineering/pull/7 |
+| Base | `main` |
+| Head | `s12-r-007-documentation-reconciliation-final-acceptance` |
+| Draft | **true** (not Ready, not merged) |
+| Tested SHA | `4d683b184c7bb7456bfdbbdaa0ab1cbb2c7e4c9e` (Commit B) |
+| Authoritative workflow run | **29254007448** / run number **94** |
+| Run URL | https://github.com/Reguluspt/valora-engineering/actions/runs/29254007448 |
+| Overall conclusion | **SUCCESS** |
+| Job backend | **SUCCESS** |
+| Job worker | **SUCCESS** |
+| Job frontend | **SUCCESS** |
+
+### Backend job (authoritative logs)
+| Gate | Result |
+|---|---|
+| Ruff | All checks passed |
+| Alembic upgrade head | PASS against PostgreSQL to `db5977424e7b` |
+| Alembic single head | PASS |
+| Pytest | **375 passed, 0 skipped, 27 warnings** (`collected 375 items`) |
+| pip-audit | No known vulnerabilities found |
+| Security scanner | Scan passed |
+
+PostgreSQL skips in CI: **0**. The five former local-skip tests **executed** (suite finished with zero skips).
+
+Log confirmation of concurrency node:
+```text
+tests/test_s12_r_006_excel_intake_hardening.py::TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization
+```
+
+### Worker job
+| Gate | Result |
+|---|---|
+| Ruff | All checks passed |
+| Pytest | **1 passed** |
+| Dependency audit | No known vulnerabilities found |
+
+### Frontend job
+| Gate | Result |
+|---|---|
+| Lint / build | PASS (job success) |
+| Vitest | **15 files / 80 tests passed** |
+| npm audit | **0 vulnerabilities** |
+
+### Non-authoritative / duplicate run
+| Run | Result | Classification |
+|---|---|---|
+| **29253478077** (#93) | **failure** | Non-authoritative. Backend SUCCESS, worker SUCCESS, frontend FAILED with GitHub Actions infra error: `Failed to resolve action download info. Error: Service Unavailable`. Transient platform failure, not product failure. Superseded by **29254007448**. |
+
+### Local vs code-bearing CI distinction
+| Environment | Backend pytest |
+|---|---|
+| Local (no PG) | 370 passed, **5 skipped**, 20 warnings |
+| Code-bearing CI (PG 16) on `4d683b1…` | **375 passed, 0 skipped**, 27 warnings |
+
+## Historical R-006 CI evidence (baseline, separate from this PR)
+
+| Item | Value |
+|---|---|
+| Nature | Historical code-bearing CI for R-006 before squash-merge to main |
 | Backend | **375 passed, 0 skipped, 27 warnings** |
-| PG concurrency | Executed and passed |
 | Main squash merge | `54872c764399182efae496e89dae9bd6ebdba9af` (#6) |
 
-This R007 branch still requires **its own** Draft PR CI on the documentation head.
+R007 now has **its own** Draft PR CI on documentation head `4d683b1…`.
 
 ## Limitations
 
-1. No Draft PR created in this pass.  
-2. Documentation-head CI not claimed.  
-3. Independent audit PENDING.  
-4. Overall S12-R slice not declared PASS.  
-5. S12-PR-003 not started.  
+1. Code-bearing Draft PR CI validated on SHA `4d683b1…` via run `29254007448`.
+2. Documentation-head CI for **this** audit-evidence commit is not claimed until that run completes.
+3. Independent audit PENDING — implementer must not self-declare independent PASS.
+4. Overall S12-R slice not declared final PASS.
+5. S12-PR-003 not started.
 6. Local PG skips remain expected without PostgreSQL service.
+7. PR remains Draft only.
 
 ## Commit lineage
 
 ```text
 main 54872c7 (S12-R-006 #6)
   └─ branch s12-r-007-documentation-reconciliation-final-acceptance
-       ├─ Commit A: docs: reconcile Valora phase and remediation records
-       └─ Commit B: docs: add S12-R-007 pre-PR final acceptance evidence  (this file)
+       ├─ Commit A b05906b: docs: reconcile Valora phase and remediation records
+       ├─ Commit B 4d683b1: docs: add S12-R-007 pre-PR final acceptance evidence
+       └─ Commit C (this): docs: record S12-R-007 Draft PR CI evidence
 ```
 
 ## Final verdict
 ```text
-S12-R-007 LOCAL DOCUMENTATION RECONCILIATION COMPLETE — AWAITING DRAFT PR, POSTGRESQL CI, AND INDEPENDENT AUDIT
+S12-R-007 DRAFT PR CI VALIDATED — AWAITING FINAL DOCUMENTATION-HEAD CI AND INDEPENDENT AUDIT
 ```
