@@ -1,9 +1,21 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-14 — S12-R-008
-**Baseline `main` SHA:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8)
+**Reconciled:** 2026-07-14 — S12-R-008 corrective authority
+**S12-R-008 starting baseline:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened; not an evergreen “current main” claim)
 **Do not use** protected untracked onboarding artifacts as authority.
+
+### Live task gate
+
+```text
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+```
+
+Agents must `git fetch origin` and verify live `origin/main`.
 
 ---
 
@@ -136,13 +148,13 @@ S12-PR-003 — Excel Staging Validation Engine — MERGED (PR #8)
 
 Validation Engine operates on **staging rows only**, does not apply to official lines, and does not introduce AI auto-approve.
 
-### S12-R-008 (this handoff cycle)
+### S12-R-008 (authority reconciliation)
 
 ```text
 S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
 ```
 
-Documentation / design-authority only: ADR 0029, staging contract §15, ADR 0028 addendum, operator-doc reconciliation. **Does not** implement Apply.
+Documentation / design-authority only while the live gate says R008 is active: ADR 0029, staging contract §15, ADR 0028 addendum. **Does not** implement Apply.
 
 ## 9. Next approved implementation task
 
@@ -150,9 +162,9 @@ Documentation / design-authority only: ADR 0029, staging contract §15, ADR 0028
 S12-PR-004 — Excel Staging Apply Command & Provenance
 ```
 
-Only after S12-R-008 Draft PR CI + independent audit PASS + merge to `main`.
+Authorized only when the **live gate** above says `origin/main` already contains merged S12-R-008 / ADR 0029 (after independent audit PASS + merge). Until then, PR-004 is blocked.
 
-Apply must follow ADR 0029 and contract §15 exactly (backend-only; human-confirmed DRAFT-only; all-valid all-or-nothing; lineage migration).
+Apply must follow ADR 0029 and contract §15 exactly (backend-only; human-confirmed DRAFT-only; all-valid all-or-nothing; lineage migration; `contract_version = s12-pr-004-v1`).
 
 ## 10. Out of scope (still)
 

@@ -60,24 +60,42 @@ Required JSON body:
 - Any pending, invalid, or warning row rejects the **whole** command (all-or-nothing)
 - All other batch states, including `applied`, reject with `409` and zero mutation
 
+### Contract version (frozen)
+
+```text
+contract_version = s12-pr-004-v1
+```
+
+Every Apply success and failure audit payload **must** set `contract_version` to exactly `s12-pr-004-v1` (lowercase). No aliases or inferred version strings.
+
 ### Mapping registry (explicit only)
 
 | Staging input | Official target | Transformation |
 | --- | --- | --- |
-| `proposed_asset_name` | `asset_name` | Required; trim; non-empty; max 255 |
-| `proposed_description` | `description` | Optional; trim; blank → `null`; max 5000; owner-authorized **only** through Apply |
-| `proposed_quantity` | `quantity` | Blank/null → `1.0000`; else finite Decimal `>= 0`, max 4 fractional and 11 integer digits; **no silent rounding** |
-| `proposed_unit` | `unit_id` | Blank/null → `null`; else one ACTIVE Unit, case-insensitive code or display name; symbol only if unique; unknown/ambiguous/inactive → whole Apply fails |
-| `proposed_raw_price` | `raw_price` | Blank/null → `null`; else finite Decimal `>= 0`, max 2 fractional and 13 integer digits; **no silent rounding** |
-| `proposed_currency` | `raw_price_currency_id` | Blank/null → `null`; else one ACTIVE Currency, case-insensitive code or display name; **no symbol matching**; unknown/ambiguous/inactive → whole Apply fails |
+| `proposed_asset_name` | `asset_name` | Required; trim outer Unicode whitespace; non-empty; max 255 |
+| `proposed_description` | `description` | Optional; trim outer Unicode whitespace; blank → `null`; max 5000; owner-authorized **only** through Apply |
+| `proposed_quantity` | `quantity` | Blank/null → `1.0000`; else finite Decimal `>= 0`, max 4 fractional and 11 integer digits; **no silent rounding**; Decimal-only parse (scientific notation only if expanded value fits limits); never convert through float |
+| `proposed_unit` | `unit_id` | Blank/null → `null`; else ACTIVE Unit lookup (see deterministic mechanics) |
+| `proposed_raw_price` | `raw_price` | Blank/null → `null`; else finite Decimal `>= 0`, max 2 fractional and 13 integer digits; **no silent rounding**; Decimal-only parse; never convert through float |
+| `proposed_currency` | `raw_price_currency_id` | Blank/null → `null`; else ACTIVE Currency lookup (see deterministic mechanics) |
 | constant | `review_status` | `pending` |
 | constant | `validation_status` | `unvalidated` |
 
 **Must never apply:** `proposed_appraised_unit_price`, `proposed_review_status`, `proposed_validation_status`, raw/unregistered spreadsheet keys. `raw_values` remains staging evidence only.
 
+### Deterministic mapping mechanics (frozen)
+
+- **Stage order:** `source_row_number ASC, id ASC`.
+- Official inserts and response `created_lines[]` use **that exact order**.
+- Trim outer **Unicode** whitespace.
+- Matching is **exact Unicode case-insensitive only**; no fuzzy, substring, accent folding, or auto-create of master data.
+- **Unit priority:** code → display name → unique symbol. A unique match at a higher tier **stops** lower tiers. The selected tier must resolve exactly one ACTIVE row; otherwise mapping invalid.
+- **Currency priority:** code → display name; **symbols forbidden**. Selected tier must resolve exactly one ACTIVE row; otherwise mapping invalid.
+- **Decimal-only parsing.** Scientific notation allowed only when the expanded value fits approved Numeric integer/scale limits. Never convert through float and never round.
+
 ### Creation semantics
 
-- One new `ProjectAssetLine` per eligible staging row
+- One new `ProjectAssetLine` per eligible staging row (in stage order above)
 - No update, upsert, name-dedup, replace, or delete of existing official lines
 
 ### Atomicity and idempotency
@@ -105,6 +123,34 @@ Pre-attempt generation fingerprint includes:
 - latest upload, validation-success, and Apply-success audit IDs
 
 Failure recovery: rollback, re-lock, write failure audit only if fingerprint still matches. Stale failures must not overwrite newer upload/validate/Apply generations.
+
+### Failure-state preservation (frozen)
+
+Every rejected or failed Apply preserves **exactly**:
+
+- batch status
+- source filename and sheet
+- all counters
+- staging rows, raw/mapped values, validation statuses/errors/warnings
+- all pre-existing official lines and lineage
+
+For an eligible (confirmed, scoped) attempt that fails mapping or engine recovery, the batch remains `ready_for_review`. **Do not** introduce batch status `apply_failed`. Only the append-only failure audit permitted by the audit cardinality matrix may be new.
+
+### Audit cardinality matrix (frozen)
+
+| Outcome | Success audit | Failure audit |
+| --- | ---: | ---: |
+| confirmation missing/false | 0 | 0 |
+| safe 404 / inaccessible target | 0 | 0 |
+| project not DRAFT | 0 | 0 |
+| batch state not allowed / rows not ready / re-apply | 0 | 0 |
+| successful Apply | exactly 1 | 0 |
+| mapping invalid after confirmed, scoped attempt | 0 | exactly 1 if fingerprint matches |
+| engine/savepoint/flush/outer-commit failure | 0 | exactly 1 if fingerprint matches and failure audit persists |
+| stale fingerprint mismatch | 0 | 0 |
+| failure-audit persistence failure | 0 | 0; preserve generation and return safe 500 |
+
+Repeated confirmed mapping failures may each create one failure audit. Never include raw/proposed values in failure audits.
 
 ### Lifecycle after success
 
@@ -142,6 +188,8 @@ Failure payload keys only:
 contract_version, organization_id, project_id, batch_id,
 source_status, error_code
 ```
+
+In both payloads, `contract_version` **must** be exactly `s12-pr-004-v1`.
 
 No raw cells, proposed business values, SQL, paths, stacks, secrets, or bulk line IDs in payloads.
 

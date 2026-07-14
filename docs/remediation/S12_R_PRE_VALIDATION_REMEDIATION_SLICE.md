@@ -3,8 +3,8 @@
 **Tên đầy đủ:** Security, Workbench Routing & Excel Intake Hardening
 **Mã slice:** `S12-R`
 **Trạng thái (historical slice):** Remediation R-001…R-007 **merged**; Validation Engine S12-PR-003 **merged** (PR #8)
-**Current post-validation authority task:** `S12-R-008 — Post-Validation Reconciliation & Apply Design Authority`
-**Next implementation (blocked until R008 merges):** `S12-PR-004 — Excel Staging Apply Command & Provenance`
+**S12-R-008 starting baseline:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (label only; not evergreen current-main)
+**Live gate:** if `origin/main` lacks merged S12-R-008 / ADR 0029 → R008 active, PR-004 blocked; if present → R008 complete, PR-004 next authorized implementation
 **Base branch đề xuất (historical):** `s12-pr-002-excel-file-upload-parser-intake`
 **Ngày tạo:** 2026-07-11
 **Design authority:** Valora Design Book v1.3, Astryx Design System, Valora engineering guardrails và các ADR hiện hành (incl. ADR 0028/0029 for Apply).
@@ -648,17 +648,14 @@ Disposition key: only `FIXED`, `ACCEPTED WITH ADR`, `DEFERRED`, or `BLOCKED`. To
 
 # 13. Post-merge reconciliation note (S12-R-008) — 2026-07-14
 
-**Status:** Current authority reconciliation. Does not rewrite historical R-001…R-007 evidence above.
+**Status:** Authority reconciliation note. Does not rewrite historical R-001…R-007 evidence above.
 
-| Item | Current truth |
+| Item | Truth |
 | --- | --- |
 | S12-R-001…R-007 | Merged historically to `main` |
-| S12-PR-003 Validation Engine | **Merged / complete** — PR #8, merge commit `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` |
-| S12-R-008 | **Active** documentation task — Apply design authority (ADR 0029, contract §15) |
-| S12-PR-004 | **Next implementation** after R008 independent audit PASS + merge |
-| Apply production code | **Not started**; forbidden in R008 |
+| S12-PR-003 Validation Engine | **Merged / complete** — PR #8; **S12-R-008 starting baseline** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (not evergreen current-main) |
+| Live gate | If `origin/main` lacks merged S12-R-008 / ADR 0029 → **R008 active**, **PR-004 blocked**. If present → **R008 complete**, **PR-004 next authorized implementation** |
+| Apply production code | Forbidden while R008 is the active authority task |
 | Frontend Apply UX | Deferred; no task ID assigned in this package |
 
-Historical rows that said “S12-PR-003 blocked / DEFERRED / not started” remain **historical** process language for the pre-merge remediation period. They are **not** the current repository status.
-
-Do **not** start S12-PR-004 until S12-R-008 is merged. Do **not** invent Apply behavior outside ADR 0029 / contract §15.
+Agents must `git fetch origin` and verify live `origin/main`. Do not invent Apply behavior outside ADR 0029 / contract §15 (`contract_version = s12-pr-004-v1`).

@@ -8,13 +8,19 @@
 
 Valora is in the **Engineering Phase**.
 
-### Current phase (authoritative)
+### Current phase (authoritative — live gate)
 
 ```text
 Post-Validation Apply Authority
-Active documentation task: S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
-Next implementation task (blocked until R008 merges): S12-PR-004 Excel Staging Apply Command & Provenance
+
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
 ```
+
+**S12-R-008 starting baseline (not evergreen current-main):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened). Agents must fetch and verify live `origin/main`.
 
 ### Historical roadmap (completed slices)
 

@@ -1,9 +1,8 @@
 # Valora Engineering
 
 **Phase:** Engineering — post S12-PR-003 Validation Engine
-**Baseline `main`:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 squash-merge #8)
-**Active task:** `S12-R-008` — Post-Validation Reconciliation & Apply Design Authority
-**Next approved implementation task (blocked until R008 merges):** `S12-PR-004` — Excel Staging Apply Command & Provenance
+**S12-R-008 starting baseline (`main` at R008 open):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 squash-merge #8) — not an evergreen “current main” claim
+**Active / next task:** use the **live merge gate** below (agents must `git fetch origin` and verify `origin/main`)
 
 ## Product goal
 
@@ -17,12 +16,22 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Sprint 10–11 Live Workbench loop | Merged historically; readiness **superseded** by S12-R gates |
 | S12-PR-001 / S12-PR-002 Excel staging + upload | Merged historically; hardened by S12-R-006 |
 | **S12-R-001 … S12-R-007** | **Merged to `main`** (PRs #1–#7) |
-| **S12-PR-003** Validation Engine | **Merged / complete** (PR #8, `c2f154d…`) |
-| **S12-R-008** Apply design authority | **Active** — documentation / ADR / contract only |
-| S12-PR-004 Apply Command & Provenance | **Next implementation** only after S12-R-008 independent audit PASS and merge |
+| **S12-PR-003** Validation Engine | **Merged / complete** (PR #8; starting baseline for R008 work) |
+| **S12-R-008** Apply design authority | **Live gate** — active until ADR 0029 / R008 authority is on `main` |
+| S12-PR-004 Apply Command & Provenance | **Live gate** — authorized only after R008 merges |
 | Production-ready | **No** — remaining gates and product scope remain |
 
-S12-R-008 freezes Apply design authority (ADR 0029 + contract §15). Do **not** implement S12-PR-004 until R008 merges.
+### Live task gate (before vs after R008 merge)
+
+```text
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+```
+
+Agents must fetch and verify live `origin/main`. Do not claim an unknown future squash-merge SHA.
 
 ## Architecture (monorepo)
 

@@ -24,16 +24,33 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` are **histor
 
 ```text
 Engineering Phase / Post-Validation Apply Authority
-Active task: S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
 ```
 
-### Active task rules (S12-R-008)
+### Live task gate (fetch origin/main before acting)
+
+```text
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+```
+
+**S12-R-008 starting baseline (historical label, not evergreen current-main):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened).
+
+### While S12-R-008 is active (main lacks R008 / ADR 0029)
 
 ```text
 Documentation / design-authority only.
-No production code, tests, migrations, workflows, config, or dependency changes
-unless a separate implementation task (S12-PR-004) explicitly authorizes them
-after S12-R-008 merges.
+No production code, tests, migrations, workflows, config, or dependency changes.
+Do not implement S12-PR-004.
+```
+
+### After S12-R-008 merges (main contains R008 / ADR 0029)
+
+```text
+S12-PR-004 — Excel Staging Apply Command & Provenance
+is the next authorized active implementation task (backend only).
 ```
 
 ### Completed (do not re-open as “blocked / not started”)
@@ -42,22 +59,7 @@ after S12-R-008 merges.
 S12-PR-003 — Excel Staging Validation Engine — MERGED to main (PR #8)
 ```
 
-### Next implementation task (blocked until R008 acceptance + merge)
-
-```text
-S12-PR-004 — Excel Staging Apply Command & Provenance
-```
-
-May start **only after**:
-
-```text
-1. S12-R-008 Draft PR CI is green on the documentation head
-2. Independent audit PASS for S12-R-008
-3. S12-R-008 is merged to main
-4. Project handoff marks S12-PR-004 unblocked
-```
-
-Do **not** implement Apply inside an R008 session. Do **not** invent Apply behavior outside ADR 0029 / contract §15.
+Do **not** invent Apply behavior outside ADR 0029 / contract §15. Agents must `git fetch origin` and verify live `origin/main`.
 
 ## 3. Permanent Hard Rules
 

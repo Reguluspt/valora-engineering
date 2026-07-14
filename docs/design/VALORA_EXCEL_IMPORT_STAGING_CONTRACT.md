@@ -281,6 +281,7 @@ Reruns allowed from `validation_failed` and `ready_for_review` (and `parsed`). E
 **Authority:** Owner decision package 2026-07-14 + ADR 0029.
 **Implementation task:** `S12-PR-004 — Excel Staging Apply Command & Provenance` (backend only).
 **Gate:** Implementation must not start until S12-R-008 authority merges to `main`.
+**Contract version (frozen):** `s12-pr-004-v1` — every Apply success and failure audit uses this exact lowercase value; no aliases.
 
 ### A. Trigger, endpoint, permission
 
@@ -317,12 +318,12 @@ Apply uses only the following registered transformations. Raw `setattr`, wildcar
 
 | Staging input | Official target | Transformation |
 | --- | --- | --- |
-| `proposed_asset_name` | `asset_name` | Required; trim outer whitespace; non-empty; max 255 |
-| `proposed_description` | `description` | Optional; trim; blank → `null`; max 5000; authorized **only** through this Apply command (ADR 0028 / 0029) |
-| `proposed_quantity` | `quantity` | Blank/null → `1.0000`; otherwise finite Decimal `>= 0`, max 4 fractional and 11 integer digits; no silent rounding |
-| `proposed_unit` | `unit_id` | Blank/null → `null`; otherwise exactly one ACTIVE Unit matched case-insensitively by code or display name; symbol only when unique; unknown/ambiguous/inactive → whole Apply fails |
-| `proposed_raw_price` | `raw_price` | Blank/null → `null`; otherwise finite Decimal `>= 0`, max 2 fractional and 13 integer digits; no silent rounding |
-| `proposed_currency` | `raw_price_currency_id` | Blank/null → `null`; otherwise exactly one ACTIVE Currency matched case-insensitively by code or display name; **symbols not accepted**; unknown/ambiguous/inactive → whole Apply fails |
+| `proposed_asset_name` | `asset_name` | Required; trim outer Unicode whitespace; non-empty; max 255 |
+| `proposed_description` | `description` | Optional; trim outer Unicode whitespace; blank → `null`; max 5000; authorized **only** through this Apply command (ADR 0028 / 0029) |
+| `proposed_quantity` | `quantity` | Blank/null → `1.0000`; otherwise finite Decimal `>= 0`, max 4 fractional and 11 integer digits; no silent rounding; Decimal-only parse; scientific notation only if expanded value fits limits; never convert through float |
+| `proposed_unit` | `unit_id` | Blank/null → `null`; otherwise ACTIVE Unit lookup per deterministic mechanics below |
+| `proposed_raw_price` | `raw_price` | Blank/null → `null`; otherwise finite Decimal `>= 0`, max 2 fractional and 13 integer digits; no silent rounding; Decimal-only parse; never convert through float |
+| `proposed_currency` | `raw_price_currency_id` | Blank/null → `null`; otherwise ACTIVE Currency lookup per deterministic mechanics below |
 | constant | `review_status` | `pending` |
 | constant | `validation_status` | `unvalidated` |
 
@@ -330,9 +331,19 @@ Apply uses only the following registered transformations. Raw `setattr`, wildcar
 
 Invalid numeric or reference mapping → HTTP 400, `error_code=apply_mapping_invalid`.
 
+### C2. Deterministic mapping mechanics (frozen)
+
+- **Stage order:** `source_row_number ASC, id ASC`.
+- Official inserts and response `created_lines[]` use **that exact order**.
+- Trim outer **Unicode** whitespace.
+- Matching is **exact Unicode case-insensitive only**; no fuzzy, substring, accent folding, or auto-create of master data.
+- **Unit priority:** code → display name → unique symbol. A unique match at a higher tier **stops** lower tiers. Selected tier must resolve exactly one ACTIVE row; otherwise mapping invalid.
+- **Currency priority:** code → display name; **symbols forbidden**. Selected tier must resolve exactly one ACTIVE row; otherwise mapping invalid.
+- **Decimal-only parsing.** Scientific notation allowed only when the expanded value fits approved Numeric integer/scale limits. Never convert through float and never round.
+
 ### D. Creation, atomicity, and immutability
 
-- Creates **one new** `ProjectAssetLine` per eligible staging row.
+- Creates **one new** `ProjectAssetLine` per eligible staging row (in stage order above).
 - No update, upsert, name-based deduplication, replace, or delete of existing official lines.
 - All lines, lineage, batch transition to `applied`, and success audit commit in **one transaction**.
 - Any mapping, lookup, constraint, flush, savepoint, audit, or outer-commit failure rolls back the entire attempt.
@@ -356,6 +367,34 @@ scoped Project FOR UPDATE → scoped import batch FOR UPDATE → ordered staging
 Pre-attempt generation fingerprint includes: project status; batch status, source filename/sheet, counters; ordered staging row IDs and source row numbers; all registered proposed inputs used by Apply; row validation status/errors/warnings; latest upload, validation-success, and Apply-success audit IDs.
 
 On engine/commit failure: full rollback; re-lock; write failure audit only if the fingerprint still matches. Stale failures must not overwrite a newer upload, validation, or Apply generation.
+
+### F2. Failure-state preservation (frozen)
+
+Every rejected or failed Apply preserves **exactly**:
+
+- batch status;
+- source filename and sheet;
+- all counters;
+- staging rows, raw/mapped values, validation statuses/errors/warnings;
+- all pre-existing official lines and lineage.
+
+For an eligible (confirmed, scoped) attempt that fails mapping or engine recovery, the batch remains `ready_for_review`. **Do not** introduce batch status `apply_failed`. Only the append-only failure audit permitted by the audit cardinality matrix may be new.
+
+### F3. Audit cardinality matrix (frozen)
+
+| Outcome | Success audit | Failure audit |
+| --- | ---: | ---: |
+| confirmation missing/false | 0 | 0 |
+| safe 404 / inaccessible target | 0 | 0 |
+| project not DRAFT | 0 | 0 |
+| batch state not allowed / rows not ready / re-apply | 0 | 0 |
+| successful Apply | exactly 1 | 0 |
+| mapping invalid after confirmed, scoped attempt | 0 | exactly 1 if fingerprint matches |
+| engine/savepoint/flush/outer-commit failure | 0 | exactly 1 if fingerprint matches and failure audit persists |
+| stale fingerprint mismatch | 0 | 0 |
+| failure-audit persistence failure | 0 | 0; preserve generation and return safe 500 |
+
+Repeated confirmed mapping failures may each create one failure audit. Never include raw/proposed values in failure audits.
 
 ### G. Lifecycle after success
 
@@ -383,6 +422,8 @@ Imported lines set both fields. Manual lines leave both null. Uniqueness of `sou
 Success payload keys only: `contract_version`, `organization_id`, `project_id`, `batch_id`, `source_status`, `target_status`, `total_rows`, `created_count`.
 
 Failure payload keys only: `contract_version`, `organization_id`, `project_id`, `batch_id`, `source_status`, `error_code`.
+
+In both payloads, `contract_version` **must** be exactly `s12-pr-004-v1`.
 
 Payloads must not include raw cells, proposed business values, SQL, paths, stack traces, secrets, or bulk line IDs.
 
