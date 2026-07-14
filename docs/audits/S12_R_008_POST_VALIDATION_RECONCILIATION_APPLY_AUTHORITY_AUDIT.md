@@ -3,23 +3,58 @@
 ## Status
 
 ```text
-S12-R-008 CORRECTIVE AUTHORITY COMPLETE — AWAITING DRAFT PR, CI, AND INDEPENDENT RE-AUDIT
+S12-R-008 DRAFT PR CI VALIDATED — AWAITING FINAL INDEPENDENT AUDIT
 ```
 
 | Field | Value |
 | --- | --- |
 | Task | S12-R-008 Post-Validation Reconciliation & Apply Design Authority |
 | Mode | Documentation / design authority only |
-| Independent audit (prior) | **PASS WITH FIXES** — merge blocked pending corrective authority |
+| Independent corrective-authority re-audit | **PASS — READY FOR DRAFT PR AND CI** (F-1…F-5 closed) |
 | S12-R-008 starting baseline | `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 PR #8; label only, not evergreen current-main) |
 | Branch | `s12-r-008-post-validation-reconciliation-apply-authority` |
 | Commit A | `18725a6fafca1e630b09da2fc6b24e5a12ae9f69` |
 | Commit B | `6b70bcd56970ba71eff1e111d23b78f826755b69` |
 | Commit C (corrective) | `39352d15b63ecd06deecad0b69d9f9776d55887f` |
-| Commit D | this audit-only corrective evidence commit |
-| Draft PR | **Not created in corrective session** |
-| CI | **Pending** Draft PR / branch CI |
-| Independent re-audit | **Pending** |
+| Commit D | `d842a2ed9067893cb95cda133747f5afb68cce60` |
+| Code-bearing / corrective documentation head | `d842a2ed9067893cb95cda133747f5afb68cce60` |
+| Draft PR | **#9** — https://github.com/Reguluspt/valora-engineering/pull/9 (open, draft=true) |
+| Final independent audit | **Pending** |
+
+## Draft PR and CI evidence (process slice)
+
+### PR
+
+| Field | Value |
+| --- | --- |
+| Number / URL | #9 / https://github.com/Reguluspt/valora-engineering/pull/9 |
+| Base | `main` |
+| Head branch | `s12-r-008-post-validation-reconciliation-apply-authority` |
+| Head SHA (code-bearing CI) | `d842a2ed9067893cb95cda133747f5afb68cce60` |
+| Draft | **true** (not Ready; not merged) |
+
+### Authoritative CI on head `d842a2e…`
+
+| Run | Event | Conclusion | Jobs | Backend |
+| --- | --- | --- | --- | --- |
+| **29320435686** (#118) | push | SUCCESS | backend/worker/frontend SUCCESS | **410 passed, 0 skipped, 27 warnings** |
+| **29322616643** (#119) | pull_request | SUCCESS | backend/worker/frontend SUCCESS | **410 passed, 0 skipped, 27 warnings** |
+
+- https://github.com/Reguluspt/valora-engineering/actions/runs/29320435686
+- https://github.com/Reguluspt/valora-engineering/actions/runs/29322616643
+
+PostgreSQL former-local-skip count: **0** (410 collected/passed; no skipped nodes in backend summary).
+
+### Documentation-head CI
+
+Recorded after this audit-only evidence commit (see Actions on the new HEAD). Require zero PG skips and all jobs green before treating documentation head as validated.
+
+### Remaining limitations
+
+- S12-PR-004 not implemented
+- No Apply UI / AI / worker / auto-apply
+- Final independent audit still required
+- PR remains Draft; no Ready/merge in this process slice
 
 ## Scope
 
