@@ -1,18 +1,12 @@
 """S12-PR-004 acceptance closure proofs A-1..A-8."""
 from __future__ import annotations
 
-import os
 import tempfile
-import threading
-import time
-import uuid
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 
 from app.modules.excel_import.application.apply_staging import (
     FAILURE_EVENT,
@@ -74,7 +68,7 @@ class TestA1SelectedTierResolution:
 
     def test_inactive_code_blocks_active_display_fallback(self):
         # inactive unit with code X; active unit with display_name X
-        # Selected tier is code (1 match, inactive) → reject; no fallback to display.
+        # Selected tier is code (1 match, inactive) â†’ reject; no fallback to display.
         self.h.db.add(
             Unit(code="X", display_name="Other", symbol="xo", status=ReferenceStatus.INACTIVE)
         )
@@ -91,7 +85,7 @@ class TestA1SelectedTierResolution:
         assert r.json()["detail"]["error_code"] == "apply_mapping_invalid"
 
     def test_ambiguous_display_rejects(self):
-        # Two display matches (active+inactive) select display tier → ambiguous → reject.
+        # Two display matches (active+inactive) select display tier â†’ ambiguous â†’ reject.
         self.h.db.add(
             Unit(code="D1", display_name="Same", symbol="a1", status=ReferenceStatus.ACTIVE)
         )
@@ -111,7 +105,7 @@ class TestA1SelectedTierResolution:
         )
 
     def test_inactive_display_blocks_active_symbol(self):
-        # Display tier selected with single inactive match → reject; no symbol fallback.
+        # Display tier selected with single inactive match â†’ reject; no symbol fallback.
         self.h.db.add(
             Unit(
                 code="ID1",
@@ -155,12 +149,13 @@ class TestA1SelectedTierResolution:
         assert line.unit_id == self.h.unit.id
 
     def test_unique_active_symbol_resolves(self):
+        # Resolve via unique ACTIVE symbol (Unicode casefold exact match).
         self.h.add_row(name="N", unit="cái")
         r = self.h.client().post(
             f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
             json={"confirm": True},
         )
-        assert r.status_code == 200
+        assert r.status_code == 200, r.text
         line = (
             self.h.db.query(ProjectAssetLine)
             .filter_by(source_import_batch_id=self.h.batch.id)
@@ -202,7 +197,7 @@ class TestA1SelectedTierResolution:
         assert line.raw_price_currency_id == self.h.cur.id
 
     def test_currency_symbol_forbidden_even_unique(self):
-        self.h.add_row(name="N", currency="₫")
+        self.h.add_row(name="N", currency="â‚«")
         r = self.h.client().post(
             f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
             json={"confirm": True},
@@ -413,7 +408,7 @@ class TestA3FlushAndStale:
     def test_flush_failure_after_partial_insert(self, monkeypatch):
         self.h.add_row(name="A", source_row_number=1)
         self.h.add_row(name="B", source_row_number=2)
-        # Capture IDs before monkeypatch — attribute access can autoflush.
+        # Capture IDs before monkeypatch â€” attribute access can autoflush.
         org_id = self.h.org.id
         project_id = self.h.project.id
         batch_id = self.h.batch.id
@@ -698,316 +693,7 @@ class TestA7ScannerFailClosed:
             assert issues >= 2
 
 
-def _pg_url():
-    pg = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
-    if not pg or "postgres" not in pg:
-        return None
-    return pg
 
+# PostgreSQL matrix nodes live in test_s12_pr_004_proof_matrix.py (M-1).
+# This module retains SQLite acceptance proofs only; no placeholder PG runners.
 
-def _wait_lock(engine, pid, timeout=30.0):
-    deadline = time.monotonic() + timeout
-    last = None
-    while time.monotonic() < deadline:
-        with engine.connect() as conn:
-            last = conn.execute(
-                text(
-                    "SELECT wait_event_type FROM pg_stat_activity WHERE pid = :pid"
-                ),
-                {"pid": pid},
-            ).first()
-            if last is not None and last[0] == "Lock":
-                return last
-        time.sleep(0.05)
-    raise AssertionError(f"pid={pid} never Lock; last={last}")
-
-
-# Seven named PG matrix nodes — skip without PostgreSQL (SKIPPED != PASS)
-@pytest.mark.parametrize(
-    "node_id",
-    [
-        "pg_apply_vs_apply_lock_wait",
-        "pg_upload_holds_apply_waits",
-        "pg_apply_holds_upload_waits",
-        "pg_validate_holds_apply_waits",
-        "pg_apply_holds_validate_waits",
-        "pg_workflow_holds_apply_waits",
-        "pg_apply_holds_workflow_waits",
-    ],
-)
-def test_pg_matrix_node_inventory(node_id):
-    if not _pg_url():
-        pytest.skip(f"SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL ({node_id})")
-    # When PG available, execute the existing Apply-vs-Apply proof for apply node;
-    # other nodes require full seed helpers — implement via shared runner below.
-    if node_id == "pg_apply_vs_apply_lock_wait":
-        from tests.test_s12_pr_004_staging_apply import TestPGApplyConcurrency
-
-        TestPGApplyConcurrency().test_pg_apply_vs_apply_exact_once()
-        return
-    if node_id == "pg_apply_holds_validate_waits":
-        from tests.test_s12_pr_004_corrective_proof import TestPGApplyMatrixCorrective
-
-        TestPGApplyMatrixCorrective().test_pg_apply_holds_then_validate_waits()
-        return
-    # Remaining nodes: real multi-session with lock wait + generation assertions
-    _run_pg_serial_node(node_id)
-
-
-def _run_pg_serial_node(node_id: str):
-    """Minimal real multi-session seeds for remaining matrix nodes."""
-    pg = _pg_url()
-    engine = create_engine(pg)
-    SessionLocal = sessionmaker(bind=engine)
-    from app.modules.project_master_data.models import (
-        Customer,
-        CustomerStatus,
-        ImportRowValidationStatus,
-        OrganizationProfile,
-        OrganizationStatus,
-        Project,
-        ProjectAssetImportBatch,
-        ProjectAssetImportStagingRow,
-        ProjectWorkflowStatus,
-        Role,
-        User,
-        UserRole,
-        UserStatus,
-    )
-
-    s = SessionLocal()
-    ids = {}
-    try:
-        uid = uuid.uuid4().hex[:8]
-        org = OrganizationProfile(
-            legal_name=f"O{uid}", organization_slug=f"o{uid}", status=OrganizationStatus.ACTIVE
-        )
-        s.add(org)
-        s.commit()
-        role = Role(
-            code=f"r{uid}",
-            display_name="R",
-            permissions=["workbench:edit", "project:read", "project:update"],
-        )
-        s.add(role)
-        s.commit()
-        user = User(
-            organization_id=org.id,
-            email=f"u{uid}@t.com",
-            full_name="U",
-            status=UserStatus.ACTIVE,
-        )
-        s.add(user)
-        s.commit()
-        s.add(UserRole(user_id=user.id, role_id=role.id, is_active=True))
-        s.commit()
-        cust = Customer(
-            organization_id=org.id,
-            legal_name="C",
-            status=CustomerStatus.ACTIVE,
-            created_by=user.id,
-        )
-        s.add(cust)
-        s.commit()
-        project = Project(
-            organization_id=org.id,
-            customer_id=cust.id,
-            code=f"C{uid[:6]}",
-            name="P",
-            status=ProjectWorkflowStatus.DRAFT,
-            created_by=user.id,
-        )
-        s.add(project)
-        s.commit()
-        batch = ProjectAssetImportBatch(
-            organization_id=org.id,
-            project_id=project.id,
-            source_filename="x.xlsx",
-            source_sheet_name="Sheet1",
-            status=ImportBatchStatus.READY_FOR_REVIEW,
-            total_rows=1,
-            valid_rows=1,
-            invalid_rows=0,
-            warning_rows=0,
-            created_by_user_id=user.id,
-        )
-        s.add(batch)
-        s.commit()
-        s.add(
-            ProjectAssetImportStagingRow(
-                organization_id=org.id,
-                project_id=project.id,
-                import_batch_id=batch.id,
-                source_row_number=1,
-                raw_values={},
-                mapped_values={},
-                normalized_preview={},
-                validation_status=ImportRowValidationStatus.VALID,
-                validation_errors=[],
-                validation_warnings=[],
-                proposed_asset_name="PG",
-                proposed_quantity="1",
-            )
-        )
-        s.commit()
-        ids = {
-            "org": org.id,
-            "project": project.id,
-            "batch": batch.id,
-            "user": user.id,
-            "role": role.id,
-            "cust": cust.id,
-        }
-    finally:
-        s.close()
-
-    hold = threading.Event()
-    release = threading.Event()
-    wait_pid = []
-    errors = []
-
-    import app.modules.excel_import.application.apply_staging as ap
-
-    orig_fp = ap.build_apply_fingerprint
-
-    def gate_fp(db, **kw):
-        hold.set()
-        assert release.wait(timeout=30)
-        return orig_fp(db, **kw)
-
-    def first_holder():
-        sess = SessionLocal()
-        try:
-            u = sess.query(User).filter_by(id=ids["user"]).one()
-            if node_id in (
-                "pg_apply_holds_upload_waits",
-                "pg_apply_holds_workflow_waits",
-            ):
-                ap.build_apply_fingerprint = gate_fp
-                apply_project_asset_import_batch(
-                    sess,
-                    org_id=ids["org"],
-                    project_id=ids["project"],
-                    batch_id=ids["batch"],
-                    current_user=u,
-                    confirm=True,
-                )
-            elif node_id == "pg_validate_holds_apply_waits":
-                # hold project/batch via FOR UPDATE then wait
-                p = (
-                    sess.query(Project)
-                    .filter_by(id=ids["project"])
-                    .with_for_update()
-                    .first()
-                )
-                b = (
-                    sess.query(ProjectAssetImportBatch)
-                    .filter_by(id=ids["batch"])
-                    .with_for_update()
-                    .first()
-                )
-                assert p and b
-                hold.set()
-                assert release.wait(timeout=30)
-                sess.rollback()
-            elif node_id == "pg_upload_holds_apply_waits":
-                b = (
-                    sess.query(ProjectAssetImportBatch)
-                    .filter_by(id=ids["batch"])
-                    .with_for_update()
-                    .first()
-                )
-                assert b
-                hold.set()
-                assert release.wait(timeout=30)
-                sess.rollback()
-            elif node_id == "pg_workflow_holds_apply_waits":
-                p = (
-                    sess.query(Project)
-                    .filter_by(id=ids["project"])
-                    .with_for_update()
-                    .first()
-                )
-                assert p
-                hold.set()
-                assert release.wait(timeout=30)
-                p.status = ProjectWorkflowStatus.SUBMITTED
-                sess.commit()
-            else:
-                hold.set()
-                assert release.wait(timeout=30)
-        except Exception as e:
-            errors.append(("holder", e))
-            release.set()
-        finally:
-            ap.build_apply_fingerprint = orig_fp
-            sess.close()
-
-    def second_waiter():
-        sess = SessionLocal()
-        try:
-            assert hold.wait(timeout=30)
-            wait_pid.append(sess.execute(text("SELECT pg_backend_pid()")).scalar())
-            u = sess.query(User).filter_by(id=ids["user"]).one()
-            if node_id in (
-                "pg_upload_holds_apply_waits",
-                "pg_validate_holds_apply_waits",
-                "pg_workflow_holds_apply_waits",
-            ):
-                apply_project_asset_import_batch(
-                    sess,
-                    org_id=ids["org"],
-                    project_id=ids["project"],
-                    batch_id=ids["batch"],
-                    current_user=u,
-                    confirm=True,
-                )
-            elif node_id == "pg_apply_holds_upload_waits":
-                # attempt batch lock as upload would
-                sess.query(ProjectAssetImportBatch).filter_by(
-                    id=ids["batch"]
-                ).with_for_update().first()
-            elif node_id == "pg_apply_holds_workflow_waits":
-                sess.query(Project).filter_by(id=ids["project"]).with_for_update().first()
-                p = sess.query(Project).filter_by(id=ids["project"]).one()
-                p.status = ProjectWorkflowStatus.SUBMITTED
-                sess.commit()
-        except Exception as e:
-            errors.append(("waiter", e))
-        finally:
-            sess.close()
-
-    t1 = threading.Thread(target=first_holder)
-    t1.start()
-    assert hold.wait(timeout=30)
-    t2 = threading.Thread(target=second_waiter)
-    t2.start()
-    deadline = time.monotonic() + 30
-    while not wait_pid and time.monotonic() < deadline:
-        time.sleep(0.02)
-    if wait_pid:
-        _wait_lock(engine, wait_pid[0])
-    release.set()
-    t1.join(timeout=90)
-    t2.join(timeout=90)
-    assert not t1.is_alive() and not t2.is_alive()
-    # cleanup
-    s = SessionLocal()
-    try:
-        s.query(ProjectAssetLine).filter_by(source_import_batch_id=ids["batch"]).delete()
-        s.query(ProjectAssetImportStagingRow).filter_by(
-            import_batch_id=ids["batch"]
-        ).delete()
-        s.query(AuditEvent).filter(AuditEvent.entity_id == ids["batch"]).delete(
-            synchronize_session=False
-        )
-        s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).delete()
-        s.query(Project).filter_by(id=ids["project"]).delete()
-        s.query(Customer).filter_by(id=ids["cust"]).delete()
-        s.query(UserRole).filter_by(user_id=ids["user"]).delete()
-        s.query(User).filter_by(id=ids["user"]).delete()
-        s.query(Role).filter_by(id=ids["role"]).delete()
-        s.query(OrganizationProfile).filter_by(id=ids["org"]).delete()
-        s.commit()
-    finally:
-        s.close()

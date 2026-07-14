@@ -196,3 +196,57 @@ def test_approved_apply_implementation_passes_scanner():
     monorepo = os.path.abspath(os.path.join(backend_root, ".."))
     issues = m.check_apply_path_blockers(monorepo)
     assert issues == 0, f"Approved Apply implementation must pass scanner, got {issues}"
+
+
+def test_apply_update_upsert_merge_blockers():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).with_for_update().all()\n"
+                "    db.query(ProjectAssetLine).filter_by(id=x).update({})\n"
+                "    db.merge(line)\n"
+                "    db.bulk_update_mappings(ProjectAssetLine, [])\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues >= 3, f"Expected update/merge/bulk blockers, got {issues}"
+
+
+def test_apply_preexisting_line_assign_blocker():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).with_for_update().all()\n"
+                "    existing_line.asset_name = 'x'\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues > 0, "Expected pre-existing line update blocker"
+
+
+def test_apply_endpoint_missing_workbench_edit():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).with_for_update().all()\n"
+            )
+        api_dir = os.path.join(tmp, "app", "api")
+        os.makedirs(api_dir, exist_ok=True)
+        with open(os.path.join(api_dir, "projects.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "@router.post('/x/apply')\n"
+                "def apply_project_asset_import_batch_endpoint():\n"
+                "    return apply_project_asset_import_batch()\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues > 0, "Expected missing workbench:edit blocker"

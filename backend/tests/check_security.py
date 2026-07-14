@@ -89,6 +89,18 @@ class ExcelIntakeSecurityVisitor(ast.NodeVisitor):
 class ApplyStagingSecurityVisitor(ast.NodeVisitor):
     """AST fail-closed checks for apply_staging.py."""
 
+    FORBIDDEN_MUTATORS = frozenset(
+        {
+            "update",
+            "delete",
+            "merge",
+            "upsert",
+            "bulk_update_mappings",
+            "bulk_insert_mappings",
+            "bulk_save_objects",
+        }
+    )
+
     def __init__(self):
         self.issues = []
         self.has_staging_for_update = False
@@ -98,12 +110,30 @@ class ApplyStagingSecurityVisitor(ast.NodeVisitor):
         # setattr(...)
         if isinstance(node.func, ast.Name) and node.func.id == "setattr":
             self.issues.append((node.lineno, "Apply uses raw setattr", "setattr()"))
-        # .delete() chained after ProjectAssetLine query is hard; flag Attribute delete on query results
-        if isinstance(node.func, ast.Attribute) and node.func.attr == "delete":
-            self.issues.append((node.lineno, "Apply may delete rows", ".delete()"))
-        # with_for_update on any call chain involving ProjectAssetImportStagingRow tracked via source
+        if isinstance(node.func, ast.Name) and node.func.id in ("merge", "upsert"):
+            self.issues.append(
+                (node.lineno, "Apply uses merge/upsert", f"{node.func.id}()")
+            )
+        # .delete() / .update() / merge / replace / bulk_* targeting official lines
+        if isinstance(node.func, ast.Attribute) and node.func.attr in self.FORBIDDEN_MUTATORS:
+            if self._chain_queries_asset_line(node.func.value) or node.func.attr in (
+                "delete",
+                "merge",
+                "upsert",
+                "bulk_update_mappings",
+                "bulk_insert_mappings",
+                "bulk_save_objects",
+            ):
+                # Always block delete/update/merge/upsert/bulk on Apply path
+                self.issues.append(
+                    (
+                        node.lineno,
+                        "Apply mutates/deletes official lines",
+                        f".{node.func.attr}()",
+                    )
+                )
+        # with_for_update on any call chain involving ProjectAssetImportStagingRow
         if isinstance(node.func, ast.Attribute) and node.func.attr == "with_for_update":
-            # walk receiver for query(ProjectAssetImportStagingRow)
             if self._chain_queries_staging(node.func.value):
                 self.has_staging_for_update = True
         self.generic_visit(node)
@@ -113,28 +143,55 @@ class ApplyStagingSecurityVisitor(ast.NodeVisitor):
             self.issues.append((node.lineno, "Apply reads raw_values", "raw_values"))
         self.generic_visit(node)
 
-    def _chain_queries_staging(self, node) -> bool:
-        """True if call chain includes query(ProjectAssetImportStagingRow)."""
+    def visit_Assign(self, node):
+        # Flag assignment to attributes on a name that looks like a pre-existing line update
+        # e.g. existing_line.asset_name = ... after query(ProjectAssetLine)
+        for t in node.targets:
+            if isinstance(t, ast.Attribute) and isinstance(t.value, ast.Name):
+                if t.value.id in (
+                    "existing",
+                    "existing_line",
+                    "preexisting",
+                    "old_line",
+                    "manual",
+                    "prior_line",
+                ):
+                    self.issues.append(
+                        (
+                            node.lineno,
+                            "Apply updates pre-existing ProjectAssetLine",
+                            f"{t.value.id}.{t.attr} = ...",
+                        )
+                    )
+        self.generic_visit(node)
+
+    def _chain_queries_model(self, node, model_names: set[str]) -> bool:
         cur = node
         while isinstance(cur, ast.Call):
             if isinstance(cur.func, ast.Attribute) and cur.func.attr == "query":
                 for arg in cur.args:
-                    if isinstance(arg, ast.Name) and arg.id == "ProjectAssetImportStagingRow":
-                        self.staging_query_seen = True
+                    if isinstance(arg, ast.Name) and arg.id in model_names:
                         return True
-                    if isinstance(arg, ast.Attribute) and arg.attr == "ProjectAssetImportStagingRow":
-                        self.staging_query_seen = True
+                    if isinstance(arg, ast.Attribute) and arg.attr in model_names:
                         return True
             if isinstance(cur.func, ast.Attribute):
                 cur = cur.func.value
             else:
                 break
-        # also walk attributes
         while isinstance(cur, ast.Attribute):
             cur = cur.value
             if isinstance(cur, ast.Call):
-                return self._chain_queries_staging(cur)
+                return self._chain_queries_model(cur, model_names)
         return False
+
+    def _chain_queries_staging(self, node) -> bool:
+        hit = self._chain_queries_model(node, {"ProjectAssetImportStagingRow"})
+        if hit:
+            self.staging_query_seen = True
+        return hit
+
+    def _chain_queries_asset_line(self, node) -> bool:
+        return self._chain_queries_model(node, {"ProjectAssetLine"})
 
 
 def check_apply_path_blockers(directory):
