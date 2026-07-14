@@ -24,8 +24,12 @@ from app.modules.excel_import.domain.validation_rules import (
 from app.modules.excel_import.application.validate_staging import (
     FAILURE_EVENT,
     SUCCESS_EVENT,
+    build_validation_fingerprint,
     validate_project_asset_import_batch,
 )
+from app.modules.excel_import.application.import_service import upload_excel_file_orchestrator
+import io
+import openpyxl
 from app.modules.project_master_data.models import (
     AuditEvent,
     Customer,
@@ -100,6 +104,74 @@ class TestValidationRulesCatalog:
         _, _, warnings = evaluate_row("A", None)
         assert warnings == []
         assert all("year" not in str(w).lower() for w in warnings)
+
+
+class TestFingerprintNullAwareness:
+    """F-1: fingerprint preserves null vs string distinctions."""
+
+    def setup_method(self):
+        self.h = ValidationHarness()
+
+    def teardown_method(self):
+        self.h.close()
+
+    def _fp_for(self, name, qty):
+        self.h.db.query(ProjectAssetImportStagingRow).filter_by(
+            import_batch_id=self.h.batch.id
+        ).delete()
+        self.h.db.commit()
+        self.h.add_row(name, qty)
+        self.h.db.refresh(self.h.batch)
+        return build_validation_fingerprint(self.h.db, self.h.batch)
+
+    def test_fingerprint_differs_null_vs_literal_none_asset_name(self):
+        a = self._fp_for(None, "1")
+        b = self._fp_for("None", "1")
+        assert a["validation_inputs"] != b["validation_inputs"]
+        assert a != b
+
+    def test_fingerprint_differs_null_vs_literal_none_quantity(self):
+        a = self._fp_for("A", None)
+        b = self._fp_for("A", "None")
+        assert a["validation_inputs"] != b["validation_inputs"]
+        assert a != b
+
+    def test_fingerprint_differs_empty_string_vs_null(self):
+        a = self._fp_for("", "1")
+        b = self._fp_for(None, "1")
+        assert a["validation_inputs"][0][0] == ""
+        assert b["validation_inputs"][0][0] is None
+        assert a != b
+
+    def test_fingerprint_identical_typed_inputs_same_generation(self):
+        self.h.db.query(ProjectAssetImportStagingRow).filter_by(
+            import_batch_id=self.h.batch.id
+        ).delete()
+        self.h.db.commit()
+        self.h.add_row("A", "1")
+        c1 = build_validation_fingerprint(self.h.db, self.h.batch)
+        c2 = build_validation_fingerprint(self.h.db, self.h.batch)
+        assert c1 == c2
+        assert c1["validation_inputs"] == [("A", "1")]
+
+    def test_fingerprint_row_order_deterministic_by_id(self):
+        self.h.db.query(ProjectAssetImportStagingRow).filter_by(
+            import_batch_id=self.h.batch.id
+        ).delete()
+        self.h.db.commit()
+        self.h.add_row("B", "2")
+        self.h.add_row("A", "1")
+        fp = build_validation_fingerprint(self.h.db, self.h.batch)
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        assert fp["staging_row_ids"] == [r.id for r in rows]
+        assert fp["validation_inputs"] == [
+            (r.proposed_asset_name, r.proposed_quantity) for r in rows
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -516,6 +588,59 @@ class TestValidationTransactionsAudits:
     def teardown_method(self):
         self.h.close()
 
+    def _snapshot(self):
+        self.h.db.expire_all()
+        self.h.db.refresh(self.h.batch)
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        return {
+            "status": self.h.batch.status,
+            "total_rows": self.h.batch.total_rows,
+            "valid_rows": self.h.batch.valid_rows,
+            "invalid_rows": self.h.batch.invalid_rows,
+            "warning_rows": self.h.batch.warning_rows,
+            "row_ids": [r.id for r in rows],
+            "proposed": [(r.proposed_asset_name, r.proposed_quantity) for r in rows],
+            "val_status": [r.validation_status for r in rows],
+            "val_errors": [list(r.validation_errors or []) for r in rows],
+            "val_warnings": [list(r.validation_warnings or []) for r in rows],
+            "success_ids": [
+                e.id
+                for e in self.h.db.query(AuditEvent)
+                .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
+                .order_by(AuditEvent.created_at)
+                .all()
+            ],
+            "failure_ids": [
+                e.id
+                for e in self.h.db.query(AuditEvent)
+                .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
+                .order_by(AuditEvent.created_at)
+                .all()
+            ],
+        }
+
+    def _assert_generation(self, snap):
+        cur = self._snapshot()
+        for k in (
+            "status",
+            "total_rows",
+            "valid_rows",
+            "invalid_rows",
+            "warning_rows",
+            "row_ids",
+            "proposed",
+            "val_status",
+            "val_errors",
+            "val_warnings",
+        ):
+            assert cur[k] == snap[k], k
+        self.h.assert_line_immutable()
+
     def test_success_audit_payload_safe_and_complete(self):
         self.h.add_row("A", "1")
         client = self.h.client_as(self.h.user)
@@ -548,37 +673,141 @@ class TestValidationTransactionsAudits:
         assert "raw_values" not in p
         assert "stack" not in str(p).lower()
 
-    def test_rule_engine_failure_rolls_back_and_may_record_failure(self, monkeypatch):
+    def test_rule_evaluation_failure_records_exact_failure_audit(self, monkeypatch):
         self.h.add_row("A", "1")
+        snap = self._snapshot()
         import app.modules.excel_import.application.validate_staging as vs
 
-        def boom(*a, **k):
-            raise RuntimeError("rule boom")
-
-        monkeypatch.setattr(vs, "_apply_validation_to_rows", boom)
+        monkeypatch.setattr(
+            vs,
+            "_apply_validation_to_rows",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("rule boom")),
+        )
         client = self.h.client_as(self.h.user)
         r = client.post(
             f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/validate"
         )
         assert r.status_code == 500
-        assert "Không thể kiểm tra" in r.json()["detail"]
+        assert r.json()["detail"] == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
         self.h.db.expire_all()
-        row = (
+        self.h.db.refresh(self.h.batch)
+        # fingerprint matched: engine failure marks validation_failed + one failure audit
+        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
+        fails = (
+            self.h.db.query(AuditEvent)
+            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
+            .all()
+        )
+        assert len(fails) == 1
+        p = fails[0].payload
+        assert p["error_code"] == "validation_engine_failed"
+        assert p["rule_set_version"] == "s12-pr-003-v1"
+        assert set(p.keys()) >= {
+            "rule_set_version",
+            "organization_id",
+            "project_id",
+            "batch_id",
+            "source_status",
+            "error_code",
+        }
+        assert "raw_values" not in p
+        # staging generation preserved except batch status/failure audit
+        rows = (
             self.h.db.query(ProjectAssetImportStagingRow)
             .filter_by(import_batch_id=self.h.batch.id)
-            .one()
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
         )
-        # prior pending/stale generation preserved or failure path set validation_failed
-        assert row.proposed_asset_name == "A"
+        assert [r.id for r in rows] == snap["row_ids"]
+        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
+        assert [r.validation_status for r in rows] == snap["val_status"]
+        assert self.h.db.query(AuditEvent).filter_by(
+            entity_id=self.h.batch.id, event_name=SUCCESS_EVENT
+        ).count() == 0
         self.h.assert_line_immutable()
 
-    def test_outer_commit_failure_preserves_generation(self, monkeypatch):
+    def test_flush_failure_after_audit_preserves_generation(self, monkeypatch):
         self.h.add_row("A", "1")
+        snap = self._snapshot()
+        import app.modules.excel_import.application.validate_staging as vs
+
+        orig_audit = vs._record_success_audit
+
+        def boom_after_audit(*a, **k):
+            orig_audit(*a, **k)
+            raise RuntimeError("flush-equivalent fail after audit")
+
+        monkeypatch.setattr(vs, "_record_success_audit", boom_after_audit)
+        with pytest.raises(HTTPException) as exc:
+            validate_project_asset_import_batch(
+                self.h.db,
+                org_id=self.h.org.id,
+                project_id=self.h.project.id,
+                batch_id=self.h.batch.id,
+                current_user=self.h.user,
+            )
+        assert exc.value.status_code == 500
+        assert "Không thể kiểm tra" in str(exc.value.detail)
+        self.h.db.expire_all()
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        assert [r.id for r in rows] == snap["row_ids"]
+        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
+        assert [r.validation_status for r in rows] == snap["val_status"]
+        # matched fingerprint → validation_failed + one failure audit
+        self.h.db.refresh(self.h.batch)
+        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
+        assert (
+            self.h.db.query(AuditEvent)
+            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
+            .count()
+            == 1
+        )
+        self.h.assert_line_immutable()
+
+    def test_savepoint_commit_failure_preserves_generation(self, monkeypatch):
+        self.h.add_row("A", "1")
+        snap = self._snapshot()
+
+        class FakeSP:
+            def commit(self):
+                raise RuntimeError("savepoint release fail")
+
+            def rollback(self):
+                return None
+
+        monkeypatch.setattr(self.h.db, "begin_nested", lambda: FakeSP())
+        with pytest.raises(HTTPException) as exc:
+            validate_project_asset_import_batch(
+                self.h.db,
+                org_id=self.h.org.id,
+                project_id=self.h.project.id,
+                batch_id=self.h.batch.id,
+                current_user=self.h.user,
+            )
+        assert exc.value.status_code == 500
+        self.h.db.expire_all()
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        assert [r.id for r in rows] == snap["row_ids"]
+        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
+        self.h.assert_line_immutable()
+
+    def test_outer_commit_failure_exact_failure_audit(self, monkeypatch):
+        self.h.add_row("A", "1")
+        snap = self._snapshot()
         orig = self.h.db.commit
         fail = {"n": 0}
 
         def mock_commit():
-            # fail the outer commit after nested success (first commit after savepoint)
             fail["n"] += 1
             if fail["n"] == 1:
                 raise RuntimeError("outer commit fail")
@@ -594,7 +823,71 @@ class TestValidationTransactionsAudits:
                 current_user=self.h.user,
             )
         assert exc.value.status_code == 500
+        assert "Không thể kiểm tra" in str(exc.value.detail)
         self.h.db.expire_all()
+        self.h.db.refresh(self.h.batch)
+        # After outer commit fail + recover with matching fingerprint
+        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
+        fails = (
+            self.h.db.query(AuditEvent)
+            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
+            .all()
+        )
+        assert len(fails) == 1
+        assert fails[0].payload["error_code"] == "validation_engine_failed"
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        assert [r.id for r in rows] == snap["row_ids"]
+        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
+        assert self.h.db.query(AuditEvent).filter_by(
+            entity_id=self.h.batch.id, event_name=SUCCESS_EVENT
+        ).count() == 0
+        self.h.assert_line_immutable()
+
+    def test_failure_audit_persistence_failure_preserves_pre_attempt(self, monkeypatch):
+        self.h.add_row("A", "1")
+        snap = self._snapshot()
+        import app.modules.excel_import.application.validate_staging as vs
+
+        monkeypatch.setattr(
+            vs,
+            "_apply_validation_to_rows",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("rule boom")),
+        )
+        monkeypatch.setattr(
+            vs,
+            "_record_failure_audit",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("audit fail")),
+        )
+        with pytest.raises(HTTPException) as exc:
+            validate_project_asset_import_batch(
+                self.h.db,
+                org_id=self.h.org.id,
+                project_id=self.h.project.id,
+                batch_id=self.h.batch.id,
+                current_user=self.h.user,
+            )
+        assert exc.value.status_code == 500
+        self.h.db.expire_all()
+        self.h.db.refresh(self.h.batch)
+        # recover also fails audit write → rollback; pre-attempt generation preserved
+        assert self.h.batch.status == snap["status"]
+        assert self.h.db.query(AuditEvent).filter_by(
+            entity_id=self.h.batch.id, event_name=FAILURE_EVENT
+        ).count() == 0
+        rows = (
+            self.h.db.query(ProjectAssetImportStagingRow)
+            .filter_by(import_batch_id=self.h.batch.id)
+            .order_by(ProjectAssetImportStagingRow.id)
+            .all()
+        )
+        assert [r.id for r in rows] == snap["row_ids"]
+        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
+        assert [r.validation_status for r in rows] == snap["val_status"]
         self.h.assert_line_immutable()
 
     def test_stale_failure_does_not_overwrite_newer_generation(self, monkeypatch):
@@ -604,18 +897,20 @@ class TestValidationTransactionsAudits:
         orig_recover = vs._recover_validation_failure
 
         def inject_newer(*args, **kwargs):
-            # After rollback window: land a newer ready_for_review generation
             self.h.batch.status = ImportBatchStatus.READY_FOR_REVIEW
             self.h.batch.valid_rows = 99
+            self.h.batch.total_rows = 1
+            self.h.batch.invalid_rows = 0
+            self.h.batch.warning_rows = 0
             self.h.db.commit()
             orig_recover(*args, **kwargs)
 
         monkeypatch.setattr(vs, "_recover_validation_failure", inject_newer)
-
-        def boom(*a, **k):
-            raise RuntimeError("x")
-
-        monkeypatch.setattr(vs, "_apply_validation_to_rows", boom)
+        monkeypatch.setattr(
+            vs,
+            "_apply_validation_to_rows",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")),
+        )
 
         with pytest.raises(HTTPException):
             validate_project_asset_import_batch(
@@ -635,6 +930,7 @@ class TestValidationTransactionsAudits:
             .count()
         )
         assert fails == 0
+        self.h.assert_line_immutable()
 
 
 class TestProjectAssetLineImmutabilityOnValidation:
@@ -657,105 +953,207 @@ class TestProjectAssetLineImmutabilityOnValidation:
         self.h.assert_line_immutable()
 
 
+def _pg_url():
+    pg = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not pg or "postgres" not in pg:
+        return None
+    return pg
+
+
+def _xlsx(rows):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    for r in rows:
+        ws.append([str(c) if c is not None else None for c in r])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+class FakeUpload:
+    def __init__(self, filename, content):
+        self.filename = filename
+        self.file = io.BytesIO(content)
+        self.size = len(content)
+
+
+class _PGSeed:
+    """Shared PostgreSQL seed/cleanup for concurrency matrix."""
+
+    def __init__(self, SessionLocal):
+        self.SessionLocal = SessionLocal
+        self.db = SessionLocal()
+        self.ids = {}
+
+    def seed(self, with_line=True):
+        db = self.db
+        uid = uuid.uuid4().hex[:8]
+        org = OrganizationProfile(
+            legal_name=f"PG-{uid}",
+            organization_slug=f"pg-{uid}",
+            status=OrganizationStatus.ACTIVE,
+        )
+        db.add(org)
+        db.commit()
+        role = Role(
+            code=f"e-{uid}",
+            display_name="E",
+            permissions=["project:read", "workbench:edit"],
+        )
+        db.add(role)
+        db.commit()
+        user = User(
+            organization_id=org.id,
+            email=f"u-{uid}@t.com",
+            full_name="U",
+            status=UserStatus.ACTIVE,
+        )
+        db.add(user)
+        db.commit()
+        db.add(UserRole(user_id=user.id, role_id=role.id, is_active=True))
+        db.commit()
+        cust = Customer(
+            organization_id=org.id,
+            legal_name="C",
+            status=CustomerStatus.ACTIVE,
+            created_by=user.id,
+        )
+        db.add(cust)
+        db.commit()
+        project = Project(
+            organization_id=org.id,
+            customer_id=cust.id,
+            code=f"PG{uid[:6]}",
+            name="P",
+            status=ProjectWorkflowStatus.DRAFT,
+            created_by=user.id,
+        )
+        db.add(project)
+        db.commit()
+        line = None
+        if with_line:
+            line = ProjectAssetLine(
+                project_id=project.id,
+                asset_name="Official",
+                quantity=1.0,
+                row_version=1,
+            )
+            db.add(line)
+            db.commit()
+        batch = ProjectAssetImportBatch(
+            organization_id=org.id,
+            project_id=project.id,
+            source_filename="pg.xlsx",
+            source_sheet_name="Sheet1",
+            status=ImportBatchStatus.PARSED,
+            created_by_user_id=user.id,
+        )
+        db.add(batch)
+        db.commit()
+        self.ids = {
+            "org": org.id,
+            "role": role.id,
+            "user": user.id,
+            "cust": cust.id,
+            "project": project.id,
+            "batch": batch.id,
+            "line": line.id if line else None,
+            "line_name": line.asset_name if line else None,
+            "line_qty": line.quantity if line else None,
+            "line_ver": line.row_version if line else None,
+        }
+        return self.ids
+
+    def add_rows(self, specs):
+        db = self.db
+        bid = self.ids["batch"]
+        for i, (name, qty) in enumerate(specs):
+            db.add(
+                ProjectAssetImportStagingRow(
+                    organization_id=self.ids["org"],
+                    project_id=self.ids["project"],
+                    import_batch_id=bid,
+                    source_row_number=i + 1,
+                    raw_values={"cells": []},
+                    mapped_values={},
+                    normalized_preview={},
+                    validation_status=ImportRowValidationStatus.PENDING,
+                    validation_errors=[],
+                    validation_warnings=[],
+                    proposed_asset_name=name,
+                    proposed_quantity=qty,
+                )
+            )
+        db.commit()
+
+    def assert_line(self):
+        if not self.ids.get("line"):
+            return
+        s = self.SessionLocal()
+        try:
+            line = s.query(ProjectAssetLine).filter_by(id=self.ids["line"]).one()
+            assert line.asset_name == self.ids["line_name"]
+            assert line.quantity == self.ids["line_qty"]
+            assert line.row_version == self.ids["line_ver"]
+        finally:
+            s.close()
+
+    def cleanup(self):
+        s = self.SessionLocal()
+        try:
+            bid = self.ids["batch"]
+            s.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=bid).delete()
+            s.query(AuditEvent).filter(AuditEvent.entity_id == bid).delete(
+                synchronize_session=False
+            )
+            s.query(ProjectAssetImportBatch).filter_by(id=bid).delete()
+            if self.ids.get("line"):
+                s.query(ProjectAssetLine).filter_by(id=self.ids["line"]).delete()
+            s.query(Project).filter_by(id=self.ids["project"]).delete()
+            s.query(Customer).filter_by(id=self.ids["cust"]).delete()
+            s.query(UserRole).filter_by(user_id=self.ids["user"]).delete()
+            s.query(User).filter_by(id=self.ids["user"]).delete()
+            s.query(Role).filter_by(id=self.ids["role"]).delete()
+            s.query(OrganizationProfile).filter_by(id=self.ids["org"]).delete()
+            s.commit()
+        finally:
+            s.close()
+            self.db.close()
+
+
 class TestPGValidationConcurrency:
-    def test_same_batch_serializes_under_postgres(self):
-        pg = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
-        if not pg or "postgres" not in pg:
+    """PostgreSQL concurrency matrix PG-A..PG-D (skip without PG)."""
+
+    def test_pg_a_two_validations_same_batch_both_succeed(self):
+        pg = _pg_url()
+        if not pg:
             pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
 
         engine = create_engine(pg)
         SessionLocal = sessionmaker(bind=engine)
-        db = SessionLocal()
+        seed = _PGSeed(SessionLocal)
         try:
-            org = OrganizationProfile(
-                legal_name=f"PG-{uuid.uuid4().hex[:8]}",
-                organization_slug=f"pg-{uuid.uuid4().hex[:8]}",
-                status=OrganizationStatus.ACTIVE,
-            )
-            db.add(org)
-            db.commit()
-            role = Role(
-                code=f"e-{uuid.uuid4().hex[:6]}",
-                display_name="E",
-                permissions=["project:read", "workbench:edit"],
-            )
-            db.add(role)
-            db.commit()
-            user = User(
-                organization_id=org.id,
-                email=f"u-{uuid.uuid4().hex[:8]}@t.com",
-                full_name="U",
-                status=UserStatus.ACTIVE,
-            )
-            db.add(user)
-            db.commit()
-            db.add(UserRole(user_id=user.id, role_id=role.id, is_active=True))
-            db.commit()
-            cust = Customer(
-                organization_id=org.id,
-                legal_name="C",
-                status=CustomerStatus.ACTIVE,
-                created_by=user.id,
-            )
-            db.add(cust)
-            db.commit()
-            project = Project(
-                organization_id=org.id,
-                customer_id=cust.id,
-                code=f"PG{uuid.uuid4().hex[:6]}",
-                name="P",
-                status=ProjectWorkflowStatus.DRAFT,
-                created_by=user.id,
-            )
-            db.add(project)
-            db.commit()
-            batch = ProjectAssetImportBatch(
-                organization_id=org.id,
-                project_id=project.id,
-                source_filename="pg.xlsx",
-                status=ImportBatchStatus.PARSED,
-                created_by_user_id=user.id,
-            )
-            db.add(batch)
-            db.commit()
-            for i in range(3):
-                db.add(
-                    ProjectAssetImportStagingRow(
-                        organization_id=org.id,
-                        project_id=project.id,
-                        import_batch_id=batch.id,
-                        source_row_number=i + 1,
-                        raw_values={"cells": []},
-                        mapped_values={},
-                        normalized_preview={},
-                        validation_status=ImportRowValidationStatus.PENDING,
-                        validation_errors=[],
-                        validation_warnings=[],
-                        proposed_asset_name=f"A{i}",
-                        proposed_quantity="1",
-                    )
-                )
-            db.commit()
-            batch_id = batch.id
-            org_id = org.id
-            project_id = project.id
-            user_id = user.id
-
+            ids = seed.seed()
+            seed.add_rows([("A0", "1"), ("A1", "1"), ("A2", "1")])
+            results = []
             errors = []
             barrier = threading.Barrier(2, timeout=30)
 
             def worker():
                 s = SessionLocal()
                 try:
-                    u = s.query(User).filter_by(id=user_id).one()
+                    u = s.query(User).filter_by(id=ids["user"]).one()
                     barrier.wait(timeout=30)
-                    validate_project_asset_import_batch(
+                    out = validate_project_asset_import_batch(
                         s,
-                        org_id=org_id,
-                        project_id=project_id,
-                        batch_id=batch_id,
+                        org_id=ids["org"],
+                        project_id=ids["project"],
+                        batch_id=ids["batch"],
                         current_user=u,
                     )
+                    results.append(out.status)
                 except Exception as e:
                     errors.append(e)
                 finally:
@@ -768,32 +1166,382 @@ class TestPGValidationConcurrency:
             t1.join(timeout=60)
             t2.join(timeout=60)
             assert not t1.is_alive() and not t2.is_alive()
-            # At least one success; both may succeed serially
+            assert errors == []
+            assert len(results) == 2
+            assert all(
+                (r == ImportBatchStatus.READY_FOR_REVIEW or r == "ready_for_review")
+                for r in results
+            )
             s = SessionLocal()
             try:
-                b = s.query(ProjectAssetImportBatch).filter_by(id=batch_id).one()
+                b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
                 assert b.status == ImportBatchStatus.READY_FOR_REVIEW
                 assert b.total_rows == 3
                 assert b.valid_rows == 3
                 assert b.invalid_rows == 0
+                assert b.warning_rows == 0
+                rows = (
+                    s.query(ProjectAssetImportStagingRow)
+                    .filter_by(import_batch_id=ids["batch"])
+                    .order_by(ProjectAssetImportStagingRow.id)
+                    .all()
+                )
+                assert len(rows) == 3
+                for row in rows:
+                    assert row.validation_status == ImportRowValidationStatus.VALID
+                    assert row.validation_errors == []
+                    assert row.validation_warnings == []
+                succ = (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
+                    .count()
+                )
+                fail = (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
+                    .count()
+                )
+                assert succ == 2
+                assert fail == 0
             finally:
                 s.close()
-            # cleanup
+            seed.assert_line()
+        finally:
+            seed.cleanup()
+
+    def test_pg_b_upload_then_validation_serial_orders(self):
+        pg = _pg_url()
+        if not pg:
+            pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
+
+        engine = create_engine(pg)
+        SessionLocal = sessionmaker(bind=engine)
+
+        def run_order(upload_first: bool):
+            seed = _PGSeed(SessionLocal)
+            try:
+                ids = seed.seed()
+                seed.add_rows([("Old", "1")])
+                lock_held = threading.Event()
+                release = threading.Event()
+                done = []
+                errors = []
+
+                def upload_worker():
+                    s = SessionLocal()
+                    try:
+                        u = s.query(User).filter_by(id=ids["user"]).one()
+                        if not upload_first:
+                            lock_held.wait(timeout=30)
+                        content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
+                        # Hold path: begin lock via validate or upload using orchestrator
+                        if upload_first:
+                            # acquire by starting upload after signaling via nested mock is hard;
+                            # use FOR UPDATE in thread then call upload
+                            b = (
+                                s.query(ProjectAssetImportBatch)
+                                .filter_by(id=ids["batch"])
+                                .with_for_update()
+                                .first()
+                            )
+                            assert b is not None
+                            lock_held.set()
+                            release.wait(timeout=30)
+                            s.rollback()  # release advisory hold then real upload
+                        upload_excel_file_orchestrator(
+                            s,
+                            org_id=ids["org"],
+                            project_id=ids["project"],
+                            batch_id=ids["batch"],
+                            file=FakeUpload("n.xlsx", content),
+                            request=None,
+                            current_user=u,
+                        )
+                        done.append("upload")
+                    except Exception as e:
+                        errors.append(("upload", e))
+                    finally:
+                        s.close()
+
+                def validate_worker():
+                    s = SessionLocal()
+                    try:
+                        u = s.query(User).filter_by(id=ids["user"]).one()
+                        if upload_first:
+                            lock_held.wait(timeout=30)
+                            # wait for upload hold then release so upload proceeds
+                            release.set()
+                        else:
+                            b = (
+                                s.query(ProjectAssetImportBatch)
+                                .filter_by(id=ids["batch"])
+                                .with_for_update()
+                                .first()
+                            )
+                            assert b is not None
+                            lock_held.set()
+                            release.wait(timeout=30)
+                            s.rollback()
+                        validate_project_asset_import_batch(
+                            s,
+                            org_id=ids["org"],
+                            project_id=ids["project"],
+                            batch_id=ids["batch"],
+                            current_user=u,
+                        )
+                        done.append("validate")
+                    except Exception as e:
+                        errors.append(("validate", e))
+                    finally:
+                        s.close()
+
+                if upload_first:
+                    t1 = threading.Thread(target=upload_worker)
+                    t2 = threading.Thread(target=validate_worker)
+                else:
+                    t1 = threading.Thread(target=validate_worker)
+                    t2 = threading.Thread(target=upload_worker)
+                t1.start()
+                t2.start()
+                t1.join(timeout=90)
+                t2.join(timeout=90)
+                assert not t1.is_alive() and not t2.is_alive()
+                assert errors == [], errors
+                assert set(done) == {"upload", "validate"}
+                s = SessionLocal()
+                try:
+                    b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+                    rows = (
+                        s.query(ProjectAssetImportStagingRow)
+                        .filter_by(import_batch_id=ids["batch"])
+                        .order_by(ProjectAssetImportStagingRow.id)
+                        .all()
+                    )
+                    if upload_first:
+                        # final: validate after upload → ready_for_review on NewU
+                        assert b.status == ImportBatchStatus.READY_FOR_REVIEW
+                        assert b.total_rows == 1
+                        assert rows[0].proposed_asset_name == "NewU"
+                        assert rows[0].validation_status == ImportRowValidationStatus.VALID
+                    else:
+                        # final: upload after validation → parsed pending generation
+                        assert b.status == ImportBatchStatus.PARSED
+                        assert rows[0].proposed_asset_name == "NewU"
+                        assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+                finally:
+                    s.close()
+                seed.assert_line()
+            finally:
+                seed.cleanup()
+
+        run_order(upload_first=True)
+        run_order(upload_first=False)
+
+    def test_pg_c_stale_validation_failure_vs_newer_success(self):
+        pg = _pg_url()
+        if not pg:
+            pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
+
+        engine = create_engine(pg)
+        SessionLocal = sessionmaker(bind=engine)
+        seed = _PGSeed(SessionLocal)
+        try:
+            ids = seed.seed()
+            seed.add_rows([("A", "1")])
+            entered = threading.Event()
+            release = threading.Event()
+            errors = []
+
+            import app.modules.excel_import.application.validate_staging as vs
+
+            orig_recover = vs._recover_validation_failure
+
+            def gated_recover(*a, **k):
+                entered.set()
+                release.wait(timeout=30)
+                return orig_recover(*a, **k)
+
+            # Patch in worker only via module global
+            def stale_worker():
+                s = SessionLocal()
+                try:
+                    # force rule failure after lock
+                    real_apply = vs._apply_validation_to_rows
+
+                    def boom(*a, **k):
+                        raise RuntimeError("stale boom")
+
+                    vs._apply_validation_to_rows = boom
+                    vs._recover_validation_failure = gated_recover
+                    u = s.query(User).filter_by(id=ids["user"]).one()
+                    try:
+                        validate_project_asset_import_batch(
+                            s,
+                            org_id=ids["org"],
+                            project_id=ids["project"],
+                            batch_id=ids["batch"],
+                            current_user=u,
+                        )
+                    except HTTPException:
+                        pass
+                    finally:
+                        vs._apply_validation_to_rows = real_apply
+                        vs._recover_validation_failure = orig_recover
+                except Exception as e:
+                    errors.append(e)
+                finally:
+                    s.close()
+
+            t = threading.Thread(target=stale_worker)
+            t.start()
+            assert entered.wait(timeout=30)
+            # newer success on separate session
+            s2 = SessionLocal()
+            try:
+                u = s2.query(User).filter_by(id=ids["user"]).one()
+                content = _xlsx([["asset_name", "quantity"], ["Newer", "5"]])
+                upload_excel_file_orchestrator(
+                    s2,
+                    org_id=ids["org"],
+                    project_id=ids["project"],
+                    batch_id=ids["batch"],
+                    file=FakeUpload("newer.xlsx", content),
+                    request=None,
+                    current_user=u,
+                )
+            finally:
+                s2.close()
+            release.set()
+            t.join(timeout=60)
+            assert not t.is_alive()
+            assert errors == []
             s = SessionLocal()
             try:
-                s.query(ProjectAssetImportStagingRow).filter_by(import_batch_id=batch_id).delete()
-                s.query(AuditEvent).filter(AuditEvent.entity_id == batch_id).delete(
-                    synchronize_session=False
+                b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+                assert b.status == ImportBatchStatus.PARSED
+                assert b.source_filename == "newer.xlsx"
+                rows = (
+                    s.query(ProjectAssetImportStagingRow)
+                    .filter_by(import_batch_id=ids["batch"])
+                    .all()
                 )
-                s.query(ProjectAssetImportBatch).filter_by(id=batch_id).delete()
-                s.query(Project).filter_by(id=project_id).delete()
-                s.query(Customer).filter_by(id=cust.id).delete()
-                s.query(UserRole).filter_by(user_id=user_id).delete()
-                s.query(User).filter_by(id=user_id).delete()
-                s.query(Role).filter_by(id=role.id).delete()
-                s.query(OrganizationProfile).filter_by(id=org_id).delete()
-                s.commit()
+                assert len(rows) == 1
+                assert rows[0].proposed_asset_name == "Newer"
+                assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+                fail = (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
+                    .count()
+                )
+                assert fail == 0
+                up = (
+                    s.query(AuditEvent)
+                    .filter_by(
+                        entity_id=ids["batch"],
+                        event_name="ProjectAssetImportBatchUploaded",
+                    )
+                    .count()
+                )
+                assert up >= 1
             finally:
                 s.close()
+            seed.assert_line()
         finally:
-            db.close()
+            seed.cleanup()
+
+    def test_pg_d_different_batches_independent(self):
+        pg = _pg_url()
+        if not pg:
+            pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
+
+        engine = create_engine(pg)
+        SessionLocal = sessionmaker(bind=engine)
+        seed_a = _PGSeed(SessionLocal)
+        seed_b = _PGSeed(SessionLocal)
+        try:
+            ids_a = seed_a.seed()
+            seed_a.add_rows([("AA", "1")])
+            ids_b = seed_b.seed()
+            seed_b.add_rows([("BB", "2")])
+            held = threading.Event()
+            release = threading.Event()
+            b_done = threading.Event()
+            errors = []
+
+            def hold_a():
+                s = SessionLocal()
+                try:
+                    b = (
+                        s.query(ProjectAssetImportBatch)
+                        .filter_by(id=ids_a["batch"])
+                        .with_for_update()
+                        .first()
+                    )
+                    assert b is not None
+                    held.set()
+                    release.wait(timeout=30)
+                    u = s.query(User).filter_by(id=ids_a["user"]).one()
+                    # release lock then validate
+                    s.rollback()
+                    validate_project_asset_import_batch(
+                        s,
+                        org_id=ids_a["org"],
+                        project_id=ids_a["project"],
+                        batch_id=ids_a["batch"],
+                        current_user=u,
+                    )
+                except Exception as e:
+                    errors.append(e)
+                finally:
+                    s.close()
+
+            def validate_b():
+                s = SessionLocal()
+                try:
+                    held.wait(timeout=30)
+                    u = s.query(User).filter_by(id=ids_b["user"]).one()
+                    validate_project_asset_import_batch(
+                        s,
+                        org_id=ids_b["org"],
+                        project_id=ids_b["project"],
+                        batch_id=ids_b["batch"],
+                        current_user=u,
+                    )
+                    b_done.set()
+                except Exception as e:
+                    errors.append(e)
+                finally:
+                    s.close()
+
+            t_a = threading.Thread(target=hold_a)
+            t_b = threading.Thread(target=validate_b)
+            t_a.start()
+            t_b.start()
+            assert b_done.wait(timeout=30), "batch B should complete while A still holds lock"
+            release.set()
+            t_a.join(timeout=60)
+            t_b.join(timeout=60)
+            assert not t_a.is_alive() and not t_b.is_alive()
+            assert errors == []
+            s = SessionLocal()
+            try:
+                ba = s.query(ProjectAssetImportBatch).filter_by(id=ids_a["batch"]).one()
+                bb = s.query(ProjectAssetImportBatch).filter_by(id=ids_b["batch"]).one()
+                assert ba.status == ImportBatchStatus.READY_FOR_REVIEW
+                assert bb.status == ImportBatchStatus.READY_FOR_REVIEW
+                assert ba.valid_rows == 1 and bb.valid_rows == 1
+                # no cross contamination of audits
+                for bid in (ids_a["batch"], ids_b["batch"]):
+                    assert (
+                        s.query(AuditEvent)
+                        .filter_by(entity_id=bid, event_name=SUCCESS_EVENT)
+                        .count()
+                        == 1
+                    )
+            finally:
+                s.close()
+            seed_a.assert_line()
+            seed_b.assert_line()
+        finally:
+            seed_a.cleanup()
+            seed_b.cleanup()

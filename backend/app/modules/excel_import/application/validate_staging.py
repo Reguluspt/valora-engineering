@@ -62,8 +62,9 @@ def build_validation_fingerprint(db: Session, batch: ProjectAssetImportBatch) ->
         "invalid_rows": batch.invalid_rows,
         "warning_rows": batch.warning_rows,
         "staging_row_ids": [r.id for r in rows],
+        # Null-aware typed pairs: do not str() collapse None vs "None" or empty vs null.
         "validation_inputs": [
-            (str(r.proposed_asset_name), str(r.proposed_quantity)) for r in rows
+            (r.proposed_asset_name, r.proposed_quantity) for r in rows
         ],
         "latest_validation_success_audit_id": (
             str(latest_success.id) if latest_success else None
