@@ -1210,6 +1210,7 @@ class TestPGValidationConcurrency:
             seed.cleanup()
 
     def test_pg_b_upload_then_validation_serial_orders(self):
+        """PG-B: real upload vs validation serialization in both orders."""
         pg = _pg_url()
         if not pg:
             pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
@@ -1217,125 +1218,196 @@ class TestPGValidationConcurrency:
         engine = create_engine(pg)
         SessionLocal = sessionmaker(bind=engine)
 
-        def run_order(upload_first: bool):
-            seed = _PGSeed(SessionLocal)
-            try:
-                ids = seed.seed()
-                seed.add_rows([("Old", "1")])
-                lock_held = threading.Event()
-                release = threading.Event()
-                done = []
-                errors = []
+        class SlowXlsx:
+            """Blocks first read so upload holds batch FOR UPDATE mid-flight."""
 
-                def upload_worker():
-                    s = SessionLocal()
-                    try:
-                        u = s.query(User).filter_by(id=ids["user"]).one()
-                        if not upload_first:
-                            lock_held.wait(timeout=30)
-                        content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
-                        # Hold path: begin lock via validate or upload using orchestrator
-                        if upload_first:
-                            # acquire by starting upload after signaling via nested mock is hard;
-                            # use FOR UPDATE in thread then call upload
-                            b = (
-                                s.query(ProjectAssetImportBatch)
-                                .filter_by(id=ids["batch"])
-                                .with_for_update()
-                                .first()
-                            )
-                            assert b is not None
-                            lock_held.set()
-                            release.wait(timeout=30)
-                            s.rollback()  # release advisory hold then real upload
-                        upload_excel_file_orchestrator(
-                            s,
-                            org_id=ids["org"],
-                            project_id=ids["project"],
-                            batch_id=ids["batch"],
-                            file=FakeUpload("n.xlsx", content),
-                            request=None,
-                            current_user=u,
-                        )
-                        done.append("upload")
-                    except Exception as e:
-                        errors.append(("upload", e))
-                    finally:
-                        s.close()
+            def __init__(self, content, entered, release):
+                self.filename = "n.xlsx"
+                self._bio = io.BytesIO(content)
+                self.size = len(content)
+                self.entered = entered
+                self.release = release
+                self._once = False
+                self.file = self
 
-                def validate_worker():
-                    s = SessionLocal()
-                    try:
-                        u = s.query(User).filter_by(id=ids["user"]).one()
-                        if upload_first:
-                            lock_held.wait(timeout=30)
-                            # wait for upload hold then release so upload proceeds
-                            release.set()
-                        else:
-                            b = (
-                                s.query(ProjectAssetImportBatch)
-                                .filter_by(id=ids["batch"])
-                                .with_for_update()
-                                .first()
-                            )
-                            assert b is not None
-                            lock_held.set()
-                            release.wait(timeout=30)
-                            s.rollback()
-                        validate_project_asset_import_batch(
-                            s,
-                            org_id=ids["org"],
-                            project_id=ids["project"],
-                            batch_id=ids["batch"],
-                            current_user=u,
-                        )
-                        done.append("validate")
-                    except Exception as e:
-                        errors.append(("validate", e))
-                    finally:
-                        s.close()
+            def read(self, size=-1):
+                if not self._once:
+                    self._once = True
+                    self.entered.set()
+                    assert self.release.wait(timeout=30)
+                return self._bio.read(size)
 
-                if upload_first:
-                    t1 = threading.Thread(target=upload_worker)
-                    t2 = threading.Thread(target=validate_worker)
-                else:
-                    t1 = threading.Thread(target=validate_worker)
-                    t2 = threading.Thread(target=upload_worker)
-                t1.start()
-                t2.start()
-                t1.join(timeout=90)
-                t2.join(timeout=90)
-                assert not t1.is_alive() and not t2.is_alive()
-                assert errors == [], errors
-                assert set(done) == {"upload", "validate"}
+        # --- Order 1: upload holds FOR UPDATE; validation waits; then validates new gen ---
+        seed = _PGSeed(SessionLocal)
+        try:
+            ids = seed.seed()
+            seed.add_rows([("Old", "1")])
+            entered = threading.Event()
+            release = threading.Event()
+            upload_done = threading.Event()
+            errors = []
+            content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
+
+            def upload_first():
                 s = SessionLocal()
                 try:
-                    b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-                    rows = (
-                        s.query(ProjectAssetImportStagingRow)
-                        .filter_by(import_batch_id=ids["batch"])
-                        .order_by(ProjectAssetImportStagingRow.id)
-                        .all()
+                    u = s.query(User).filter_by(id=ids["user"]).one()
+                    upload_excel_file_orchestrator(
+                        s,
+                        org_id=ids["org"],
+                        project_id=ids["project"],
+                        batch_id=ids["batch"],
+                        file=SlowXlsx(content, entered, release),
+                        request=None,
+                        current_user=u,
                     )
-                    if upload_first:
-                        # final: validate after upload → ready_for_review on NewU
-                        assert b.status == ImportBatchStatus.READY_FOR_REVIEW
-                        assert b.total_rows == 1
-                        assert rows[0].proposed_asset_name == "NewU"
-                        assert rows[0].validation_status == ImportRowValidationStatus.VALID
-                    else:
-                        # final: upload after validation → parsed pending generation
-                        assert b.status == ImportBatchStatus.PARSED
-                        assert rows[0].proposed_asset_name == "NewU"
-                        assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+                    upload_done.set()
+                except Exception as e:
+                    errors.append(("upload", e))
+                    upload_done.set()
                 finally:
                     s.close()
-                seed.assert_line()
-            finally:
-                seed.cleanup()
 
-        run_order(upload_first=True)
-        run_order(upload_first=False)
+            def validate_while_and_after_upload():
+                s = SessionLocal()
+                try:
+                    assert entered.wait(timeout=30)
+                    # Upload holds FOR UPDATE. Start validation on another thread so it
+                    # blocks on the same batch lock, then release upload to complete.
+                    val_errors = []
+                    val_ok = []
+
+                    def do_validate():
+                        s2 = SessionLocal()
+                        try:
+                            u2 = s2.query(User).filter_by(id=ids["user"]).one()
+                            validate_project_asset_import_batch(
+                                s2,
+                                org_id=ids["org"],
+                                project_id=ids["project"],
+                                batch_id=ids["batch"],
+                                current_user=u2,
+                            )
+                            val_ok.append(True)
+                        except Exception as e:
+                            val_errors.append(e)
+                        finally:
+                            s2.close()
+
+                    tv = threading.Thread(target=do_validate)
+                    tv.start()
+                    # allow validate to block on lock
+                    threading.Event().wait(0.3)
+                    release.set()
+                    assert upload_done.wait(timeout=60)
+                    tv.join(timeout=60)
+                    assert not tv.is_alive()
+                    assert val_errors == [], val_errors
+                    assert val_ok == [True]
+                except Exception as e:
+                    errors.append(("validate", e))
+                    release.set()
+                finally:
+                    s.close()
+
+            t1 = threading.Thread(target=upload_first)
+            t2 = threading.Thread(target=validate_while_and_after_upload)
+            t1.start()
+            t2.start()
+            t1.join(timeout=90)
+            t2.join(timeout=90)
+            assert not t1.is_alive() and not t2.is_alive()
+            assert errors == [], errors
+            s = SessionLocal()
+            try:
+                b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+                rows = (
+                    s.query(ProjectAssetImportStagingRow)
+                    .filter_by(import_batch_id=ids["batch"])
+                    .order_by(ProjectAssetImportStagingRow.id)
+                    .all()
+                )
+                assert b.status == ImportBatchStatus.READY_FOR_REVIEW
+                assert b.total_rows == 1
+                assert rows[0].proposed_asset_name == "NewU"
+                assert rows[0].validation_status == ImportRowValidationStatus.VALID
+            finally:
+                s.close()
+            seed.assert_line()
+        finally:
+            seed.cleanup()
+
+        # --- Order 2: validation first, then upload replaces generation ---
+        seed = _PGSeed(SessionLocal)
+        try:
+            ids = seed.seed()
+            seed.add_rows([("Old", "1")])
+            val_done = threading.Event()
+            errors = []
+
+            def validate_first():
+                s = SessionLocal()
+                try:
+                    u = s.query(User).filter_by(id=ids["user"]).one()
+                    validate_project_asset_import_batch(
+                        s,
+                        org_id=ids["org"],
+                        project_id=ids["project"],
+                        batch_id=ids["batch"],
+                        current_user=u,
+                    )
+                    val_done.set()
+                except Exception as e:
+                    errors.append(("validate", e))
+                    val_done.set()
+                finally:
+                    s.close()
+
+            def upload_after_validate():
+                s = SessionLocal()
+                try:
+                    assert val_done.wait(timeout=30)
+                    u = s.query(User).filter_by(id=ids["user"]).one()
+                    content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
+                    upload_excel_file_orchestrator(
+                        s,
+                        org_id=ids["org"],
+                        project_id=ids["project"],
+                        batch_id=ids["batch"],
+                        file=FakeUpload("n.xlsx", content),
+                        request=None,
+                        current_user=u,
+                    )
+                except Exception as e:
+                    errors.append(("upload", e))
+                finally:
+                    s.close()
+
+            t1 = threading.Thread(target=validate_first)
+            t2 = threading.Thread(target=upload_after_validate)
+            t1.start()
+            t2.start()
+            t1.join(timeout=90)
+            t2.join(timeout=90)
+            assert not t1.is_alive() and not t2.is_alive()
+            assert errors == [], errors
+            s = SessionLocal()
+            try:
+                b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+                rows = (
+                    s.query(ProjectAssetImportStagingRow)
+                    .filter_by(import_batch_id=ids["batch"])
+                    .order_by(ProjectAssetImportStagingRow.id)
+                    .all()
+                )
+                assert b.status == ImportBatchStatus.PARSED
+                assert rows[0].proposed_asset_name == "NewU"
+                assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+            finally:
+                s.close()
+            seed.assert_line()
+        finally:
+            seed.cleanup()
 
     def test_pg_c_stale_validation_failure_vs_newer_success(self):
         pg = _pg_url()
