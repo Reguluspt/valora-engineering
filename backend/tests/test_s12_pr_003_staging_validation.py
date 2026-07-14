@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 import uuid
 from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -582,6 +583,15 @@ class TestValidationStateCountersRerun:
 
 
 class TestValidationTransactionsAudits:
+    FAILURE_PAYLOAD_KEYS = {
+        "rule_set_version",
+        "organization_id",
+        "project_id",
+        "batch_id",
+        "source_status",
+        "error_code",
+    }
+
     def setup_method(self):
         self.h = ValidationHarness()
 
@@ -589,6 +599,7 @@ class TestValidationTransactionsAudits:
         self.h.close()
 
     def _snapshot(self):
+        """Complete pre-attempt generation snapshot."""
         self.h.db.expire_all()
         self.h.db.refresh(self.h.batch)
         rows = (
@@ -597,8 +608,15 @@ class TestValidationTransactionsAudits:
             .order_by(ProjectAssetImportStagingRow.id)
             .all()
         )
+        line = (
+            self.h.db.query(ProjectAssetLine)
+            .filter_by(id=self.h.line_snapshot["id"])
+            .one()
+        )
         return {
             "status": self.h.batch.status,
+            "source_filename": self.h.batch.source_filename,
+            "source_sheet_name": self.h.batch.source_sheet_name,
             "total_rows": self.h.batch.total_rows,
             "valid_rows": self.h.batch.valid_rows,
             "invalid_rows": self.h.batch.invalid_rows,
@@ -612,22 +630,31 @@ class TestValidationTransactionsAudits:
                 e.id
                 for e in self.h.db.query(AuditEvent)
                 .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
-                .order_by(AuditEvent.created_at)
+                .order_by(AuditEvent.created_at, AuditEvent.id)
                 .all()
             ],
             "failure_ids": [
                 e.id
                 for e in self.h.db.query(AuditEvent)
                 .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-                .order_by(AuditEvent.created_at)
+                .order_by(AuditEvent.created_at, AuditEvent.id)
                 .all()
             ],
+            "line": {
+                "id": line.id,
+                "asset_name": line.asset_name,
+                "quantity": line.quantity,
+                "row_version": line.row_version,
+            },
+            "line_count": self.h.db.query(ProjectAssetLine).count(),
         }
 
-    def _assert_generation(self, snap):
+    def _assert_generation_preserved(self, snap, *, allow_failure_audit=False):
+        """Staging generation + official lines identical to snap (optional +1 failure audit)."""
         cur = self._snapshot()
         for k in (
-            "status",
+            "source_filename",
+            "source_sheet_name",
             "total_rows",
             "valid_rows",
             "invalid_rows",
@@ -637,8 +664,58 @@ class TestValidationTransactionsAudits:
             "val_status",
             "val_errors",
             "val_warnings",
+            "line",
+            "line_count",
         ):
             assert cur[k] == snap[k], k
+        assert cur["success_ids"] == snap["success_ids"]
+        if allow_failure_audit:
+            assert len(cur["failure_ids"]) == len(snap["failure_ids"]) + 1
+            assert cur["failure_ids"][:-1] == snap["failure_ids"]
+        else:
+            assert cur["failure_ids"] == snap["failure_ids"]
+            assert cur["status"] == snap["status"]
+        self.h.assert_line_immutable()
+
+    def _assert_matched_failure_outcome(self, snap):
+        """Matched-fingerprint engine failure: validation_failed + one failure audit."""
+        cur = self._snapshot()
+        assert cur["status"] == ImportBatchStatus.VALIDATION_FAILED
+        for k in (
+            "source_filename",
+            "source_sheet_name",
+            "total_rows",
+            "valid_rows",
+            "invalid_rows",
+            "warning_rows",
+            "row_ids",
+            "proposed",
+            "val_status",
+            "val_errors",
+            "val_warnings",
+            "line",
+            "line_count",
+        ):
+            assert cur[k] == snap[k], k
+        assert cur["success_ids"] == snap["success_ids"]
+        assert len(cur["failure_ids"]) == len(snap["failure_ids"]) + 1
+        assert cur["failure_ids"][:-1] == snap["failure_ids"]
+        fails = (
+            self.h.db.query(AuditEvent)
+            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
+            .order_by(AuditEvent.created_at, AuditEvent.id)
+            .all()
+        )
+        assert len(fails) == len(cur["failure_ids"])
+        p = fails[-1].payload
+        assert set(p.keys()) == self.FAILURE_PAYLOAD_KEYS
+        assert p["error_code"] == "validation_engine_failed"
+        assert p["rule_set_version"] == "s12-pr-003-v1"
+        assert p["source_status"] == "parsed"
+        assert "raw_values" not in p
+        assert "stack" not in str(p).lower()
+        assert "boom" not in str(p).lower()
+        assert "RuntimeError" not in str(p)
         self.h.assert_line_immutable()
 
     def test_success_audit_payload_safe_and_complete(self):
@@ -689,55 +766,29 @@ class TestValidationTransactionsAudits:
         )
         assert r.status_code == 500
         assert r.json()["detail"] == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        # fingerprint matched: engine failure marks validation_failed + one failure audit
-        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
-        fails = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .all()
-        )
-        assert len(fails) == 1
-        p = fails[0].payload
-        assert p["error_code"] == "validation_engine_failed"
-        assert p["rule_set_version"] == "s12-pr-003-v1"
-        assert set(p.keys()) >= {
-            "rule_set_version",
-            "organization_id",
-            "project_id",
-            "batch_id",
-            "source_status",
-            "error_code",
-        }
-        assert "raw_values" not in p
-        # staging generation preserved except batch status/failure audit
-        rows = (
-            self.h.db.query(ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .order_by(ProjectAssetImportStagingRow.id)
-            .all()
-        )
-        assert [r.id for r in rows] == snap["row_ids"]
-        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
-        assert [r.validation_status for r in rows] == snap["val_status"]
-        assert self.h.db.query(AuditEvent).filter_by(
-            entity_id=self.h.batch.id, event_name=SUCCESS_EVENT
-        ).count() == 0
-        self.h.assert_line_immutable()
+        assert "rule boom" not in r.json()["detail"]
+        self._assert_matched_failure_outcome(snap)
 
     def test_flush_failure_after_audit_preserves_generation(self, monkeypatch):
+        """Inject failure at explicit db.flush() after success audit is staged."""
         self.h.add_row("A", "1")
         snap = self._snapshot()
         import app.modules.excel_import.application.validate_staging as vs
 
-        orig_audit = vs._record_success_audit
+        orig_record = vs._record_success_audit
+        orig_flush = self.h.db.flush
 
-        def boom_after_audit(*a, **k):
-            orig_audit(*a, **k)
-            raise RuntimeError("flush-equivalent fail after audit")
+        def record_then_arm_explicit_flush(*a, **k):
+            orig_record(*a, **k)
 
-        monkeypatch.setattr(vs, "_record_success_audit", boom_after_audit)
+            def boom_flush_once(*fa, **fk):
+                # Fail only the explicit post-audit flush; restore so recovery can flush.
+                monkeypatch.setattr(self.h.db, "flush", orig_flush)
+                raise RuntimeError("explicit flush fail after success audit staged")
+
+            monkeypatch.setattr(self.h.db, "flush", boom_flush_once)
+
+        monkeypatch.setattr(vs, "_record_success_audit", record_then_arm_explicit_flush)
         with pytest.raises(HTTPException) as exc:
             validate_project_asset_import_batch(
                 self.h.db,
@@ -747,40 +798,30 @@ class TestValidationTransactionsAudits:
                 current_user=self.h.user,
             )
         assert exc.value.status_code == 500
-        assert "Không thể kiểm tra" in str(exc.value.detail)
-        self.h.db.expire_all()
-        rows = (
-            self.h.db.query(ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .order_by(ProjectAssetImportStagingRow.id)
-            .all()
-        )
-        assert [r.id for r in rows] == snap["row_ids"]
-        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
-        assert [r.validation_status for r in rows] == snap["val_status"]
-        # matched fingerprint → validation_failed + one failure audit
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .count()
-            == 1
-        )
-        self.h.assert_line_immutable()
+        assert exc.value.detail == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
+        assert "flush" not in str(exc.value.detail).lower()
+        self._assert_matched_failure_outcome(snap)
 
     def test_savepoint_commit_failure_preserves_generation(self, monkeypatch):
+        """Inject failure at nested savepoint commit/release after success path staged."""
         self.h.add_row("A", "1")
         snap = self._snapshot()
+        real_begin = self.h.db.begin_nested
 
-        class FakeSP:
+        class BoomSP:
+            def __init__(self, real_sp):
+                self._real = real_sp
+
             def commit(self):
                 raise RuntimeError("savepoint release fail")
 
             def rollback(self):
-                return None
+                return self._real.rollback()
 
-        monkeypatch.setattr(self.h.db, "begin_nested", lambda: FakeSP())
+        def begin_nested_wrap():
+            return BoomSP(real_begin())
+
+        monkeypatch.setattr(self.h.db, "begin_nested", begin_nested_wrap)
         with pytest.raises(HTTPException) as exc:
             validate_project_asset_import_batch(
                 self.h.db,
@@ -790,16 +831,8 @@ class TestValidationTransactionsAudits:
                 current_user=self.h.user,
             )
         assert exc.value.status_code == 500
-        self.h.db.expire_all()
-        rows = (
-            self.h.db.query(ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .order_by(ProjectAssetImportStagingRow.id)
-            .all()
-        )
-        assert [r.id for r in rows] == snap["row_ids"]
-        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
-        self.h.assert_line_immutable()
+        assert exc.value.detail == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
+        self._assert_matched_failure_outcome(snap)
 
     def test_outer_commit_failure_exact_failure_audit(self, monkeypatch):
         self.h.add_row("A", "1")
@@ -823,32 +856,12 @@ class TestValidationTransactionsAudits:
                 current_user=self.h.user,
             )
         assert exc.value.status_code == 500
-        assert "Không thể kiểm tra" in str(exc.value.detail)
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        # After outer commit fail + recover with matching fingerprint
-        assert self.h.batch.status == ImportBatchStatus.VALIDATION_FAILED
-        fails = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .all()
-        )
-        assert len(fails) == 1
-        assert fails[0].payload["error_code"] == "validation_engine_failed"
-        rows = (
-            self.h.db.query(ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .order_by(ProjectAssetImportStagingRow.id)
-            .all()
-        )
-        assert [r.id for r in rows] == snap["row_ids"]
-        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
-        assert self.h.db.query(AuditEvent).filter_by(
-            entity_id=self.h.batch.id, event_name=SUCCESS_EVENT
-        ).count() == 0
-        self.h.assert_line_immutable()
+        assert exc.value.detail == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
+        assert "outer commit" not in str(exc.value.detail)
+        self._assert_matched_failure_outcome(snap)
 
     def test_failure_audit_persistence_failure_preserves_pre_attempt(self, monkeypatch):
+        """Fail after failure audit has staged/flushed status+event; enclosing rollback restores all."""
         self.h.add_row("A", "1")
         snap = self._snapshot()
         import app.modules.excel_import.application.validate_staging as vs
@@ -858,11 +871,13 @@ class TestValidationTransactionsAudits:
             "_apply_validation_to_rows",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("rule boom")),
         )
-        monkeypatch.setattr(
-            vs,
-            "_record_failure_audit",
-            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("audit fail")),
-        )
+        orig_fail = vs._record_failure_audit
+
+        def stage_failure_then_raise(*a, **k):
+            orig_fail(*a, **k)
+            raise RuntimeError("failure audit persistence fail after stage")
+
+        monkeypatch.setattr(vs, "_record_failure_audit", stage_failure_then_raise)
         with pytest.raises(HTTPException) as exc:
             validate_project_asset_import_batch(
                 self.h.db,
@@ -872,47 +887,77 @@ class TestValidationTransactionsAudits:
                 current_user=self.h.user,
             )
         assert exc.value.status_code == 500
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        # recover also fails audit write → rollback; pre-attempt generation preserved
-        assert self.h.batch.status == snap["status"]
-        assert self.h.db.query(AuditEvent).filter_by(
-            entity_id=self.h.batch.id, event_name=FAILURE_EVENT
-        ).count() == 0
-        rows = (
-            self.h.db.query(ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .order_by(ProjectAssetImportStagingRow.id)
-            .all()
-        )
-        assert [r.id for r in rows] == snap["row_ids"]
-        assert [(r.proposed_asset_name, r.proposed_quantity) for r in rows] == snap["proposed"]
-        assert [r.validation_status for r in rows] == snap["val_status"]
-        self.h.assert_line_immutable()
+        assert exc.value.detail == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
+        # Full pre-attempt snapshot unchanged (no partial failure state/audit)
+        self._assert_generation_preserved(snap, allow_failure_audit=False)
 
     def test_stale_failure_does_not_overwrite_newer_generation(self, monkeypatch):
         self.h.add_row("A", "1")
         import app.modules.excel_import.application.validate_staging as vs
 
+        newer_snap = {}
         orig_recover = vs._recover_validation_failure
 
         def inject_newer(*args, **kwargs):
-            self.h.batch.status = ImportBatchStatus.READY_FOR_REVIEW
-            self.h.batch.valid_rows = 99
-            self.h.batch.total_rows = 1
-            self.h.batch.invalid_rows = 0
-            self.h.batch.warning_rows = 0
+            self.h.db.expire_all()
+            batch = (
+                self.h.db.query(ProjectAssetImportBatch)
+                .filter_by(id=self.h.batch.id)
+                .one()
+            )
+            rows = (
+                self.h.db.query(ProjectAssetImportStagingRow)
+                .filter_by(import_batch_id=batch.id)
+                .order_by(ProjectAssetImportStagingRow.id)
+                .all()
+            )
+            batch.status = ImportBatchStatus.READY_FOR_REVIEW
+            batch.source_filename = "newer.xlsx"
+            batch.source_sheet_name = "Sheet1"
+            batch.total_rows = 1
+            batch.valid_rows = 1
+            batch.invalid_rows = 0
+            batch.warning_rows = 0
+            for r in rows:
+                r.proposed_asset_name = "Newer"
+                r.proposed_quantity = "5"
+                r.validation_status = ImportRowValidationStatus.VALID
+                r.validation_errors = []
+                r.validation_warnings = []
+            from app.core.audit import log_audit_event
+
+            log_audit_event(
+                db=self.h.db,
+                event_name=SUCCESS_EVENT,
+                entity_type="ProjectAssetImportBatch",
+                entity_id=batch.id,
+                organization_id=self.h.org.id,
+                actor_user_id=self.h.user.id,
+                command_name="ValidateProjectAssetImportBatch",
+                payload={
+                    "rule_set_version": "s12-pr-003-v1",
+                    "organization_id": str(self.h.org.id),
+                    "project_id": str(self.h.project.id),
+                    "batch_id": str(batch.id),
+                    "source_status": "parsed",
+                    "total_rows": 1,
+                    "valid_rows": 1,
+                    "invalid_rows": 0,
+                    "warning_rows": 0,
+                },
+            )
             self.h.db.commit()
+            newer_snap.update(self._snapshot())
             orig_recover(*args, **kwargs)
 
         monkeypatch.setattr(vs, "_recover_validation_failure", inject_newer)
         monkeypatch.setattr(
             vs,
             "_apply_validation_to_rows",
-            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")),
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("stale boom")),
         )
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(HTTPException) as exc:
             validate_project_asset_import_batch(
                 self.h.db,
                 org_id=self.h.org.id,
@@ -920,16 +965,17 @@ class TestValidationTransactionsAudits:
                 batch_id=self.h.batch.id,
                 current_user=self.h.user,
             )
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
-        assert self.h.batch.valid_rows == 99
-        fails = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .count()
-        )
-        assert fails == 0
+        assert exc.value.status_code == 500
+        assert exc.value.detail == "Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại."
+        assert newer_snap, "newer generation must be captured"
+        final = self._snapshot()
+        for k in newer_snap:
+            assert final[k] == newer_snap[k], k
+        assert final["status"] == ImportBatchStatus.READY_FOR_REVIEW
+        assert final["valid_rows"] == 1
+        assert final["proposed"] == [("Newer", "5")]
+        assert len(final["success_ids"]) == 1
+        assert final["failure_ids"] == []
         self.h.assert_line_immutable()
 
 
@@ -1123,6 +1169,43 @@ class _PGSeed:
             self.db.close()
 
 
+UPLOAD_EVENT = "ProjectAssetImportBatchUploaded"
+
+
+def _pg_backend_pid(session) -> int:
+    return session.execute(text("SELECT pg_backend_pid()")).scalar()
+
+
+def _wait_for_lock_wait(engine, backend_pid: int, *, timeout: float = 30.0):
+    """Poll pg_stat_activity until backend is waiting on a Lock (no sleep-as-proof)."""
+    deadline = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < deadline:
+        with engine.connect() as conn:
+            last = conn.execute(
+                text(
+                    "SELECT wait_event_type, wait_event, state "
+                    "FROM pg_stat_activity WHERE pid = :pid"
+                ),
+                {"pid": backend_pid},
+            ).first()
+            if last is not None and last[0] == "Lock":
+                return last
+        time.sleep(0.05)
+    raise AssertionError(
+        f"backend pid={backend_pid} never observed in Lock wait; last={last}"
+    )
+
+
+def _ordered_audits(session, batch_id):
+    return (
+        session.query(AuditEvent)
+        .filter(AuditEvent.entity_id == batch_id)
+        .order_by(AuditEvent.created_at, AuditEvent.id)
+        .all()
+    )
+
+
 class TestPGValidationConcurrency:
     """PostgreSQL concurrency matrix PG-A..PG-D (skip without PG)."""
 
@@ -1210,7 +1293,7 @@ class TestPGValidationConcurrency:
             seed.cleanup()
 
     def test_pg_b_upload_then_validation_serial_orders(self):
-        """PG-B: real upload vs validation serialization in both orders."""
+        """PG-B: both lock orders with observed lock-wait (pg_stat_activity), no sleep proof."""
         pg = _pg_url()
         if not pg:
             pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
@@ -1237,16 +1320,16 @@ class TestPGValidationConcurrency:
                     assert self.release.wait(timeout=30)
                 return self._bio.read(size)
 
-        # --- Order 1: upload holds FOR UPDATE; validation waits; then validates new gen ---
+        # --- Order 1: upload holds FOR UPDATE; validation observed waiting; then validates ---
         seed = _PGSeed(SessionLocal)
         try:
             ids = seed.seed()
             seed.add_rows([("Old", "1")])
             entered = threading.Event()
             release = threading.Event()
-            upload_done = threading.Event()
             errors = []
             content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
+            val_pid_box = []
 
             def upload_first():
                 s = SessionLocal()
@@ -1261,63 +1344,45 @@ class TestPGValidationConcurrency:
                         request=None,
                         current_user=u,
                     )
-                    upload_done.set()
                 except Exception as e:
                     errors.append(("upload", e))
-                    upload_done.set()
                 finally:
                     s.close()
 
-            def validate_while_and_after_upload():
+            def validate_second():
                 s = SessionLocal()
                 try:
                     assert entered.wait(timeout=30)
-                    # Upload holds FOR UPDATE. Start validation on another thread so it
-                    # blocks on the same batch lock, then release upload to complete.
-                    val_errors = []
-                    val_ok = []
-
-                    def do_validate():
-                        s2 = SessionLocal()
-                        try:
-                            u2 = s2.query(User).filter_by(id=ids["user"]).one()
-                            validate_project_asset_import_batch(
-                                s2,
-                                org_id=ids["org"],
-                                project_id=ids["project"],
-                                batch_id=ids["batch"],
-                                current_user=u2,
-                            )
-                            val_ok.append(True)
-                        except Exception as e:
-                            val_errors.append(e)
-                        finally:
-                            s2.close()
-
-                    tv = threading.Thread(target=do_validate)
-                    tv.start()
-                    # allow validate to block on lock
-                    threading.Event().wait(0.3)
-                    release.set()
-                    assert upload_done.wait(timeout=60)
-                    tv.join(timeout=60)
-                    assert not tv.is_alive()
-                    assert val_errors == [], val_errors
-                    assert val_ok == [True]
+                    val_pid_box.append(_pg_backend_pid(s))
+                    u = s.query(User).filter_by(id=ids["user"]).one()
+                    validate_project_asset_import_batch(
+                        s,
+                        org_id=ids["org"],
+                        project_id=ids["project"],
+                        batch_id=ids["batch"],
+                        current_user=u,
+                    )
                 except Exception as e:
                     errors.append(("validate", e))
-                    release.set()
                 finally:
                     s.close()
 
-            t1 = threading.Thread(target=upload_first)
-            t2 = threading.Thread(target=validate_while_and_after_upload)
-            t1.start()
-            t2.start()
-            t1.join(timeout=90)
-            t2.join(timeout=90)
-            assert not t1.is_alive() and not t2.is_alive()
+            t_up = threading.Thread(target=upload_first)
+            t_up.start()
+            assert entered.wait(timeout=30)
+            t_val = threading.Thread(target=validate_second)
+            t_val.start()
+            deadline = time.monotonic() + 30
+            while not val_pid_box and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert val_pid_box, "validation never published backend pid"
+            _wait_for_lock_wait(engine, val_pid_box[0], timeout=30)
+            release.set()
+            t_up.join(timeout=90)
+            t_val.join(timeout=90)
+            assert not t_up.is_alive() and not t_val.is_alive()
             assert errors == [], errors
+
             s = SessionLocal()
             try:
                 b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
@@ -1328,22 +1393,55 @@ class TestPGValidationConcurrency:
                     .all()
                 )
                 assert b.status == ImportBatchStatus.READY_FOR_REVIEW
+                assert b.source_filename == "n.xlsx"
+                assert b.source_sheet_name == "Sheet1"
                 assert b.total_rows == 1
+                assert b.valid_rows == 1
+                assert b.invalid_rows == 0
+                assert b.warning_rows == 0
+                assert len(rows) == 1
                 assert rows[0].proposed_asset_name == "NewU"
+                assert rows[0].proposed_quantity == "9"
                 assert rows[0].validation_status == ImportRowValidationStatus.VALID
+                assert rows[0].validation_errors == []
+                assert rows[0].validation_warnings == []
+                audits = _ordered_audits(s, ids["batch"])
+                names = [a.event_name for a in audits]
+                assert names == [UPLOAD_EVENT, SUCCESS_EVENT]
+                assert (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
+                    .count()
+                    == 0
+                )
             finally:
                 s.close()
             seed.assert_line()
         finally:
             seed.cleanup()
 
-        # --- Order 2: validation first, then upload replaces generation ---
+        # --- Order 2: validation holds lock mid-flight; upload observed waiting; then replaces ---
         seed = _PGSeed(SessionLocal)
+        import app.modules.excel_import.application.validate_staging as vs
+
+        orig_fp = vs.build_validation_fingerprint
         try:
             ids = seed.seed()
             seed.add_rows([("Old", "1")])
-            val_done = threading.Event()
+            val_holds = threading.Event()
+            release_val = threading.Event()
             errors = []
+            up_pid_box = []
+            gate = {"armed": True}
+
+            def gated_fp(db, batch):
+                if gate["armed"]:
+                    gate["armed"] = False
+                    val_holds.set()
+                    assert release_val.wait(timeout=30)
+                return orig_fp(db, batch)
+
+            vs.build_validation_fingerprint = gated_fp
 
             def validate_first():
                 s = SessionLocal()
@@ -1356,17 +1454,16 @@ class TestPGValidationConcurrency:
                         batch_id=ids["batch"],
                         current_user=u,
                     )
-                    val_done.set()
                 except Exception as e:
                     errors.append(("validate", e))
-                    val_done.set()
                 finally:
                     s.close()
 
-            def upload_after_validate():
+            def upload_second():
                 s = SessionLocal()
                 try:
-                    assert val_done.wait(timeout=30)
+                    assert val_holds.wait(timeout=30)
+                    up_pid_box.append(_pg_backend_pid(s))
                     u = s.query(User).filter_by(id=ids["user"]).one()
                     content = _xlsx([["asset_name", "quantity"], ["NewU", "9"]])
                     upload_excel_file_orchestrator(
@@ -1383,14 +1480,22 @@ class TestPGValidationConcurrency:
                 finally:
                     s.close()
 
-            t1 = threading.Thread(target=validate_first)
-            t2 = threading.Thread(target=upload_after_validate)
-            t1.start()
-            t2.start()
-            t1.join(timeout=90)
-            t2.join(timeout=90)
-            assert not t1.is_alive() and not t2.is_alive()
+            t_val = threading.Thread(target=validate_first)
+            t_val.start()
+            assert val_holds.wait(timeout=30)
+            t_up = threading.Thread(target=upload_second)
+            t_up.start()
+            deadline = time.monotonic() + 30
+            while not up_pid_box and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert up_pid_box, "upload never published backend pid"
+            _wait_for_lock_wait(engine, up_pid_box[0], timeout=30)
+            release_val.set()
+            t_val.join(timeout=90)
+            t_up.join(timeout=90)
+            assert not t_val.is_alive() and not t_up.is_alive()
             assert errors == [], errors
+
             s = SessionLocal()
             try:
                 b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
@@ -1401,12 +1506,32 @@ class TestPGValidationConcurrency:
                     .all()
                 )
                 assert b.status == ImportBatchStatus.PARSED
+                assert b.source_filename == "n.xlsx"
+                assert b.source_sheet_name == "Sheet1"
+                assert b.total_rows == 1
+                assert b.valid_rows == 0
+                assert b.invalid_rows == 0
+                assert b.warning_rows == 0
+                assert len(rows) == 1
                 assert rows[0].proposed_asset_name == "NewU"
+                assert rows[0].proposed_quantity == "9"
                 assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+                assert rows[0].validation_errors == []
+                assert rows[0].validation_warnings == []
+                audits = _ordered_audits(s, ids["batch"])
+                names = [a.event_name for a in audits]
+                assert names == [SUCCESS_EVENT, UPLOAD_EVENT]
+                assert (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
+                    .count()
+                    == 0
+                )
             finally:
                 s.close()
             seed.assert_line()
         finally:
+            vs.build_validation_fingerprint = orig_fp
             seed.cleanup()
 
     def test_pg_c_stale_validation_failure_vs_newer_success(self):
@@ -1417,6 +1542,10 @@ class TestPGValidationConcurrency:
         engine = create_engine(pg)
         SessionLocal = sessionmaker(bind=engine)
         seed = _PGSeed(SessionLocal)
+        import app.modules.excel_import.application.validate_staging as vs
+
+        orig_recover = vs._recover_validation_failure
+        orig_apply = vs._apply_validation_to_rows
         try:
             ids = seed.seed()
             seed.add_rows([("A", "1")])
@@ -1424,26 +1553,17 @@ class TestPGValidationConcurrency:
             release = threading.Event()
             errors = []
 
-            import app.modules.excel_import.application.validate_staging as vs
-
-            orig_recover = vs._recover_validation_failure
-
             def gated_recover(*a, **k):
                 entered.set()
-                release.wait(timeout=30)
+                assert release.wait(timeout=30)
                 return orig_recover(*a, **k)
 
-            # Patch in worker only via module global
             def stale_worker():
                 s = SessionLocal()
                 try:
-                    # force rule failure after lock
-                    real_apply = vs._apply_validation_to_rows
-
-                    def boom(*a, **k):
-                        raise RuntimeError("stale boom")
-
-                    vs._apply_validation_to_rows = boom
+                    vs._apply_validation_to_rows = lambda *a, **k: (
+                        _ for _ in ()
+                    ).throw(RuntimeError("stale boom"))
                     vs._recover_validation_failure = gated_recover
                     u = s.query(User).filter_by(id=ids["user"]).one()
                     try:
@@ -1456,18 +1576,16 @@ class TestPGValidationConcurrency:
                         )
                     except HTTPException:
                         pass
-                    finally:
-                        vs._apply_validation_to_rows = real_apply
-                        vs._recover_validation_failure = orig_recover
                 except Exception as e:
                     errors.append(e)
                 finally:
+                    vs._apply_validation_to_rows = orig_apply
+                    vs._recover_validation_failure = orig_recover
                     s.close()
 
             t = threading.Thread(target=stale_worker)
             t.start()
             assert entered.wait(timeout=30)
-            # newer success on separate session
             s2 = SessionLocal()
             try:
                 u = s2.query(User).filter_by(id=ids["user"]).one()
@@ -1487,38 +1605,55 @@ class TestPGValidationConcurrency:
             t.join(timeout=60)
             assert not t.is_alive()
             assert errors == []
+
             s = SessionLocal()
             try:
                 b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-                assert b.status == ImportBatchStatus.PARSED
-                assert b.source_filename == "newer.xlsx"
                 rows = (
                     s.query(ProjectAssetImportStagingRow)
                     .filter_by(import_batch_id=ids["batch"])
+                    .order_by(ProjectAssetImportStagingRow.id)
                     .all()
                 )
+                assert b.status == ImportBatchStatus.PARSED
+                assert b.source_filename == "newer.xlsx"
+                assert b.source_sheet_name == "Sheet1"
+                assert b.total_rows == 1
+                assert b.valid_rows == 0
+                assert b.invalid_rows == 0
+                assert b.warning_rows == 0
                 assert len(rows) == 1
                 assert rows[0].proposed_asset_name == "Newer"
+                assert rows[0].proposed_quantity == "5"
                 assert rows[0].validation_status == ImportRowValidationStatus.PENDING
+                assert rows[0].validation_errors == []
+                assert rows[0].validation_warnings == []
                 fail = (
                     s.query(AuditEvent)
                     .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
                     .count()
                 )
-                assert fail == 0
-                up = (
+                succ = (
                     s.query(AuditEvent)
-                    .filter_by(
-                        entity_id=ids["batch"],
-                        event_name="ProjectAssetImportBatchUploaded",
-                    )
+                    .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
                     .count()
                 )
-                assert up >= 1
+                up = (
+                    s.query(AuditEvent)
+                    .filter_by(entity_id=ids["batch"], event_name=UPLOAD_EVENT)
+                    .count()
+                )
+                assert fail == 0
+                assert succ == 0
+                assert up == 1
+                audits = _ordered_audits(s, ids["batch"])
+                assert [a.event_name for a in audits] == [UPLOAD_EVENT]
             finally:
                 s.close()
             seed.assert_line()
         finally:
+            vs._apply_validation_to_rows = orig_apply
+            vs._recover_validation_failure = orig_recover
             seed.cleanup()
 
     def test_pg_d_different_batches_independent(self):
@@ -1551,9 +1686,8 @@ class TestPGValidationConcurrency:
                     )
                     assert b is not None
                     held.set()
-                    release.wait(timeout=30)
+                    assert release.wait(timeout=30)
                     u = s.query(User).filter_by(id=ids_a["user"]).one()
-                    # release lock then validate
                     s.rollback()
                     validate_project_asset_import_batch(
                         s,
@@ -1570,7 +1704,7 @@ class TestPGValidationConcurrency:
             def validate_b():
                 s = SessionLocal()
                 try:
-                    held.wait(timeout=30)
+                    assert held.wait(timeout=30)
                     u = s.query(User).filter_by(id=ids_b["user"]).one()
                     validate_project_asset_import_batch(
                         s,
@@ -1595,21 +1729,54 @@ class TestPGValidationConcurrency:
             t_b.join(timeout=60)
             assert not t_a.is_alive() and not t_b.is_alive()
             assert errors == []
+
             s = SessionLocal()
             try:
-                ba = s.query(ProjectAssetImportBatch).filter_by(id=ids_a["batch"]).one()
-                bb = s.query(ProjectAssetImportBatch).filter_by(id=ids_b["batch"]).one()
-                assert ba.status == ImportBatchStatus.READY_FOR_REVIEW
-                assert bb.status == ImportBatchStatus.READY_FOR_REVIEW
-                assert ba.valid_rows == 1 and bb.valid_rows == 1
-                # no cross contamination of audits
-                for bid in (ids_a["batch"], ids_b["batch"]):
-                    assert (
-                        s.query(AuditEvent)
-                        .filter_by(entity_id=bid, event_name=SUCCESS_EVENT)
-                        .count()
-                        == 1
+                for ids, name, qty in (
+                    (ids_a, "AA", "1"),
+                    (ids_b, "BB", "2"),
+                ):
+                    b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+                    rows = (
+                        s.query(ProjectAssetImportStagingRow)
+                        .filter_by(import_batch_id=ids["batch"])
+                        .order_by(ProjectAssetImportStagingRow.id)
+                        .all()
                     )
+                    assert b.status == ImportBatchStatus.READY_FOR_REVIEW
+                    assert b.total_rows == 1
+                    assert b.valid_rows == 1
+                    assert b.invalid_rows == 0
+                    assert b.warning_rows == 0
+                    assert len(rows) == 1
+                    assert rows[0].proposed_asset_name == name
+                    assert rows[0].proposed_quantity == qty
+                    assert rows[0].validation_status == ImportRowValidationStatus.VALID
+                    assert rows[0].validation_errors == []
+                    assert rows[0].validation_warnings == []
+                    succ = (
+                        s.query(AuditEvent)
+                        .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
+                        .count()
+                    )
+                    fail = (
+                        s.query(AuditEvent)
+                        .filter_by(entity_id=ids["batch"], event_name=FAILURE_EVENT)
+                        .count()
+                    )
+                    assert succ == 1
+                    assert fail == 0
+                for ids in (ids_a, ids_b):
+                    other = ids_b if ids is ids_a else ids_a
+                    for ev in (
+                        s.query(AuditEvent)
+                        .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
+                        .all()
+                    ):
+                        assert ev.entity_id == ids["batch"]
+                        assert ev.entity_id != other["batch"]
+                        assert ev.payload["batch_id"] == str(ids["batch"])
+                        assert ev.payload["project_id"] == str(ids["project"])
             finally:
                 s.close()
             seed_a.assert_line()
