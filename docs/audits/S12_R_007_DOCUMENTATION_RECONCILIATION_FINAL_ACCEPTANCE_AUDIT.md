@@ -172,3 +172,16 @@ Ruff, Alembic upgrade + single head, security scanner, pip-audit, frontend lint/
 ```text
 S12-R-007 CORRECTIVE DOCUMENTATION PASS COMPLETE - AWAITING FINAL AUDIT-HEAD CI AND INDEPENDENT RE-AUDIT
 ```
+
+---
+
+## Post-merge addendum (S12-R-008, 2026-07-14)
+
+**Label:** Historical R007 audit evidence above is unchanged.
+
+| Field | Value |
+| --- | --- |
+| S12-R-007 | Completed historically (documentation reconciliation); merged prior to S12-PR-003 |
+| S12-PR-003 | **Merged** to `main` (PR #8) — statements above that PR-003 is “not started” are **historical** |
+| Current authority task | **S12-R-008** (Apply design authority; docs only) |
+| Next implementation | **S12-PR-004** after S12-R-008 merges |

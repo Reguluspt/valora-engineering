@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-13 (S12-R-007)
+**Last reconciled:** 2026-07-14 (S12-R-008)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,9 +11,9 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative)
 
 ```text
-S12-R Remediation Closure
-Active documentation task: S12-R-007
-Next product task (blocked): S12-PR-003 Excel Staging Validation Engine
+Post-Validation Apply Authority
+Active documentation task: S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
+Next implementation task (blocked until R008 merges): S12-PR-004 Excel Staging Apply Command & Provenance
 ```
 
 ### Historical roadmap (completed slices)
@@ -28,12 +28,13 @@ Sprint 5  — Document Engine + Intelligence [merged foundation]
 Sprint 6+ — AI governance / production     [partial / deferred]
 Sprint 10 — Design system, i18n, errors    [merged]
 Sprint 11 — Live Workbench loop            [merged; readiness superseded by S12-R]
-Sprint 12 — Excel import pipeline          [PR-001/002 merged; PR-003 blocked on S12-R]
-S12-R-001…006 — Remediation                [merged to main]
-S12-R-007 — Documentation reconciliation   [active]
+Sprint 12 — Excel import pipeline          [PR-001/002/003 merged; Apply = PR-004 after R008]
+S12-R-001…007 — Remediation / recon        [merged to main]
+S12-R-008 — Apply design authority         [active documentation]
 ```
 
 Sprint 0 “foundation only” boundaries are **historical**. They must not be stated as the current repository status.
+S12-PR-003 is **merged/complete** and must not be described as blocked or not started in current authority.
 
 ## 2. Design Authority
 
@@ -73,7 +74,8 @@ Vietnamese-first UX; Astryx design compliance.
 ```text
 Word and Excel are input/output only.
 They are not the source of truth.
-Excel intake targets import batch + staging only.
+Excel upload/validate target import batch + staging only.
+Official promotion uses Apply (S12-PR-004 / ADR 0029) after R008 merges.
 ```
 
 ### Price
@@ -222,5 +224,5 @@ weakens security or tenant isolation
 bypasses ADR 0028 restricted-field human commit / command gates
 creates irreversible data mutation without audit
 treats local PG skips as PASS
-starts S12-PR-003 before S12-R closure criteria are met
+starts S12-PR-004 before S12-R-008 authority merges to main
 ```

@@ -144,3 +144,18 @@ Recorded after this audit-only commit (no further evidence-loop commit).
 ```text
 S12-PR-003 MICRO-CORRECTIVE CI PASS — AWAITING INDEPENDENT RE-AUDIT
 ```
+
+---
+
+## Post-merge addendum (S12-R-008, 2026-07-14)
+
+**Label:** Historical audit evidence above is unchanged. This addendum records post-merge truth only.
+
+| Field | Value |
+| --- | --- |
+| Final disposition | **MERGED to `main`** via PR #8 |
+| Merge commit | `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` |
+| Merged at | `2026-07-14T07:01:15Z` |
+| Status strings above (`AWAITING INDEPENDENT RE-AUDIT`, Draft PR open) | **Superseded** by merge; retained as historical micro-corrective-era evidence |
+| Next authority task | S12-R-008 Apply design authority (docs only) |
+| Next implementation | S12-PR-004 after R008 merges |
