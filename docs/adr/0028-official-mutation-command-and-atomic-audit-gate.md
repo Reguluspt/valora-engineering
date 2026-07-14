@@ -49,3 +49,17 @@ The audit payload uses `committed_fields` (not `field_keys`) to avoid auto-redac
 - Safe audit trails for all operations using the `committed_fields` key.
 - Clean rollback handling prevents orphaned database mutations when background audit logging fails.
 - The DRAFT-only policy ensures workflow state integrity and prevents unauthorized mutations after a project has advanced beyond Draft.
+
+## Addendum — Excel Staging Apply command (2026-07-14)
+
+**Status:** Owner-approved addendum; does not rewrite the historical ADR body above.
+**Related:** ADR 0029, `VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` §15, S12-PR-004.
+
+### Clarifications
+
+1. **Excel Staging Apply** is a **separate** human-confirmed, DRAFT-only official-mutation command (`ApplyProjectAssetImportBatch`). It is not a direct `PATCH` bypass and is not the draft-commit command.
+2. **Direct PATCH** of restricted fields (`description`, `appraised_unit_price`, `review_status`, `validation_status`) remains blocked as decided in this ADR.
+3. **Description on create via Apply:** the owner explicitly authorizes setting `description` **only** through the approved Apply handler, using the same string-type and max-length 5000 safeguards defined in §6 of this ADR. This does not authorize Apply to set `appraised_unit_price`, `review_status`, or `validation_status` from spreadsheet values.
+4. **Spreadsheet-sourced** `proposed_appraised_unit_price`, `proposed_review_status`, and `proposed_validation_status` remain forbidden inputs for official promotion.
+5. **Subsequent edits** of restricted fields on existing official lines remain under this ADR’s draft-commit / version-token rules.
+6. **Excel upload and validation** continue to never mutate official `ProjectAssetLine` rows.

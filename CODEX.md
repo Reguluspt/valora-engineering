@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-13 (S12-R-007)
+**Last reconciled:** 2026-07-14 (S12-R-008)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -10,9 +10,9 @@ Domain behavior must come from:
 
 ```text
 1. Valora Design Book v1.2-final + v1.3 MVP completion addendum
-2. docs/design/* contracts
-3. docs/adr/* decisions
-4. docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md (for S12-R gates)
+2. docs/design/* contracts (including Excel staging contract §14–§15)
+3. docs/adr/* decisions (including ADR 0028 + addendum, ADR 0029)
+4. docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md (historical S12-R gates + recon notes)
 5. docs/VALORA_PROJECT_HANDOFF.md
 ```
 
@@ -23,33 +23,43 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` are **histor
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / S12-R Remediation Closure
-Active task: S12-R-007 — Documentation Reconciliation & Final Acceptance
+Engineering Phase / Post-Validation Apply Authority
 ```
 
-### Active task rules (S12-R-007)
+### Live task gate (fetch origin/main before acting)
 
 ```text
-Documentation / audit reconciliation only.
-No production code, tests, migrations, workflows, config, or dependency changes
-unless a separate implementation task explicitly authorizes them.
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
 ```
 
-### Next task (blocked until R007 acceptance)
+**S12-R-008 starting baseline (historical label, not evergreen current-main):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened).
+
+### While S12-R-008 is active (main lacks R008 / ADR 0029)
 
 ```text
-S12-PR-003 — Excel Staging Validation Engine
+Documentation / design-authority only.
+No production code, tests, migrations, workflows, config, or dependency changes.
+Do not implement S12-PR-004.
 ```
 
-May start **only after**:
+### After S12-R-008 merges (main contains R008 / ADR 0029)
 
 ```text
-1. S12-R-007 Draft PR CI is green on the documentation head
-2. Independent audit PASS for S12-R-007 / slice closure
-3. Project handoff and remediation slice mark S12-PR-003 as unblocked
+S12-PR-004 — Excel Staging Apply Command & Provenance
+is the next authorized active implementation task (backend only).
 ```
 
-Do **not** start S12-PR-003 inside an R007 session.
+### Completed (do not re-open as “blocked / not started”)
+
+```text
+S12-PR-003 — Excel Staging Validation Engine — MERGED to main (PR #8)
+```
+
+Do **not** invent Apply behavior outside ADR 0029 / contract §15. Agents must `git fetch origin` and verify live `origin/main`.
 
 ## 3. Permanent Hard Rules
 
@@ -61,7 +71,8 @@ ADR 0028 restricted Workbench fields (description, appraised_unit_price,
   + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
 Non-restricted ProjectAssetLine fields may use direct PATCH under project:update and are
   outside the R004 Human Commit Gate / atomic-command guarantee.
-Excel intake still never mutates official ProjectAssetLine rows.
+Excel upload/validate still never mutate official ProjectAssetLine rows.
+Apply (S12-PR-004 after R008) is the only approved promotion path; see ADR 0029.
 No tenant boundary bypass (organization_id / project / session fail-closed).
 No secrets committed; no production credentials in repo.
 No unbounded whole-file materialization on Excel runtime path

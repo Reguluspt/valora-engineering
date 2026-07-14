@@ -1,9 +1,21 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-13 — S12-R-007
-**Baseline `main` SHA:** `54872c764399182efae496e89dae9bd6ebdba9af`
+**Reconciled:** 2026-07-14 — S12-R-008 corrective authority
+**S12-R-008 starting baseline:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened; not an evergreen “current main” claim)
 **Do not use** protected untracked onboarding artifacts as authority.
+
+### Live task gate
+
+```text
+If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is the active authority task and S12-PR-004 is blocked.
+
+If origin/main contains the merged S12-R-008 / ADR 0029 authority,
+S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+```
+
+Agents must `git fetch origin` and verify live `origin/main`.
 
 ---
 
@@ -123,28 +135,40 @@ Superseded in part by S12-R-002…006 for auth, transaction, streaming, and raw 
 
 R-006 code-bearing CI historical evidence (pre-squash): **375 passed, 0 skipped**, PG concurrency executed.
 
-### S12-R-007 (this handoff cycle)
+### S12-R-007 (historical handoff cycle)
 
 Documentation reconciliation and final acceptance matrix.
-**Does not** implement Validation Engine.
+**Does not** implement Validation Engine. **Merged historically** before S12-PR-003.
 
-## 9. Next approved task
+### S12-PR-003 (merged)
 
 ```text
-S12-PR-003 — Excel Staging Validation Engine
+S12-PR-003 — Excel Staging Validation Engine — MERGED (PR #8)
 ```
 
-Only after S12-R-007 Draft PR CI + independent audit close the remediation slice.
+Validation Engine operates on **staging rows only**, does not apply to official lines, and does not introduce AI auto-approve.
 
-Validation Engine must:
+### S12-R-008 (authority reconciliation)
 
-- operate on **staging rows only**
-- not apply to official lines
-- not introduce AI auto-approve
+```text
+S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
+```
+
+Documentation / design-authority only while the live gate says R008 is active: ADR 0029, staging contract §15, ADR 0028 addendum. **Does not** implement Apply.
+
+## 9. Next approved implementation task
+
+```text
+S12-PR-004 — Excel Staging Apply Command & Provenance
+```
+
+Authorized only when the **live gate** above says `origin/main` already contains merged S12-R-008 / ADR 0029 (after independent audit PASS + merge). Until then, PR-004 is blocked.
+
+Apply must follow ADR 0029 and contract §15 exactly (backend-only; human-confirmed DRAFT-only; all-valid all-or-nothing; lineage migration; `contract_version = s12-pr-004-v1`).
 
 ## 10. Out of scope (still)
 
-- Apply staging → `ProjectAssetLine`
+- Frontend Apply UX (deferred; no task ID assigned here)
 - AI provider runtime
 - PDF/Word product reporting
 - CRM/revenue dashboards
@@ -152,13 +176,14 @@ Validation Engine must:
 
 ## 11. Safe onboarding for the next agent
 
-1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff.
+1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff, ADR 0029, staging contract §15.
 2. Verify `git rev-parse origin/main` against the task baseline.
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never touch protected untracked onboarding files outside scope.
 6. Never treat local PG skips as PASS.
-7. Do not start S12-PR-003 until R007 acceptance criteria say so.
+7. Do not implement S12-PR-004 until R008 acceptance criteria say so.
+8. Do not re-open S12-PR-003 as blocked/not started — it is merged.
 
 ## 12. Key paths
 
