@@ -53,6 +53,9 @@ from app.modules.project_master_data.workbench_schemas import (
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
 from app.modules.excel_import.application.import_service import upload_excel_file_orchestrator
+from app.modules.excel_import.application.validate_staging import (
+    validate_project_asset_import_batch,
+)
 
 
 def get_correlation_id(request: Request) -> str:
@@ -642,6 +645,37 @@ def upload_project_asset_import_file(
         request=request,
         current_user=current_user,
         correlation_id=correlation_id
+    )
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/validate",
+    response_model=ProjectAssetImportBatchResponse,
+)
+def validate_project_asset_import_batch_endpoint(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    """S12-PR-003: deterministic staging validation (staging-only, no ProjectAssetLine)."""
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id,
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    correlation_id = get_correlation_id(request) if request else None
+    return validate_project_asset_import_batch(
+        db=db,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+        current_user=current_user,
+        correlation_id=correlation_id,
     )
 
 

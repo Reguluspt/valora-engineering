@@ -211,3 +211,67 @@ To protect against system degradation, Denial of Service (DoS), data inconsisten
 - **Official Data Immutability**: All existing `ProjectAssetLine` records, their IDs, quantities, names, and version fields remain strictly immutable throughout the Excel ingestion transaction. Any transaction fault or outer commit failure rollback guarantees that no partial changes or draft states leak to ProjectAssetLine.
 
 
+
+## 14. S12-PR-003: Deterministic Staging Validation Engine (v1)
+
+**Authority:** Product/engineering owner decision package 2026-07-13.  
+**Supersedes for validation v1:** the historical illustrative `year_missing` warning example in §11C — validation v1 produces **no warnings** and does not implement year validation.
+
+### A. Trigger, endpoint, permission
+- **Route:** `POST /api/v1/projects/{project_id}/asset-imports/{batch_id}/validate`
+- **Permission:** `workbench:edit`
+- **Request body:** none
+- **Response:** `ProjectAssetImportBatchResponse`
+- **Invocation:** explicit and synchronous only. No automatic validation after upload in v1. No worker/background job.
+
+### B. Allowed and rejected batch source states
+- **Allowed:** `parsed`, `validation_failed`, `ready_for_review`
+- **Rejected (HTTP 409, zero mutation, zero audit):** `created`, `parsing`, `failed`, `applied`
+- **Client detail (409):** `Lô nhập liệu chưa ở trạng thái có thể kiểm tra.`
+- Unknown / cross-tenant / wrong-project / missing batch: established safe `404`.
+
+### C. Batch outcome semantics
+On **successful engine execution**:
+- Batch status becomes `ready_for_review` even when one or more rows are business-invalid.
+- Business-invalid rows are communicated via row `validation_status` and batch counters.
+- `validation_failed` is reserved for **validation-engine/system failure**, not ordinary invalid business data.
+- Zero staging rows: success → `ready_for_review` with all counters `0`.
+
+### D. Rule catalog v1 (`rule_set_version`: `s12-pr-003-v1`)
+1. **V1-001 asset name required** — field `proposed_asset_name`; trim for evaluation only; missing/null/empty/whitespace-only → invalid; do not rewrite stored value.
+   - `message_key`: `excel.validation.asset_name_required`
+   - `message`: `Tên tài sản là bắt buộc.`
+2. **V1-002 quantity format** — field `proposed_quantity`; optional; null/empty/whitespace-only → valid; if present, trimmed value must parse as finite decimal (signed/zero/scientific OK when Decimal recognizes); NaN/±Infinity/malformed → invalid; no positivity/range/unit rules; do not rewrite stored value.
+   - `message_key`: `excel.validation.quantity_invalid`
+   - `message`: `Số lượng không đúng định dạng số.`
+
+Row classification:
+- Any approved error → `invalid`
+- No approved errors → `valid`
+- Both errors: store in order asset name, then quantity
+- `validation_warnings` is always `[]` in v1
+- No unapproved fields/rules
+
+### E. Counters
+After successful validation under lock:
+- `total_rows` = staging row count
+- `valid_rows` / `invalid_rows` counted once per row
+- `warning_rows` = 0
+
+### F. Rerun / idempotency
+Reruns allowed from `validation_failed` and `ready_for_review` (and `parsed`). Each run clears prior validation outputs and recomputes all rows from current proposed values under lock. Identical inputs produce identical ordered results and counters.
+
+### G. Transaction, lock, fingerprint
+- `SELECT … FOR UPDATE` on tenant/project-scoped batch before staging select/mutate (same lock order as S12-R-006 upload).
+- Nested savepoint for mutations; outer commit; rollback preserves prior generation.
+- Pre-attempt fingerprint includes: batch status + source metadata + counters + ordered staging IDs + ordered `(proposed_asset_name, proposed_quantity)` + latest validation success audit id (if any).
+- On engine/commit failure: rollback, re-lock, write failure audit + `validation_failed` only if fingerprint still matches; never overwrite a newer generation.
+
+### H. Audit
+- Command: `ValidateProjectAssetImportBatch`
+- Success event: `ProjectAssetImportBatchValidationSucceeded`
+- Failure event: `ProjectAssetImportBatchValidationFailed`
+- Success payload: rule_set_version, organization_id, project_id, batch_id, source_status, total_rows, valid_rows, invalid_rows, warning_rows
+- Failure payload: rule_set_version, organization_id, project_id, batch_id, source_status, error_code=`validation_engine_failed`
+- Client engine-failure detail: `Không thể kiểm tra dữ liệu Excel. Vui lòng thử lại.`
+- No raw cell contents, stack traces, SQL, paths, or secrets in payloads/responses.
