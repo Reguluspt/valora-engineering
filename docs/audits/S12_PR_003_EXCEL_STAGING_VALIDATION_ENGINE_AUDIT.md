@@ -2,141 +2,104 @@
 
 ## Status
 ```text
-S12-PR-003 DRAFT PR CI VALIDATED — AWAITING FINAL DOCUMENTATION-HEAD CI AND INDEPENDENT AUDIT
+S12-PR-003 CORRECTIVE-HEAD CI PASS — AWAITING INDEPENDENT RE-AUDIT
 ```
 
 | Field | Value |
 |---|---|
 | Task | S12-PR-003 Excel Staging Validation Engine |
+| Independent audit (prior) | **PASS WITH FIXES** (merge blocked pending corrective proof) |
 | Baseline `main` | `5bef98c25bc0bdfb386c68312a80f104a51769c6` |
 | Branch | `s12-pr-003-excel-staging-validation-engine` |
-| Design authority | Owner decision package 2026-07-13 + contract §14 |
-| Draft PR | **#8** — https://github.com/Reguluspt/valora-engineering/pull/8 |
-| PR state | open, **draft=true** |
-| Code-bearing branch head | `e0d0c840b38fee3cb54e9440a1a6ac01882aa2a9` |
-| Independent audit | **PENDING** |
+| Draft PR | **#8** — https://github.com/Reguluspt/valora-engineering/pull/8 (open, draft=true) |
+| Corrective code head | `d92de3ae42fd3668d1923c34429720d376798c49` |
+| Independent re-audit | **PENDING** |
 
-## Design authority applied
+## Independent audit findings (F-1…F-5) and resolution
 
-| Decision | Implementation |
-|---|---|
-| D1 Endpoint | `POST /api/v1/projects/{project_id}/asset-imports/{batch_id}/validate`, `workbench:edit`, no body |
-| D2 States | Allow `parsed`/`validation_failed`/`ready_for_review`; 409 otherwise |
-| D3 Outcomes | Success → `ready_for_review` even with invalid rows; `validation_failed` = engine failure only |
-| D4 Rules | V1-001 asset name required; V1-002 quantity finite decimal; warnings always empty |
-| D5–D8 | Counters, rerun, FOR UPDATE + fingerprint recovery, success/failure audits |
+| ID | Finding | Resolution |
+|---|---|---|
+| F-1 | Fingerprint `str()` collapsed `None` vs `"None"` | `validation_inputs` now stores raw `(proposed_asset_name, proposed_quantity)` null-aware pairs |
+| F-2 | Same-batch PG test allowed worker failures | PG-A asserts both threads succeed, `errors==[]`, 2 success audits, 0 failure audits, exact rows/counters |
+| F-3 | Incomplete PG matrix | Added PG-A, PG-B (both serial orders), PG-C (stale failure vs newer upload), PG-D (different batches) |
+| F-4 | Weak fault-injection | Exact snapshots + failure audit cardinality/payload for rule/flush/savepoint/outer-commit/audit-persist/stale paths |
+| F-5 | Evidence claims | This section lists exact nodes and CI counts |
 
-Contract amendment: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` §14
-Supersedes illustrative `year_missing` for validation v1.
+## Design authority (unchanged)
 
-## Code paths
+Contract §14 + owner package 2026-07-13. Rules v1 unchanged: asset_name_required, quantity_invalid; warnings always empty; success → ready_for_review; engine failure → validation_failed + fingerprint-guarded failure audit.
 
-```text
-backend/app/modules/excel_import/domain/validation_rules.py
-backend/app/modules/excel_import/application/validate_staging.py
-backend/app/api/projects.py  (thin adapter)
-backend/tests/test_s12_pr_003_staging_validation.py
-```
+## Corrective code commits
 
-No migration. No frontend/worker/dependency/workflow changes. No Apply. No `ProjectAssetLine` mutation.
+| Commit | SHA | Paths |
+|---|---|---|
+| Strengthen proof | `d1e939736b61da54c4fd93c1096817db3bafe5e5` | `validate_staging.py`, `test_s12_pr_003_staging_validation.py` |
+| PG-B barrier fix | `d92de3ae42fd3668d1923c34429720d376798c49` | `test_s12_pr_003_staging_validation.py` only |
 
-## Commit lineage
+## Exact tests added/strengthened
 
-```text
-main 5bef98c (S12-R-007 #7)
-  └─ s12-pr-003-excel-staging-validation-engine
-       ├─ A 68227cd implement Excel staging validation engine
-       ├─ B e0d0c84 docs: record S12-PR-003 local validation evidence
-       └─ C (this) docs: record S12-PR-003 Draft PR CI evidence
-```
+### Fingerprint (SQLite unit)
+- `TestFingerprintNullAwareness::test_fingerprint_differs_null_vs_literal_none_asset_name`
+- `…_quantity`
+- `…_empty_string_vs_null`
+- `…_identical_typed_inputs_same_generation`
+- `…_row_order_deterministic_by_id`
 
-## Local evidence (pre-CI)
+### Fault injection (SQLite)
+- `test_rule_evaluation_failure_records_exact_failure_audit`
+- `test_flush_failure_after_audit_preserves_generation`
+- `test_savepoint_commit_failure_preserves_generation`
+- `test_outer_commit_failure_exact_failure_audit`
+- `test_failure_audit_persistence_failure_preserves_pre_attempt`
+- `test_stale_failure_does_not_overwrite_newer_generation`
+
+### PostgreSQL (CI-required; local skip without PG)
+- `TestPGValidationConcurrency::test_pg_a_two_validations_same_batch_both_succeed`
+- `…::test_pg_b_upload_then_validation_serial_orders`
+- `…::test_pg_c_stale_validation_failure_vs_newer_success`
+- `…::test_pg_d_different_batches_independent`
+
+## Local results (corrective)
 
 | Suite | Result |
 |---|---|
-| Focused PR-003 tests | **23 passed, 1 skipped** (PG concurrency) |
-| R006 hardening | 39 passed, 1 skipped |
-| Full backend pytest | **393 passed, 6 skipped, 20 warnings** |
+| Focused PR-003 | **31 passed, 4 skipped** (PG matrix) |
+| Full backend | **401 passed, 9 skipped, 20 warnings** |
+| R006 + security blockers | green |
 | Security scanner | PASS |
-| Alembic | single head `db5977424e7b` |
-| Worker | Ruff PASS, 1 passed |
-| Frontend | lint/build/vitest **80 / 15** |
+| Alembic | `db5977424e7b` |
+| Worker | 1 passed |
+| Frontend | 80 / 15 |
 | npm audit --audit-level=high | 0 vulnerabilities |
 
-### Local PostgreSQL skips (NOT PASS)
-```text
-tests/test_auth_endpoints.py:737
-tests/test_s12_pr_003_staging_validation.py::TestPGValidationConcurrency::test_same_batch_serializes_under_postgres
-tests/test_s12_r_004_official_mutation.py:1049
-tests/test_s12_r_006_excel_intake_hardening.py:517
-tests/test_workbench_api.py:696
-tests/test_workbench_api.py:980
-```
+Local PG skips are **SKIPPED**, not PASS.
 
-## Code-bearing Draft PR CI evidence (SHA `e0d0c84…`)
+## Code-bearing corrective CI (head `d92de3a…`)
 
-| Run | Event | Branch-head SHA | Checkout/tested SHA | Conclusion | Jobs |
-|---|---|---|---|---|---|
-| **29262082691** (#102) | `push` | `e0d0c840b38fee3cb54e9440a1a6ac01882aa2a9` | branch head (direct push) | **SUCCESS** | backend/worker/frontend SUCCESS |
-| **29262718158** (#103) | `pull_request` | `e0d0c840b38fee3cb54e9440a1a6ac01882aa2a9` | `e8a4f46ba1907f1ae4e829c7e415a1081573f3cf` (Merge head into `5bef98c…`) | **SUCCESS** | backend/worker/frontend SUCCESS |
+| Run | Event | Conclusion | Backend |
+|---|---|---|---|
+| **29309650043** (#108) | push | SUCCESS | **410 passed, 0 skipped, 27 warnings** |
+| **29309651857** (#109) | pull_request | SUCCESS | **410 passed, 0 skipped, 27 warnings** |
 
-URLs:
-- https://github.com/Reguluspt/valora-engineering/actions/runs/29262082691
-- https://github.com/Reguluspt/valora-engineering/actions/runs/29262718158
+- https://github.com/Reguluspt/valora-engineering/actions/runs/29309650043
+- https://github.com/Reguluspt/valora-engineering/actions/runs/29309651857
 
-### Backend (authoritative PR run #103 and push #102)
-| Gate | Result |
-|---|---|
-| Ruff | All checks passed |
-| Pytest | **399 passed, 0 skipped, 27 warnings** (`collected 399 items`) |
-| pip-audit | No known vulnerabilities found |
-| Security scanner | Scan passed |
-| Alembic upgrade / single head | PASS (CI job path) |
+Jobs: backend/worker/frontend SUCCESS. PostgreSQL skip count: **0**. All four PG matrix tests executed.
 
-PostgreSQL skip count in CI: **0**.
+Prior failed code-bearing attempt on `d1e9397` (PG-B barrier bug) superseded by `d92de3a` fix; do not treat failed runs as authoritative.
 
-### S12-PR-003 PostgreSQL concurrency proof
-- Suite `tests/test_s12_pr_003_staging_validation.py` fully green in CI (all nodes including concurrency; local skip no longer applies).
-- Overall backend: **399/0 skip** = former 393 pass + 6 previously skipped PG tests all executed.
-- Node (local skip ID):
-  ```text
-  tests/test_s12_pr_003_staging_validation.py::TestPGValidationConcurrency::test_same_batch_serializes_under_postgres
-  ```
-  Executed as part of the full suite under PostgreSQL CI (0 skips).
+## Documentation-head CI
 
-### Former local-skip tests executed in CI
-All six previously skipped tests ran (suite completed with zero skips), including:
-- auth PG integration
-- S12-R-004 concurrency
-- S12-R-006 `TestPGIsolatedConcurrencyRestored::test_concurrent_upload_serialization` (present in CI logs)
-- workbench PG concurrency / rollback
-- S12-PR-003 PG validation concurrency
-
-### Worker / Frontend
-- Worker job: SUCCESS (Ruff + pytest + deps)
-- Frontend job: SUCCESS (lint/build/Vitest/npm audit)
-
-### Transient/superseded runs
-None for this head — both push and PR runs concluded SUCCESS.
-
-### Local vs CI distinction
-| Environment | Backend pytest |
-|---|---|
-| Local (no PG) | 393 passed, **6 skipped**, 20 warnings |
-| Code-bearing CI (PG) on `e0d0c84…` | **399 passed, 0 skipped**, 27 warnings |
-
-## Immutability
-
-Focused tests snapshot official `ProjectAssetLine` IDs/name/quantity/row_version across success and failure paths; unchanged. CI full suite green.
+Recorded externally after this audit-only commit (no evidence loop).
 
 ## Limitations
 
-1. Documentation-head CI for this audit-evidence commit is reported externally after push (not looped into another commit).
-2. Independent audit remains PENDING.
-3. PR remains Draft — not Ready, not merged.
-4. Validation v1 still only two rules; no Apply/AI/frontend.
+- Independent re-audit still required.
+- PR remains Draft.
+- Validation rule catalog still v1 only (two rules).
+- No Apply/AI/frontend.
 
 ## Final verdict
 ```text
-S12-PR-003 DRAFT PR CI VALIDATED — AWAITING FINAL DOCUMENTATION-HEAD CI AND INDEPENDENT AUDIT
+S12-PR-003 CORRECTIVE-HEAD CI PASS — AWAITING INDEPENDENT RE-AUDIT
 ```
