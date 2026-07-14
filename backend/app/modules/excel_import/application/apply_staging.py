@@ -390,6 +390,7 @@ def apply_project_asset_import_batch(
     if _status_value(batch.status) != ImportBatchStatus.READY_FOR_REVIEW.value:
         _raise(409, ERR_STATE, MSG_STATE)
 
+    # Lock order: Project → batch → staging FOR UPDATE (ordered) → inserts
     rows = (
         db.query(ProjectAssetImportStagingRow)
         .filter(
@@ -401,6 +402,7 @@ def apply_project_asset_import_batch(
             ProjectAssetImportStagingRow.source_row_number,
             ProjectAssetImportStagingRow.id,
         )
+        .with_for_update()
         .all()
     )
 
@@ -448,14 +450,7 @@ def apply_project_asset_import_batch(
     pre_fingerprint = build_apply_fingerprint(
         db, project=project, batch=batch, rows=rows
     )
-
-    # Capture official-line snapshot count for immutability (existing lines)
-    pre_official_ids = {
-        lid
-        for (lid,) in db.query(ProjectAssetLine.id)
-        .filter(ProjectAssetLine.project_id == project_id)
-        .all()
-    }
+    batch_id_value = batch.id
 
     sp = db.begin_nested()
     savepoint_committed = False
@@ -516,25 +511,17 @@ def apply_project_asset_import_batch(
         db.flush()
         sp.commit()
         savepoint_committed = True
-        db.commit()
-        db.refresh(batch)
-
-        # Immutability: pre-existing official lines still present
-        post_ids = {
-            lid
-            for (lid,) in db.query(ProjectAssetLine.id)
-            .filter(ProjectAssetLine.project_id == project_id)
-            .all()
-        }
-        assert pre_official_ids.issubset(post_ids)
-
-        return {
+        # Response must be fully built from scalars/UUIDs before outer commit.
+        # Outer commit is the final fallible success-path operation.
+        response = {
             "project_id": project_id,
-            "import_batch_id": batch.id,
-            "status": _status_value(batch.status),
+            "import_batch_id": batch_id_value,
+            "status": ImportBatchStatus.APPLIED.value,
             "created_count": len(created_lines),
             "created_lines": created_lines,
         }
+        db.commit()
+        return response
 
     except HTTPException:
         raise

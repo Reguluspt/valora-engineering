@@ -85,6 +85,75 @@ class ExcelIntakeSecurityVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+
+def check_apply_path_blockers(directory):
+    """S12-PR-004: fail-closed rules for Apply runtime only."""
+    print("=== Checking S12-PR-004 Apply path blockers ===")
+    issues = 0
+    apply_path = os.path.join(
+        directory, "backend", "app", "modules", "excel_import", "application", "apply_staging.py"
+    )
+    # support scanning from monorepo root or backend root
+    if not os.path.isfile(apply_path):
+        apply_path = os.path.join(
+            directory, "app", "modules", "excel_import", "application", "apply_staging.py"
+        )
+    projects_path = os.path.join(directory, "backend", "app", "api", "projects.py")
+    if not os.path.isfile(projects_path):
+        projects_path = os.path.join(directory, "app", "api", "projects.py")
+
+    if os.path.isfile(apply_path):
+        with open(apply_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if ".with_for_update()" not in content:
+            print("[BLOCKER FAIL] Apply staging/batch path missing with_for_update()")
+            issues += 1
+        # staging query must lock rows: order_by then with_for_update before .all()
+        if not re.search(
+            r"ProjectAssetImportStagingRow[\s\S]{0,800}?with_for_update\(\)",
+            content,
+        ):
+            print(
+                "[BLOCKER FAIL] Apply staging query missing with_for_update() on ProjectAssetImportStagingRow"
+            )
+            issues += 1
+        if re.search(r"\bsetattr\s*\(", content):
+            print("[BLOCKER FAIL] Apply uses raw setattr")
+            issues += 1
+        if re.search(r"\braw_values\b", content):
+            print("[BLOCKER FAIL] Apply reads raw_values business content")
+            issues += 1
+        if re.search(
+            r"query\s*\(\s*ProjectAssetLine\s*\)[\s\S]{0,200}\.delete\s*\(",
+            content,
+        ) or re.search(r"db\.delete\s*\(\s*.*ProjectAssetLine", content):
+            print("[BLOCKER FAIL] Apply deletes ProjectAssetLine rows")
+            issues += 1
+        if re.search(r"\bupdate\s*\(\s*\{", content) and "ProjectAssetLine" in content:
+            print("[BLOCKER FAIL] Apply appears to update existing ProjectAssetLine via dict update")
+            issues += 1
+
+    if os.path.isfile(projects_path):
+        with open(projects_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        # endpoint must require workbench:edit and call application command
+        if not re.search(
+            r"asset-imports/\{batch_id\}/apply[\s\S]{0,1200}?require_permission\(\s*[\"']workbench:edit[\"']\s*\)",
+            content,
+        ):
+            print(
+                "[BLOCKER FAIL] Apply endpoint missing workbench:edit permission dependency"
+            )
+            issues += 1
+        if "apply_project_asset_import_batch(" not in content:
+            print(
+                "[BLOCKER FAIL] Apply endpoint does not call application command apply_project_asset_import_batch"
+            )
+            issues += 1
+
+    return issues
+
+
 def check_secret_placeholders(directory):
     print("=== Scanning for hardcoded secrets ===")
     secret_patterns = [
@@ -198,11 +267,12 @@ if __name__ == "__main__":
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     secrets_failed = check_secret_placeholders(base_dir)
     baseline_failed = check_security_baseline_and_blockers(base_dir)
-    
-    total_failures = secrets_failed + baseline_failed
+    apply_failed = check_apply_path_blockers(base_dir)
+
+    total_failures = secrets_failed + baseline_failed + apply_failed
     if total_failures > 0:
         print(f"\nScan failed: {total_failures} critical security issues found.")
         sys.exit(1)
-    
+
     print("\nScan passed: Controlled baseline validated without blocker regressions.")
     sys.exit(0)

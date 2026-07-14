@@ -144,3 +144,55 @@ def unrelated_function():
         issues = m.check_security_baseline_and_blockers(tmp)
         assert issues == 0, "Expected no blocker outside upload function in projects.py"
 
+
+
+def test_apply_staging_for_update_blocker():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).order_by(ProjectAssetImportStagingRow.id).all()\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues > 0, "Expected FOR UPDATE blocker on Apply staging query"
+
+
+def test_apply_setattr_blocker():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).with_for_update().all()\n"
+                "    setattr(line, 'asset_name', x)\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues > 0, "Expected setattr blocker on Apply path"
+
+
+def test_apply_raw_values_blocker():
+    m = _import_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        excel_dir = os.path.join(tmp, "app", "modules", "excel_import", "application")
+        os.makedirs(excel_dir, exist_ok=True)
+        with open(os.path.join(excel_dir, "apply_staging.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "def apply():\n"
+                "    rows = db.query(ProjectAssetImportStagingRow).with_for_update().all()\n"
+                "    v = row.raw_values\n"
+            )
+        issues = m.check_apply_path_blockers(tmp)
+        assert issues > 0, "Expected raw_values blocker on Apply path"
+
+
+def test_approved_apply_implementation_passes_scanner():
+    m = _import_checker()
+    backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    monorepo = os.path.abspath(os.path.join(backend_root, ".."))
+    issues = m.check_apply_path_blockers(monorepo)
+    assert issues == 0, f"Approved Apply implementation must pass scanner, got {issues}"
