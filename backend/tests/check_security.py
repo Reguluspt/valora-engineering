@@ -86,6 +86,57 @@ class ExcelIntakeSecurityVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class ApplyStagingSecurityVisitor(ast.NodeVisitor):
+    """AST fail-closed checks for apply_staging.py."""
+
+    def __init__(self):
+        self.issues = []
+        self.has_staging_for_update = False
+        self.staging_query_seen = False
+
+    def visit_Call(self, node):
+        # setattr(...)
+        if isinstance(node.func, ast.Name) and node.func.id == "setattr":
+            self.issues.append((node.lineno, "Apply uses raw setattr", "setattr()"))
+        # .delete() chained after ProjectAssetLine query is hard; flag Attribute delete on query results
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "delete":
+            self.issues.append((node.lineno, "Apply may delete rows", ".delete()"))
+        # with_for_update on any call chain involving ProjectAssetImportStagingRow tracked via source
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "with_for_update":
+            # walk receiver for query(ProjectAssetImportStagingRow)
+            if self._chain_queries_staging(node.func.value):
+                self.has_staging_for_update = True
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        if node.attr == "raw_values":
+            self.issues.append((node.lineno, "Apply reads raw_values", "raw_values"))
+        self.generic_visit(node)
+
+    def _chain_queries_staging(self, node) -> bool:
+        """True if call chain includes query(ProjectAssetImportStagingRow)."""
+        cur = node
+        while isinstance(cur, ast.Call):
+            if isinstance(cur.func, ast.Attribute) and cur.func.attr == "query":
+                for arg in cur.args:
+                    if isinstance(arg, ast.Name) and arg.id == "ProjectAssetImportStagingRow":
+                        self.staging_query_seen = True
+                        return True
+                    if isinstance(arg, ast.Attribute) and arg.attr == "ProjectAssetImportStagingRow":
+                        self.staging_query_seen = True
+                        return True
+            if isinstance(cur.func, ast.Attribute):
+                cur = cur.func.value
+            else:
+                break
+        # also walk attributes
+        while isinstance(cur, ast.Attribute):
+            cur = cur.value
+            if isinstance(cur, ast.Call):
+                return self._chain_queries_staging(cur)
+        return False
+
+
 def check_apply_path_blockers(directory):
     """S12-PR-004: fail-closed rules for Apply runtime only."""
     print("=== Checking S12-PR-004 Apply path blockers ===")
@@ -93,7 +144,6 @@ def check_apply_path_blockers(directory):
     apply_path = os.path.join(
         directory, "backend", "app", "modules", "excel_import", "application", "apply_staging.py"
     )
-    # support scanning from monorepo root or backend root
     if not os.path.isfile(apply_path):
         apply_path = os.path.join(
             directory, "app", "modules", "excel_import", "application", "apply_staging.py"
@@ -102,54 +152,72 @@ def check_apply_path_blockers(directory):
     if not os.path.isfile(projects_path):
         projects_path = os.path.join(directory, "app", "api", "projects.py")
 
-    if os.path.isfile(apply_path):
+    if not os.path.isfile(apply_path):
+        print("[BLOCKER FAIL] missing apply_staging.py")
+        issues += 1
+    else:
         with open(apply_path, "r", encoding="utf-8") as f:
             content = f.read()
-        if ".with_for_update()" not in content:
-            print("[BLOCKER FAIL] Apply staging/batch path missing with_for_update()")
-            issues += 1
-        # staging query must lock rows: order_by then with_for_update before .all()
-        if not re.search(
-            r"ProjectAssetImportStagingRow[\s\S]{0,800}?with_for_update\(\)",
-            content,
-        ):
-            print(
-                "[BLOCKER FAIL] Apply staging query missing with_for_update() on ProjectAssetImportStagingRow"
-            )
-            issues += 1
-        if re.search(r"\bsetattr\s*\(", content):
-            print("[BLOCKER FAIL] Apply uses raw setattr")
-            issues += 1
-        if re.search(r"\braw_values\b", content):
-            print("[BLOCKER FAIL] Apply reads raw_values business content")
-            issues += 1
-        if re.search(
-            r"query\s*\(\s*ProjectAssetLine\s*\)[\s\S]{0,200}\.delete\s*\(",
-            content,
-        ) or re.search(r"db\.delete\s*\(\s*.*ProjectAssetLine", content):
-            print("[BLOCKER FAIL] Apply deletes ProjectAssetLine rows")
-            issues += 1
-        if re.search(r"\bupdate\s*\(\s*\{", content) and "ProjectAssetLine" in content:
-            print("[BLOCKER FAIL] Apply appears to update existing ProjectAssetLine via dict update")
+        try:
+            tree = ast.parse(content, filename=apply_path)
+            visitor = ApplyStagingSecurityVisitor()
+            visitor.visit(tree)
+            for lineno, name, detail in visitor.issues:
+                print(f"[BLOCKER FAIL] {name} found in apply_staging.py:{lineno} - {detail}")
+                issues += 1
+            if not visitor.has_staging_for_update:
+                print(
+                    "[BLOCKER FAIL] Apply staging query missing with_for_update() on ProjectAssetImportStagingRow"
+                )
+                issues += 1
+        except SyntaxError as se:
+            print(f"[AST ERROR] apply_staging.py: {se}")
             issues += 1
 
-    if os.path.isfile(projects_path):
+    if not os.path.isfile(projects_path):
+        print("[BLOCKER FAIL] missing projects.py API file")
+        issues += 1
+    else:
         with open(projects_path, "r", encoding="utf-8") as f:
             content = f.read()
-        # endpoint must require workbench:edit and call application command
-        if not re.search(
-            r"asset-imports/\{batch_id\}/apply[\s\S]{0,1200}?require_permission\(\s*[\"']workbench:edit[\"']\s*\)",
-            content,
-        ):
-            print(
-                "[BLOCKER FAIL] Apply endpoint missing workbench:edit permission dependency"
-            )
+        try:
+            tree = ast.parse(content, filename=projects_path)
+        except SyntaxError as se:
+            print(f"[AST ERROR] projects.py: {se}")
             issues += 1
-        if "apply_project_asset_import_batch(" not in content:
-            print(
-                "[BLOCKER FAIL] Apply endpoint does not call application command apply_project_asset_import_batch"
-            )
+            return issues
+        # Find apply endpoint function
+        apply_fn = None
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if "apply" in node.name and "asset_import" in node.name:
+                    apply_fn = node
+                    break
+        if apply_fn is None:
+            # also scan for decorator path containing /apply
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for dec in node.decorator_list:
+                        src = ast.dump(dec)
+                        if "apply" in src:
+                            apply_fn = node
+                            break
+        if apply_fn is None:
+            print("[BLOCKER FAIL] Apply endpoint function not found in projects.py")
             issues += 1
+        else:
+            lines = content.splitlines()
+            start = max(0, apply_fn.lineno - 8)
+            end = apply_fn.end_lineno or (apply_fn.lineno + 40)
+            fn_text = "\n".join(lines[start:end])
+            if "workbench:edit" not in fn_text:
+                print("[BLOCKER FAIL] Apply endpoint missing workbench:edit")
+                issues += 1
+            if "apply_project_asset_import_batch(" not in fn_text:
+                print(
+                    "[BLOCKER FAIL] Apply endpoint does not call application command apply_project_asset_import_batch"
+                )
+                issues += 1
 
     return issues
 

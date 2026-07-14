@@ -102,66 +102,69 @@ def _parse_decimal(
     return dec
 
 
+def _is_active_ref(status) -> bool:
+    return (status.value if hasattr(status, "value") else str(status)) == ReferenceStatus.ACTIVE.value
+
+
 def _resolve_unit(db: Session, raw: str | None) -> uuid.UUID | None:
+    """Selected-tier resolution: match ALL rows per tier, then require exactly one ACTIVE."""
     key = _trim(raw)
     if key is None:
         return None
     key_cf = key.casefold()
-    active = (
-        db.query(Unit)
-        .filter(Unit.status == ReferenceStatus.ACTIVE)
-        .all()
-    )
+    all_units = db.query(Unit).all()
     for attr in ("code", "display_name", "symbol"):
         matches = [
             u
-            for u in active
+            for u in all_units
             if getattr(u, attr) is not None
             and str(getattr(u, attr)).casefold() == key_cf
         ]
-        if attr == "symbol":
-            # only unique symbol
-            if len(matches) == 1:
-                return matches[0].id
-            if len(matches) > 1:
-                raise ValueError("ambiguous unit symbol")
-            continue
-        if len(matches) == 1:
-            return matches[0].id
-        if len(matches) > 1:
-            raise ValueError("ambiguous unit")
-        # no matches at this tier: fall through only when zero matches
+        if not matches:
+            continue  # zero matches → next tier
+        # Tier selected: lower tiers forbidden
+        if len(matches) != 1:
+            raise ValueError("ambiguous unit tier")
+        only = matches[0]
+        if not _is_active_ref(only.status):
+            raise ValueError("inactive unit tier")
+        return only.id
     raise ValueError("unknown unit")
 
 
 def _resolve_currency(db: Session, raw: str | None) -> uuid.UUID | None:
+    """Selected-tier resolution for currency; symbols always forbidden.
+
+    Match ALL rows at each tier (code, then display_name). Zero matches → next
+    tier. Non-zero matches select the tier: require exactly one ACTIVE row.
+    Symbols are never a valid lookup tier.
+    """
     key = _trim(raw)
     if key is None:
         return None
     key_cf = key.casefold()
-    active = (
-        db.query(Currency)
-        .filter(Currency.status == ReferenceStatus.ACTIVE)
-        .all()
-    )
+    all_currencies = db.query(Currency).all()
     for attr in ("code", "display_name"):
         matches = [
             c
-            for c in active
+            for c in all_currencies
             if getattr(c, attr) is not None
             and str(getattr(c, attr)).casefold() == key_cf
         ]
-        if len(matches) == 1:
-            return matches[0].id
-        if len(matches) > 1:
-            raise ValueError("ambiguous currency")
-    # symbol forbidden: if matches only via symbol, reject
-    sym = [
-        c
-        for c in active
-        if c.symbol is not None and str(c.symbol).casefold() == key_cf
-    ]
-    if sym:
+        if not matches:
+            continue  # zero matches → next tier
+        # Tier selected: lower tiers (and symbols) forbidden
+        if len(matches) != 1:
+            raise ValueError("ambiguous currency tier")
+        only = matches[0]
+        if not _is_active_ref(only.status):
+            raise ValueError("inactive currency tier")
+        return only.id
+    # No code/display match: symbol strings are never valid currency inputs
+    if any(
+        c.symbol is not None and str(c.symbol).casefold() == key_cf
+        for c in all_currencies
+    ):
         raise ValueError("currency symbol forbidden")
     raise ValueError("unknown currency")
 
