@@ -3,7 +3,7 @@
 ## Status
 
 ```text
-S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDENT RE-AUDIT
+S12-PR-004 PROOF MATRIX IMPLEMENTED — AWAITING POSTGRESQL CI AND INDEPENDENT RE-AUDIT
 ```
 
 | Field | Value |
@@ -12,8 +12,8 @@ S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDEN
 | Baseline main | `32024be43044097b185b6946499705f2560a9103` (S12-R-008 merge #9) |
 | Branch | `s12-pr-004-excel-staging-apply-command-provenance` |
 | Authority | ADR 0029 + staging contract section 15 (`contract_version = s12-pr-004-v1`) |
-| Starting head (pre-acceptance-closure) | `98fcffc8b300a186d47fcd70b355e5d6d03b8bfa` |
-| Independent audit | Not passed (acceptance-closure A-1..A-8 addressed in this pass) |
+| Starting head (pre-proof-matrix) | `ade92f18acb4b3a7116a6b79b128827a5af73b93` |
+| Independent audit | Not passed (proof-matrix M-1..M-7 addressed in this pass) |
 | Draft PR | Not created in this session |
 
 ## Scope delivered
@@ -23,52 +23,86 @@ S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDEN
 - Success path: outer commit is final fallible step; response built from pre-commit scalars
 - Lineage migration `e1f2a3b4c5d6` (nullable FKs RESTRICT; unique staging row id)
 - Upload/validate reject applied batches
-- Apply path security scanner blockers (AST fail-closed; missing files fail)
-- Selected-tier unit/currency resolution (match ALL rows per tier, require exactly one ACTIVE)
-- Expanded SQLite mapping/fault/lifecycle/immutability proofs; 7-node PostgreSQL matrix inventory (skip without PG)
+- Apply path security scanner blockers (AST fail-closed; missing files; update/merge/upsert/delete; workbench:edit)
+- Selected-tier unit/currency resolution
+- Executable proof matrix: 7 real PG nodes, migration behavioral proofs, 3 stale-generation recoveries
 
-## Corrective findings C-1..C-7 (prior pass)
-
-| ID | Resolution |
-| --- | --- |
-| C-1 | Removed post-commit refresh/query/assert; response pre-built before outer commit |
-| C-2 | Staging query uses ordered `with_for_update()` |
-| C-3 | PG Apply-vs-Apply + Apply-hold/Validate-wait with `pg_stat_activity` Lock wait (local skip without PG) |
-| C-4 | Mapping after partial, savepoint fail, outer-commit fail, failure-audit persist fail, stale after newer apply |
-| C-5 | Parametrized string/decimal/unit/currency/exclusion/order proofs |
-| C-6 | Upload+Validate applied guards; lineage unique; alembic single head |
-| C-7 | `check_apply_path_blockers` + isolated scanner tests |
-
-## Acceptance-closure findings A-1..A-8
+## Corrective findings C-1..C-7 (prior)
 
 | ID | Resolution |
 | --- | --- |
-| A-1 | Unit/currency selected-tier: match ALL rows at tier, zero→next, non-zero requires exactly one ACTIVE; no inactive→lower-tier fallthrough; currency symbols forbidden |
-| A-2 | Seven named PG matrix nodes collected; real multi-session lock-wait helpers; local SKIP without PostgreSQL (SKIP ≠ PASS) |
-| A-3 | Fault matrix expanded: flush-after-partial-insert, success-audit fail, outer-commit/savepoint/stale covered |
-| A-4 | Mapping exhaustive: raw_price + quantity parametrize, unicode trim, name/desc bounds, forbidden fields inert |
-| A-5 | Alembic single head `e1f2a3b4c5d6` + migration lineage column/RESTRICT/unique assertions |
-| A-6 | Full-field `official_line_snapshot` helper; byte-equal pre/post Apply immutability of pre-existing lines |
-| A-7 | Scanner fail-closed: missing apply/projects files, missing staging FOR UPDATE, setattr/raw_values |
-| A-8 | Post-commit regression: success path has no ORM query/refresh after outer commit |
+| C-1 | Post-commit boundary fixed |
+| C-2 | Staging ordered `with_for_update()` |
+| C-3 | PG matrix skeleton (later replaced by M-1) |
+| C-4 | Fault injection matrix |
+| C-5 | Mapping parametrize |
+| C-6 | Lifecycle + single head |
+| C-7 | Apply path scanner |
 
-## Local quality gates (acceptance-closure head)
+## Acceptance-closure A-1..A-8 (prior)
+
+| ID | Resolution |
+| --- | --- |
+| A-1 | Selected-tier all-row resolution |
+| A-2 | Seven node IDs collected (bodies completed in M-1) |
+| A-3..A-8 | Fault, mapping, migration head, immutability helper, scanner, post-commit |
+
+## Proof-matrix findings M-1..M-7
+
+| ID | Resolution |
+| --- | --- |
+| M-1 | Seven real PG node bodies using production entry points (Apply, Upload orchestrator, Validate service, `archive_project` workflow status path); each publishes waiter `pg_backend_pid` and asserts `wait_event_type == Lock`; no placeholder lock-only transactions |
+| M-2 | Executable migration proof: inspect nullable columns/indexes/FKs RESTRICT/unique; DML RESTRICT on batch+staging delete; unique `source_staging_row_id`; script chain `db5977424e7b` ↔ `e1f2a3b4c5d6`; single head (PG skip local) |
+| M-3 | Three stale-generation recoveries with complete generations: after newer Upload+Validate; after newer Validation; after newer Apply with official rows+lineage |
+| M-4 | `official_line_snapshot` used across precondition/mapping/fault/stale/PG nodes; ordered audit tuples with payload key sets |
+| M-5 | Exact Decimal persistence; no rounding at scale; scientific fit/overflow; accent preservation; forbidden inputs explicit defaults |
+| M-6 | Scanner blocks update/merge/upsert/bulk/delete and pre-existing line assigns; workbench:edit + command delegation retained |
+| M-7 | Commit F SHA corrected to `ade92f18acb4b3a7116a6b79b128827a5af73b93`; this audit-only enclosing commit identified as `this audit-only enclosing commit; verify with git log` (do not embed self-SHA) |
+
+### M-1 node inventory (real holders/waiters)
+
+| Node ID | Holder | Waiter | Local |
+| --- | --- | --- | --- |
+| `pg_apply_vs_apply_lock_wait` | real Apply | real Apply | SKIPPED without PG |
+| `pg_upload_holds_apply_waits` | real Upload orchestrator | real Apply | SKIPPED without PG |
+| `pg_apply_holds_upload_waits` | real Apply | real Upload orchestrator | SKIPPED without PG |
+| `pg_validate_holds_apply_waits` | real Validate service | real Apply | SKIPPED without PG |
+| `pg_apply_holds_validate_waits` | real Apply | real Validate service | SKIPPED without PG |
+| `pg_workflow_holds_apply_waits` | real `archive_project` | real Apply | SKIPPED without PG |
+| `pg_apply_holds_workflow_waits` | real Apply | real `archive_project` | SKIPPED without PG |
+
+Placeholder `_run_pg_serial_node` removed from acceptance_closure. Bodies live in `tests/test_s12_pr_004_proof_matrix.py`.
+
+### M-3 stale-generation tests
+
+1. `TestM3StaleGenerationRecovery::test_stale_after_newer_upload`
+2. `TestM3StaleGenerationRecovery::test_stale_after_newer_validation`
+3. `TestM3StaleGenerationRecovery::test_stale_after_newer_apply`
+
+## Local quality gates (proof-matrix head)
 
 | Gate | Result |
 | --- | --- |
-| Focused PR-004 + acceptance + corrective + security blockers | **110 passed, 10 skipped** |
-| Full backend pytest | **499 passed, 19 skipped, 20 warnings** |
+| Focused PR-004 + proof + corrective + acceptance + security blockers | **149 passed, 11 skipped** |
+| Full backend pytest | **538 passed, 20 skipped, 20 warnings** |
 | Backend Ruff | All checks passed |
 | Security scanner | PASS (incl. Apply path blockers) |
 | Alembic heads | single head `e1f2a3b4c5d6` |
-| Worker | 1 passed |
-| Frontend npm test | 80 passed / 15 files |
+| Worker Ruff/pytest | PASS / 1 passed |
+| Frontend Vitest | 80 passed / 15 files |
+| Frontend build | PASS |
 
 ### Exact local skips (SKIPPED not PASS)
 
-1. Seven PG matrix inventory nodes without PostgreSQL (`test_pg_matrix_node_inventory`)
-2. Apply-vs-Apply / Apply-hold Validate-wait PG proofs without PostgreSQL
-3. Other historical PG skips from R004/R006/workbench/auth (repository baseline)
+1. `test_pg_proof_matrix_node[pg_apply_vs_apply_lock_wait]`
+2. `test_pg_proof_matrix_node[pg_upload_holds_apply_waits]`
+3. `test_pg_proof_matrix_node[pg_apply_holds_upload_waits]`
+4. `test_pg_proof_matrix_node[pg_validate_holds_apply_waits]`
+5. `test_pg_proof_matrix_node[pg_apply_holds_validate_waits]`
+6. `test_pg_proof_matrix_node[pg_workflow_holds_apply_waits]`
+7. `test_pg_proof_matrix_node[pg_apply_holds_workflow_waits]`
+8. `TestM2ExecutableMigration::test_lineage_migration_upgrade_downgrade_restrict_unique`
+9. Other historical PG skips (R004/R006/workbench/auth and prior PR-004 concurrency helpers)
 
 ## Commit lineage
 
@@ -79,11 +113,14 @@ S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDEN
 | C `c37e01fb3c638498a969a1c2d2317387c9585150` | Atomicity, locks, tests, scanner |
 | D `98fcffc8b300a186d47fcd70b355e5d6d03b8bfa` | Audit-only corrective evidence |
 | E `dfc46059869001029313f9b91c6f5b1ac0760ab9` | Mapping + acceptance matrices A-1..A-8 |
-| F `7ab47696e4410aef2186ca1e9f6049cc08a75fec` | Audit-only acceptance-closure evidence |
+| F `ade92f18acb4b3a7116a6b79b128827a5af73b93` | Audit-only acceptance-closure evidence (corrected; not 7ab4769…) |
+| G `26642295f82ccc1e73882df317814433f39b1e2b` | Proof matrix implementation M-1..M-6 |
+| H this audit-only enclosing commit; verify with `git log` | Reconcile executable proof evidence |
 
 ## Remaining limitations
 
-- Full PostgreSQL multi-session matrix (all serial orders with lock-wait) requires CI with PostgreSQL; local nodes SKIPPED
+- Full PostgreSQL multi-session matrix requires CI with PostgreSQL; local nodes SKIPPED
+- Live Alembic downgrade/upgrade against shared CI database is intentionally non-destructive; reversible proof uses script chain + live FK/unique DML + inspect
 - Draft PR and authoritative CI not created in this session
 - Independent re-audit still required
 - No Ready/merge authority from this pass
@@ -91,5 +128,5 @@ S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDEN
 ## Final verdict
 
 ```text
-S12-PR-004 ACCEPTANCE CLOSURE COMPLETE — AWAITING POSTGRESQL CI AND INDEPENDENT RE-AUDIT
+S12-PR-004 PROOF MATRIX IMPLEMENTED — AWAITING POSTGRESQL CI AND INDEPENDENT RE-AUDIT
 ```
