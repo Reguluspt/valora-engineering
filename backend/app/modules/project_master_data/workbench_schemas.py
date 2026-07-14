@@ -271,3 +271,21 @@ class ProjectAssetImportStagingRowPaginationResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ProjectAssetImportBatchApplyRequest(BaseModel):
+    confirm: Optional[bool] = None
+
+
+class ProjectAssetImportBatchApplyCreatedLine(BaseModel):
+    line_id: uuid.UUID
+    staging_row_id: uuid.UUID
+    source_row_number: int
+
+
+class ProjectAssetImportBatchApplyResponse(BaseModel):
+    project_id: uuid.UUID
+    import_batch_id: uuid.UUID
+    status: str
+    created_count: int
+    created_lines: List[ProjectAssetImportBatchApplyCreatedLine]

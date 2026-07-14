@@ -58,6 +58,13 @@ def upload_excel_file_orchestrator(
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
+    status_val = batch.status.value if hasattr(batch.status, "value") else str(batch.status)
+    if status_val == "applied":
+        raise HTTPException(
+            status_code=409,
+            detail="Lô nhập liệu đã được áp dụng và không thể tải lên lại.",
+        )
+
     pre_fingerprint = _build_pre_fingerprint(db, batch)
     previous_count = len(pre_fingerprint["staging_row_ids"])
     sanitized = sanitize_filename(file.filename or "import.xlsx")

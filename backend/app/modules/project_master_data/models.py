@@ -757,6 +757,19 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
         nullable=True
     )
 
+    # S12-PR-004 Excel Apply lineage (nullable for manual lines)
+    source_import_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("project_asset_import_batches.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_staging_row_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("project_asset_import_staging_rows.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+
     # Future Placeholders
     matched_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
     matched_knowledge_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
