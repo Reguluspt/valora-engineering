@@ -122,7 +122,7 @@ $$\text{AI Suggestion} \longrightarrow \text{User Review} \longrightarrow \text{
 - **Sprint 10**: Design Book v1.3 + Astryx Vietnamese UX Contract
 - **Sprint 11**: Live Workbench Data Loop
 - **Sprint 12**: Excel Import Pipeline
-- **Sprint 13**: AI Assistant MVP (Gemini + DeepSeek Gateway)
+- **Historical roadmap — superseded by v1.4:** Sprint 13 was previously planned as AI Assistant MVP (Gemini + DeepSeek Gateway). Active sequencing is defined by the Design Authority Index and v1.4.
 - **Sprint 14**: Document Report Generation MVP
 - **Sprint 15**: Real Auth + Pilot Acceptance
 

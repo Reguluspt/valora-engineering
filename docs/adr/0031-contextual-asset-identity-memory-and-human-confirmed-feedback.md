@@ -1,8 +1,8 @@
-# ADR 0031 â€” Contextual Asset Identity Memory and Human-Confirmed Feedback
+# ADR 0031 — Contextual Asset Identity Memory and Human-Confirmed Feedback
 
 ## Status
 
-Accepted â€” owner-requested design authority, 2026-07-14. Runtime implementation requires S13-PR-001 design audit/merge, then assigned Sprint 14 task IDs and audit. No runtime is authorized by this ADR alone.
+Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires S13-PR-001 design audit/merge, then assigned Sprint 14 task IDs and audit. No runtime is authorized by this ADR alone.
 
 ## Context
 
@@ -34,11 +34,11 @@ Candidate retrieval priority:
 
 ```text
 same-customer contextual alias
-â†’ organization contextual alias
-â†’ curated AssetAlias
-â†’ canonical/variant names and codes
-â†’ deterministic fuzzy/attribute retrieval
-â†’ approved AI reranking
+→ organization contextual alias
+→ curated AssetAlias
+→ canonical/variant names and codes
+→ deterministic fuzzy/attribute retrieval
+→ approved AI reranking
 ```
 
 Score components and explanations are versioned. Price is not a primary identity feature.
