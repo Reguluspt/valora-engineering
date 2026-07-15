@@ -224,6 +224,12 @@ def validate_project_asset_import_batch(
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
 
+    if _status_value(batch.status) == ImportBatchStatus.APPLIED.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Lô nhập liệu đã được áp dụng và không ở trạng thái có thể kiểm tra.",
+        )
+
     if not _is_allowed_source(batch.status):
         raise HTTPException(status_code=409, detail=DISALLOWED_CLIENT_DETAIL)
 

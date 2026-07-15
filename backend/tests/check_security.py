@@ -85,6 +85,200 @@ class ExcelIntakeSecurityVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+
+class ApplyStagingSecurityVisitor(ast.NodeVisitor):
+    """AST fail-closed checks for apply_staging.py."""
+
+    FORBIDDEN_MUTATORS = frozenset(
+        {
+            "update",
+            "delete",
+            "merge",
+            "upsert",
+            "bulk_update_mappings",
+            "bulk_insert_mappings",
+            "bulk_save_objects",
+        }
+    )
+
+    def __init__(self):
+        self.issues = []
+        self.has_staging_for_update = False
+        self.staging_query_seen = False
+
+    def visit_Call(self, node):
+        # setattr(...)
+        if isinstance(node.func, ast.Name) and node.func.id == "setattr":
+            self.issues.append((node.lineno, "Apply uses raw setattr", "setattr()"))
+        if isinstance(node.func, ast.Name) and node.func.id in ("merge", "upsert"):
+            self.issues.append(
+                (node.lineno, "Apply uses merge/upsert", f"{node.func.id}()")
+            )
+        # .delete() / .update() / merge / replace / bulk_* targeting official lines
+        if isinstance(node.func, ast.Attribute) and node.func.attr in self.FORBIDDEN_MUTATORS:
+            if self._chain_queries_asset_line(node.func.value) or node.func.attr in (
+                "delete",
+                "merge",
+                "upsert",
+                "bulk_update_mappings",
+                "bulk_insert_mappings",
+                "bulk_save_objects",
+            ):
+                # Always block delete/update/merge/upsert/bulk on Apply path
+                self.issues.append(
+                    (
+                        node.lineno,
+                        "Apply mutates/deletes official lines",
+                        f".{node.func.attr}()",
+                    )
+                )
+        # with_for_update on any call chain involving ProjectAssetImportStagingRow
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "with_for_update":
+            if self._chain_queries_staging(node.func.value):
+                self.has_staging_for_update = True
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        if node.attr == "raw_values":
+            self.issues.append((node.lineno, "Apply reads raw_values", "raw_values"))
+        self.generic_visit(node)
+
+    def visit_Assign(self, node):
+        # Flag assignment to attributes on a name that looks like a pre-existing line update
+        # e.g. existing_line.asset_name = ... after query(ProjectAssetLine)
+        for t in node.targets:
+            if isinstance(t, ast.Attribute) and isinstance(t.value, ast.Name):
+                if t.value.id in (
+                    "existing",
+                    "existing_line",
+                    "preexisting",
+                    "old_line",
+                    "manual",
+                    "prior_line",
+                ):
+                    self.issues.append(
+                        (
+                            node.lineno,
+                            "Apply updates pre-existing ProjectAssetLine",
+                            f"{t.value.id}.{t.attr} = ...",
+                        )
+                    )
+        self.generic_visit(node)
+
+    def _chain_queries_model(self, node, model_names: set[str]) -> bool:
+        cur = node
+        while isinstance(cur, ast.Call):
+            if isinstance(cur.func, ast.Attribute) and cur.func.attr == "query":
+                for arg in cur.args:
+                    if isinstance(arg, ast.Name) and arg.id in model_names:
+                        return True
+                    if isinstance(arg, ast.Attribute) and arg.attr in model_names:
+                        return True
+            if isinstance(cur.func, ast.Attribute):
+                cur = cur.func.value
+            else:
+                break
+        while isinstance(cur, ast.Attribute):
+            cur = cur.value
+            if isinstance(cur, ast.Call):
+                return self._chain_queries_model(cur, model_names)
+        return False
+
+    def _chain_queries_staging(self, node) -> bool:
+        hit = self._chain_queries_model(node, {"ProjectAssetImportStagingRow"})
+        if hit:
+            self.staging_query_seen = True
+        return hit
+
+    def _chain_queries_asset_line(self, node) -> bool:
+        return self._chain_queries_model(node, {"ProjectAssetLine"})
+
+
+def check_apply_path_blockers(directory):
+    """S12-PR-004: fail-closed rules for Apply runtime only."""
+    print("=== Checking S12-PR-004 Apply path blockers ===")
+    issues = 0
+    apply_path = os.path.join(
+        directory, "backend", "app", "modules", "excel_import", "application", "apply_staging.py"
+    )
+    if not os.path.isfile(apply_path):
+        apply_path = os.path.join(
+            directory, "app", "modules", "excel_import", "application", "apply_staging.py"
+        )
+    projects_path = os.path.join(directory, "backend", "app", "api", "projects.py")
+    if not os.path.isfile(projects_path):
+        projects_path = os.path.join(directory, "app", "api", "projects.py")
+
+    if not os.path.isfile(apply_path):
+        print("[BLOCKER FAIL] missing apply_staging.py")
+        issues += 1
+    else:
+        with open(apply_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        try:
+            tree = ast.parse(content, filename=apply_path)
+            visitor = ApplyStagingSecurityVisitor()
+            visitor.visit(tree)
+            for lineno, name, detail in visitor.issues:
+                print(f"[BLOCKER FAIL] {name} found in apply_staging.py:{lineno} - {detail}")
+                issues += 1
+            if not visitor.has_staging_for_update:
+                print(
+                    "[BLOCKER FAIL] Apply staging query missing with_for_update() on ProjectAssetImportStagingRow"
+                )
+                issues += 1
+        except SyntaxError as se:
+            print(f"[AST ERROR] apply_staging.py: {se}")
+            issues += 1
+
+    if not os.path.isfile(projects_path):
+        print("[BLOCKER FAIL] missing projects.py API file")
+        issues += 1
+    else:
+        with open(projects_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        try:
+            tree = ast.parse(content, filename=projects_path)
+        except SyntaxError as se:
+            print(f"[AST ERROR] projects.py: {se}")
+            issues += 1
+            return issues
+        # Find apply endpoint function
+        apply_fn = None
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if "apply" in node.name and "asset_import" in node.name:
+                    apply_fn = node
+                    break
+        if apply_fn is None:
+            # also scan for decorator path containing /apply
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for dec in node.decorator_list:
+                        src = ast.dump(dec)
+                        if "apply" in src:
+                            apply_fn = node
+                            break
+        if apply_fn is None:
+            print("[BLOCKER FAIL] Apply endpoint function not found in projects.py")
+            issues += 1
+        else:
+            lines = content.splitlines()
+            start = max(0, apply_fn.lineno - 8)
+            end = apply_fn.end_lineno or (apply_fn.lineno + 40)
+            fn_text = "\n".join(lines[start:end])
+            if "workbench:edit" not in fn_text:
+                print("[BLOCKER FAIL] Apply endpoint missing workbench:edit")
+                issues += 1
+            if "apply_project_asset_import_batch(" not in fn_text:
+                print(
+                    "[BLOCKER FAIL] Apply endpoint does not call application command apply_project_asset_import_batch"
+                )
+                issues += 1
+
+    return issues
+
+
 def check_secret_placeholders(directory):
     print("=== Scanning for hardcoded secrets ===")
     secret_patterns = [
@@ -198,11 +392,12 @@ if __name__ == "__main__":
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     secrets_failed = check_secret_placeholders(base_dir)
     baseline_failed = check_security_baseline_and_blockers(base_dir)
-    
-    total_failures = secrets_failed + baseline_failed
+    apply_failed = check_apply_path_blockers(base_dir)
+
+    total_failures = secrets_failed + baseline_failed + apply_failed
     if total_failures > 0:
         print(f"\nScan failed: {total_failures} critical security issues found.")
         sys.exit(1)
-    
+
     print("\nScan passed: Controlled baseline validated without blocker regressions.")
     sys.exit(0)

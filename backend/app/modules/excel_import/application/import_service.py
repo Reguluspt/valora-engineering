@@ -3,7 +3,10 @@ from fastapi import UploadFile, Request, HTTPException
 from sqlalchemy.orm import Session
 
 from app.modules.project_master_data.models import (
-    ProjectAssetImportBatch, ProjectAssetImportStagingRow, AuditEvent
+    Project,
+    ProjectAssetImportBatch,
+    ProjectAssetImportStagingRow,
+    AuditEvent,
 )
 from app.modules.excel_import.application.parse_workbook import (
     parse_workbook_lazy, ParseError, sanitize_filename, get_request_size, enforce_request_limit
@@ -50,6 +53,16 @@ def upload_excel_file_orchestrator(
     current_user,
     correlation_id: str | None = None
 ) -> ProjectAssetImportBatch:
+    # Lock order (ADR 0029 / Apply-compatible): Project → batch → staging mutation
+    project = (
+        db.query(Project)
+        .filter(Project.organization_id == org_id, Project.id == project_id)
+        .with_for_update()
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     batch = db.query(ProjectAssetImportBatch).filter(
         ProjectAssetImportBatch.organization_id == org_id,
         ProjectAssetImportBatch.project_id == project_id,
@@ -57,6 +70,13 @@ def upload_excel_file_orchestrator(
     ).with_for_update().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
+
+    status_val = batch.status.value if hasattr(batch.status, "value") else str(batch.status)
+    if status_val == "applied":
+        raise HTTPException(
+            status_code=409,
+            detail="Lô nhập liệu đã được áp dụng và không thể tải lên lại.",
+        )
 
     pre_fingerprint = _build_pre_fingerprint(db, batch)
     previous_count = len(pre_fingerprint["staging_row_ids"])
