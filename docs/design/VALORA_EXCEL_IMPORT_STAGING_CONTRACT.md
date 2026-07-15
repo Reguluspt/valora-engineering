@@ -10,7 +10,8 @@ This document establishes the architecture, lifecycle, and staging boundary for 
 
 ## 2. Relationship to Authoritative Contracts
 - **Relationship to Design Book v1.3**: Implements the staging boundary of the Excel Import Pipeline module. Aligns with the Non-IT UX registry to present clear validation errors. Enforces AI-assistance guardrails (AI cannot auto-approve or auto-import).
-- **Relationship to Sprint 11 Live Workbench Loop**: Staged records do not appear in the Live Workbench grid. Staged data remains in a separate sandbox layer. A separate, future "Apply" action will copy valid staging lines to the official `ProjectAssetLine` table, which the Workbench then loads.
+- **Relationship to Sprint 11 Live Workbench Loop**: Staged records do not appear in the Live Workbench grid. Staged data remains in a separate sandbox layer. Official promotion uses the **implemented** Apply command (S12-PR-004 / ADR 0029 / `s12-pr-004-v1`, merged to main). Adaptive Intake v2 (Design Book v1.4) is additive and does not silently change this contract.
+- **Status (engineering, 2026-07-15):** S12 upload/validate/Apply v1 is **merged** (main evidence `a9f2c1e…`). Contract semantics remain frozen; only status wording is reconciled.
 - **Relationship to Vietnamese i18n Dictionary**: Keys for validation results and import status tags are translated to user-friendly Vietnamese labels (e.g., `Đang chờ kiểm tra`, `Hợp lệ`, `Không hợp lệ`, `Có cảnh báo`).
 
 ## 3. Import Lifecycle
@@ -279,9 +280,10 @@ Reruns allowed from `validation_failed` and `ready_for_review` (and `parsed`). E
 ## 15. S12-PR-004: Excel Staging Apply Command & Provenance (v1)
 
 **Authority:** Owner decision package 2026-07-14 + ADR 0029.
-**Implementation task:** `S12-PR-004 — Excel Staging Apply Command & Provenance` (backend only).
-**Gate:** Implementation must not start until S12-R-008 authority merges to `main`.
+**Implementation task:** `S12-PR-004 — Excel Staging Apply Command & Provenance` (backend only) — **MERGED** (PR #10; main squash evidence `a9f2c1e…`).
+**Historical gate (completed):** Implementation started only after S12-R-008 / ADR 0029 authority merged to `main`.
 **Contract version (frozen):** `s12-pr-004-v1` — every Apply success and failure audit uses this exact lowercase value; no aliases.
+**Parser scope of this contract:** S12 v1 remains **`.xlsx`** deterministic staging/validation/Apply. Adaptive Intake v2 (`.xls`/`.xlsx`, Column Mapping Memory) is a separate versioned path (ADR 0030 / Design Book v1.4) and must materialize confirmed mappings into compatible staging without silently changing `s12-pr-004-v1`.
 
 ### A. Trigger, endpoint, permission
 

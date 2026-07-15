@@ -1,78 +1,79 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-14 (S12-R-008)
+**Last reconciled:** 2026-07-15 (S13-PR-001)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
 
-Domain behavior must come from:
+Domain behavior must come from this read order:
 
 ```text
-1. Valora Design Book v1.2-final + v1.3 MVP completion addendum
-2. docs/design/* contracts (including Excel staging contract §14–§15)
-3. docs/adr/* decisions (including ADR 0028 + addendum, ADR 0029)
-4. docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md (historical S12-R gates + recon notes)
-5. docs/VALORA_PROJECT_HANDOFF.md
+1. CODEX.md (this file) — live task gate and agent operating rules
+2. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
+3. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — conflict resolution and version relationship
+4. docs/VALORA_PROJECT_HANDOFF.md — verified implementation state and next authorized sequence
+5. Valora Design Book v1.2-final package — established domain foundation
+6. docs/design/VALORA_DESIGN_BOOK_V1_3_MVP_COMPLETION_ADDENDUM.md — Vietnamese UX, Astryx, MVP, AI provider architecture
+7. docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md — Adaptive Intake, two memories, dossiers
+8. Feature contracts under docs/design/ (including Excel staging contract §14–§15, frozen s12-pr-004-v1)
+9. docs/adr/* (including ADR 0028, 0029, 0030, 0031, 0032)
+10. docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md — active roadmap after S12
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
 
-Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` are **historical foundation records**, not the active phase description.
+Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historical S12-R remediation prose are **historical records**, not the live gate.
 
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Post-Validation Apply Authority
+Engineering Phase / Post S12-PR-004 — Design Authority Reconciliation (S13-PR-001)
 ```
 
 ### Live task gate (fetch origin/main before acting)
 
 ```text
-If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is the active authority task and S12-PR-004 is blocked.
+S12-PR-004 is MERGED and its engineering gate is CLOSED.
+Evidence (not evergreen): main squash a9f2c1e77e3ec46f216b881d608a02685b9d322a;
+post-merge main CI run 29419008129 PASS.
 
-If origin/main contains the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+While origin/main does not contain the merged S13-PR-001 documentation authority,
+S13-PR-001 is the only active task: docs-only design reconciliation.
+No Sprint 13 runtime implementation is authorized.
+
+After independent design audit PASS and owner merge of S13-PR-001,
+S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact)
+becomes the next candidate runtime slice — only from the accepted main baseline
+and only under an assigned task ID.
 ```
 
-**S12-R-008 starting baseline (historical label, not evergreen current-main):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened).
+Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
 
-### While S12-R-008 is active (main lacks R008 / ADR 0029)
+### Permanent S12 Apply v1 (frozen)
 
 ```text
-Documentation / design-authority only.
-No production code, tests, migrations, workflows, config, or dependency changes.
-Do not implement S12-PR-004.
+Apply command remains ADR 0029 / staging contract §15 / contract_version = s12-pr-004-v1.
+Upload/validate never mutate official ProjectAssetLine.
+Upload lock order: Project FOR UPDATE → batch FOR UPDATE → staging mutation.
+Apply lock order: Project FOR UPDATE → batch FOR UPDATE → ordered staging → inserts.
 ```
 
-### After S12-R-008 merges (main contains R008 / ADR 0029)
-
-```text
-S12-PR-004 — Excel Staging Apply Command & Provenance
-is the next authorized active implementation task (backend only).
-```
-
-### Completed (do not re-open as “blocked / not started”)
-
-```text
-S12-PR-003 — Excel Staging Validation Engine — MERGED to main (PR #8)
-```
-
-Do **not** invent Apply behavior outside ADR 0029 / contract §15. Agents must `git fetch origin` and verify live `origin/main`.
+Do **not** re-open S12-PR-003 or S12-PR-004 as blocked/not started.
 
 ## 3. Permanent Hard Rules
 
 ```text
 No domain invention outside Design Book / ADR / approved contract.
 No AI auto-approval or auto-apply of official data.
+No AI confirmation of mapping, identity, price, Apply, or active knowledge.
 ADR 0028 restricted Workbench fields (description, appraised_unit_price,
   review_status, validation_status) require draft-commit command path + authorization
   + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
 Non-restricted ProjectAssetLine fields may use direct PATCH under project:update and are
   outside the R004 Human Commit Gate / atomic-command guarantee.
 Excel upload/validate still never mutate official ProjectAssetLine rows.
-Apply (S12-PR-004 after R008) is the only approved promotion path; see ADR 0029.
+Apply (S12-PR-004) is the only approved promotion path for S12 staging; see ADR 0029.
 No tenant boundary bypass (organization_id / project / session fail-closed).
 No secrets committed; no production credentials in repo.
 No unbounded whole-file materialization on Excel runtime path
@@ -84,6 +85,8 @@ No unrelated refactors or formatting churn.
 No deleting or weakening guardrails.
 Vietnamese client-facing copy must keep correct diacritics.
 Astryx compliance for Workbench UI.
+No client-identifying data or real customer files in the public repository.
+No direct bulk SQL into active knowledge from historical dossiers.
 ```
 
 ## 4. Domain Non-Negotiables
@@ -96,6 +99,8 @@ AI suggests; human reviews; system audits.
 Evidence is immutable or append-only.
 ReviewDecision is append-only.
 Organization/tenant boundaries are enforced server-side.
+Raw observations remain immutable; only human-confirmed decisions become reusable feedback.
+Column Mapping Memory and Asset Identity Memory are separate bounded memories (v1.4 / ADR 0030–0031).
 ```
 
 ## 5. Evidence Semantics
@@ -106,6 +111,7 @@ PostgreSQL behavior: requires CI (or local) run with PostgreSQL service.
 Audit PASS for a historical PR does not imply current slice READY.
 Do not treat skipped tests as passed.
 Do not claim Draft PR / Ready / merge without explicit authorization.
+Historical audit prose never overrides code + CI at a cited SHA.
 ```
 
 ## 6. Required Output After Every Task
@@ -133,7 +139,8 @@ Task requires work outside the assigned task ID.
 New dependency with architectural impact.
 Secret/credential/production config required.
 Starting baseline SHA does not match the task prompt.
-Protected files are involved (e.g. unauthorized onboarding artifacts).
+Protected files are involved without authorization.
+S13 runtime is requested before S13-PR-001 is audited and merged.
 ```
 
 ## 8. Pull Request Behavior
@@ -149,15 +156,7 @@ unless a task explicitly authorizes otherwise.
 ## 9. Security Requirement
 
 ```text
-deny by default
-least privilege
-server-side authorization
-no X-User-Id identity spoofing in production paths
-short-lived tokens + refresh rotation where auth applies
-no sensitive payload logging
-append-only audit events
+Fail closed on missing identity, inactive user/org, cross-tenant access.
+Frontend visibility is not security.
+No production secrets in repository content or fixtures.
 ```
-
-## 10. Historical note (Sprint 0)
-
-Sprint 0 originally constrained the repository to foundation-only work. That phase is **complete and historical**. Do not re-apply Sprint 0 “no business logic” as the current repository status. Current constraints are the S12-R / Design Book / ADR set above.

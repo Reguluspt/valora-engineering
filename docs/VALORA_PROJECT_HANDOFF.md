@@ -1,21 +1,23 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-14 — S12-R-008 corrective authority
-**S12-R-008 starting baseline:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened; not an evergreen “current main” claim)
-**Do not use** protected untracked onboarding artifacts as authority.
+**Reconciled:** 2026-07-15 — S13-PR-001 design authority reconciliation
+**Main evidence (not evergreen):** `a9f2c1e77e3ec46f216b881d608a02685b9d322a` (S12-PR-004 squash #10)
+**Main CI evidence:** run `29419008129` PASS
 
 ### Live task gate
 
 ```text
-If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is the active authority task and S12-PR-004 is blocked.
+S12-PR-004 is MERGED and its engineering gate is CLOSED.
 
-If origin/main contains the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+Active task: S13-PR-001 — Design Authority and Contract Reconciliation (docs-only).
+No Sprint 13 runtime code is authorized during S13-PR-001.
+
+After independent design audit PASS and owner merge of S13-PR-001,
+S13-PR-002 is the next candidate runtime slice from the accepted main baseline.
 ```
 
-Agents must `git fetch origin` and verify live `origin/main`.
+Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
 
 ---
 
@@ -24,6 +26,8 @@ Agents must `git fetch origin` and verify live `origin/main`.
 Valora is a **valuation and asset-identity workbench** for business appraisers and review roles who are **not software engineers**. UX must be **Vietnamese-first**, non-IT error messages, and **Astryx**-aligned components.
 
 Word/Excel are **ports** for import/export. The Workbench + database are the source of truth.
+
+Design Book v1.4 adds two separate, auditable memories: **Column Mapping Memory** (workbook structure) and **Asset Identity Memory** (raw wording → canonical/variant). Raw observations remain immutable; only human-confirmed decisions become reusable feedback. These are **design authority**, not implemented runtime.
 
 ## 2. Vietnamese UX and Astryx
 
@@ -34,15 +38,15 @@ Word/Excel are **ports** for import/export. The Workbench + database are the sou
 
 ## 3. Bounded contexts and ownership
 
-| Module | Responsibility |
+| Module | Responsibility (current + planned) |
 |---|---|
-| `project_master_data` | Org, users/roles, master data, projects, central models |
-| `taxonomy_asset_identity` | Taxonomy, canonical assets, aliases, candidates |
-| `knowledge_evidence` | Evidence library, knowledge versions, quotes |
+| `project_master_data` | Org, users/roles, master data, projects, central models hub |
+| `taxonomy_asset_identity` | Taxonomy, canonical assets, aliases, candidates; **planned** Raw Asset Observation + Asset Identity Memory |
+| `knowledge_evidence` | Evidence library, knowledge versions, quotes; **planned** reviewed bootstrap candidates |
 | `workflow_workbench` | Workflow + workbench session helpers |
-| `document_engine_intelligence` | Document templates/render/intelligence domain tables |
-| `ai_governance_security` | Future AI governance boundary |
-| `excel_import` | Streaming Excel parse + atomic staging replacement |
+| `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
+| `ai_governance_security` | AI task/provider governance; advisory only |
+| `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
 
 API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench under `frontend/src/components/workbench/*`.
 
@@ -50,7 +54,7 @@ API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench un
 
 | Layer | Role |
 |---|---|
-| Backend | Auth, RBAC, domain APIs, persistence, audit, Excel intake |
+| Backend | Auth, RBAC, domain APIs, persistence, audit, Excel intake + Apply |
 | Frontend | App shell, Workbench grid/drafts/session, API clients |
 | Worker | Skeleton only (no heavy job pipeline yet) |
 
@@ -63,9 +67,9 @@ Local infra: PostgreSQL 16, Redis 7, MinIO via `docker-compose.yml`.
 - All project/session/import resources scoped by `organization_id` (+ project where applicable).
 - Cross-tenant access → safe `404` / deny-by-default.
 
-## 6. Human Commit Gate and official mutation (ADR 0028 scope)
+## 6. Human Commit Gate and official mutation (ADR 0028)
 
-**Restricted Workbench-gated fields** (only):
+**Restricted Workbench-gated fields:**
 
 ```text
 description
@@ -74,118 +78,75 @@ review_status
 validation_status
 ```
 
-For those fields, official changes go through:
+Official changes go through draft → human confirmation → `commit_asset_line_draft` with atomic audit. Direct PATCH of those four fields is rejected.
 
-1. Draft edit path
-2. Human confirmation
-3. Single application command (`commit_asset_line_draft` pattern)
-4. Permission + workflow state + exact optimistic version
-5. Atomic `AuditEvent` in the same transaction
+**Non-restricted fields** may use direct `PATCH` under `project:update` with optimistic locking (outside R004 single-command guarantee).
 
-Direct PATCH of those four fields is rejected with 400 (S12-R-004 / ADR 0028).
+Excel intake never mutates official `ProjectAssetLine` (staging only) until Apply.
 
-**Non-restricted fields** (examples: `asset_name`, `quantity`, `unit_id`, `raw_price`,
-`raw_price_currency_id`, `appraised_currency_id`, `brand_id`, `manufacturer_id`) may still be
-updated via direct `PATCH` under `project:update` with optimistic locking. That path is
-**outside** the R004 Human Commit Gate and atomic-command guarantee.
+## 7. Excel staging / Apply (S12 v1 — implemented)
 
-Excel intake never mutates official `ProjectAssetLine` (staging only).
-
-## 7. Excel staging / parser / transaction model
-
-Contract: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md`
+Contract: `docs/design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` (§14–§15)
+ADR: `docs/adr/0029-excel-staging-apply-command-and-lineage.md`
 Implementation: `backend/app/modules/excel_import/`
 
 ```text
-Upload → batch lock → pre-fingerprint
-  → nested savepoint: replace staging + success audit
-  → outer commit
-On failure: rollback preserve prior staging; optional failure audit with fingerprint guard
+Upload → batch lock (Project → batch order) → staging replace → success audit
+Validate → staging rows only
+Apply (s12-pr-004-v1) → human confirm, DRAFT-only, all-valid all-or-nothing,
+  lineage columns, atomic success audit
 ```
 
-Invariants:
-
-- Staging-only; **no** `ProjectAssetLine` mutation
-- Bounded streaming + ZIP/XLSX safety + resource limits
-- Positional `raw_values.cells` (duplicate/blank headers preserved)
-- First-alias-wins mapping for known columns
+Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.cells`. It does **not** implement Adaptive Intake v2.
 
 ## 8. Progress snapshot
 
-### Sprint 11 (historical)
+### Merged on main (do not re-open)
 
-Live Workbench loop (asset lines, draft, human commit UI/API) merged.
-**Historical READY labels are not current slice approval** — S12-R re-gated security and data integrity.
+| ID | Focus |
+|---|---|
+| S12-R-001…008 | Remediation, auth, tenant, mutation, Excel harden, recon, Apply authority |
+| S12-PR-003 | Validation Engine |
+| **S12-PR-004** | Apply Command & Provenance — **merged** PR #10 at `a9f2c1e…` |
 
-### S12-PR-001 / S12-PR-002 (historical)
-
-Staging model + initial upload/parser.
-Superseded in part by S12-R-002…006 for auth, transaction, streaming, and raw value shape.
-
-### S12-R-001 … S12-R-006 (merged on `main`)
-
-| ID | Focus | Merge evidence |
-|---|---|---|
-| R-001 | CI / default branch / gates | `6c64305` #1 |
-| R-002 | Auth identity boundary | `b025b97` #2 |
-| R-003 | Workbench tenant/session scope | `c46ea1c` #3 |
-| R-004 | Official mutation + atomic audit | `e683757` #4 |
-| R-005 | Dynamic project context / live data | `ff40fda` #5 |
-| R-006 | Excel streaming + transaction harden | `54872c7` #6 |
-
-R-006 code-bearing CI historical evidence (pre-squash): **375 passed, 0 skipped**, PG concurrency executed.
-
-### S12-R-007 (historical handoff cycle)
-
-Documentation reconciliation and final acceptance matrix.
-**Does not** implement Validation Engine. **Merged historically** before S12-PR-003.
-
-### S12-PR-003 (merged)
+### Active
 
 ```text
-S12-PR-003 — Excel Staging Validation Engine — MERGED (PR #8)
+S13-PR-001 — Design Authority and Contract Reconciliation — docs-only
 ```
 
-Validation Engine operates on **staging rows only**, does not apply to official lines, and does not introduce AI auto-approve.
-
-### S12-R-008 (authority reconciliation)
+### Next candidate (not authorized until S13-PR-001 audits and merges)
 
 ```text
-S12-R-008 — Post-Validation Reconciliation & Apply Design Authority
+S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 ```
 
-Documentation / design-authority only while the live gate says R008 is active: ADR 0029, staging contract §15, ADR 0028 addendum. **Does not** implement Apply.
+Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier bootstrap → audited AI.
 
-## 9. Next approved implementation task
+## 9. Out of scope (still)
 
-```text
-S12-PR-004 — Excel Staging Apply Command & Provenance
-```
-
-Authorized only when the **live gate** above says `origin/main` already contains merged S12-R-008 / ADR 0029 (after independent audit PASS + merge). Until then, PR-004 is blocked.
-
-Apply must follow ADR 0029 and contract §15 exactly (backend-only; human-confirmed DRAFT-only; all-valid all-or-nothing; lineage migration; `contract_version = s12-pr-004-v1`).
-
-## 10. Out of scope (still)
-
-- Frontend Apply UX (deferred; no task ID assigned here)
-- AI provider runtime
+- Adaptive `.xls`/`.xlsx` runtime and mapping-confirmation UX
+- Column Mapping Memory / Asset Identity Memory runtime
+- Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
+- AI provider runtime and end-to-end AI mapping/matching
 - PDF/Word product reporting
 - CRM/revenue dashboards
 - Production certification
+- Broad debt F-01 tenant isolation, F-02 legacy atomic audit, F-05 Astryx, etc. (tracked separately)
 
-## 11. Safe onboarding for the next agent
+## 10. Safe onboarding for the next agent
 
-1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff, ADR 0029, staging contract §15.
+1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff, and `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md`.
 2. Verify `git rev-parse origin/main` against the task baseline.
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
-5. Never touch protected untracked onboarding files outside scope.
-6. Never treat local PG skips as PASS.
-7. Do not implement S12-PR-004 until R008 acceptance criteria say so.
-8. Do not re-open S12-PR-003 as blocked/not started — it is merged.
+5. Never treat local PG skips as PASS.
+6. Do not start S13 runtime until S13-PR-001 is audited/merged and a runtime task is assigned.
+7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
+8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
+9. Do not claim uncommitted local docs are already merged authority.
 
-## 12. Key paths
+## 11. Key paths
 
 ```text
 backend/app/main.py
@@ -194,6 +155,11 @@ backend/app/modules/excel_import/
 backend/app/modules/project_master_data/commands/commit_asset_line_draft.py
 frontend/src/App.tsx
 frontend/src/components/workbench/
-docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md
-docs/audits/S12_R_00*_*.md
+docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
+docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md
+docs/adr/0029-excel-staging-apply-command-and-lineage.md
+docs/adr/0030-versioned-column-mapping-memory-and-adaptive-workbook-intake.md
+docs/adr/0031-contextual-asset-identity-memory-and-human-confirmed-feedback.md
+docs/adr/0032-paired-dossier-aggregate-document-extraction-and-row-alignment.md
+docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 ```
