@@ -50,7 +50,7 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ```text
 S12-PR-004 engineering gate: CLOSED (merged)
 S13-PR-001 design-authority gate: CLOSED (merged)
-→ S13-PR-001-CLOSEOUT post-merge live-gate reconciliation (docs-only; active until merge)
+Runtime assignment state: NONE
 → S13-PR-002 Adaptive Intake / Column Mapping Memory runtime candidate
    (requires separate explicit owner assignment; not started)
 → S14 Asset Identity Memory
@@ -87,7 +87,7 @@ Before any S13 runtime PR (still required):
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 is **not** started and is **not** authorized by S13-PR-001-CLOSEOUT alone.
+S13-PR-002 is **not** started. Runtime start requires a separate explicit owner assignment and the then-current accepted `origin/main` baseline.
 
 ## 7. Module ownership (future runtime)
 

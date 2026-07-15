@@ -11,8 +11,8 @@
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED (merged PR #11).
 
-Active task: S13-PR-001-CLOSEOUT — post-merge live-gate reconciliation (docs-only).
-Active runtime task: NONE. No Sprint 13 runtime code is authorized by this closeout.
+Runtime assignment state: NONE.
+No Sprint 13 runtime code is authorized without a separate owner-assigned task ID.
 
 Next runtime candidate: S13-PR-002 — only under a separate explicit owner assignment
 from the then-current accepted origin/main.
@@ -111,11 +111,10 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | **S12-PR-004** | Apply Command & Provenance — **merged** PR #10 at `a9f2c1e…` |
 | **S13-PR-001** | Design Authority and Contract Reconciliation — **merged** PR #11 at `7f7473e…` |
 
-### Active
+### Runtime assignment state
 
 ```text
-S13-PR-001-CLOSEOUT — Post-merge live-gate reconciliation — docs-only
-Active runtime task: NONE
+Active runtime assignment: NONE
 ```
 
 ### Next candidate (not started; requires separate owner assignment)

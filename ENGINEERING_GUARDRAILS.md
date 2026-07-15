@@ -17,9 +17,8 @@ S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED (main squash evidence 7f7473e…;
 main CI 29429680504 PASS). Gate 0b is SATISFIED.
 
-Active task: S13-PR-001-CLOSEOUT (docs-only live-gate reconciliation).
-Active runtime task: NONE. Adaptive Intake v2 remains design-only until a
-runtime PR is separately authorized.
+Runtime assignment state: NONE.
+Adaptive Intake v2 remains design-only until a runtime PR is separately authorized.
 
 Next runtime candidate: S13-PR-002 — only under a separate explicit owner
 assignment from the then-current accepted origin/main.

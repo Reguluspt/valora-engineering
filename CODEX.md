@@ -40,8 +40,8 @@ Evidence (not evergreen): main squash 7f7473e459f592deac1054be3935d7f911b760a2
 (S13-PR-001 PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a);
 post-merge main CI run 29429680504 PASS.
 
-Active task: S13-PR-001-CLOSEOUT only — docs-only live-gate reconciliation.
-Active runtime task: NONE. No Sprint 13 runtime implementation is authorized by this closeout.
+Runtime assignment state: NONE.
+No Sprint 13 runtime implementation is authorized without a separate owner-assigned task ID.
 
 Next runtime candidate: S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact).
 S13-PR-002 may start only under a separate explicit owner assignment, from the

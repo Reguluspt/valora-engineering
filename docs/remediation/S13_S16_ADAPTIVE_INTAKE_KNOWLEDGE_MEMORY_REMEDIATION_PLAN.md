@@ -5,7 +5,7 @@
 **Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
-**Active task:** **S13-PR-001-CLOSEOUT** docs-only live-gate reconciliation. **Active runtime task: NONE**.
+**Runtime assignment state:** **NONE**.
 **Rule:** Do not start S13-PR-002 runtime until a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
 
 ---
@@ -96,12 +96,12 @@ No historical bootstrap activation until source locators, alignment review and c
 **Not implemented by S13-PR-001:** runtime code, migrations, dependencies, AI calls.
 **Does not authorize by itself:** S13-PR-002 or any S13 runtime work (runtime still needs separate assignment).
 
-### S13-PR-001-CLOSEOUT — Post-merge live-gate reconciliation
+### Post-merge live-gate reconciliation provenance
 
-**Type:** docs-only (current closeout PR).
-**Status:** active until independent live-gate audit PASS and owner merge.
-**Scope:** reconcile live operating status after S13-PR-001 merge (CODEX, guardrails, README, handoff, Authority Index, this plan header/gates only).
-**Does not authorize:** S13-PR-002 or any runtime work.
+After S13-PR-001 merged, live operating documents were reconciled so they no longer
+describe S13-PR-001 as an active docs gate. That reconciliation is **provenance only**
+(not a durable live task). Durable state: S13-PR-001 closed, Gate 0b satisfied,
+runtime assignment none, S13-PR-002 next candidate under separate owner assignment.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 

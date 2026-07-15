@@ -2,9 +2,8 @@
 
 **Phase:** Engineering — post S13-PR-001 design authority (merged)
 **Main evidence (not evergreen):** `7f7473e459f592deac1054be3935d7f911b760a2` (S13-PR-001 squash #11); main CI `29429680504` PASS
-**Active task:** **S13-PR-001-CLOSEOUT** — post-merge live-gate reconciliation (**docs-only**)
-**Active runtime task:** **NONE**
-**Next runtime candidate:** S13-PR-002 — requires a separate explicit owner assignment from accepted `main`
+**Runtime assignment state:** **NONE**
+**Next runtime candidate:** S13-PR-002 — not started; requires a separate explicit owner assignment from accepted `main`
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -33,7 +32,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ```text
 S12-PR-004 is merged and closed.
 S13-PR-001 design-authority gate is closed (merged to main).
-Active task: S13-PR-001-CLOSEOUT (docs-only). Active runtime task: NONE.
+Runtime assignment state: NONE.
 S13-PR-002 is the next candidate only — not started; requires separate owner assignment.
 ```
 
