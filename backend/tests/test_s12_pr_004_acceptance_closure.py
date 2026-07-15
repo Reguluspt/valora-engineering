@@ -593,20 +593,14 @@ class TestA6ImmutabilityHelper:
 
 class TestA7ScannerFailClosed:
     def test_missing_apply_file(self):
-        import sys
-
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-        import check_security as m
+        from tests import check_security as m
 
         with tempfile.TemporaryDirectory() as tmp:
             issues = m.check_apply_path_blockers(tmp)
             assert issues >= 1
 
     def test_missing_projects_api_file(self):
-        import sys
-
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-        import check_security as m
+        from tests import check_security as m
 
         with tempfile.TemporaryDirectory() as tmp:
             app_dir = Path(tmp) / "app" / "modules" / "excel_import" / "application"
@@ -620,10 +614,7 @@ class TestA7ScannerFailClosed:
             assert issues >= 1
 
     def test_missing_staging_for_update_only(self):
-        import sys
-
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-        import check_security as m
+        from tests import check_security as m
 
         backend = Path(__file__).resolve().parents[1]
         src = (
@@ -665,10 +656,7 @@ class TestA7ScannerFailClosed:
             assert issues > 0
 
     def test_setattr_and_raw_values_flagged(self):
-        import sys
-
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-        import check_security as m
+        from tests import check_security as m
 
         with tempfile.TemporaryDirectory() as tmp:
             app_dir = Path(tmp) / "app" / "modules" / "excel_import" / "application"
