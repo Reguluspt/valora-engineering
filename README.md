@@ -1,9 +1,10 @@
 # Valora Engineering
 
-**Phase:** Engineering — post S12-PR-004 Apply (merged)
-**Main evidence (not evergreen):** `a9f2c1e77e3ec46f216b881d608a02685b9d322a` (S12-PR-004 squash #10); main CI `29419008129` PASS
-**Active task:** **S13-PR-001** — Design authority and contract reconciliation (**docs-only**)
-**Next runtime candidate:** S13-PR-002 only after independent design audit and owner merge of S13-PR-001
+**Phase:** Engineering — post S13-PR-001 design authority (merged)
+**Main evidence (not evergreen):** `7f7473e459f592deac1054be3935d7f911b760a2` (S13-PR-001 squash #11); main CI `29429680504` PASS
+**Active task:** **S13-PR-001-CLOSEOUT** — post-merge live-gate reconciliation (**docs-only**)
+**Active runtime task:** **NONE**
+**Next runtime candidate:** S13-PR-002 — requires a separate explicit owner assignment from accepted `main`
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -24,15 +25,16 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | S12 parser capability (today) | `.xlsx` only; fixed column aliases; staging + validate + Apply v1 |
 | Adaptive Intake / Column Mapping Memory | **Design only** (v1.4 / ADR 0030) — not implemented |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
-| **S13-PR-001** Design authority reconciliation | **Active docs-only gate** |
+| **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Production-ready | **No** |
 
 ### Live task gate
 
 ```text
 S12-PR-004 is merged and closed.
-S13-PR-001 is docs-only until independent design audit and owner merge.
-S13-PR-002+ runtime is not authorized during S13-PR-001.
+S13-PR-001 design-authority gate is closed (merged to main).
+Active task: S13-PR-001-CLOSEOUT (docs-only). Active runtime task: NONE.
+S13-PR-002 is the next candidate only — not started; requires separate owner assignment.
 ```
 
 ## Architecture (monorepo)

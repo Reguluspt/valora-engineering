@@ -1,11 +1,12 @@
 # S13–S16 Adaptive Intake, Knowledge Memory and Historical Dossier Remediation Plan
 
-**Status:** Active implementation plan after S12-PR-004 engineering closure; runtime tasks remain individually gated.
+**Status:** Active implementation plan after S12-PR-004 engineering closure and S13-PR-001 design-authority merge; runtime tasks remain individually gated.
 **Design authority:** Design Book v1.4 adaptive-intake addendum + ADR 0030–0032 + Design Authority Index.
-**S12-PR-004 engineering baseline (evidence, not evergreen):** main squash `a9f2c1e77e3ec46f216b881d608a02685b9d322a`; post-merge main CI `29419008129` PASS.
+**Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
-**Active gate:** **S13-PR-001** docs-only design reconciliation until independent design audit PASS and owner merge.
-**Rule:** Do not start S13-PR-002 runtime until S13-PR-001 is audited and merged. Branch runtime from the accepted main baseline only.
+**Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
+**Active task:** **S13-PR-001-CLOSEOUT** docs-only live-gate reconciliation. **Active runtime task: NONE**.
+**Rule:** Do not start S13-PR-002 runtime until a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
 
 ---
 
@@ -63,16 +64,17 @@ Evidence:
 - M2 + seven concurrency nodes executed with zero target skips;
 - independent post-CI audit PASS on pre-merge head `64086dd…`.
 
-### Gate 0b — S13-PR-001 documentation gate (active)
+### Gate 0b — S13-PR-001 documentation gate (satisfied)
 
-Before any S13 runtime PR:
+Evidence:
 
-- S13-PR-001 independent design audit PASS;
-- owner Ready/squash/merge of S13-PR-001;
-- runtime branches from the accepted main baseline after that merge;
-- no Adaptive Intake runtime mixed into unrelated tasks.
+- independent design audit PASS (corrective re-audit on head `4b2422e…`);
+- owner Ready/squash/merge of S13-PR-001 as PR #11;
+- main SHA `7f7473e459f592deac1054be3935d7f911b760a2`;
+- post-merge main CI `29429680504` PASS;
+- no Adaptive Intake runtime mixed into the design-authority package.
 
-S13-PR-002 is **not** authorized until Gate 0b completes.
+S13-PR-002 remains the next candidate and is **not** authorized until a separate explicit owner assignment.
 
 ### Gate 1 — deterministic baseline before external AI
 
@@ -88,15 +90,22 @@ No historical bootstrap activation until source locators, alignment review and c
 
 ### S13-PR-001 — Design Authority and Contract Reconciliation
 
-**Type:** docs-only (this PR).
-**Status:** active until independent design audit PASS and owner merge.
-**Scope:** Design Book v1.4, ADR 0030–0032, Authority Index, contract/handoff/CODEX/guardrails reconciliation, this plan.
-**Not implemented:** runtime code, migrations, dependencies, AI calls.
-**Gate:** document link/status consistency, privacy scan, independent design review.
-**Does not authorize:** S13-PR-002 or any S13 runtime work.
+**Type:** docs-only.
+**Status:** **merged / closed** (PR #11 squash `7f7473e…`; main CI `29429680504` PASS).
+**Scope delivered:** Design Book v1.4, ADR 0030–0032, Authority Index, contract/handoff/CODEX/guardrails reconciliation, this plan.
+**Not implemented by S13-PR-001:** runtime code, migrations, dependencies, AI calls.
+**Does not authorize by itself:** S13-PR-002 or any S13 runtime work (runtime still needs separate assignment).
+
+### S13-PR-001-CLOSEOUT — Post-merge live-gate reconciliation
+
+**Type:** docs-only (current closeout PR).
+**Status:** active until independent live-gate audit PASS and owner merge.
+**Scope:** reconcile live operating status after S13-PR-001 merge (CODEX, guardrails, README, handoff, Authority Index, this plan header/gates only).
+**Does not authorize:** S13-PR-002 or any runtime work.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 
+**Status:** next runtime candidate — **not started**; requires separate explicit owner assignment from accepted `main`.
 **Closes:** G-01 and the source-replay prerequisite.
 
 Scope:

@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-15 (S13-PR-001)
+**Last reconciled:** 2026-07-15 (S13-PR-001-CLOSEOUT)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -28,24 +28,24 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Post S12-PR-004 — Design Authority Reconciliation (S13-PR-001)
+Engineering Phase / Post S13-PR-001 — Design Authority Closed; Runtime Handoff Preparation
 ```
 
 ### Live task gate (fetch origin/main before acting)
 
 ```text
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
-Evidence (not evergreen): main squash a9f2c1e77e3ec46f216b881d608a02685b9d322a;
-post-merge main CI run 29419008129 PASS.
+S13-PR-001 design-authority gate is CLOSED (squash-merged to main).
+Evidence (not evergreen): main squash 7f7473e459f592deac1054be3935d7f911b760a2
+(S13-PR-001 PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a);
+post-merge main CI run 29429680504 PASS.
 
-While origin/main does not contain the merged S13-PR-001 documentation authority,
-S13-PR-001 is the only active task: docs-only design reconciliation.
-No Sprint 13 runtime implementation is authorized.
+Active task: S13-PR-001-CLOSEOUT only — docs-only live-gate reconciliation.
+Active runtime task: NONE. No Sprint 13 runtime implementation is authorized by this closeout.
 
-After independent design audit PASS and owner merge of S13-PR-001,
-S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact)
-becomes the next candidate runtime slice — only from the accepted main baseline
-and only under an assigned task ID.
+Next runtime candidate: S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact).
+S13-PR-002 may start only under a separate explicit owner assignment, from the
+then-current accepted origin/main, and only under that assigned task ID.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
@@ -140,7 +140,7 @@ New dependency with architectural impact.
 Secret/credential/production config required.
 Starting baseline SHA does not match the task prompt.
 Protected files are involved without authorization.
-S13 runtime is requested before S13-PR-001 is audited and merged.
+S13 runtime is requested without an assigned runtime task ID, or from a baseline that does not match the task prompt.
 ```
 
 ## 8. Pull Request Behavior
