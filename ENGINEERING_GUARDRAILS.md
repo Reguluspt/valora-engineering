@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-14 (S12-R-008)
+**Last reconciled:** 2026-07-15 (S13-PR-001)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,16 +11,20 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Post-Validation Apply Authority
+Post S12-PR-004 — Design Authority Reconciliation
 
-If origin/main does not yet contain the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is the active authority task and S12-PR-004 is blocked.
+S12-PR-004 is MERGED (main squash evidence a9f2c1e…; main CI 29419008129 PASS).
+Its engineering gate is CLOSED.
 
-If origin/main contains the merged S12-R-008 / ADR 0029 authority,
-S12-R-008 is complete and S12-PR-004 is the next authorized active implementation task.
+While origin/main does not contain merged S13-PR-001 documentation authority,
+S13-PR-001 is the only active task (docs-only).
+No Sprint 13 runtime implementation is authorized.
+
+After independent design audit PASS and owner merge of S13-PR-001,
+S13-PR-002 becomes the next candidate runtime slice from the accepted main baseline.
 ```
 
-**S12-R-008 starting baseline (not evergreen current-main):** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (S12-PR-003 merge #8 when R008 opened). Agents must fetch and verify live `origin/main`.
+Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
 
 ### Historical roadmap (completed slices)
 
@@ -34,21 +38,25 @@ Sprint 5  — Document Engine + Intelligence [merged foundation]
 Sprint 6+ — AI governance / production     [partial / deferred]
 Sprint 10 — Design system, i18n, errors    [merged]
 Sprint 11 — Live Workbench loop            [merged; readiness superseded by S12-R]
-Sprint 12 — Excel import pipeline          [PR-001/002/003 merged; Apply = PR-004 after R008]
-S12-R-001…007 — Remediation / recon        [merged to main]
-S12-R-008 — Apply design authority         [active documentation]
+Sprint 12 — Excel import pipeline          [PR-001…PR-004 merged; Apply v1 frozen]
+S12-R-001…008 — Remediation / recon        [merged to main]
+S12-PR-004 — Apply Command & Provenance    [MERGED; engineering gate closed]
+S13-PR-001 — Design authority reconciliation [active docs-only until merge]
 ```
 
 Sprint 0 “foundation only” boundaries are **historical**. They must not be stated as the current repository status.
-S12-PR-003 is **merged/complete** and must not be described as blocked or not started in current authority.
+S12-PR-003 and S12-PR-004 are **merged/complete** and must not be described as blocked or not started.
 
 ## 2. Design Authority
 
 ```text
-Valora Design Book v1.2-final + v1.3 MVP completion addendum
-docs/design/* contracts
-docs/adr/*
-docs/remediation/S12_R_PRE_VALIDATION_REMEDIATION_SLICE.md
+Valora Design Book v1.2-final
++ v1.3 MVP completion addendum
++ v1.4 Adaptive Intake / Knowledge Memory addendum
+docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
+docs/design/* contracts (including Excel staging §15, frozen s12-pr-004-v1)
+docs/adr/* (including ADR 0028–0032)
+docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 docs/VALORA_PROJECT_HANDOFF.md
 ```
 
@@ -81,7 +89,9 @@ Vietnamese-first UX; Astryx design compliance.
 Word and Excel are input/output only.
 They are not the source of truth.
 Excel upload/validate target import batch + staging only.
-Official promotion uses Apply (S12-PR-004 / ADR 0029) after R008 merges.
+Official promotion for S12 staging uses Apply (ADR 0029 / s12-pr-004-v1) — implemented.
+S12 parser v1 remains .xlsx + fixed aliases; Adaptive Intake v2 (.xls/.xlsx, mapping memory)
+is design authority only until S13 runtime PRs are authorized.
 ```
 
 ### Price
@@ -104,7 +114,22 @@ Corrections use ChangeRequest/Reversal, not silent edit/delete.
 ```text
 AI is advisory only.
 AI cannot approve official data or auto-apply staging.
+AI cannot confirm mapping, identity, price, or activate knowledge.
 AI output must be candidate/reviewed/audited.
+Gemini/DeepSeek (or other providers) are future gateway candidates only after
+deterministic S13–S15 foundations and ADR-governed provider integration.
+```
+
+### Adaptive Intake / Memory (v1.4 design authority)
+
+```text
+Column Mapping Memory and Asset Identity Memory are separate.
+RawAssetObservation is immutable; normalization never overwrites raw wording.
+Human confirmation is required before reusable feedback or active knowledge.
+No cross-organization learning. No per-click online training.
+No direct bulk SQL into active knowledge from historical dossiers.
+Public fixtures must be anonymized; real client files stay private.
+.xls support requires a security/dependency spike before runtime adoption.
 ```
 
 ### Tenant Boundary

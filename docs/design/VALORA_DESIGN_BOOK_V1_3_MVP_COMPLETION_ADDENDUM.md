@@ -1,7 +1,8 @@
 # Valora Design Book v1.3 — MVP Completion Addendum
 
-- **Status**: Draft for Phase 2 execution
+- **Status**: Draft for Phase 2 execution (historical roadmap sequencing partially superseded)
 - **Relationship to v1.2**: v1.2 remains authoritative for existing domain architecture; v1.3 adds MVP completion scope, UX rules, AI provider rules, and expansion deferrals.
+- **Supersession (2026-07-15 / S13-PR-001):** Any **§7 / “Sprint 13 = AI Assistant first”** roadmap sequencing in v1.3 is superseded by Design Book **v1.4** and the Design Authority Index. Active order is S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 dossiers → S16 audited AI suggestions. Vietnamese-first UX, Astryx, MVP module freeze, and human-in-the-loop AI rules in this document **remain in force**.
 
 ---
 
@@ -121,7 +122,7 @@ $$\text{AI Suggestion} \longrightarrow \text{User Review} \longrightarrow \text{
 - **Sprint 10**: Design Book v1.3 + Astryx Vietnamese UX Contract
 - **Sprint 11**: Live Workbench Data Loop
 - **Sprint 12**: Excel Import Pipeline
-- **Sprint 13**: AI Assistant MVP (Gemini + DeepSeek Gateway)
+- **Historical roadmap — superseded by v1.4:** Sprint 13 was previously planned as AI Assistant MVP (Gemini + DeepSeek Gateway). Active sequencing is defined by the Design Authority Index and v1.4.
 - **Sprint 14**: Document Report Generation MVP
 - **Sprint 15**: Real Auth + Pilot Acceptance
 
