@@ -696,4 +696,3 @@ class TestA7ScannerFailClosed:
 
 # PostgreSQL matrix nodes live in test_s12_pr_004_proof_matrix.py (M-1).
 # This module retains SQLite acceptance proofs only; no placeholder PG runners.
-

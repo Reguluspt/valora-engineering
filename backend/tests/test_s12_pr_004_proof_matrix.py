@@ -18,8 +18,11 @@ from app.api.projects import archive_project
 from app.modules.excel_import.application.apply_staging import (
     COMMAND_NAME,
     CONTRACT_VERSION,
+    ERR_NOT_DRAFT,
+    ERR_STATE,
     FAILURE_EVENT,
     SUCCESS_EVENT,
+    VALIDATION_SUCCESS_EVENT,
     apply_project_asset_import_batch,
 )
 from app.modules.excel_import.application.import_service import (
@@ -209,6 +212,106 @@ def assert_no_failure_audit(db, batch_id):
         .count()
         == 0
     )
+
+
+def assert_apply_success_count(db, batch_id, n=1):
+    assert (
+        db.query(AuditEvent)
+        .filter_by(entity_id=batch_id, event_name=SUCCESS_EVENT)
+        .count()
+        == n
+    )
+
+
+def assert_apply_failure_count(db, batch_id, n=0):
+    assert (
+        db.query(AuditEvent)
+        .filter_by(entity_id=batch_id, event_name=FAILURE_EVENT)
+        .count()
+        == n
+    )
+
+
+def _http_error_code(exc) -> str | None:
+    if not isinstance(exc, HTTPException):
+        return None
+    detail = exc.detail
+    if isinstance(detail, dict):
+        return detail.get("error_code")
+    return None
+
+
+def _assert_http_error(errors, role, *, status, error_code=None):
+    """Exactly one error for role with exact HTTP status and optional domain code."""
+    role_errors = [e for e in errors if e[0] == role]
+    assert len(role_errors) == 1, f"expected one {role!r} error, got {errors!r}"
+    other = [e for e in errors if e[0] != role]
+    assert other == [], f"unexpected errors outside {role!r}: {other!r}"
+    exc = role_errors[0][1]
+    assert isinstance(exc, HTTPException), exc
+    assert exc.status_code == status, (exc.status_code, exc.detail)
+    if error_code is not None:
+        assert _http_error_code(exc) == error_code, exc.detail
+
+
+def _assert_results_exact(results, expected):
+    assert sorted(results) == sorted(expected), results
+
+
+def _assert_holder_no_error(errors, role):
+    assert not any(e[0] == role for e in errors), errors
+
+
+def _assert_imported_lineage(db, ids, *, count=1):
+    lines = (
+        db.query(ProjectAssetLine)
+        .filter_by(source_import_batch_id=ids["batch"])
+        .order_by(ProjectAssetLine.id.asc())
+        .all()
+    )
+    assert len(lines) == count
+    if count == 1:
+        assert lines[0].source_staging_row_id == ids["staging"]
+        assert lines[0].source_import_batch_id == ids["batch"]
+    return lines
+
+
+def _assert_manual_immutable(db, seed):
+    m = db.query(ProjectAssetLine).filter_by(id=seed.ids["manual"]).one()
+    assert official_line_snapshot(m) == seed.manual_snap
+
+
+def _assert_batch_generation(
+    db,
+    ids,
+    *,
+    status,
+    filename="x.xlsx",
+    sheet="Sheet1",
+    total_rows=1,
+    valid_rows=1,
+    invalid_rows=0,
+    warning_rows=0,
+):
+    b = db.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
+    assert b.status == status
+    assert b.source_filename == filename
+    assert b.source_sheet_name == sheet
+    assert b.total_rows == total_rows
+    assert b.valid_rows == valid_rows
+    assert b.invalid_rows == invalid_rows
+    assert b.warning_rows == warning_rows
+    return b
+
+
+# Expected outcome matrix (ADR 0029 lock order + production contracts; not soft dual-state):
+# 1 apply vs apply: holder ok; waiter 409/apply_state_not_allowed; 1 imported line; 1 success audit
+# 2 upload holds apply: upload ok; apply 409/apply_state_not_allowed; 0 imported; 0 apply audits
+# 3 apply holds upload: apply ok; upload 409; applied generation x.xlsx; 1 line; 1 success audit
+# 4 validate holds apply: both ok; applied; validation-success audit before apply-success
+# 5 apply holds validate: apply ok; validate 409; applied; 1 line; 1 success audit
+# 6 workflow holds apply: archive ok; apply 400/apply_project_not_draft; ready_for_review; 0 lines
+# 7 apply holds workflow: both ok; archived+applied; apply success before ProjectArchived
 
 
 # ---------------------------------------------------------------------------
@@ -757,12 +860,242 @@ class TestM4PreconditionSnapshots:
 
 
 # ---------------------------------------------------------------------------
-# M-2 — executable migration proof (PostgreSQL)
+# M-2 — executable migration proof (PostgreSQL throwaway database)
 # ---------------------------------------------------------------------------
+
+LINEAGE_PARENT_REV = "db5977424e7b"
+LINEAGE_HEAD_REV = "e1f2a3b4c5d6"
+LINEAGE_COL_BATCH = "source_import_batch_id"
+LINEAGE_COL_STAGING = "source_staging_row_id"
+
+
+def _make_url(pg_url: str):
+    from sqlalchemy.engine.url import make_url
+
+    return make_url(pg_url)
+
+
+def _point_alembic_settings_at(pg_url: str) -> dict:
+    """Alembic env.py reads get_settings().database_url (POSTGRES_* env)."""
+    from app.core.config import get_settings
+
+    u = _make_url(pg_url)
+    keys = {
+        "POSTGRES_HOST": u.host or "localhost",
+        "POSTGRES_PORT": str(u.port or 5432),
+        "POSTGRES_DB": u.database,
+        "POSTGRES_USER": u.username or "valora",
+        "POSTGRES_PASSWORD": u.password or "",
+    }
+    prev = {k: os.environ.get(k) for k in keys}
+    for k, v in keys.items():
+        os.environ[k] = "" if v is None else str(v)
+    get_settings.cache_clear()
+    return prev
+
+
+def _restore_env(prev: dict) -> None:
+    from app.core.config import get_settings
+
+    for k, v in prev.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    get_settings.cache_clear()
+
+
+def _assert_no_lineage_artifacts(engine) -> None:
+    insp = inspect(engine)
+    cols = {c["name"] for c in insp.get_columns("project_asset_lines")}
+    assert LINEAGE_COL_BATCH not in cols
+    assert LINEAGE_COL_STAGING not in cols
+    fks = insp.get_foreign_keys("project_asset_lines")
+    for fk in fks:
+        constrained = fk.get("constrained_columns") or []
+        assert LINEAGE_COL_BATCH not in constrained
+        assert LINEAGE_COL_STAGING not in constrained
+    for idx in insp.get_indexes("project_asset_lines"):
+        col_names = idx.get("column_names") or []
+        assert LINEAGE_COL_BATCH not in col_names
+        assert LINEAGE_COL_STAGING not in col_names
+
+
+def _assert_lineage_artifacts_at_head(engine) -> None:
+    insp = inspect(engine)
+    cols = {c["name"]: c for c in insp.get_columns("project_asset_lines")}
+    assert LINEAGE_COL_BATCH in cols
+    assert LINEAGE_COL_STAGING in cols
+    assert cols[LINEAGE_COL_BATCH]["nullable"] is True
+    assert cols[LINEAGE_COL_STAGING]["nullable"] is True
+
+    fks = insp.get_foreign_keys("project_asset_lines")
+    batch_fk = [
+        f
+        for f in fks
+        if LINEAGE_COL_BATCH in (f.get("constrained_columns") or [])
+    ]
+    staging_fk = [
+        f
+        for f in fks
+        if LINEAGE_COL_STAGING in (f.get("constrained_columns") or [])
+    ]
+    assert batch_fk, fks
+    assert staging_fk, fks
+    for fk in batch_fk + staging_fk:
+        opts = fk.get("options") or {}
+        ondelete = (opts.get("ondelete") or fk.get("ondelete") or "").upper()
+        assert ondelete == "RESTRICT", fk
+
+    idxs = insp.get_indexes("project_asset_lines")
+    staging_idx = [
+        i
+        for i in idxs
+        if LINEAGE_COL_STAGING in (i.get("column_names") or [])
+    ]
+    assert any(i.get("unique") for i in staging_idx), idxs
+    batch_idx = [
+        i for i in idxs if LINEAGE_COL_BATCH in (i.get("column_names") or [])
+    ]
+    assert batch_idx, idxs
+
+
+def _run_lineage_dml_proof(engine) -> None:
+    SessionLocal = sessionmaker(bind=engine)
+    s = SessionLocal()
+    try:
+        uid = uuid.uuid4().hex[:8]
+        org = OrganizationProfile(
+            legal_name=f"M2{uid}",
+            organization_slug=f"m2{uid}",
+            status=OrganizationStatus.ACTIVE,
+        )
+        s.add(org)
+        s.commit()
+        role = Role(
+            code=f"m2{uid}",
+            display_name="R",
+            permissions=["workbench:edit"],
+        )
+        s.add(role)
+        s.commit()
+        user = User(
+            organization_id=org.id,
+            email=f"m2{uid}@t.com",
+            full_name="U",
+            status=UserStatus.ACTIVE,
+        )
+        s.add(user)
+        s.commit()
+        cust = Customer(
+            organization_id=org.id,
+            legal_name="C",
+            status=CustomerStatus.ACTIVE,
+            created_by=user.id,
+        )
+        s.add(cust)
+        s.commit()
+        project = Project(
+            organization_id=org.id,
+            customer_id=cust.id,
+            code=f"M2{uid[:6]}",
+            name="P",
+            status=ProjectWorkflowStatus.DRAFT,
+            created_by=user.id,
+        )
+        s.add(project)
+        s.commit()
+        batch = ProjectAssetImportBatch(
+            organization_id=org.id,
+            project_id=project.id,
+            source_filename="m.xlsx",
+            source_sheet_name="Sheet1",
+            status=ImportBatchStatus.APPLIED,
+            total_rows=1,
+            valid_rows=1,
+            invalid_rows=0,
+            warning_rows=0,
+            created_by_user_id=user.id,
+        )
+        s.add(batch)
+        s.commit()
+        staging = ProjectAssetImportStagingRow(
+            organization_id=org.id,
+            project_id=project.id,
+            import_batch_id=batch.id,
+            source_row_number=1,
+            raw_values={},
+            mapped_values={},
+            normalized_preview={},
+            validation_status=ImportRowValidationStatus.VALID,
+            validation_errors=[],
+            validation_warnings=[],
+            proposed_asset_name="L",
+            proposed_quantity="1",
+        )
+        s.add(staging)
+        s.commit()
+        line = ProjectAssetLine(
+            project_id=project.id,
+            asset_name="Imported",
+            quantity=1,
+            source_import_batch_id=batch.id,
+            source_staging_row_id=staging.id,
+        )
+        manual = ProjectAssetLine(
+            project_id=project.id,
+            asset_name="Manual",
+            quantity=1,
+            source_import_batch_id=None,
+            source_staging_row_id=None,
+        )
+        s.add_all([line, manual])
+        s.commit()
+        s.refresh(manual)
+        assert manual.source_import_batch_id is None
+        assert manual.source_staging_row_id is None
+
+        with pytest.raises(Exception):
+            s.query(ProjectAssetImportBatch).filter_by(id=batch.id).delete()
+            s.commit()
+        s.rollback()
+
+        with pytest.raises(Exception):
+            s.query(ProjectAssetImportStagingRow).filter_by(id=staging.id).delete()
+            s.commit()
+        s.rollback()
+
+        dup = ProjectAssetLine(
+            project_id=project.id,
+            asset_name="Dup",
+            quantity=1,
+            source_import_batch_id=batch.id,
+            source_staging_row_id=staging.id,
+        )
+        s.add(dup)
+        with pytest.raises(Exception):
+            s.commit()
+        s.rollback()
+    finally:
+        s.close()
 
 
 class TestM2ExecutableMigration:
     def test_lineage_migration_upgrade_downgrade_restrict_unique(self):
+        """Real Alembic upgrade/downgrade on a throwaway PostgreSQL database.
+
+        Cycle:
+          CREATE DATABASE
+          → alembic upgrade parent
+          → assert no lineage artifacts
+          → alembic upgrade head
+          → inspect + DML RESTRICT/unique
+          → alembic downgrade parent
+          → assert lineage removed
+          → alembic upgrade head
+          → assert lineage restored
+          → DROP DATABASE
+        """
         pg = _pg_url()
         if not pg:
             pytest.skip(
@@ -770,263 +1103,88 @@ class TestM2ExecutableMigration:
                 "(m2_lineage_migration_upgrade_downgrade)"
             )
 
+        from alembic import command
         from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        # Use isolated schema so we do not disturb shared DB head
-        schema = f"s12pr004_{uuid.uuid4().hex[:10]}"
-        engine = create_engine(pg, isolation_level="AUTOCOMMIT")
-        with engine.connect() as conn:
-            conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+        base = _make_url(pg)
+        db_name = f"s12pr004_m2_{uuid.uuid4().hex[:12]}"
+        admin_url = base.set(database="postgres")
+        isolated_url = base.set(database=db_name)
+        isolated_url_str = isolated_url.render_as_string(hide_password=False)
+
+        admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+        isolated_engine = None
+        created = False
+        prev_env: dict = {}
         try:
-            # Point search_path so Alembic creates objects in isolated schema
-            url = pg
-            cfg = Config("alembic.ini")
-            cfg.set_main_option("sqlalchemy.url", url)
-            # Run migrations with schema search_path via connect args
-            eng2 = create_engine(
-                url,
-                connect_args={"options": f"-csearch_path={schema},public"},
-            )
-            # Ensure alembic_version in schema
-            with eng2.begin() as conn:
-                conn.execute(
-                    text(
-                        f'CREATE TABLE IF NOT EXISTS "{schema}".alembic_version '
-                        f"(version_num VARCHAR(32) NOT NULL)"
-                    )
-                )
-
-            # Full upgrade to parent then lineage: use command with env
-            # Simpler path: upgrade head on isolated metadata is heavy.
-            # Behavioral proof on existing head schema when already migrated:
-            heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-            assert heads == ["e1f2a3b4c5d6"]
-
-            # Inspect live public schema lineage artifacts (CI DB at head)
-            insp = inspect(create_engine(pg))
-            cols = {c["name"]: c for c in insp.get_columns("project_asset_lines")}
-            assert "source_import_batch_id" in cols
-            assert "source_staging_row_id" in cols
-            assert cols["source_import_batch_id"]["nullable"] is True
-            assert cols["source_staging_row_id"]["nullable"] is True
-
-            fks = insp.get_foreign_keys("project_asset_lines")
-            batch_fk = [
-                f
-                for f in fks
-                if f.get("constrained_columns") == ["source_import_batch_id"]
-                or "source_import_batch_id" in (f.get("constrained_columns") or [])
-            ]
-            staging_fk = [
-                f
-                for f in fks
-                if "source_staging_row_id" in (f.get("constrained_columns") or [])
-            ]
-            assert batch_fk, fks
-            assert staging_fk, fks
-            for fk in batch_fk + staging_fk:
-                opts = fk.get("options") or {}
-                ondelete = (opts.get("ondelete") or fk.get("ondelete") or "").upper()
-                assert ondelete == "RESTRICT", fk
-
-            idxs = insp.get_indexes("project_asset_lines")
-            staging_idx = [
-                i
-                for i in idxs
-                if i.get("column_names") == ["source_staging_row_id"]
-                or "source_staging_row_id" in (i.get("column_names") or [])
-            ]
-            assert any(i.get("unique") for i in staging_idx), idxs
-
-            # RESTRICT + unique behavior via live DML
-            SessionLocal = sessionmaker(bind=create_engine(pg))
-            s = SessionLocal()
-            ids = {}
             try:
-                uid = uuid.uuid4().hex[:8]
-                org = OrganizationProfile(
-                    legal_name=f"M2{uid}",
-                    organization_slug=f"m2{uid}",
-                    status=OrganizationStatus.ACTIVE,
+                with admin_engine.connect() as conn:
+                    conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                created = True
+            except Exception as exc:
+                pytest.fail(
+                    "BLOCKER: cannot CREATE throwaway PostgreSQL database for "
+                    f"isolated Alembic proof (db={db_name!r}): {exc!r}. "
+                    "Do not fall back to shared/public inspect or schema-only "
+                    "placeholder proofs."
                 )
-                s.add(org)
-                s.commit()
-                role = Role(
-                    code=f"m2{uid}",
-                    display_name="R",
-                    permissions=["workbench:edit"],
-                )
-                s.add(role)
-                s.commit()
-                user = User(
-                    organization_id=org.id,
-                    email=f"m2{uid}@t.com",
-                    full_name="U",
-                    status=UserStatus.ACTIVE,
-                )
-                s.add(user)
-                s.commit()
-                cust = Customer(
-                    organization_id=org.id,
-                    legal_name="C",
-                    status=CustomerStatus.ACTIVE,
-                    created_by=user.id,
-                )
-                s.add(cust)
-                s.commit()
-                project = Project(
-                    organization_id=org.id,
-                    customer_id=cust.id,
-                    code=f"M2{uid[:6]}",
-                    name="P",
-                    status=ProjectWorkflowStatus.DRAFT,
-                    created_by=user.id,
-                )
-                s.add(project)
-                s.commit()
-                batch = ProjectAssetImportBatch(
-                    organization_id=org.id,
-                    project_id=project.id,
-                    source_filename="m.xlsx",
-                    source_sheet_name="Sheet1",
-                    status=ImportBatchStatus.APPLIED,
-                    total_rows=1,
-                    valid_rows=1,
-                    invalid_rows=0,
-                    warning_rows=0,
-                    created_by_user_id=user.id,
-                )
-                s.add(batch)
-                s.commit()
-                staging = ProjectAssetImportStagingRow(
-                    organization_id=org.id,
-                    project_id=project.id,
-                    import_batch_id=batch.id,
-                    source_row_number=1,
-                    raw_values={},
-                    mapped_values={},
-                    normalized_preview={},
-                    validation_status=ImportRowValidationStatus.VALID,
-                    validation_errors=[],
-                    validation_warnings=[],
-                    proposed_asset_name="L",
-                    proposed_quantity="1",
-                )
-                s.add(staging)
-                s.commit()
-                line = ProjectAssetLine(
-                    project_id=project.id,
-                    asset_name="Imported",
-                    quantity=1,
-                    source_import_batch_id=batch.id,
-                    source_staging_row_id=staging.id,
-                )
-                manual = ProjectAssetLine(
-                    project_id=project.id,
-                    asset_name="Manual",
-                    quantity=1,
-                )
-                s.add_all([line, manual])
-                s.commit()
-                ids = {
-                    "org": org.id,
-                    "role": role.id,
-                    "user": user.id,
-                    "cust": cust.id,
-                    "project": project.id,
-                    "batch": batch.id,
-                    "staging": staging.id,
-                    "line": line.id,
-                    "manual": manual.id,
-                }
 
-                # RESTRICT: cannot delete batch while lineage exists
-                with pytest.raises(Exception):
-                    s.query(ProjectAssetImportBatch).filter_by(id=batch.id).delete()
-                    s.commit()
-                s.rollback()
+            prev_env = _point_alembic_settings_at(isolated_url_str)
+            cfg = Config("alembic.ini")
+            script = ScriptDirectory.from_config(cfg)
+            assert script.get_heads() == [LINEAGE_HEAD_REV]
+            rev = script.get_revision(LINEAGE_HEAD_REV)
+            assert rev.down_revision == LINEAGE_PARENT_REV
 
-                # RESTRICT: cannot delete staging while lineage exists
-                with pytest.raises(Exception):
-                    s.query(ProjectAssetImportStagingRow).filter_by(
-                        id=staging.id
-                    ).delete()
-                    s.commit()
-                s.rollback()
+            # 1) upgrade to parent (lineage columns must not exist)
+            command.upgrade(cfg, LINEAGE_PARENT_REV)
+            isolated_engine = create_engine(isolated_url_str)
+            _assert_no_lineage_artifacts(isolated_engine)
 
-                # unique source_staging_row_id
-                dup = ProjectAssetLine(
-                    project_id=project.id,
-                    asset_name="Dup",
-                    quantity=1,
-                    source_import_batch_id=batch.id,
-                    source_staging_row_id=staging.id,
-                )
-                s.add(dup)
-                with pytest.raises(Exception):
-                    s.commit()
-                s.rollback()
+            # 2) upgrade to head + inspect lineage
+            command.upgrade(cfg, LINEAGE_HEAD_REV)
+            isolated_engine.dispose()
+            isolated_engine = create_engine(isolated_url_str)
+            _assert_lineage_artifacts_at_head(isolated_engine)
 
-                # downgrade/upgrade cycle on script directory (no data loss check)
-                # Prove revision chain exists and is reversible in metadata
-                script = ScriptDirectory.from_config(Config("alembic.ini"))
-                rev = script.get_revision("e1f2a3b4c5d6")
-                assert rev.down_revision == "db5977424e7b" or (
-                    isinstance(rev.down_revision, str)
-                    and rev.down_revision == "db5977424e7b"
-                )
-                # Execute downgrade + upgrade on isolated schema via raw SQL from migration
-                # using alembic command against a throwaway database URL is preferred when
-                # available; here we execute upgrade/downgrade functions via op on schema.
+            # 3) DML RESTRICT + unique + null manual lineage
+            _run_lineage_dml_proof(isolated_engine)
+            isolated_engine.dispose()
+            isolated_engine = None
 
-                # Note: migration module path uses filename; import via importlib
-            finally:
-                # cleanup fixtures first
-                try:
-                    s.query(ProjectAssetLine).filter(
-                        ProjectAssetLine.project_id == ids.get("project")
-                    ).delete(synchronize_session=False)
-                    s.query(ProjectAssetImportStagingRow).filter_by(
-                        import_batch_id=ids.get("batch")
-                    ).delete(synchronize_session=False)
-                    s.query(ProjectAssetImportBatch).filter_by(
-                        id=ids.get("batch")
-                    ).delete(synchronize_session=False)
-                    s.query(Project).filter_by(id=ids.get("project")).delete(
-                        synchronize_session=False
-                    )
-                    s.query(Customer).filter_by(id=ids.get("cust")).delete(
-                        synchronize_session=False
-                    )
-                    s.query(User).filter_by(id=ids.get("user")).delete(
-                        synchronize_session=False
-                    )
-                    s.query(Role).filter_by(id=ids.get("role")).delete(
-                        synchronize_session=False
-                    )
-                    s.query(OrganizationProfile).filter_by(id=ids.get("org")).delete(
-                        synchronize_session=False
-                    )
-                    s.commit()
-                except Exception:
-                    s.rollback()
-                s.close()
+            # 4) downgrade to parent → lineage artifacts gone
+            command.downgrade(cfg, LINEAGE_PARENT_REV)
+            isolated_engine = create_engine(isolated_url_str)
+            _assert_no_lineage_artifacts(isolated_engine)
+            isolated_engine.dispose()
+            isolated_engine = None
 
-            # Script-level downgrade/upgrade + single head (always)
-            script = ScriptDirectory.from_config(Config("alembic.ini"))
-            assert script.get_heads() == ["e1f2a3b4c5d6"]
-            rev = script.get_revision("e1f2a3b4c5d6")
-            assert rev.down_revision == "db5977424e7b"
+            # 5) upgrade head again → artifacts restored
+            command.upgrade(cfg, LINEAGE_HEAD_REV)
+            isolated_engine = create_engine(isolated_url_str)
+            _assert_lineage_artifacts_at_head(isolated_engine)
 
-            # Live alembic current if available
-            cfg2 = Config("alembic.ini")
-            cfg2.set_main_option("sqlalchemy.url", pg)
-            # command.downgrade/upgrade against shared DB is too destructive for shared CI;
-            # reversible proof is via script chain + live FK/unique DML above.
+            assert ScriptDirectory.from_config(cfg).get_heads() == [LINEAGE_HEAD_REV]
         finally:
-            with engine.connect() as conn:
-                conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+            if isolated_engine is not None:
+                isolated_engine.dispose()
+            _restore_env(prev_env)
+            if created:
+                try:
+                    with admin_engine.connect() as conn:
+                        conn.execute(
+                            text(
+                                "SELECT pg_terminate_backend(pid) "
+                                "FROM pg_stat_activity "
+                                "WHERE datname = :db AND pid <> pg_backend_pid()"
+                            ),
+                            {"db": db_name},
+                        )
+                        conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}"'))
+                except Exception:
+                    pass
+            admin_engine.dispose()
 
 
 # ---------------------------------------------------------------------------
@@ -1264,22 +1422,18 @@ def _run_node_apply_vs_apply(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert any(r[0] == "h" for r in results)
-        assert any(
-            e[0] == "w" and isinstance(e[1], HTTPException) and e[1].status_code == 409
-            for e in errors
+        assert results == [("h", "ok")], results
+        _assert_http_error(
+            errors, "w", status=409, error_code=ERR_STATE
         )
         s = SessionLocal()
         try:
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status == ImportBatchStatus.APPLIED
-            lines = (
-                s.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=ids["batch"])
-                .all()
+            p = s.query(Project).filter_by(id=ids["project"]).one()
+            assert p.status == ProjectWorkflowStatus.DRAFT
+            _assert_batch_generation(
+                s, ids, status=ImportBatchStatus.APPLIED
             )
-            assert len(lines) == 1
-            assert lines[0].source_staging_row_id == ids["staging"]
+            _assert_imported_lineage(s, ids, count=1)
             assert_apply_success_audit(
                 s,
                 ids["batch"],
@@ -1287,9 +1441,8 @@ def _run_node_apply_vs_apply(engine, SessionLocal):
                 org_id=ids["org"],
                 project_id=ids["project"],
             )
-            assert_no_failure_audit(s, ids["batch"])
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            assert official_line_snapshot(m) == seed.manual_snap
+            assert_apply_failure_count(s, ids["batch"], 0)
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1363,20 +1516,27 @@ def _run_node_upload_holds_apply_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        # After upload, staging is PENDING (not validated) → Apply should 409 rows not ready
-        # Upload completes first, then Apply runs
-        assert "upload_ok" in results
+        # Upload replaces generation → batch leaves ready_for_review; Apply rejects state.
+        _assert_results_exact(results, ["upload_ok"])
+        _assert_http_error(errors, "apply", status=409, error_code=ERR_STATE)
         s = SessionLocal()
         try:
+            p = s.query(Project).filter_by(id=ids["project"]).one()
+            assert p.status == ProjectWorkflowStatus.DRAFT
             b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
             assert b.source_filename == "up.xlsx"
-            # Apply after upload without validate → not READY_FOR_REVIEW or counters mismatch
-            if "apply_ok" in results:
-                assert b.status == ImportBatchStatus.APPLIED
-            else:
-                assert any(e[0] == "apply" for e in errors)
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            assert official_line_snapshot(m) == seed.manual_snap
+            assert b.source_sheet_name == "Sheet1"
+            assert b.status != ImportBatchStatus.APPLIED
+            assert b.status != ImportBatchStatus.READY_FOR_REVIEW
+            assert (
+                s.query(ProjectAssetLine)
+                .filter_by(source_import_batch_id=ids["batch"])
+                .count()
+                == 0
+            )
+            assert_apply_success_count(s, ids["batch"], 0)
+            assert_apply_failure_count(s, ids["batch"], 0)
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1459,25 +1619,20 @@ def _run_node_apply_holds_upload_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert "apply_ok" in results
-        assert any(
-            e[0] == "upload"
-            and isinstance(e[1], HTTPException)
-            and e[1].status_code == 409
-            for e in errors
-        )
+        _assert_results_exact(results, ["apply_ok"])
+        _assert_http_error(errors, "upload", status=409)
         s = SessionLocal()
         try:
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status == ImportBatchStatus.APPLIED
-            assert b.source_filename == "x.xlsx"
-            lines = (
-                s.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=ids["batch"])
-                .all()
+            p = s.query(Project).filter_by(id=ids["project"]).one()
+            assert p.status == ProjectWorkflowStatus.DRAFT
+            _assert_batch_generation(
+                s,
+                ids,
+                status=ImportBatchStatus.APPLIED,
+                filename="x.xlsx",
+                sheet="Sheet1",
             )
-            assert len(lines) == 1
-            assert lines[0].source_staging_row_id == ids["staging"]
+            _assert_imported_lineage(s, ids, count=1)
             assert_apply_success_audit(
                 s,
                 ids["batch"],
@@ -1485,8 +1640,8 @@ def _run_node_apply_holds_upload_waits(engine, SessionLocal):
                 org_id=ids["org"],
                 project_id=ids["project"],
             )
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            assert official_line_snapshot(m) == seed.manual_snap
+            assert_apply_failure_count(s, ids["batch"], 0)
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1567,17 +1722,47 @@ def _run_node_validate_holds_apply_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert "validate_ok" in results
-        # Apply may succeed after validate if still all valid
+        _assert_results_exact(results, ["validate_ok", "apply_ok"])
+        assert errors == [], errors
         s = SessionLocal()
         try:
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status in (
-                ImportBatchStatus.READY_FOR_REVIEW,
-                ImportBatchStatus.APPLIED,
+            p = s.query(Project).filter_by(id=ids["project"]).one()
+            assert p.status == ProjectWorkflowStatus.DRAFT
+            _assert_batch_generation(s, ids, status=ImportBatchStatus.APPLIED)
+            _assert_imported_lineage(s, ids, count=1)
+            assert_apply_success_audit(
+                s,
+                ids["batch"],
+                actor_id=ids["user"],
+                org_id=ids["org"],
+                project_id=ids["project"],
             )
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            assert official_line_snapshot(m) == seed.manual_snap
+            assert_apply_failure_count(s, ids["batch"], 0)
+            val_rows = (
+                s.query(AuditEvent)
+                .filter_by(
+                    entity_id=ids["batch"], event_name=VALIDATION_SUCCESS_EVENT
+                )
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                .all()
+            )
+            apply_rows = (
+                s.query(AuditEvent)
+                .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                .all()
+            )
+            assert len(val_rows) >= 1
+            assert len(apply_rows) == 1
+            # validation-success audit must precede apply-success (commit order)
+            assert (
+                val_rows[-1].created_at,
+                str(val_rows[-1].id),
+            ) < (
+                apply_rows[0].created_at,
+                str(apply_rows[0].id),
+            )
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1658,23 +1843,14 @@ def _run_node_apply_holds_validate_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert "apply_ok" in results
-        assert any(
-            e[0] == "validate"
-            and isinstance(e[1], HTTPException)
-            and e[1].status_code == 409
-            for e in errors
-        )
+        _assert_results_exact(results, ["apply_ok"])
+        _assert_http_error(errors, "validate", status=409)
         s = SessionLocal()
         try:
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status == ImportBatchStatus.APPLIED
-            assert (
-                s.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=ids["batch"])
-                .count()
-                == 1
-            )
+            p = s.query(Project).filter_by(id=ids["project"]).one()
+            assert p.status == ProjectWorkflowStatus.DRAFT
+            _assert_batch_generation(s, ids, status=ImportBatchStatus.APPLIED)
+            _assert_imported_lineage(s, ids, count=1)
             assert_apply_success_audit(
                 s,
                 ids["batch"],
@@ -1682,8 +1858,8 @@ def _run_node_apply_holds_validate_waits(engine, SessionLocal):
                 org_id=ids["org"],
                 project_id=ids["project"],
             )
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            assert official_line_snapshot(m) == seed.manual_snap
+            assert_apply_failure_count(s, ids["batch"], 0)
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1765,13 +1941,9 @@ def _run_node_workflow_holds_apply_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert "archive_ok" in results
-        # Apply after archive → not draft
-        assert any(
-            e[0] == "apply"
-            and isinstance(e[1], HTTPException)
-            and e[1].status_code == 400
-            for e in errors
+        _assert_results_exact(results, ["archive_ok"])
+        _assert_http_error(
+            errors, "apply", status=400, error_code=ERR_NOT_DRAFT
         )
         s = SessionLocal()
         try:
@@ -1779,20 +1951,18 @@ def _run_node_workflow_holds_apply_waits(engine, SessionLocal):
             assert p.status == ProjectWorkflowStatus.ARCHIVED or (
                 getattr(p.status, "value", p.status) == "archived"
             )
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status == ImportBatchStatus.READY_FOR_REVIEW
+            _assert_batch_generation(
+                s, ids, status=ImportBatchStatus.READY_FOR_REVIEW
+            )
             assert (
                 s.query(ProjectAssetLine)
                 .filter_by(source_import_batch_id=ids["batch"])
                 .count()
                 == 0
             )
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            # manual snap may still match fields except we compare identity fields
-            snap = official_line_snapshot(m)
-            assert snap["asset_name"] == seed.manual_snap["asset_name"]
-            assert snap["id"] == seed.manual_snap["id"]
-            assert snap["source_import_batch_id"] is None
+            assert_apply_success_count(s, ids["batch"], 0)
+            assert_apply_failure_count(s, ids["batch"], 0)
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
@@ -1868,8 +2038,8 @@ def _run_node_apply_holds_workflow_waits(engine, SessionLocal):
         t1.join(timeout=90)
         t2.join(timeout=90)
         assert not t1.is_alive() and not t2.is_alive()
-        assert "apply_ok" in results
-        assert "archive_ok" in results
+        _assert_results_exact(results, ["apply_ok", "archive_ok"])
+        assert errors == [], errors
         s = SessionLocal()
         try:
             p = s.query(Project).filter_by(id=ids["project"]).one()
@@ -1877,25 +2047,32 @@ def _run_node_apply_holds_workflow_waits(engine, SessionLocal):
                 p.status == ProjectWorkflowStatus.ARCHIVED
                 or getattr(p.status, "value", p.status) == "archived"
             )
-            b = s.query(ProjectAssetImportBatch).filter_by(id=ids["batch"]).one()
-            assert b.status == ImportBatchStatus.APPLIED
-            assert (
-                s.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=ids["batch"])
-                .count()
-                == 1
-            )
-            assert_apply_success_audit(
+            _assert_batch_generation(s, ids, status=ImportBatchStatus.APPLIED)
+            _assert_imported_lineage(s, ids, count=1)
+            apply_evt = assert_apply_success_audit(
                 s,
                 ids["batch"],
                 actor_id=ids["user"],
                 org_id=ids["org"],
                 project_id=ids["project"],
             )
-            m = s.query(ProjectAssetLine).filter_by(id=ids["manual"]).one()
-            snap = official_line_snapshot(m)
-            assert snap["asset_name"] == "Manual"
-            assert snap["source_staging_row_id"] is None
+            assert_apply_failure_count(s, ids["batch"], 0)
+            arch_rows = (
+                s.query(AuditEvent)
+                .filter_by(entity_id=ids["project"], event_name="ProjectArchived")
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                .all()
+            )
+            assert len(arch_rows) == 1
+            # Apply success audit must precede ProjectArchived (commit order)
+            assert (
+                apply_evt.created_at,
+                str(apply_evt.id),
+            ) < (
+                arch_rows[0].created_at,
+                str(arch_rows[0].id),
+            )
+            _assert_manual_immutable(s, seed)
         finally:
             s.close()
     finally:
