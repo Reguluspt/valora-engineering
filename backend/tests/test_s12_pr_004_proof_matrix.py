@@ -1145,13 +1145,20 @@ class TestM2ExecutableMigration:
             isolated_engine = create_engine(isolated_url_str)
             _assert_no_lineage_artifacts(isolated_engine)
 
-            # 2) upgrade to head + inspect lineage
+            # 2) upgrade to S12 lineage revision + inspect lineage columns
             command.upgrade(cfg, LINEAGE_HEAD_REV)
             isolated_engine.dispose()
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
 
-            # 3) DML RESTRICT + unique + null manual lineage
+            # 2b) advance to live graph head so ORM model columns match schema
+            # (e.g. S13-PR-002 current_source_artifact_id on import batches).
+            command.upgrade(cfg, CURRENT_ALEMBIC_HEAD)
+            isolated_engine.dispose()
+            isolated_engine = create_engine(isolated_url_str)
+            _assert_lineage_artifacts_at_head(isolated_engine)
+
+            # 3) DML RESTRICT + unique + null manual lineage (ORM against live head)
             _run_lineage_dml_proof(isolated_engine)
             isolated_engine.dispose()
             isolated_engine = None
@@ -1163,8 +1170,8 @@ class TestM2ExecutableMigration:
             isolated_engine.dispose()
             isolated_engine = None
 
-            # 5) upgrade head again → artifacts restored
-            command.upgrade(cfg, LINEAGE_HEAD_REV)
+            # 5) upgrade live head again → lineage + later schema restored
+            command.upgrade(cfg, CURRENT_ALEMBIC_HEAD)
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
 
