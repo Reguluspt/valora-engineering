@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-15 (S13-PR-001-CLOSEOUT)
+**Last reconciled:** 2026-07-16 (bounded-AI automation readiness design extension)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,17 +11,21 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Post S13-PR-001 — Design Authority Closed; Runtime Handoff Preparation
+Gate 0c — Bounded-AI Automation Readiness Before S13 Runtime
 
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED (main squash evidence 7f7473e…;
 main CI 29429680504 PASS). Gate 0b is SATISFIED.
+Closeout/live-gate reconciliation main a3672f4… / CI 29474065397 PASS.
+
+Gate 0c (Design Book v1.4 §20 + ADR 0033–0034 + canonical reconciliation)
+is PENDING owner merge and exact-main CI.
 
 Runtime assignment state: NONE.
 Adaptive Intake v2 remains design-only until a runtime PR is separately authorized.
 
-Next runtime candidate: S13-PR-002 — only under a separate explicit owner
-assignment from the then-current accepted origin/main.
+Next runtime candidate: S13-PR-002 — only after Gate 0c closes and under a separate
+explicit owner assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
@@ -55,7 +59,7 @@ Valora Design Book v1.2-final
 + v1.4 Adaptive Intake / Knowledge Memory addendum
 docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
 docs/design/* contracts (including Excel staging §15, frozen s12-pr-004-v1)
-docs/adr/* (including ADR 0028–0032)
+docs/adr/* (including ADR 0028–0034)
 docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 docs/VALORA_PROJECT_HANDOFF.md
 ```
@@ -116,6 +120,11 @@ AI is advisory only.
 AI cannot approve official data or auto-apply staging.
 AI cannot confirm mapping, identity, price, or activate knowledge.
 AI output must be candidate/reviewed/audited.
+AI/rules/providers/frontends submit typed proposals only and never call persistence mutations directly.
+AITaskRun/DecisionEpisode provide task/learning provenance but do not replace domain truth or atomic audit.
+Workflow-pattern inputs are domain commands and committed outcomes, never UI clickstream.
+Temporary/autosave/unreviewed/failed/stale/rolled-back output is not positive learning evidence.
+Human, system and ai_service principals are distinct; AI/system cannot impersonate human approval.
 Gemini/DeepSeek (or other providers) are future gateway candidates only after
 deterministic S13–S15 foundations and ADR-governed provider integration.
 ```
@@ -130,6 +139,20 @@ No cross-organization learning. No per-click online training.
 No direct bulk SQL into active knowledge from historical dossiers.
 Public fixtures must be anonymized; real client files stay private.
 .xls support requires a security/dependency spike before runtime adoption.
+```
+
+### Bounded automation readiness (ADR 0033–0034)
+
+```text
+ExecutionPolicy is deterministic, versioned and deny-by-default.
+No R2 auto-draft/auto-stage/exception-only-review promotion in S13–S16.
+Any future write-capable automation uses an allowlisted idempotent domain command
+  with server tenant/RBAC/state/version checks and atomic required audit.
+Final price, QC approval, signature and report/certificate release remain human-only.
+Long-running production AI/extraction work requires durable outbox/job/attempt execution,
+  lease/retry/timeout/cancellation and stale-generation protection.
+Provider fallback is task-specific and evaluated; deterministic/manual fallback remains complete.
+Future agents use typed allowlisted tools and the same policy/command gates.
 ```
 
 ### Tenant Boundary
@@ -200,6 +223,8 @@ No list(ws.iter_rows()) materialization
 Enforce request/file/ZIP/row/column/cell limits explicitly
 Preserve prior staging generation when a new upload fails
 Use generation fingerprint to prevent stale failure overwrite
+Preserve immutable source artifact/checksum before adaptive analysis
+Define recoverable database/object-storage partial-failure states
 ```
 
 Do not overwrite:
@@ -232,6 +257,13 @@ AI price approval
 AI document correction commit without human review
 AI context bundle without tenant boundary check
 AI provider call without audit
+AI/provider/frontend direct database mutation
+AI/system impersonation of a human actor or approval
+learning from UI clickstream or temporary/autosave state
+unregistered provider fallback or unbounded context/tool access
+production AI job without idempotency, durable state and stale-result rejection
+R2 capability promotion without task-specific accepted design, shadow evaluation and rollback proof
+open-ended autonomous agent bypassing ExecutionPolicy/domain commands
 ```
 
 ## 10. Dependency Guardrails
@@ -255,5 +287,6 @@ weakens security or tenant isolation
 bypasses ADR 0028 restricted-field human commit / command gates
 creates irreversible data mutation without audit
 treats local PG skips as PASS
-starts S12-PR-004 before S12-R-008 authority merges to main
+starts S13 runtime before Gate 0c owner merge/main CI and a separate owner-assigned task ID
+silently promotes an R2 capability or weakens current mapping/identity/alignment/Apply review gates
 ```

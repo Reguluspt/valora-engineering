@@ -1,9 +1,9 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-15 — S13-PR-001-CLOSEOUT live-gate reconciliation
-**Main evidence (not evergreen):** `7f7473e459f592deac1054be3935d7f911b760a2` (S13-PR-001 squash #11)
-**Main CI evidence:** run `29429680504` PASS
+**Reconciled:** 2026-07-16 — bounded-AI automation readiness design extension
+**Main evidence (not evergreen):** `a3672f41bc54f42420fb70639a27bf50d604376a` (S13-PR-001 closeout/live-gate reconciliation squash #12)
+**Main CI evidence:** run `29474065397` PASS
 
 ### Live task gate
 
@@ -11,11 +11,15 @@
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED (merged PR #11).
 
+Gate 0c bounded-AI automation readiness is PENDING owner merge + main CI.
+The current design change defines Design Book v1.4 §20 and ADR 0033–0034,
+but unmerged documentation is not yet accepted main authority.
+
 Runtime assignment state: NONE.
 No Sprint 13 runtime code is authorized without a separate owner-assigned task ID.
 
-Next runtime candidate: S13-PR-002 — only under a separate explicit owner assignment
-from the then-current accepted origin/main.
+Next runtime candidate: S13-PR-002 — only after Gate 0c closes and under a separate
+explicit owner assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -28,7 +32,9 @@ Valora is a **valuation and asset-identity workbench** for business appraisers a
 
 Word/Excel are **ports** for import/export. The Workbench + database are the source of truth.
 
-Design Book v1.4 adds two separate, auditable memories: **Column Mapping Memory** (workbook structure) and **Asset Identity Memory** (raw wording → canonical/variant). Raw observations remain immutable; only human-confirmed decisions become reusable feedback. These are **design authority**, not implemented runtime.
+Design Book v1.4 adds two separate, auditable memories: **Column Mapping Memory** (workbook structure) and **Asset Identity Memory** (raw wording → canonical/variant). Raw observations remain immutable; only human-confirmed decisions become reusable feedback.
+
+The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt provenance, `DecisionEpisode` learning lineage, intent-level workflow-pattern inputs and a deny-by-default risk-tiered `ExecutionPolicy`. It prepares future automation but does not enable autonomous runtime or weaken human gates.
 
 ## 2. Vietnamese UX and Astryx
 
@@ -44,9 +50,9 @@ Design Book v1.4 adds two separate, auditable memories: **Column Mapping Memory*
 | `project_master_data` | Org, users/roles, master data, projects, central models hub |
 | `taxonomy_asset_identity` | Taxonomy, canonical assets, aliases, candidates; **planned** Raw Asset Observation + Asset Identity Memory |
 | `knowledge_evidence` | Evidence library, knowledge versions, quotes; **planned** reviewed bootstrap candidates |
-| `workflow_workbench` | Workflow + workbench session helpers |
+| `workflow_workbench` | Workflow + workbench session helpers; future patterns derive from domain commands/outcomes, not UI clickstream |
 | `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
-| `ai_governance_security` | AI task/provider governance; advisory only |
+| `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only in S13–S16 |
 | `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
 
 API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench under `frontend/src/components/workbench/*`.
@@ -57,7 +63,7 @@ API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench un
 |---|---|
 | Backend | Auth, RBAC, domain APIs, persistence, audit, Excel intake + Apply |
 | Frontend | App shell, Workbench grid/drafts/session, API clients |
-| Worker | Skeleton only (no heavy job pipeline yet) |
+| Worker | Skeleton only; planned durable outbox/job/attempt/lease/retry runtime before long-running dossier extraction and production AI tasks |
 
 Local infra: PostgreSQL 16, Redis 7, MinIO via `docker-compose.yml`.
 
@@ -115,15 +121,17 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ```text
 Active runtime assignment: NONE
+Gate 0c: pending owner merge + exact-main CI
 ```
 
 ### Next candidate (not started; requires separate owner assignment)
 
 ```text
+Gate 0c closeout, then
 S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 ```
 
-Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier bootstrap → audited AI.
+Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier/job foundation → reliable audited AI suggestions and shadow evaluation.
 
 ## 9. Out of scope (still)
 
@@ -131,6 +139,9 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 - Column Mapping Memory / Asset Identity Memory runtime
 - Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
 - AI provider runtime and end-to-end AI mapping/matching
+- `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
+- R2 auto-draft/auto-stage/exception-only-review capability promotion
+- Open-ended agent orchestration or AI direct database mutation
 - PDF/Word product reporting
 - CRM/revenue dashboards
 - Production certification
@@ -143,10 +154,13 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart the closed S13-PR-001 design-authority gate. Do not start S13 runtime until a separate owner assignment names a runtime task ID (next candidate: S13-PR-002) from accepted main.
+6. Do not restart the closed S13-PR-001 design-authority gate. Close Gate 0c by owner merge + main CI before any S13 runtime assignment; the next candidate remains S13-PR-002 from accepted main.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.
+10. Treat `AITaskRun`/`DecisionEpisode` as provenance around authoritative domain decisions, not replacement business truth.
+11. AI/rules submit typed proposals only; future writes must pass deterministic ExecutionPolicy and an allowlisted idempotent domain command.
+12. Do not learn workflow patterns from UI clickstream or promote automation from raw confirmation count.
 
 ## 11. Key paths
 
@@ -163,5 +177,7 @@ docs/adr/0029-excel-staging-apply-command-and-lineage.md
 docs/adr/0030-versioned-column-mapping-memory-and-adaptive-workbook-intake.md
 docs/adr/0031-contextual-asset-identity-memory-and-human-confirmed-feedback.md
 docs/adr/0032-paired-dossier-aggregate-document-extraction-and-row-alignment.md
+docs/adr/0033-audited-ai-task-runs-decision-episodes-and-learning-evidence.md
+docs/adr/0034-risk-tiered-execution-policy-and-reliable-autonomous-commands.md
 docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 ```

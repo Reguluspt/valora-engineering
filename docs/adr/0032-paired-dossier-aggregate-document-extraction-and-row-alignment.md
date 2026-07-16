@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires S13-PR-001 design audit/merge, then assigned Sprint 15 task IDs and audit. No runtime is authorized by this ADR alone.
+Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires Gate 0c closure, then assigned Sprint 15 task IDs and audit. No runtime or autonomous bootstrap is authorized by this ADR alone.
 
 ## Context
 
@@ -116,6 +116,13 @@ No extraction/alignment command mutates active project or knowledge data directl
 - Requires new aggregate persistence and orchestration across Excel, Document Intelligence, Identity and Knowledge contexts.
 - Requires table/row source locators and review UX.
 - Requires explicit handling of missing, split, merged and reordered rows.
+
+## Automation-readiness compatibility
+
+- Long-running extraction/alignment tasks follow ADR 0033 task/context/attempt provenance and ADR 0034 durable idempotent job semantics.
+- Confirmed/rejected alignment outcomes link to Decision Episodes without replacing the authoritative `DossierRowAlignment` decision state.
+- Extraction and alignment remain R0/R1 proposal work in S15–S16. No R2 bootstrap promotion is authorized without a later task-specific evaluated release.
+- Database/object-storage partial failures and stale generations must be recoverable and must preserve prior reviewed extraction.
 
 ## Acceptance gates
 

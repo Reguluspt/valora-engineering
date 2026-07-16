@@ -1,12 +1,13 @@
 # S13–S16 Adaptive Intake, Knowledge Memory and Historical Dossier Remediation Plan
 
 **Status:** Active implementation plan after S12-PR-004 engineering closure and S13-PR-001 design-authority merge; runtime tasks remain individually gated.
-**Design authority:** Design Book v1.4 adaptive-intake addendum + ADR 0030–0032 + Design Authority Index.
+**Design authority:** Design Book v1.4 adaptive-intake/bounded-automation addendum + ADR 0030–0034 + Design Authority Index.
 **Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
+**Gate 0c (bounded-AI automation readiness):** **pending owner merge + main CI**.
 **Runtime assignment state:** **NONE**.
-**Rule:** Do not start S13-PR-002 runtime until a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
+**Rule:** Do not start S13-PR-002 runtime until Gate 0c closes and a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
 
 ---
 
@@ -21,7 +22,10 @@ Close the verified gaps that prevent Valora from:
 - ingesting historical Excel–Word dossiers as supervised knowledge sources;
 - extracting and aligning technical, quote and final-result tables;
 - learning safely from human decisions;
-- running audited AI column/identity suggestions end to end.
+- running audited AI column/identity suggestions end to end;
+- preserving provider-independent AI task/context/decision provenance;
+- preparing a deny-by-default, risk-tiered extension point for future bounded automation;
+- running long-lived AI/extraction tasks through reliable idempotent jobs.
 
 The target remains human-controlled. No task below authorizes AI auto-approval, AI auto-Apply or direct active-knowledge injection.
 
@@ -42,6 +46,9 @@ The target remains human-controlled. No task below authorizes AI auto-approval, 
 | G-09 | No real Word extraction runtime | generic models/CRUD only | Sprint 15 Document Intelligence runtime |
 | G-10 | No feedback contract | no confirmed-decision learning events | Sprint 14 feedback |
 | G-11 | No end-to-end AI column/asset matcher | AI module boundary only | Sprint 16 AI Gateway/tasks |
+| G-12 | No AI task/context/attempt provenance | generic audit cannot reproduce a bounded task run | Sprint 16 reliable AI task runtime |
+| G-13 | No deterministic Execution Policy/capability release | no central risk/promotion/kill-switch decision | Sprint 16 policy foundation; no R2 promotion in this plan |
+| G-14 | Worker has no durable business jobs/outbox | worker remains Sprint 0 skeleton | Sprint 15 reliable job foundation before document extraction |
 
 ---
 
@@ -49,7 +56,8 @@ The target remains human-controlled. No task below authorizes AI auto-approval, 
 
 ```mermaid
 flowchart TD
-    A["Close S12-PR-004"] --> B["Sprint 13: Column Mapping Memory"]
+    A["Close S12-PR-004"] --> A2["Gate 0c: Automation Readiness Design"]
+    A2 --> B["Sprint 13: Column Mapping Memory"]
     B --> C["Sprint 14: Asset Identity Memory"]
     C --> D["Sprint 15: Paired Dossier Bootstrap"]
     D --> E["Sprint 16: Audited AI Runtime"]
@@ -74,7 +82,18 @@ Evidence:
 - post-merge main CI `29429680504` PASS;
 - no Adaptive Intake runtime mixed into the design-authority package.
 
-S13-PR-002 remains the next candidate and is **not** authorized until a separate explicit owner assignment.
+S13-PR-002 remains the next candidate and is **not** authorized until Gate 0c closes and a separate explicit owner assignment is issued.
+
+### Gate 0c — bounded-AI automation readiness (pending)
+
+Required before any S13 runtime branch:
+
+- Design Book v1.4 §20 and ADR 0033–0034 merged as accepted authority;
+- authority index, this roadmap, handoff and agent rules reconciled;
+- independent design audit confirms no weakening of ADR 0028–0032 human gates;
+- exact merged-main CI PASS recorded.
+
+This gate designs future extension points and data capture. It does not authorize provider calls, autonomous execution or an R2 capability.
 
 ### Gate 1 — deterministic baseline before external AI
 
@@ -83,6 +102,10 @@ Workbook discovery, mapping profiles, deterministic identity retrieval and DOCX 
 ### Gate 2 — source and review before knowledge activation
 
 No historical bootstrap activation until source locators, alignment review and candidate lineage are complete.
+
+### Gate 3 — reliable jobs before long-running extraction or AI
+
+The durable outbox/job/attempt boundary must exist before production DOCX/PDF/OCR extraction or external AI tasks run asynchronously. S15 document extraction and S16 AI tasks reuse one job contract rather than inventing separate queues.
 
 ---
 
@@ -101,7 +124,7 @@ No historical bootstrap activation until source locators, alignment review and c
 After S13-PR-001 merged, live operating documents were reconciled so they no longer
 describe S13-PR-001 as an active docs gate. That reconciliation is **provenance only**
 (not a durable live task). Durable state: S13-PR-001 closed, Gate 0b satisfied,
-runtime assignment none, S13-PR-002 next candidate under separate owner assignment.
+runtime assignment none, Gate 0c pending, then S13-PR-002 next candidate under separate owner assignment.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 
@@ -114,6 +137,9 @@ Scope:
 - safe `.xlsx` adapter extraction behind the contract;
 - safe `.xls` adapter following dependency/security spike;
 - immutable source artifact/checksum/storage metadata;
+- server-owned storage-object identity and checksum verification;
+- explicit pending/available/failed/orphaned source states or equivalent recoverable protocol;
+- bounded reconciliation/cleanup for database/object-storage partial failures;
 - value-only behavior, no macro/formula/external execution;
 - bounded resource/security limits for both formats;
 - friendly Vietnamese format/security errors.
@@ -125,6 +151,8 @@ Required tests:
 - max file/row/column/cell boundaries;
 - duplicate and blank header preservation;
 - source checksum and prior-generation preservation on failure;
+- object-write/database-commit and database-reservation/object-write failure recovery;
+- orphan cleanup never removes a referenced or prior reviewed artifact;
 - no `ProjectAssetLine` mutation.
 
 Non-goals:
@@ -166,6 +194,7 @@ Scope:
 - customer/template fingerprinting;
 - profile versions and supersession;
 - proposal/confirm/reject application services;
+- ADR 0033-compatible proposal source, version, before/after decision summary and committed-outcome linkage;
 - exact mapping snapshot per import batch;
 - materialize staging only from confirmed mapping;
 - tenant/RBAC/audit contracts.
@@ -270,6 +299,7 @@ Scope:
 
 - append-only accepted/corrected/rejected/deferred decisions;
 - positive/negative `LearningFeedbackEvent` semantics;
+- `DecisionEpisode` linkage without duplicating the authoritative identity decision;
 - approved contextual alias creation/promotion path;
 - high-confidence explicit batch review, never auto-approval;
 - UI step **Đối chiếu tài sản** using Astryx/Vietnamese;
@@ -316,7 +346,39 @@ Required tests:
 - rerun idempotency;
 - tenant and evidence-access security.
 
-### S15-PR-002 — DOCX Extraction Runtime and Table Role Candidates
+### S15-PR-002 — Reliable Task Job and Outbox Foundation
+
+**Closes:** G-14 and satisfies Gate 3 for document extraction.
+
+Scope:
+
+- transactional outbox and durable task/job/attempt persistence;
+- server-derived tenant/initiator/correlation/causation metadata;
+- idempotency key and duplicate-delivery protection;
+- lease/claim with expiry and safe reclaim;
+- bounded retry/backoff, timeout and cancellation;
+- dead-letter/exception-review state;
+- generation token and stale-result rejection;
+- database/object-storage partial-failure and orphan reconciliation;
+- restricted operational audit without source contents.
+
+Required tests:
+
+- committed outbox request is eventually claimable;
+- duplicate delivery cannot duplicate a domain result;
+- expired lease can be safely reclaimed;
+- timeout/cancel/retry terminal states are deterministic;
+- stale generation cannot overwrite a newer reviewed generation;
+- object/database half-write reaches a recoverable state;
+- cross-tenant job/attempt access fails closed.
+
+Non-goals:
+
+- no AI provider or prompt runtime;
+- no domain-specific extraction logic;
+- no autonomous capability promotion.
+
+### S15-PR-003 — DOCX Extraction Runtime and Table Role Candidates
 
 **Closes:** G-09.
 
@@ -327,6 +389,7 @@ Scope:
 - metadata extraction for report number/date/valuation time/customer;
 - candidate roles for technical/comparison/final tables;
 - source table/row/cell locator;
+- execute through the S15-PR-002 durable job/attempt boundary;
 - retry/version/failure behavior;
 - bounded PDF/OCR extension contract, not necessarily full OCR in this PR.
 
@@ -340,7 +403,7 @@ Required tests:
 - parser failure preserves prior reviewed extraction;
 - no official mutation.
 
-### S15-PR-003 — Multi-Table Dossier Row Alignment and Review UX
+### S15-PR-004 — Multi-Table Dossier Row Alignment and Review UX
 
 **Closes:** G-08.
 
@@ -362,7 +425,7 @@ Required tests:
 - five materially changed names remain linked raw-to-standardized;
 - removed/reordered synthetic rows create conflicts, not drift.
 
-### S15-PR-004 — Reviewed Historical Bootstrap Candidate Import
+### S15-PR-005 — Reviewed Historical Bootstrap Candidate Import
 
 Scope:
 
@@ -385,6 +448,7 @@ Required tests:
 ### Sprint 15 completion gate
 
 - historical dossier is a real aggregate;
+- reliable outbox/job/attempt runtime is operational before extraction;
 - Word extraction and alignment run end to end;
 - bootstrap creates reviewed candidates with full lineage;
 - sample and adversarial row-drift fixtures pass;
@@ -392,54 +456,95 @@ Required tests:
 
 ---
 
-## 7. Sprint 16 — Audited AI Column Mapper and Asset Matcher
+## 7. Sprint 16 — Reliable, Audited AI Suggestion Runtime
 
-### S16-PR-001 — Gemini/DeepSeek AI Gateway Runtime
+### S16-PR-001 — Audited AI Task, Context and Policy Foundation
+
+**Closes:** G-12; establishes the non-promoted foundation for G-13 and reuses the S15 reliable job contract.
 
 Scope:
 
-- backend-only provider interface;
-- Gemini, DeepSeek and deterministic/mock provider;
-- prompt/task registry;
-- tenant-scoped context bundles;
-- timeout/rate/cost/audit/error handling;
-- no provider credentials in frontend/logs.
+- registered typed task-contract interface;
+- `AITaskRun`, append-only `AITaskAttempt` and restricted `AIContextManifest` persistence;
+- distinct human/system/AI-service principal provenance;
+- `ActionProposal` and deny-by-default `ExecutionPolicy` interface;
+- current policy outcomes limited to read/suggest/human-review/blocked;
+- bind each `AITaskRun`/attempt to the existing durable job/outbox runtime;
+- AI-specific timeout/cost/rate/error outcome mapping without creating a second queue;
+- correlation/causation and restricted operational audit.
 
-### S16-PR-002 — AI Column Mapping Suggestion Task
+Required tests:
+
+- duplicate/retried job execution cannot duplicate an AI run or domain outcome;
+- stale/cancelled AI result cannot become a proposal for a newer generation;
+- cross-tenant context/job/run access fails closed;
+- raw sensitive context is absent from general audit payloads;
+- policy defaults to human review/blocked for every write-capable proposal.
+
+### S16-PR-002 — Provider Gateway and Task Registry
+
+Scope:
+
+- backend-only Gemini, DeepSeek and deterministic/mock provider interfaces;
+- versioned prompt/task/input/output registry;
+- centralized tenant/data-policy context assembler;
+- schema validation before and after provider calls;
+- timeout/rate/cost/error handling recorded per attempt;
+- task-specific evaluated fallback allowlist;
+- deterministic/manual fallback when provider execution is unavailable or unapproved;
+- no provider credentials or provider naming in frontend/general logs.
+
+Required tests:
+
+- provider attempt/version/cost/latency provenance;
+- malformed provider output fails schema validation;
+- unregistered task/model/fallback is rejected;
+- data classification/redaction policy is applied before request;
+- provider failure preserves deterministic/manual operation.
+
+### S16-PR-003 — AI Column Mapping Suggestion Task
 
 **Partially closes:** G-11.
 
 - implement `AI-TASK-COLUMN-MAPPING-SUGGEST`;
 - schema-validate role/row candidates;
 - combine with deterministic proposal;
-- expose reasons/confidence/model/prompt version;
+- expose reasons, source references and task/model/prompt version;
+- link human outcome through ADR 0033 Decision Episode semantics;
 - mandatory mapping review;
+- no auto-materialization or profile activation;
 - fallback to deterministic/manual flow on AI failure.
 
-### S16-PR-003 — AI Asset Identity Rerank Task
+### S16-PR-004 — AI Asset Identity Rerank Task
 
 **Closes:** remaining G-11 scope.
 
 - extend `AI-TASK-ASSET-IDENTITY-SUGGEST` over deterministic top-k;
 - never allow AI to invent unreferenced active assets/evidence;
-- show reason/difference/conflict explanations;
+- show reason/difference/conflict explanations and source references;
+- link human outcome through ADR 0033 Decision Episode semantics;
 - mandatory identity review;
 - fallback to deterministic matcher.
 
-### S16-PR-004 — End-to-End Evaluation and Release Gate
+### S16-PR-005 — End-to-End Shadow Evaluation and Release Gate
 
-- versioned 20–50 dossier corpus with train/evaluation separation;
-- compare deterministic baseline vs AI-assisted path;
-- measure mapping accuracy, alignment accuracy, recall@k, false high-confidence and review time;
-- deploy only if agreed thresholds pass;
-- rollback provider/prompt/model version;
-- no online per-click training.
+- versioned 20–50 dossier corpus with dossier/customer/time leakage controls;
+- compare deterministic baseline, AI-assisted proposal and independent human outcome;
+- run shadow mode without write side effects;
+- measure mapping accuracy, alignment accuracy, recall@k, false high-confidence, correction rate, review time, latency and cost;
+- evaluate every permitted provider fallback separately;
+- deploy suggestion capabilities only if agreed thresholds pass;
+- rollback task/prompt/provider/model/retriever version;
+- no online per-click training;
+- no `auto_draft`, `auto_stage` or `exception_only_review` promotion in this release.
 
 ### Sprint 16 completion gate
 
-- AI tasks work end to end through audited gateway;
+- durable task/context/attempt/job provenance works end to end;
+- AI tasks work through the audited provider gateway and task registry;
 - deterministic/manual fallback remains complete;
-- AI cannot auto-confirm, auto-Apply or activate knowledge;
+- ExecutionPolicy remains deny-by-default and no R2 capability is promoted;
+- AI cannot auto-confirm, auto-Apply, mutate official data or activate knowledge;
 - evaluation shows measurable benefit without unacceptable high-confidence errors.
 
 ---
@@ -453,6 +558,9 @@ Scope:
 - Derived fingerprints/indexes may be rebuilt; they are not source-of-truth records.
 - Active/canonical records are never seeded by migration scripts.
 - Pilot/import data uses application commands and batch idempotency keys.
+- Domain decisions store ADR 0033-compatible proposal/outcome/version metadata from their first implementation; missing legacy provenance stays explicitly unknown.
+- Derived Workflow Pattern candidates use domain commands/Decision Episodes, not UI clickstream.
+- Any future AI-triggerable write path must be allowlisted, idempotent and atomic with required audit before policy registration.
 
 ---
 
@@ -466,6 +574,10 @@ Every code PR must prove:
 - no formula/macro/external execution;
 - no provider secret exposure;
 - no unrestricted context sent to AI;
+- no client/provider asserted human actor or approval;
+- no provider/prompt/frontend direct database mutation;
+- no unregistered provider fallback or task/tool access;
+- no durable job without tenant scope, idempotency and stale-generation protection;
 - fail-closed behavior on unknown/ambiguous targets;
 - immutable evidence/source lineage.
 
@@ -499,6 +611,10 @@ row-alignment accuracy
 quote supplier/time/evidence completeness
 review time and deferred rate
 reuse accuracy on subsequent imports
+shadow disagreement and correction rate
+task latency/cost/error/fallback by contract version
+policy review/block reason rate
+stale-result and duplicate-delivery rejection rate
 ```
 
 No confidence threshold is production-frozen from the single PD-001 dossier.
@@ -507,4 +623,4 @@ No confidence threshold is production-frozen from the single PD-001 dossier.
 
 ## 12. Definition of completion for the remediation program
 
-The program is complete only when all G-01…G-11 are closed by code, tests and audit; Design Book/ADR/handoff truth matches the merged main; the deterministic/manual path works without AI; the paired-dossier bootstrap has reviewed pilot evidence; and no unresolved blocker is hidden behind a PASS label.
+The program is complete only when all G-01…G-14 are closed by code, tests and audit; Design Book/ADR/handoff truth matches the merged main; the deterministic/manual path works without AI; the paired-dossier bootstrap has reviewed pilot evidence; reliable AI tasks have shadow/evaluation proof; no R2 capability is silently promoted; and no unresolved blocker is hidden behind a PASS label.

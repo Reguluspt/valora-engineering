@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires S13-PR-001 design audit/merge, then assigned Sprint 14 task IDs and audit. No runtime is authorized by this ADR alone.
+Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires Gate 0c closure, then assigned Sprint 14 task IDs and audit. No runtime or autonomous identity decision is authorized by this ADR alone.
 
 ## Context
 
@@ -114,6 +114,13 @@ Every decision is tenant-scoped and append-only, with actor, time, reason, sourc
 - Requires migration away from candidate-only linkage to ProjectAssetLine or a compatible observation-backed association.
 - Requires new review UX and index/retrieval services.
 - Requires conflict policy for the same raw alias mapping differently in different contexts.
+
+## Automation-readiness compatibility
+
+- Identity task runs and human outcomes follow ADR 0033 `AITaskRun`/`DecisionEpisode` provenance while the authoritative identity decision remains in this domain.
+- Workflow-pattern learning may consume committed identity outcomes but never temporary review clicks or UI navigation.
+- ADR 0034 does not change the human-confirmation requirement. R2 automation cannot approve identity, create active aliases or activate canonical knowledge.
+- Future provider/model fallback is task-specific and evaluated; deterministic identity retrieval remains complete without AI.
 
 ## Acceptance gates
 

@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-15 (S13-PR-001-CLOSEOUT)
+**Last reconciled:** 2026-07-16 (bounded-AI automation readiness design extension)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -15,9 +15,9 @@ Domain behavior must come from this read order:
 4. docs/VALORA_PROJECT_HANDOFF.md — verified implementation state and next authorized sequence
 5. Valora Design Book v1.2-final package — established domain foundation
 6. docs/design/VALORA_DESIGN_BOOK_V1_3_MVP_COMPLETION_ADDENDUM.md — Vietnamese UX, Astryx, MVP, AI provider architecture
-7. docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md — Adaptive Intake, two memories, dossiers
+7. docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md — Adaptive Intake, two memories, dossiers, bounded-AI readiness
 8. Feature contracts under docs/design/ (including Excel staging contract §14–§15, frozen s12-pr-004-v1)
-9. docs/adr/* (including ADR 0028, 0029, 0030, 0031, 0032)
+9. docs/adr/* (including ADR 0028, 0029, 0030, 0031, 0032, 0033, 0034)
 10. docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md — active roadmap after S12
 ```
 
@@ -28,7 +28,7 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Post S13-PR-001 — Design Authority Closed; Runtime Handoff Preparation
+Engineering Phase / Gate 0c — Bounded-AI Automation Readiness Before S13 Runtime
 ```
 
 ### Live task gate (fetch origin/main before acting)
@@ -39,13 +39,18 @@ S13-PR-001 design-authority gate is CLOSED (squash-merged to main).
 Evidence (not evergreen): main squash 7f7473e459f592deac1054be3935d7f911b760a2
 (S13-PR-001 PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a);
 post-merge main CI run 29429680504 PASS.
+Closeout/live-gate reconciliation main a3672f41bc54f42420fb70639a27bf50d604376a
+(PR #12); main CI run 29474065397 PASS.
+
+Gate 0c bounded-AI automation readiness is PENDING owner merge + main CI.
+Its required content is Design Book v1.4 §20 + ADR 0033–0034 plus canonical-doc reconciliation.
 
 Runtime assignment state: NONE.
 No Sprint 13 runtime implementation is authorized without a separate owner-assigned task ID.
 
 Next runtime candidate: S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact).
-S13-PR-002 may start only under a separate explicit owner assignment, from the
-then-current accepted origin/main, and only under that assigned task ID.
+S13-PR-002 may start only after Gate 0c owner merge/main CI, under a separate explicit
+owner assignment, from the then-current accepted origin/main, and only under that task ID.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
@@ -67,6 +72,15 @@ Do **not** re-open S12-PR-003 or S12-PR-004 as blocked/not started.
 No domain invention outside Design Book / ADR / approved contract.
 No AI auto-approval or auto-apply of official data.
 No AI confirmation of mapping, identity, price, Apply, or active knowledge.
+No R2 auto-draft/auto-stage/exception-only-review promotion in S13–S16.
+AI/rules/providers/frontends produce typed proposals only; they never call persistence mutations directly.
+Any future write-capable automation requires deterministic ExecutionPolicy plus an allowlisted,
+  idempotent domain command with tenant/RBAC/state/version checks and atomic required audit.
+Human, system and ai_service principals remain distinct; AI/system never impersonates approval.
+AITaskRun/DecisionEpisode are provenance around authoritative domain decisions, not replacement truth.
+Workflow patterns derive from domain commands and committed outcomes, never UI clickstream.
+Temporary selections, autosave, failed/stale runs and unreviewed output are not positive feedback.
+Long-running production AI/extraction tasks require durable outbox/job/attempt execution and stale-result protection.
 ADR 0028 restricted Workbench fields (description, appraised_unit_price,
   review_status, validation_status) require draft-commit command path + authorization
   + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
@@ -101,6 +115,9 @@ ReviewDecision is append-only.
 Organization/tenant boundaries are enforced server-side.
 Raw observations remain immutable; only human-confirmed decisions become reusable feedback.
 Column Mapping Memory and Asset Identity Memory are separate bounded memories (v1.4 / ADR 0030–0031).
+AI task/context/attempt/decision provenance follows ADR 0033.
+Future automation risk/policy/command/job boundaries follow ADR 0034 and remain deny-by-default.
+Final price, QC approval, signature and report/certificate release remain human-only R4 actions.
 ```
 
 ## 5. Evidence Semantics
@@ -140,7 +157,8 @@ New dependency with architectural impact.
 Secret/credential/production config required.
 Starting baseline SHA does not match the task prompt.
 Protected files are involved without authorization.
-S13 runtime is requested without an assigned runtime task ID, or from a baseline that does not match the task prompt.
+S13 runtime is requested before Gate 0c closes, without an assigned runtime task ID,
+  or from a baseline that does not match the task prompt.
 ```
 
 ## 8. Pull Request Behavior

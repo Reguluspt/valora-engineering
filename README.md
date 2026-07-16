@@ -1,9 +1,9 @@
 # Valora Engineering
 
-**Phase:** Engineering — post S13-PR-001 design authority (merged)
-**Main evidence (not evergreen):** `7f7473e459f592deac1054be3935d7f911b760a2` (S13-PR-001 squash #11); main CI `29429680504` PASS
+**Phase:** Engineering — Gate 0c bounded-AI automation readiness before S13 runtime
+**Main evidence (not evergreen):** `a3672f41bc54f42420fb70639a27bf50d604376a` (S13-PR-001 closeout/live-gate reconciliation #12); main CI `29474065397` PASS
 **Runtime assignment state:** **NONE**
-**Next runtime candidate:** S13-PR-002 — not started; requires a separate explicit owner assignment from accepted `main`
+**Next runtime candidate:** S13-PR-002 — not started; requires Gate 0c closure plus a separate explicit owner assignment from accepted `main`
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -25,6 +25,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Adaptive Intake / Column Mapping Memory | **Design only** (v1.4 / ADR 0030) — not implemented |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
+| Bounded-AI task/decision/policy/job architecture | Gate 0c design extension (v1.4 §20 / ADR 0033–0034); pending merge/main CI; runtime not implemented |
 | Production-ready | **No** |
 
 ### Live task gate
@@ -32,8 +33,9 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ```text
 S12-PR-004 is merged and closed.
 S13-PR-001 design-authority gate is closed (merged to main).
+Gate 0c bounded-AI automation readiness is pending owner merge + main CI.
 Runtime assignment state: NONE.
-S13-PR-002 is the next candidate only — not started; requires separate owner assignment.
+S13-PR-002 is the next candidate only — not started; requires Gate 0c closure and separate owner assignment.
 ```
 
 ## Architecture (monorepo)
@@ -41,7 +43,7 @@ S13-PR-002 is the next candidate only — not started; requires separate owner a
 ```text
 backend/     FastAPI + SQLAlchemy + Alembic (Python ≥3.12)
 frontend/    React 18 + TypeScript + Vite + Astryx
-worker/      Python worker skeleton
+worker/      Python worker skeleton; planned reliable outbox/job runtime before long-running extraction/AI
 infra/       Local infra notes
 docs/        ADR, design contracts, audits, remediation, handoff
 .github/     CI workflows
@@ -55,11 +57,11 @@ taxonomy_asset_identity/       taxonomy, canonical assets, aliases, candidates
 knowledge_evidence/            evidence library, knowledge versions, quotes
 workflow_workbench/            workflow + workbench session helpers
 document_engine_intelligence/  document templates/render/intelligence tables
-ai_governance_security/        AI task/provider governance (boundary)
+ai_governance_security/        AI task/context/provider provenance + ExecutionPolicy boundary
 excel_import/                  streaming parser + staging + Apply (S12 v1)
 ```
 
-Future ownership (design only until runtime PRs): Adaptive Intake + Column Mapping Memory → `excel_import`; Raw Asset Observation / Identity Memory → `taxonomy_asset_identity`; dossier extraction/alignment → `document_engine_intelligence`.
+Future ownership (design only until runtime PRs): Adaptive Intake + Column Mapping Memory → `excel_import`; Raw Asset Observation / Identity Memory → `taxonomy_asset_identity`; dossier extraction/alignment → `document_engine_intelligence`; task/context/attempt provenance and deny-by-default ExecutionPolicy → `ai_governance_security`; durable outbox/job execution → worker/runtime infrastructure.
 
 ### Non-negotiable invariants
 
@@ -69,13 +71,17 @@ Future ownership (design only until runtime PRs): Adaptive Intake + Column Mappi
 - **Apply** (S12-PR-004 / ADR 0029 / `s12-pr-004-v1`) is the human-confirmed DRAFT-only promotion path.
 - Upload lock order: **Project → batch → staging** (aligned with Apply).
 - AI is advisory only; no auto-approve / auto-apply / auto knowledge activation.
+- AI/rules/providers produce typed proposals only; no direct persistence mutation.
+- Domain decisions remain authority; `AITaskRun`/`DecisionEpisode` provide provenance and learning lineage.
+- No R2 auto-draft/auto-stage promotion in S13–S16; future writes require deterministic ExecutionPolicy and allowlisted idempotent commands.
+- Workflow-pattern learning uses domain commands/outcomes, not UI clickstream.
 - Local PostgreSQL test **skips are not PASS**.
 
 ## Authority hierarchy
 
 Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md` → handoff → Design Book v1.2/v1.3/v1.4 → contracts/ADRs → S13–S16 plan.
 
-Roadmap (active): S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 audited AI suggestions → S17 reports → S18 auth/pilot.
+Roadmap (active): Gate 0c design closeout → S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 reliable audited AI suggestions + shadow evaluation → S17 reports → S18 auth/pilot.
 
 ## Local setup
 
@@ -114,6 +120,8 @@ Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not 
 - Column Mapping Memory / Asset Identity Memory runtime
 - Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
 - End-to-end AI column/identity matching
+- AI task/context/attempt/decision runtime and reliable background jobs
+- Bounded R2 automation or an open-ended agent orchestrator
 - Production certification
 
 ## License / ownership
