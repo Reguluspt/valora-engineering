@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-16 (bounded-AI automation readiness design extension)
+**Reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -36,17 +36,18 @@ When two sources conflict, the newer explicit decision governs only the scope it
 ## 3. Engineering baseline (evidence, not evergreen)
 
 ```text
-S13-PR-001 design authority squash-merged to main:
-  7f7473e459f592deac1054be3935d7f911b760a2
-  (PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a = S12-PR-004)
+Gate 0c design authority squash-merged to main:
+  99dfccbc7bf2893fa5b0dce8d52a01068655e39a
+  (PR #13; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076;
+   parent a3672f41bc54f42420fb70639a27bf50d604376a)
 Post-merge main CI:
-  run 29429680504 — PASS
-S13-PR-001 closeout/live-gate reconciliation on main:
-  a3672f41bc54f42420fb70639a27bf50d604376a
-  (PR #12; post-main CI 29474065397 — PASS)
+  run 29504915362 — PASS
+Prior S13-PR-001 / closeout evidence (historical):
+  7f7473e… / CI 29429680504; a3672f4… / CI 29474065397
 Prior S12-PR-004 evidence (historical):
   a9f2c1e… / CI 29419008129 PASS
 ```
+
 
 Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat historical feature SHAs (`259ee59…`) or historical `main` (`32024be…` / `a9f2c1e…` alone) as current status when a newer accepted main exists.
 
@@ -55,17 +56,17 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ```text
 S12-PR-004 engineering gate: CLOSED (merged)
 S13-PR-001 design-authority gate: CLOSED (merged)
-Gate 0c bounded-AI automation readiness: PENDING OWNER MERGE + MAIN CI
+Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
 Runtime assignment state: NONE
-→ Gate 0c merge/CI
 → S13-PR-002 Adaptive Intake / Column Mapping Memory runtime candidate
    (requires separate explicit owner assignment; not started)
 → S14 Asset Identity Memory
-→ S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
+→ S15 paired-dossier extraction, alignment and bootstrap
 → S16 reliable audited AI suggestion runtime and shadow evaluation
 → S17 report generation
 → S18 real auth and pilot acceptance
 ```
+
 
 Deterministic structure discovery, mapping profiles, identity retrieval and document extraction must exist before external AI is allowed to augment ambiguous cases.
 
@@ -94,22 +95,20 @@ S13-PR-001 documentation/design-authority prerequisites (satisfied):
 2. Owner Ready, squash and merge of S13-PR-001 — **satisfied** (main `7f7473e…`).
 3. Post-merge main CI PASS — **satisfied** (run `29429680504`).
 
-Gate 0c — bounded-AI automation readiness (required before S13 runtime):
+Gate 0c — bounded-AI automation readiness (satisfied):
 
-1. Design Book v1.4 §20 plus ADR 0033–0034 reconciled across authority, roadmap, handoff and agent rules.
-2. Independent docs/design audit with no contradiction against ADR 0028–0032.
-3. Owner merge and exact-main CI PASS.
-
-The content is owner-requested and specified by the current design change, but Gate 0c remains **unsatisfied until merge and main CI evidence exist**.
+1. Design Book v1.4 §20 plus ADR 0033–0034 reconciled across authority, roadmap, handoff and agent rules — **satisfied**.
+2. Independent design audit PASS on head `656dc9ff70a453ee5b83f47d13b7040b3f062076` — **satisfied**.
+3. Owner Ready, squash and merge of Gate 0c PR #13 — **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`).
+4. Exact post-merge main CI PASS — **satisfied** (run `29504915362`).
 
 Before any S13 runtime PR (still required):
 
-1. Gate 0c owner merge and main CI PASS.
-2. Separate explicit owner assignment of a runtime task ID (next candidate: S13-PR-002).
-3. Runtime work must branch from the then-current accepted `origin/main`.
-4. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
+1. Separate explicit owner assignment of a runtime task ID (next candidate: S13-PR-002).
+2. Runtime work must branch from the then-current accepted `origin/main`.
+3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 is **not** started. Runtime start requires Gate 0c closure, a separate explicit owner assignment and the then-current accepted `origin/main` baseline.
+S13-PR-002 is **not** started. Runtime start requires a separate explicit owner assignment and the then-current accepted `origin/main` baseline.
 
 ## 7. Module ownership (future runtime)
 

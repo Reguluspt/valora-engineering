@@ -1,25 +1,24 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-16 — bounded-AI automation readiness design extension
-**Main evidence (not evergreen):** `a3672f41bc54f42420fb70639a27bf50d604376a` (S13-PR-001 closeout/live-gate reconciliation squash #12)
-**Main CI evidence:** run `29474065397` PASS
+**Reconciled:** 2026-07-16 — Gate 0c closeout / live-gate reconciliation
+**Main evidence (not evergreen):** `99dfccbc7bf2893fa5b0dce8d52a01068655e39a` (Gate 0c PR #13)
+**Main CI evidence:** run `29504915362` PASS
 
 ### Live task gate
 
 ```text
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED (merged PR #11).
-
-Gate 0c bounded-AI automation readiness is PENDING owner merge + main CI.
-The current design change defines Design Book v1.4 §20 and ADR 0033–0034,
-but unmerged documentation is not yet accepted main authority.
+S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
+Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
+Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
+main CI 29504915362 PASS; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076.
 
 Runtime assignment state: NONE.
 No Sprint 13 runtime code is authorized without a separate owner-assigned task ID.
 
-Next runtime candidate: S13-PR-002 — only after Gate 0c closes and under a separate
-explicit owner assignment from the then-current accepted origin/main.
+Next runtime candidate: S13-PR-002 — NOT STARTED; only under a separate explicit owner assignment
+from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -121,13 +120,12 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ```text
 Active runtime assignment: NONE
-Gate 0c: pending owner merge + exact-main CI
+Gate 0c: CLOSED / SATISFIED (main 99dfccb…; CI 29504915362)
 ```
 
 ### Next candidate (not started; requires separate owner assignment)
 
 ```text
-Gate 0c closeout, then
 S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 ```
 
@@ -154,7 +152,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart the closed S13-PR-001 design-authority gate. Close Gate 0c by owner merge + main CI before any S13 runtime assignment; the next candidate remains S13-PR-002 from accepted main.
+6. Do not restart closed S13-PR-001 or Gate 0c. Do not start S13 runtime until a separate owner assignment names a runtime task ID (next candidate: S13-PR-002) from accepted main.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.

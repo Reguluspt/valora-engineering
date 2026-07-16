@@ -5,9 +5,9 @@
 **Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
-**Gate 0c (bounded-AI automation readiness):** **pending owner merge + main CI**.
+**Gate 0c (bounded-AI automation readiness):** **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`; CI `29504915362` PASS).
 **Runtime assignment state:** **NONE**.
-**Rule:** Do not start S13-PR-002 runtime until Gate 0c closes and a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
+**Rule:** Do not start S13-PR-002 runtime until a separate explicit owner assignment authorizes it. Branch runtime from the then-current accepted `origin/main` only.
 
 ---
 
@@ -82,18 +82,25 @@ Evidence:
 - post-merge main CI `29429680504` PASS;
 - no Adaptive Intake runtime mixed into the design-authority package.
 
-S13-PR-002 remains the next candidate and is **not** authorized until Gate 0c closes and a separate explicit owner assignment is issued.
+S13-PR-002 remains the next candidate and is **not** authorized until a separate explicit owner assignment is issued.
 
-### Gate 0c — bounded-AI automation readiness (pending)
+### Gate 0c — bounded-AI automation readiness (satisfied)
 
-Required before any S13 runtime branch:
+Evidence:
 
-- Design Book v1.4 §20 and ADR 0033–0034 merged as accepted authority;
-- authority index, this roadmap, handoff and agent rules reconciled;
-- independent design audit confirms no weakening of ADR 0028–0032 human gates;
-- exact merged-main CI PASS recorded.
+- Design Book v1.4 §20 and ADR 0033–0034 merged as accepted authority (PR #13);
+- independent design audit PASS on head `656dc9ff70a453ee5b83f47d13b7040b3f062076`;
+- owner Ready/squash/merge of Gate 0c as PR #13 at main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`;
+- post-merge main CI `29504915362` PASS (backend/frontend/worker);
+- no Adaptive Intake runtime, provider calls, or R2 capability mixed into the design package.
 
-This gate designs future extension points and data capture. It does not authorize provider calls, autonomous execution or an R2 capability.
+S13-PR-002 remains the next candidate and is **not** authorized until a separate explicit owner assignment is issued.
+
+### Post-merge live-gate reconciliation provenance
+
+After Gate 0c merged and main CI passed, live operating documents were reconciled so they no longer
+describe Gate 0c as pending. That reconciliation is **provenance only** (not a durable live task).
+Durable state: Gate 0c closed/satisfied, runtime assignment none, S13-PR-002 next candidate under separate owner assignment.
 
 ### Gate 1 — deterministic baseline before external AI
 
@@ -124,7 +131,7 @@ The durable outbox/job/attempt boundary must exist before production DOCX/PDF/OC
 After S13-PR-001 merged, live operating documents were reconciled so they no longer
 describe S13-PR-001 as an active docs gate. That reconciliation is **provenance only**
 (not a durable live task). Durable state: S13-PR-001 closed, Gate 0b satisfied,
-runtime assignment none, Gate 0c pending, then S13-PR-002 next candidate under separate owner assignment.
+runtime assignment none, Gate 0c closed/satisfied, S13-PR-002 next candidate under separate owner assignment.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 
