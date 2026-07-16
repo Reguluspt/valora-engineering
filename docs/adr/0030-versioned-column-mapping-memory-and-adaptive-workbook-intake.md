@@ -3,7 +3,7 @@
 ## Status
 
 Accepted — owner-requested design authority, 2026-07-14.
-**S13-PR-001 note:** Runtime implementation requires S13-PR-001 independent design audit + owner merge, then assigned Sprint 13 task IDs (starting candidate S13-PR-002). No runtime is authorized by this ADR alone.
+**Runtime gate note:** S13-PR-001 is merged. Runtime implementation additionally requires Gate 0c (Design Book v1.4 §20 + ADR 0033–0034) owner merge/main CI, then an assigned Sprint 13 task ID (starting candidate S13-PR-002). No runtime is authorized by this ADR alone.
 
 ## Context
 
@@ -134,6 +134,8 @@ Audit payloads contain identifiers, versions and counts, not unrestricted raw ce
 - S12 fixed alias mapping remains the implemented v1 behavior until v2 tasks land.
 - `VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` §§6/12 remain historical S12-v1 descriptions.
 - This ADR and Design Book v1.4 govern new adaptive-intake implementation.
+- Mapping proposal/decision implementations also follow ADR 0033 task/version/Decision Episode provenance. The authoritative `ColumnMappingDecision` remains the business truth.
+- ADR 0034 creates a future policy extension point but does not remove this ADR's mapping confirmation, validation or Apply gates. No R2 auto-stage capability is promoted by S13–S16.
 
 ## Acceptance gates
 

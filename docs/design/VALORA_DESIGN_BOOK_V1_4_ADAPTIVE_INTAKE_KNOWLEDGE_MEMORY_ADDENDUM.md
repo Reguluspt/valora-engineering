@@ -1,10 +1,10 @@
 # Valora Design Book v1.4 — Adaptive Intake, Knowledge Memory and Historical Dossier Addendum
 
-- **Status:** Owner-requested design authority, accepted for phased implementation planning on 2026-07-14; reconciled for public repo under S13-PR-001 (2026-07-15)
+- **Status:** Owner-requested design authority, accepted for phased implementation planning on 2026-07-14; reconciled for public repo under S13-PR-001 (2026-07-15); extended with bounded-AI automation readiness on 2026-07-16
 - **Relationship to v1.2:** v1.2-final remains authoritative for established domain boundaries.
 - **Relationship to v1.3:** v1.3 remains authoritative for Vietnamese-first UX, Astryx, AI-provider architecture and MVP scope; this addendum supersedes v1.3 §7 roadmap sequencing (“AI Assistant first”).
 - **Relationship to S12:** S12 upload, staging, validation and Apply v1 are **implemented and merged** (`s12-pr-004-v1`). This addendum defines an **additive** Adaptive Intake path and does not silently change Apply semantics.
-- **Implementation gate:** This document authorizes decomposition and planning. Runtime changes must wait for S13-PR-001 independent design audit and owner merge, then use ADR 0030–0032, assigned task IDs, migrations, tests and independent audit. **No runtime is authorized by this document alone.**
+- **Implementation gate:** S13-PR-001 is merged. Before S13 runtime, the bounded-AI automation readiness extension in §20 and ADR 0033–0034 must be merged as Gate 0c. Runtime then requires a separate owner-assigned task ID, migrations, tests and independent audit. **No runtime or autonomous capability is authorized by this document alone.**
 - **Privacy:** Public text uses anonymized fixture **PD-001** only. Real client workbooks and reports never enter the public repository.
 
 ---
@@ -34,6 +34,10 @@ The sample proves the following gaps:
 9. Technical, quote-comparison and final-result rows need source-backed alignment.
 10. Document Intelligence needs an actual extraction runtime, not only persistence CRUD.
 11. Human-confirmed corrections must improve future suggestions without uncontrolled online training.
+12. AI task execution, retries and provider changes need durable provider-independent provenance.
+13. User corrections need a Decision Episode contract rather than generic UI click logging.
+14. Future automation needs one deny-by-default Execution Policy and typed domain commands.
+15. Long-running AI/extraction work needs reliable idempotent jobs before production automation.
 
 These gaps are central product requirements, not optional import conveniences.
 
@@ -158,12 +162,15 @@ original filename
 content type
 checksum
 object/storage reference
+storage state / generation
 adapter/version metadata
 sheet/structure snapshot version
 created actor/time
 ```
 
 Raw cell values remain source evidence and are never rewritten when mappings change.
+
+Object identity and checksum are server-derived/verified. Database reservation and object storage are reconciled through explicit recoverable states; a failed replacement or orphan cleanup never deletes a referenced or prior reviewed source generation.
 
 ### 5.4 Sheet and table discovery
 
@@ -648,6 +655,16 @@ Official write: no
 
 External AI must not be the only available path. Deterministic parsing, retrieval and review remain usable when AI is unavailable.
 
+Every registered task also follows ADR 0033–0034:
+
+- one versioned task contract and authorized context manifest;
+- one logical `AITaskRun` with append-only provider attempts;
+- schema-validated proposal output with source references;
+- no persistence mutation from provider or prompt code;
+- a linked `DecisionEpisode` when a human/domain decision resolves the proposal;
+- deterministic/manual fallback unless an evaluated task release explicitly permits a provider fallback;
+- reliable idempotent job execution for long-running work.
+
 ---
 
 ## 12. Vietnamese-first Astryx UX
@@ -720,6 +737,10 @@ PromoteReviewedBootstrapCandidates
 
 Every command derives actor and tenant server-side, uses explicit permissions and emits an append-only audit event or domain decision log as applicable.
 
+AI/rule output reaches a write-capable command only through a typed `ActionProposal` and deterministic `ExecutionPolicy`. Current Adaptive Intake, identity and dossier tasks remain suggestion/review flows. Gate 0c creates the future extension point but does not remove mapping, identity, alignment, bootstrap or Apply confirmation.
+
+Future automation must use the same application/domain commands as an authorized user path. Provider, prompt, frontend and future-agent code never call persistence mutation repositories directly.
+
 ---
 
 ## 14. Security, privacy and audit
@@ -730,6 +751,10 @@ Every command derives actor and tenant server-side, uses explicit permissions an
 - Raw cell/document payloads are not copied into general audit-event payloads.
 - Source files and reviewed extraction remain immutable/versioned.
 - Mapping and identity decisions record actor, time, before/after proposal, reason and rule/model version.
+- AI task runs record context-manifest, task/schema, provider/model attempt and terminal-outcome provenance under restricted access.
+- Decision Episodes reference committed domain decisions and preserve accept/correct/reject/defer/reversal outcomes.
+- Human, system and AI-service principals are distinct; AI/system execution never impersonates a human approver.
+- General audit payloads store bounded summaries/references, not unrestricted AI context or source content.
 - Derived fingerprints and indexes are rebuildable and are not the sole lineage record.
 - Secret/provider credentials remain backend-only.
 
@@ -742,10 +767,11 @@ This section supersedes v1.3 §7 sequencing.
 | Sprint | Scope |
 | --- | --- |
 | S12 closure | Finish S12-PR-004 CI, independent re-audit and owner merge; no new adaptive runtime mixed into that PR |
+| Gate 0c | Merge ADR 0033–0034 and this bounded-automation readiness extension before S13 runtime |
 | Sprint 13 | Adaptive Intake foundation and Column Mapping Memory |
 | Sprint 14 | Raw Asset Observation, contextual Asset Identity Memory and feedback |
-| Sprint 15 | DossierBundle, DOCX extraction runtime, row alignment and historical bootstrap pilot |
-| Sprint 16 | AI Assistant runtime: Gemini/DeepSeek Gateway plus column mapper and asset reranker tasks |
+| Sprint 15 | DossierBundle, reliable task-job foundation, DOCX extraction runtime, row alignment and historical bootstrap pilot |
+| Sprint 16 | Reliable AI task runtime, provider gateway, column mapper, asset reranker and shadow evaluation |
 | Sprint 17 | Document Report Generation MVP |
 | Sprint 18 | Real Auth hardening and Pilot Acceptance |
 
@@ -795,6 +821,10 @@ source-locator completeness
 quote supplier/time/evidence completeness
 review time per dossier and per row
 reuse accuracy on the next import
+shadow disagreement and correction rate
+template/data drift rate
+policy review/block reason rate
+task latency and cost by contract/model version
 ```
 
 Numeric thresholds are established from a 20–50 dossier pilot corpus. One sample must not freeze production confidence thresholds.
@@ -805,6 +835,11 @@ Numeric thresholds are established from a 20–50 dossier pilot corpus. One samp
 
 - no online/per-click model training;
 - no AI auto-approval or auto-Apply;
+- no R2 auto-draft/auto-stage capability promotion in S13–S16 without a later task-specific accepted design and evaluated release;
+- no learning from UI clickstream or temporary/autosave state;
+- no AI/provider/frontend direct database mutation;
+- no open-ended autonomous agent or unregistered tool access;
+- no silent provider fallback outside the evaluated task registry;
 - no automatic cross-tenant learning;
 - no bulk activation of historical knowledge without review;
 - no use of price as the primary identity key;
@@ -818,7 +853,7 @@ Numeric thresholds are established from a 20–50 dossier pilot corpus. One samp
 
 Implementation may claim v1.4 completion only when:
 
-- ADR 0030–0032 are implemented and audited;
+- ADR 0030–0034 are implemented to the phase-appropriate scope and audited;
 - each PR cites this addendum and its specific ADR/task contract;
 - `.xls`, header discovery, semantic mapping and row classification pass acceptance;
 - mapping and identity review UX is Vietnamese-first and Astryx-aligned;
@@ -826,5 +861,120 @@ Implementation may claim v1.4 completion only when:
 - feedback is append-only and human-confirmed;
 - deterministic baselines work without external AI;
 - AI tasks are audited, tenant-scoped and advisory;
+- AI task/context/attempt/decision provenance follows ADR 0033;
+- write-capable automation cannot bypass ADR 0034 Execution Policy and reliable command boundaries;
 - PostgreSQL and relevant frontend/runtime gates pass with no hidden skips;
 - the canonical handoff truthfully records remaining limitations.
+
+---
+
+## 20. Bounded AI automation readiness
+
+### 20.1 Architectural objective
+
+Valora must be able to replace or add providers/models without losing accumulated knowledge, while gradually automating repetitive and reversible work without delegating professional approval.
+
+The application owns memory, policy, workflow and official truth. LLMs are replaceable reasoning providers.
+
+```mermaid
+flowchart TD
+    A["Immutable source artifacts"] --> B["Raw observations and locators"]
+    B --> C["Candidates and domain memories"]
+    C --> D["Context assembler and AI task registry"]
+    D --> E["Typed proposal"]
+    E --> F["Execution Policy"]
+    F --> G["Domain command to candidate/draft/staging"]
+    G --> H["Human gate to official truth"]
+    E --> I["AITaskRun and DecisionEpisode"]
+    G --> I
+    H --> I
+    I --> C
+```
+
+### 20.2 Memory model
+
+Valora uses domain memories plus one cross-cutting learning-provenance envelope:
+
+| Component | Owns | Must not become |
+| --- | --- | --- |
+| Column Mapping Memory | workbook/profile interpretation and confirmed versions | asset identity or price memory |
+| Asset Identity Memory | raw wording, contextual aliases, candidates and human identity decisions | a second canonical catalog |
+| Domain decision records | authoritative mapping/identity/alignment/knowledge/workflow decisions | generic AI logs |
+| `AITaskRun` / attempts | task, context, version, provider and operational provenance | official business truth |
+| `DecisionEpisode` | proposal-to-human-outcome linkage | a duplicate mutable domain record |
+| `WorkflowPatternCandidate` | derived intent-level process pattern | UI clickstream or professional approval preference |
+
+Workflow patterns are learned from domain commands and committed outcomes, never screen coordinates, component identifiers or incidental navigation.
+
+### 20.3 Decision and feedback boundary
+
+The learning chain is:
+
+```text
+immutable source/observation
+→ deterministic/AI proposal
+→ committed domain decision
+→ DecisionEpisode
+→ eligible LearningFeedbackEvent
+→ derived retrieval projection
+```
+
+Temporary selections, drafts without a committed decision, system auto-rejections, failed runs, stale generations and rolled-back actions are not positive learning evidence.
+
+Immediate “learning” means approved memory/retrieval reuse. Model/rule weight changes remain offline, evaluated and versioned.
+
+### 20.4 Scope and time
+
+Reusable memory explicitly distinguishes organization policy, customer/template memory, project/dossier context and user preference. A user's presentation/process preference cannot silently become organization policy or valuation knowledge.
+
+Time-sensitive observations distinguish `observed_at`, `effective_at` and `recorded_at` where applicable. Ingestion time is not a substitute for valuation or supplier-price observation time.
+
+### 20.5 Risk-tiered execution
+
+| Risk | Examples | Current/future rule |
+| --- | --- | --- |
+| R0 read/explain | retrieval, validation explanation | may run under tenant/data policy |
+| R1 propose | mapping, identity, alignment suggestions | allowed as advisory proposal |
+| R2 reversible work | candidate, draft or staging preparation | future only after shadow/evaluation and explicit capability promotion |
+| R3 official mutation | official data or material workflow transition | authenticated human command |
+| R4 professional approval | final price, QC, signature, release | always human; prohibited for automation |
+
+ExecutionPolicy is deterministic, versioned and deny-by-default. It evaluates tenant policy, task registration, target version/state, validation, source completeness, drift, evaluated release and feature capability. Model self-confidence never grants authority.
+
+### 20.6 Promotion lifecycle
+
+```text
+disabled
+→ observe
+→ suggest
+→ shadow
+→ auto_draft
+→ auto_stage
+→ exception_only_review
+```
+
+This ladder is capability-specific. S13–S16 authorize only the human-reviewed foundation, suggestion tasks and shadow evaluation. A later accepted task-specific design and release gate is required before `auto_draft`, `auto_stage` or `exception_only_review`.
+
+Promotion requires distinct-case evidence, leakage-controlled evaluation, acceptable correction and false-high-confidence rates, no unresolved drift, rollback proof and an owner-approved capability release. Raw confirmation count is insufficient.
+
+### 20.7 Reliable task execution
+
+Long-running parsing, extraction and AI tasks use durable idempotent jobs with transactional outbox, append-only attempts, lease expiry, bounded retry, timeout/cancellation, stale-generation rejection and exception review.
+
+Database/object-storage partial failure is explicitly recoverable. Failed replacement work never destroys a prior reviewed generation.
+
+### 20.8 Context and privacy control
+
+A shared context assembler enforces tenant scope, task data classification, source access, minimum necessary content and redaction before any provider request. It records an authorized context manifest containing references/hashes/versions rather than copying unrestricted source content into general audit.
+
+Derived SQL/full-text/vector indexes are rebuildable projections with versioned source datasets. No vector index is the sole knowledge or lineage store.
+
+### 20.9 Future agents
+
+A future agent, if separately approved, is a constrained orchestrator over registered typed tools. It has explicit tenant context, tool allowlist, step/cost budgets and submits `ActionProposal` objects through ExecutionPolicy. It cannot directly mutate persistence or bypass human gates.
+
+### 20.10 Binding ADRs
+
+- ADR 0033 governs task/context/attempt/decision/learning provenance.
+- ADR 0034 governs risk, policy, commands, reliable jobs and capability promotion.
+- ADR 0028–0032 remain cumulative and are not weakened by this extension.
