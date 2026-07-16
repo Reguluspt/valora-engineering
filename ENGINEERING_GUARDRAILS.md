@@ -20,10 +20,10 @@ is CLOSED / SATISFIED.
 Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
 main CI 29504915362 PASS.
 
-Runtime assignment state: NONE.
-Adaptive Intake v2 remains design-only until a runtime PR is separately authorized.
+Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
+S13-PR-002 is the first Adaptive Intake runtime slice (feature branch only; not merged). Mapping memory / later S13 slices remain unauthorized until separately assigned.
 
-Next runtime candidate: S13-PR-002 — NOT STARTED; only under a separate
+Active runtime assignment: S13-PR-002 on branch s13-pr-002-legacy-workbook-source-artifact (not merged). Further candidates still require separate
 explicit owner assignment from the then-current accepted origin/main.
 ```
 

@@ -8,6 +8,9 @@ sys.path.insert(0, ".")
 
 from app.core.config import get_settings
 from app.db import Base
+# Ensure all models register on Base.metadata for autogenerate/migrations
+import app.modules.project_master_data.models  # noqa: F401
+import app.modules.excel_import.models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

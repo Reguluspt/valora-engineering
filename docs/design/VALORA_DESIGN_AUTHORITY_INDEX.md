@@ -57,9 +57,9 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 S12-PR-004 engineering gate: CLOSED (merged)
 S13-PR-001 design-authority gate: CLOSED (merged)
 Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
-Runtime assignment state: NONE
-→ S13-PR-002 Adaptive Intake / Column Mapping Memory runtime candidate
-   (requires separate explicit owner assignment; not started)
+Runtime assignment state: S13-PR-002 assigned / in progress (branch s13-pr-002-legacy-workbook-source-artifact; not merged)
+→ S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact (in progress on feature branch; not merged)
+→ S13-PR-003+ Column Mapping Memory / Adaptive Intake follow-ons (require separate owner assignment)
 → S14 Asset Identity Memory
 → S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
 → S16 reliable audited AI suggestion runtime and shadow evaluation
@@ -102,13 +102,13 @@ Gate 0c — bounded-AI automation readiness (satisfied):
 3. Owner Ready, squash and merge of Gate 0c PR #13 — **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`).
 4. Exact post-merge main CI PASS — **satisfied** (run `29504915362`).
 
-Before any S13 runtime PR (still required):
+Before any S13 runtime PR (still required for each task ID):
 
-1. Separate explicit owner assignment of a runtime task ID (next candidate: S13-PR-002).
+1. Separate explicit owner assignment of a runtime task ID.
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 is **not** started. Runtime start requires a separate explicit owner assignment and the then-current accepted `origin/main` baseline.
+S13-PR-002 is **assigned / in progress** on branch `s13-pr-002-legacy-workbook-source-artifact` from baseline `949903f3912aa65f8b990852756aeef7981bca08`; it is **not merged**. S13-PR-003+ still require separate owner assignment.
 
 ## 7. Module ownership (future runtime)
 

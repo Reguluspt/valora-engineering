@@ -14,11 +14,9 @@ Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
 Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
 main CI 29504915362 PASS; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076.
 
-Runtime assignment state: NONE.
-No Sprint 13 runtime code is authorized without a separate owner-assigned task ID.
-
-Next runtime candidate: S13-PR-002 — NOT STARTED; only under a separate explicit owner assignment
-from the then-current accepted origin/main.
+Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
+S13-PR-002 is owner-authorized on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
+Further candidates (S13-PR-003 onward) still require separate explicit owner assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -119,14 +117,16 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 ### Runtime assignment state
 
 ```text
-Active runtime assignment: NONE
+Active runtime assignment: S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
+Branch: s13-pr-002-legacy-workbook-source-artifact (not merged)
+Baseline: 949903f3912aa65f8b990852756aeef7981bca08
 Gate 0c: CLOSED / SATISFIED (main 99dfccb…; CI 29504915362)
 ```
 
-### Next candidate (not started; requires separate owner assignment)
+### Next candidate after S13-PR-002 merge (requires separate owner assignment)
 
 ```text
-S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
+S13-PR-003 — structure discovery / Column Mapping Memory (per remediation plan)
 ```
 
 Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier/job foundation → reliable audited AI suggestions and shadow evaluation.
@@ -152,7 +152,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart closed S13-PR-001 or Gate 0c. Do not start S13 runtime until a separate owner assignment names a runtime task ID (next candidate: S13-PR-002) from accepted main.
+6. Do not restart closed S13-PR-001 or Gate 0c. S13-PR-002 is the active assigned runtime task on its feature branch only (not merged). Do not start S13-PR-003+ until a separate owner assignment names that task ID from accepted main.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.

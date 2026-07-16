@@ -3606,6 +3606,9 @@ class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False
     )
+    # S13-PR-002: pointer to current successful Adaptive Intake source generation.
+    # DB FK is applied in migration; model avoids circular create_all dependency.
+    current_source_artifact_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
 
     project: Mapped["Project"] = relationship("Project")
     creator: Mapped["User"] = relationship("User")

@@ -55,6 +55,12 @@ from app.modules.project_master_data.workbench_schemas import (
 )
 from app.modules.project_master_data.commands.commit_asset_line_draft import execute_commit_asset_line_draft
 from app.modules.excel_import.application.import_service import upload_excel_file_orchestrator
+from app.modules.excel_import.application.source_artifact_service import (
+    get_source_artifact,
+    list_source_artifacts,
+    upload_source_artifact,
+)
+from app.modules.excel_import.schemas import ImportSourceArtifactResponse
 from app.modules.excel_import.application.validate_staging import (
     validate_project_asset_import_batch,
 )
@@ -650,6 +656,82 @@ def upload_project_asset_import_file(
         request=request,
         current_user=current_user,
         correlation_id=correlation_id
+    )
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/source-artifacts",
+    response_model=ImportSourceArtifactResponse,
+    status_code=201,
+)
+def upload_project_asset_import_source_artifact(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    file: UploadFile = File(...),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    """S13-PR-002: Adaptive Intake v2 source artifact intake (.xls/.xlsx). No staging mutation."""
+    org_id = current_user.organization_id
+    project = db.query(Project).filter(
+        Project.organization_id == org_id,
+        Project.id == project_id,
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    correlation_id = get_correlation_id(request) if request else None
+    art = upload_source_artifact(
+        db=db,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+        file=file,
+        request=request,
+        current_user=current_user,
+        correlation_id=correlation_id,
+    )
+    return art
+
+
+@router.get(
+    "/{project_id}/asset-imports/{batch_id}/source-artifacts",
+    response_model=list[ImportSourceArtifactResponse],
+)
+def list_project_asset_import_source_artifacts(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    org_id = current_user.organization_id
+    return list_source_artifacts(
+        db,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+    )
+
+
+@router.get(
+    "/{project_id}/asset-imports/{batch_id}/source-artifacts/{artifact_id}",
+    response_model=ImportSourceArtifactResponse,
+)
+def get_project_asset_import_source_artifact(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    org_id = current_user.organization_id
+    return get_source_artifact(
+        db,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+        artifact_id=artifact_id,
     )
 
 
