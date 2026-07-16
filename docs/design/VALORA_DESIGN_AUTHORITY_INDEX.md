@@ -61,7 +61,7 @@ Runtime assignment state: NONE
 → S13-PR-002 Adaptive Intake / Column Mapping Memory runtime candidate
    (requires separate explicit owner assignment; not started)
 → S14 Asset Identity Memory
-→ S15 paired-dossier extraction, alignment and bootstrap
+→ S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
 → S16 reliable audited AI suggestion runtime and shadow evaluation
 → S17 report generation
 → S18 real auth and pilot acceptance
