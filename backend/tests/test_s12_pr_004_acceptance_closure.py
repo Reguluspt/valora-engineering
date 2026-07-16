@@ -518,7 +518,8 @@ class TestA5AlembicHead:
         from alembic.script import ScriptDirectory
 
         heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-        assert heads == ["e1f2a3b4c5d6"]
+        # Single graph head advances with later migrations (S13-PR-002: f2a3b4c5d6e7).
+        assert heads == ["f2a3b4c5d6e7"]
 
     def test_migration_file_has_lineage_columns(self):
         mig = (

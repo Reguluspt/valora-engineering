@@ -864,7 +864,10 @@ class TestM4PreconditionSnapshots:
 # ---------------------------------------------------------------------------
 
 LINEAGE_PARENT_REV = "db5977424e7b"
+# S12 Apply lineage revision (not necessarily the live Alembic graph tip).
 LINEAGE_HEAD_REV = "e1f2a3b4c5d6"
+# Live single graph head after S13-PR-002 source-artifact migration.
+CURRENT_ALEMBIC_HEAD = "f2a3b4c5d6e7"
 LINEAGE_COL_BATCH = "source_import_batch_id"
 LINEAGE_COL_STAGING = "source_staging_row_id"
 
@@ -1133,7 +1136,7 @@ class TestM2ExecutableMigration:
             prev_env = _point_alembic_settings_at(isolated_url_str)
             cfg = Config("alembic.ini")
             script = ScriptDirectory.from_config(cfg)
-            assert script.get_heads() == [LINEAGE_HEAD_REV]
+            assert script.get_heads() == [CURRENT_ALEMBIC_HEAD]
             rev = script.get_revision(LINEAGE_HEAD_REV)
             assert rev.down_revision == LINEAGE_PARENT_REV
 
@@ -1165,7 +1168,7 @@ class TestM2ExecutableMigration:
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
 
-            assert ScriptDirectory.from_config(cfg).get_heads() == [LINEAGE_HEAD_REV]
+            assert ScriptDirectory.from_config(cfg).get_heads() == [CURRENT_ALEMBIC_HEAD]
         finally:
             if isolated_engine is not None:
                 isolated_engine.dispose()
