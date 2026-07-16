@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (bounded-AI automation readiness design extension)
+**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -28,29 +28,26 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Gate 0c — Bounded-AI Automation Readiness Before S13 Runtime
+Engineering Phase / Post Gate 0c — Runtime Handoff Preparation
 ```
 
 ### Live task gate (fetch origin/main before acting)
 
 ```text
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED (squash-merged to main).
-Evidence (not evergreen): main squash 7f7473e459f592deac1054be3935d7f911b760a2
-(S13-PR-001 PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a);
-post-merge main CI run 29429680504 PASS.
-Closeout/live-gate reconciliation main a3672f41bc54f42420fb70639a27bf50d604376a
-(PR #12); main CI run 29474065397 PASS.
-
-Gate 0c bounded-AI automation readiness is PENDING owner merge + main CI.
-Its required content is Design Book v1.4 §20 + ADR 0033–0034 plus canonical-doc reconciliation.
+S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
+Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
+Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a
+(Gate 0c PR #13; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076;
+parent a3672f41bc54f42420fb70639a27bf50d604376a);
+post-merge main CI run 29504915362 PASS.
 
 Runtime assignment state: NONE.
 No Sprint 13 runtime implementation is authorized without a separate owner-assigned task ID.
 
 Next runtime candidate: S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact).
-S13-PR-002 may start only after Gate 0c owner merge/main CI, under a separate explicit
-owner assignment, from the then-current accepted origin/main, and only under that task ID.
+S13-PR-002 is NOT STARTED. It may start only under a separate explicit owner assignment,
+from the then-current accepted origin/main, and only under that task ID.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
@@ -157,8 +154,7 @@ New dependency with architectural impact.
 Secret/credential/production config required.
 Starting baseline SHA does not match the task prompt.
 Protected files are involved without authorization.
-S13 runtime is requested before Gate 0c closes, without an assigned runtime task ID,
-  or from a baseline that does not match the task prompt.
+S13 runtime is requested without an assigned runtime task ID, or from a baseline that does not match the task prompt.
 ```
 
 ## 8. Pull Request Behavior

@@ -1,9 +1,9 @@
 # Valora Engineering
 
-**Phase:** Engineering — Gate 0c bounded-AI automation readiness before S13 runtime
-**Main evidence (not evergreen):** `a3672f41bc54f42420fb70639a27bf50d604376a` (S13-PR-001 closeout/live-gate reconciliation #12); main CI `29474065397` PASS
+**Phase:** Engineering — post Gate 0c; runtime handoff preparation
+**Main evidence (not evergreen):** `99dfccbc7bf2893fa5b0dce8d52a01068655e39a` (Gate 0c PR #13); main CI `29504915362` PASS
 **Runtime assignment state:** **NONE**
-**Next runtime candidate:** S13-PR-002 — not started; requires Gate 0c closure plus a separate explicit owner assignment from accepted `main`
+**Next runtime candidate:** S13-PR-002 — not started; requires a separate explicit owner assignment from accepted `main`
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -25,7 +25,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Adaptive Intake / Column Mapping Memory | **Design only** (v1.4 / ADR 0030) — not implemented |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
-| Bounded-AI task/decision/policy/job architecture | Gate 0c design extension (v1.4 §20 / ADR 0033–0034); pending merge/main CI; runtime not implemented |
+| Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
 | Production-ready | **No** |
 
 ### Live task gate
@@ -33,9 +33,9 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ```text
 S12-PR-004 is merged and closed.
 S13-PR-001 design-authority gate is closed (merged to main).
-Gate 0c bounded-AI automation readiness is pending owner merge + main CI.
+Gate 0c bounded-AI automation readiness is closed / satisfied.
 Runtime assignment state: NONE.
-S13-PR-002 is the next candidate only — not started; requires Gate 0c closure and separate owner assignment.
+S13-PR-002 is the next candidate only — not started; requires separate owner assignment.
 ```
 
 ## Architecture (monorepo)
@@ -81,7 +81,7 @@ Future ownership (design only until runtime PRs): Adaptive Intake + Column Mappi
 
 Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md` → handoff → Design Book v1.2/v1.3/v1.4 → contracts/ADRs → S13–S16 plan.
 
-Roadmap (active): Gate 0c design closeout → S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 reliable audited AI suggestions + shadow evaluation → S17 reports → S18 auth/pilot.
+Roadmap (active after separate assignment): S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 reliable audited AI suggestions + shadow evaluation → S17 reports → S18 auth/pilot.
 
 ## Local setup
 

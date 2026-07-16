@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (bounded-AI automation readiness design extension)
+**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,20 +11,19 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Gate 0c — Bounded-AI Automation Readiness Before S13 Runtime
+Post Gate 0c — Runtime Handoff Preparation
 
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED (main squash evidence 7f7473e…;
-main CI 29429680504 PASS). Gate 0b is SATISFIED.
-Closeout/live-gate reconciliation main a3672f4… / CI 29474065397 PASS.
-
+S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
 Gate 0c (Design Book v1.4 §20 + ADR 0033–0034 + canonical reconciliation)
-is PENDING owner merge and exact-main CI.
+is CLOSED / SATISFIED.
+Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
+main CI 29504915362 PASS.
 
 Runtime assignment state: NONE.
 Adaptive Intake v2 remains design-only until a runtime PR is separately authorized.
 
-Next runtime candidate: S13-PR-002 — only after Gate 0c closes and under a separate
+Next runtime candidate: S13-PR-002 — NOT STARTED; only under a separate
 explicit owner assignment from the then-current accepted origin/main.
 ```
 
@@ -287,6 +286,6 @@ weakens security or tenant isolation
 bypasses ADR 0028 restricted-field human commit / command gates
 creates irreversible data mutation without audit
 treats local PG skips as PASS
-starts S13 runtime before Gate 0c owner merge/main CI and a separate owner-assigned task ID
+starts S13 runtime without a separate owner-assigned task ID or from a baseline that does not match the task prompt
 silently promotes an R2 capability or weakens current mapping/identity/alignment/Apply review gates
 ```
