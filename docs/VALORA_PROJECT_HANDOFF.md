@@ -1,20 +1,21 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-15 — S13-PR-001 design authority reconciliation
-**Main evidence (not evergreen):** `a9f2c1e77e3ec46f216b881d608a02685b9d322a` (S12-PR-004 squash #10)
-**Main CI evidence:** run `29419008129` PASS
+**Reconciled:** 2026-07-15 — S13-PR-001-CLOSEOUT live-gate reconciliation
+**Main evidence (not evergreen):** `7f7473e459f592deac1054be3935d7f911b760a2` (S13-PR-001 squash #11)
+**Main CI evidence:** run `29429680504` PASS
 
 ### Live task gate
 
 ```text
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
+S13-PR-001 design-authority gate is CLOSED (merged PR #11).
 
-Active task: S13-PR-001 — Design Authority and Contract Reconciliation (docs-only).
-No Sprint 13 runtime code is authorized during S13-PR-001.
+Runtime assignment state: NONE.
+No Sprint 13 runtime code is authorized without a separate owner-assigned task ID.
 
-After independent design audit PASS and owner merge of S13-PR-001,
-S13-PR-002 is the next candidate runtime slice from the accepted main baseline.
+Next runtime candidate: S13-PR-002 — only under a separate explicit owner assignment
+from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -108,14 +109,15 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | S12-R-001…008 | Remediation, auth, tenant, mutation, Excel harden, recon, Apply authority |
 | S12-PR-003 | Validation Engine |
 | **S12-PR-004** | Apply Command & Provenance — **merged** PR #10 at `a9f2c1e…` |
+| **S13-PR-001** | Design Authority and Contract Reconciliation — **merged** PR #11 at `7f7473e…` |
 
-### Active
+### Runtime assignment state
 
 ```text
-S13-PR-001 — Design Authority and Contract Reconciliation — docs-only
+Active runtime assignment: NONE
 ```
 
-### Next candidate (not authorized until S13-PR-001 audits and merges)
+### Next candidate (not started; requires separate owner assignment)
 
 ```text
 S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
@@ -141,7 +143,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not start S13 runtime until S13-PR-001 is audited/merged and a runtime task is assigned.
+6. Do not restart the closed S13-PR-001 design-authority gate. Do not start S13 runtime until a separate owner assignment names a runtime task ID (next candidate: S13-PR-002) from accepted main.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.

@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-15 (S13-PR-001)
+**Last reconciled:** 2026-07-15 (S13-PR-001-CLOSEOUT)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,17 +11,17 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Post S12-PR-004 — Design Authority Reconciliation
+Post S13-PR-001 — Design Authority Closed; Runtime Handoff Preparation
 
-S12-PR-004 is MERGED (main squash evidence a9f2c1e…; main CI 29419008129 PASS).
-Its engineering gate is CLOSED.
+S12-PR-004 is MERGED and its engineering gate is CLOSED.
+S13-PR-001 design-authority gate is CLOSED (main squash evidence 7f7473e…;
+main CI 29429680504 PASS). Gate 0b is SATISFIED.
 
-While origin/main does not contain merged S13-PR-001 documentation authority,
-S13-PR-001 is the only active task (docs-only).
-No Sprint 13 runtime implementation is authorized.
+Runtime assignment state: NONE.
+Adaptive Intake v2 remains design-only until a runtime PR is separately authorized.
 
-After independent design audit PASS and owner merge of S13-PR-001,
-S13-PR-002 becomes the next candidate runtime slice from the accepted main baseline.
+Next runtime candidate: S13-PR-002 — only under a separate explicit owner
+assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
@@ -41,7 +41,7 @@ Sprint 11 — Live Workbench loop            [merged; readiness superseded by S1
 Sprint 12 — Excel import pipeline          [PR-001…PR-004 merged; Apply v1 frozen]
 S12-R-001…008 — Remediation / recon        [merged to main]
 S12-PR-004 — Apply Command & Provenance    [MERGED; engineering gate closed]
-S13-PR-001 — Design authority reconciliation [active docs-only until merge]
+S13-PR-001 — Design authority reconciliation [merged / gate closed; main 7f7473e…]
 ```
 
 Sprint 0 “foundation only” boundaries are **historical**. They must not be stated as the current repository status.

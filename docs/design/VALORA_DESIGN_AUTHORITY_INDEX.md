@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-15 (S13-PR-001)
+**Reconciled:** 2026-07-15 (S13-PR-001-CLOSEOUT)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -34,20 +34,25 @@ When two sources conflict, the newer explicit decision governs only the scope it
 ## 3. Engineering baseline (evidence, not evergreen)
 
 ```text
-S12-PR-004 squash-merged to main:
-  a9f2c1e77e3ec46f216b881d608a02685b9d322a
+S13-PR-001 design authority squash-merged to main:
+  7f7473e459f592deac1054be3935d7f911b760a2
+  (PR #11; parent a9f2c1e77e3ec46f216b881d608a02685b9d322a = S12-PR-004)
 Post-merge main CI:
-  run 29419008129 — PASS (558 tests; M2 + seven PG nodes executed)
+  run 29429680504 — PASS
+Prior S12-PR-004 evidence (historical):
+  a9f2c1e… / CI 29419008129 PASS
 ```
 
-Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat historical feature SHAs (`259ee59…`) or historical `main` (`32024be…`) as current status.
+Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat historical feature SHAs (`259ee59…`) or historical `main` (`32024be…` / `a9f2c1e…` alone) as current status when a newer accepted main exists.
 
 ## 4. Active roadmap
 
 ```text
 S12-PR-004 engineering gate: CLOSED (merged)
-→ S13-PR-001 Design Authority and Contract Reconciliation (docs-only; active until audit/merge)
-→ S13-PR-002+ Adaptive Intake / Column Mapping Memory runtime (only after S13-PR-001 merges)
+S13-PR-001 design-authority gate: CLOSED (merged)
+Runtime assignment state: NONE
+→ S13-PR-002 Adaptive Intake / Column Mapping Memory runtime candidate
+   (requires separate explicit owner assignment; not started)
 → S14 Asset Identity Memory
 → S15 paired-dossier extraction, alignment and bootstrap
 → S16 audited AI suggestion runtime
@@ -70,14 +75,19 @@ Deterministic structure discovery, mapping profiles, identity retrieval and docu
 
 ## 6. Implementation gates
 
-Before any S13 runtime PR:
+S13-PR-001 documentation/design-authority prerequisites (satisfied):
 
-1. S13-PR-001 independent design audit must PASS.
-2. Owner controls Ready, squash and merge of S13-PR-001.
-3. Runtime work must branch from the accepted main baseline after that merge.
-4. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
+1. S13-PR-001 independent design audit PASS — **satisfied**.
+2. Owner Ready, squash and merge of S13-PR-001 — **satisfied** (main `7f7473e…`).
+3. Post-merge main CI PASS — **satisfied** (run `29429680504`).
 
-S13-PR-002 is **not** authorized until S13-PR-001 is independently audited and merged.
+Before any S13 runtime PR (still required):
+
+1. Separate explicit owner assignment of a runtime task ID (next candidate: S13-PR-002).
+2. Runtime work must branch from the then-current accepted `origin/main`.
+3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
+
+S13-PR-002 is **not** started. Runtime start requires a separate explicit owner assignment and the then-current accepted `origin/main` baseline.
 
 ## 7. Module ownership (future runtime)
 
