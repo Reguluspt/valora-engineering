@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-def detect_format_and_adapter(path: str, filename: str):
+def detect_format_and_adapter(path: str, filename: str, limits=None):
     """Return (format, adapter) after extension+signature checks."""
     ext = ""
     if "." in filename:
@@ -35,11 +35,11 @@ def detect_format_and_adapter(path: str, filename: str):
                 "signature_mismatch",
                 "Phần mở rộng .xlsx không khớp chữ ký nội dung tệp.",
             )
-        return WorkbookFormat.XLSX, XlsxWorkbookAdapter()
+        return WorkbookFormat.XLSX, XlsxWorkbookAdapter(limits=limits)
     if not head.startswith(XLS_OLE_SIGNATURE):
         raise AdapterError(
             400,
             "signature_mismatch",
             "Phần mở rộng .xls không khớp chữ ký nội dung tệp.",
         )
-    return WorkbookFormat.XLS, XlsWorkbookAdapter()
+    return WorkbookFormat.XLS, XlsWorkbookAdapter(limits=limits)

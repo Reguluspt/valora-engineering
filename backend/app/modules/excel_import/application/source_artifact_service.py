@@ -45,9 +45,29 @@ __all__ = [
     "reconcile_source_artifacts",
     "count_staging_rows",
     "is_source_artifact_referenced",
+    "set_reconcile_work_session_factory",
+    "set_source_limits_override",
 ]
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+# Test/injection seams (None = production defaults)
+_work_session_factory: Callable[[Any], Session] | None = None
+_source_limits_override: SourceArtifactLimits | None = None
+
+
+def set_reconcile_work_session_factory(
+    factory: Callable[[Any], Session] | None,
+) -> None:
+    """Inject dedicated work-session factory for reconciler failpoint tests."""
+    global _work_session_factory
+    _work_session_factory = factory
+
+
+def set_source_limits_override(limits: SourceArtifactLimits | None) -> None:
+    """Inject SourceArtifactLimits for HTTP/service boundary tests."""
+    global _source_limits_override
+    _source_limits_override = limits
 
 
 def _utcnow() -> datetime:
@@ -280,16 +300,22 @@ def upload_source_artifact(
     Full adapter safety inspection runs before DB reservation and object write.
     Does NOT create/modify staging rows or ProjectAssetLine.
     """
-    limits = limits or DEFAULT_SOURCE_LIMITS
+    limits = limits or _source_limits_override or DEFAULT_SOURCE_LIMITS
     storage = storage or get_object_storage()
 
     size_hdr = get_request_size(request)
     if size_hdr is not None and size_hdr < 0:
-        raise HTTPException(status_code=400, detail="Kích thước yêu cầu HTTP không hợp lệ.")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "request_too_large", "detail": "Kích thước yêu cầu HTTP không hợp lệ."},
+        )
     if size_hdr is not None and size_hdr > limits.max_request_bytes:
         raise HTTPException(
             status_code=413,
-            detail="Kích thước yêu cầu HTTP vượt quá giới hạn cho phép.",
+            detail={
+                "error_code": "request_too_large",
+                "detail": "Kích thước yêu cầu HTTP vượt quá giới hạn cho phép.",
+            },
         )
 
     project = (
@@ -326,10 +352,13 @@ def upload_source_artifact(
 
         # Full bounded safety inspection BEFORE reservation/object write
         try:
-            fmt, adapter = detect_format_and_adapter(path, sanitized)
+            fmt, adapter = detect_format_and_adapter(path, sanitized, limits=limits)
             inspection = adapter.inspect(path)
         except AdapterError as ae:
-            raise HTTPException(status_code=ae.status, detail=ae.detail) from ae
+            raise HTTPException(
+                status_code=ae.status,
+                detail={"error_code": ae.error_code, "detail": ae.detail},
+            ) from ae
 
         last_gen = (
             db.query(ImportSourceArtifact.generation)
@@ -547,7 +576,10 @@ def upload_source_artifact(
     except HTTPException:
         raise
     except AdapterError as ae:
-        raise HTTPException(status_code=ae.status, detail=ae.detail) from ae
+        raise HTTPException(
+            status_code=ae.status,
+            detail={"error_code": ae.error_code, "detail": ae.detail},
+        ) from ae
     finally:
         if path and os.path.exists(path):
             try:
@@ -646,8 +678,11 @@ def reconcile_source_artifacts(
 
     with db.no_autoflush:
         bind = db.bind if db.bind is not None else db.get_bind()
-    WorkSession = sessionmaker(bind=bind, autoflush=False, autocommit=False)
-    work: Session = WorkSession()
+    if _work_session_factory is not None:
+        work: Session = _work_session_factory(bind)
+    else:
+        WorkSession = sessionmaker(bind=bind, autoflush=False, autocommit=False)
+        work = WorkSession()
 
     scanned = 0
     marked_orphan = 0
