@@ -1568,6 +1568,7 @@ def _pg_seed_org_batch(conn, *, oid, uid, cid, pid, bid, slug, filename="b.xlsx"
 
 
 def _pg_insert_pending_artifact(conn, *, aid, oid, pid, bid, uid, key, body, gen=1):
+    # created_at = now() so verified pending takes the promote path (not past-retention orphan).
     conn.execute(
         text(
             """
@@ -1578,7 +1579,7 @@ def _pg_insert_pending_artifact(conn, *, aid, oid, pid, bid, uid, key, body, gen
               created_by_user_id, created_at, updated_at
             ) VALUES (
               :id, :oid, :pid, :bid, :gen, 'p.xlsx', 'xlsx', 't', :sz,
-              :chk, :key, 'pending', '{}'::jsonb, :uid, now() - interval '2 hours', now()
+              :chk, :key, 'pending', '{}'::jsonb, :uid, now(), now()
             )
             """
         ),
