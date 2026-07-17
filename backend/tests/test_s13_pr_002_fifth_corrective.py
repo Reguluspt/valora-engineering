@@ -1152,7 +1152,8 @@ def test_e06_pg_constraint_identity_matrix():
                 {"id": a1, "chk": "a" * 63},
             ),
             (
-                ("chk_source_artifact_checksum_lower",),
+                # Uppercase fails lowercase CHECK and/or hex CHECK (order not guaranteed)
+                ("chk_source_artifact_checksum_lower", "chk_source_artifact_checksum_hex"),
                 "UPDATE import_source_artifacts SET checksum_sha256 = :chk WHERE id = :id",
                 {"id": a1, "chk": "A" * 64},
             ),
