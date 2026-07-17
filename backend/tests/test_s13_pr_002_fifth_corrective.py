@@ -1142,50 +1142,54 @@ def test_e06_pg_constraint_identity_matrix():
             cname = _constraint_name(ei.value)
             assert "fk_batch_current_artifact_same_batch" in cname or "same_batch" in cname
 
+        # Each case: allowed constraint name(s), SQL, params.
+        # Note: checksum hex CHECK embeds {64}, so wrong-length hex may surface as
+        # either checksum_len or checksum_hex depending on PG check order.
         cases = [
             (
-                # 63 hex chars — length fails (still valid hex charset)
-                "chk_source_artifact_checksum_len",
+                ("chk_source_artifact_checksum_len", "chk_source_artifact_checksum_hex"),
                 "UPDATE import_source_artifacts SET checksum_sha256 = :chk WHERE id = :id",
                 {"id": a1, "chk": "a" * 63},
             ),
             (
-                "chk_source_artifact_checksum_lower",
+                ("chk_source_artifact_checksum_lower",),
                 "UPDATE import_source_artifacts SET checksum_sha256 = :chk WHERE id = :id",
                 {"id": a1, "chk": "A" * 64},
             ),
             (
-                "chk_source_artifact_checksum_hex",
+                ("chk_source_artifact_checksum_hex",),
                 "UPDATE import_source_artifacts SET checksum_sha256 = :chk WHERE id = :id",
                 {"id": a1, "chk": "g" * 64},
             ),
             (
-                "chk_source_artifact_state",
+                ("chk_source_artifact_state",),
                 "UPDATE import_source_artifacts SET state = 'bogus' WHERE id = :id",
                 {"id": a1},
             ),
             (
-                "chk_source_artifact_format",
+                ("chk_source_artifact_format",),
                 "UPDATE import_source_artifacts SET detected_format = 'csv' WHERE id = :id",
                 {"id": a1},
             ),
             (
-                "chk_source_artifact_generation_positive",
+                ("chk_source_artifact_generation_positive",),
                 "UPDATE import_source_artifacts SET generation = 0 WHERE id = :id",
                 {"id": a1},
             ),
             (
-                "chk_source_artifact_size_nonneg",
+                ("chk_source_artifact_size_nonneg",),
                 "UPDATE import_source_artifacts SET file_size_bytes = -1 WHERE id = :id",
                 {"id": a1},
             ),
         ]
-        for expected, sql, params in cases:
+        for expected_names, sql, params in cases:
             with engine.begin() as conn:
                 with pytest.raises(IntegrityError) as ei:
                     conn.execute(text(sql), params)
                 cname = _constraint_name(ei.value)
-                assert expected in cname, f"expected {expected} in {cname}"
+                assert any(n in cname for n in expected_names), (
+                    f"expected one of {expected_names} in {cname}"
+                )
 
         # tenant composite FK mismatch
         with engine.begin() as conn:
