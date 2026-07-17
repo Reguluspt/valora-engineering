@@ -1144,9 +1144,10 @@ def test_e06_pg_constraint_identity_matrix():
 
         cases = [
             (
+                # 63 hex chars — length fails (still valid hex charset)
                 "chk_source_artifact_checksum_len",
-                "UPDATE import_source_artifacts SET checksum_sha256 = 'abc' WHERE id = :id",
-                {"id": a1},
+                "UPDATE import_source_artifacts SET checksum_sha256 = :chk WHERE id = :id",
+                {"id": a1, "chk": "a" * 63},
             ),
             (
                 "chk_source_artifact_checksum_lower",
