@@ -332,7 +332,6 @@ def test_true_checksum_mismatch_after_full_stream(db_session: Session, fake_stor
 
 def test_reconciler_empty_run_closes_transaction(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
-    assert db_session.in_transaction() is False or True  # may vary
     if db_session.in_transaction():
         db_session.rollback()
     assert db_session.in_transaction() is False
@@ -358,7 +357,7 @@ def test_reconciler_skip_paths_close_transaction(db_session: Session, fake_stora
         file_size_bytes=1,
         checksum_sha256="b" * 64,
         storage_object_key=key,
-        state="available",  # not selected by reconciler query
+        state="available",
         created_by_user_id=user.id,
     )
     db_session.add(art)

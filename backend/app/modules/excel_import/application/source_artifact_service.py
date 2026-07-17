@@ -391,25 +391,30 @@ def upload_source_artifact(
                     content_type=artifact.content_type,
                     expected_size=size,
                 )
-            with storage.open_stream(object_key) as rs:
-                rh = hashlib.sha256()
-                while True:
-                    chunk = rs.read(limits.read_chunk_size)
-                    if not chunk:
-                        break
-                    rh.update(chunk)
-                got = _normalize_checksum(rh.hexdigest())
-                if got != checksum:
-                    failure_code = "checksum_mismatch"
-                    raise RuntimeError("checksum_mismatch")
+            # Same size-aware verifier as reconciler — never treat short-read as corruption
+            try:
+                got = _sha256_object(
+                    storage,
+                    object_key,
+                    chunk_size=limits.read_chunk_size,
+                    expected_size=size,
+                )
+            except ObjectStorageError:
+                raise
+            except ObjectNotFound:
+                raise
+            if got != checksum:
+                failure_code = "checksum_mismatch"
+                raise RuntimeError("checksum_mismatch")
             etag = st.etag
         except Exception as exc:
             if isinstance(exc, ObjectStorageError):
+                # short_read / object_too_large / timeout / put_failed — infrastructure only
                 failure_code = exc.code[:64]
-            elif "checksum" in str(exc).lower():
-                failure_code = "checksum_mismatch"
             elif isinstance(exc, ObjectNotFound):
                 failure_code = "object_missing"
+            elif "checksum" in str(exc).lower() or failure_code == "checksum_mismatch":
+                failure_code = "checksum_mismatch"
             else:
                 failure_code = type(exc).__name__[:64]
             # Residual object may remain on checksum mismatch after put — leave for reconciler
@@ -581,6 +586,15 @@ def get_source_artifact(
     return art
 
 
+def _session_has_pending_work(db: Session) -> bool:
+    """True when the session holds unflushed unit-of-work state.
+
+    Uses ``no_autoflush`` so the check itself cannot flush caller work.
+    """
+    with db.no_autoflush:
+        return bool(db.new or db.dirty or db.deleted)
+
+
 def reconcile_source_artifacts(
     db: Session,
     *,
@@ -593,14 +607,32 @@ def reconcile_source_artifacts(
     """
     Bounded reconciler for pending/failed/orphaned artifacts.
 
-    Per-item commit: one item failure cannot roll back earlier durable outcomes.
-    Counters update only after successful item commit.
-    Always leaves the session without an open transaction.
+    Transaction ownership
+    ---------------------
+    **Strict clean-session precondition.** The caller must pass a Session with
+    no pending unit-of-work (``db.new``, ``db.dirty``, ``db.deleted`` empty).
+    If pending work exists, this function rejects **before** any query, autoflush,
+    commit or rollback — so caller-owned inserts/updates are never discarded.
+
+    Once accepted, the reconciler **owns** ``db`` for the duration of the call:
+    per-item commits and rollbacks apply only to reconciler work started after
+    the precondition check. Counters update only after durable item commit.
     """
     if org_id is None:
         raise HTTPException(status_code=400, detail="Phạm vi tổ chức là bắt buộc cho đối soát.")
     if actor_id is None:
         raise HTTPException(status_code=400, detail="Tác nhân hệ thống là bắt buộc cho đối soát.")
+
+    # Fail closed before any query/autoflush that could join/rollback caller work
+    pending = _session_has_pending_work(db)
+    if pending:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Đối soát nguồn yêu cầu phiên cơ sở dữ liệu sạch "
+                "(không có thay đổi chưa commit của tác nhân gọi)."
+            ),
+        )
 
     limits = DEFAULT_SOURCE_LIMITS
     storage = storage or get_object_storage()
@@ -637,6 +669,7 @@ def reconcile_source_artifacts(
         )
         artifact_ids = [r[0] for r in id_rows]
     finally:
+        # Snapshot was read-only on a clean session — safe to close the txn
         if db.in_transaction():
             try:
                 db.rollback()
@@ -657,6 +690,8 @@ def reconcile_source_artifacts(
                 .first()
             )
             if not art:
+                if db.in_transaction():
+                    db.rollback()
                 continue
             batch = (
                 db.query(ProjectAssetImportBatch)
@@ -668,10 +703,16 @@ def reconcile_source_artifacts(
                 .first()
             )
             if not batch:
+                if db.in_transaction():
+                    db.rollback()
                 continue
             if batch.current_source_artifact_id == art.id:
+                if db.in_transaction():
+                    db.rollback()
                 continue
             if ref_check(db, art):
+                if db.in_transaction():
+                    db.rollback()
                 continue
 
             created_ts = _as_utc_timestamp(art.created_at, fallback=now_ts)
@@ -685,6 +726,8 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
+                    if db.in_transaction():
+                        db.rollback()
                     continue
                 if st is None:
                     if past_retention and not ref_check(db, art):
@@ -721,8 +764,9 @@ def reconcile_source_artifacts(
                     except ObjectNotFound:
                         failure_code = "pending_object_missing"
                     except ObjectStorageError:
-                        # short_read / timeout / oversize — infrastructure only
                         errors += 1
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     if failure_code and not ref_check(db, art):
                         _assert_transition(art.state, SourceArtifactState.FAILED)
@@ -774,6 +818,8 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
+                    if db.in_transaction():
+                        db.rollback()
                     continue
                 if st is not None and past_retention and not ref_check(db, art):
                     _assert_transition(art.state, SourceArtifactState.ORPHANED)
@@ -799,23 +845,35 @@ def reconcile_source_artifacts(
                 orphan_ts = _as_utc_timestamp(art.orphaned_at, fallback=created_ts)
                 if orphan_ts < cutoff:
                     if batch.current_source_artifact_id == art.id:
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     if ref_check(db, art):
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     key = art.storage_object_key
                     try:
                         storage.delete(key)
                     except ObjectStorageError:
                         errors += 1
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     try:
                         if storage.head(key) is not None:
                             errors += 1
+                            if db.in_transaction():
+                                db.rollback()
                             continue
                     except ObjectStorageError:
                         errors += 1
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     if ref_check(db, art):
+                        if db.in_transaction():
+                            db.rollback()
                         continue
                     _audit(
                         db,

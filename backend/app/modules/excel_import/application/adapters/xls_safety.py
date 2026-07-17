@@ -18,6 +18,10 @@ BIFF_DCONREF = 0x0051
 BIFF_MERGEDCELLS = 0x00E5
 BIFF_BOUNDSHEET = 0x0085
 BIFF_NAME = 0x0018
+BIFF_BOF = 0x0809
+BIFF_EOF = 0x000A
+BIFF_FORMULA = 0x0006
+BIFF_FORMULA_OLD = 0x0206  # older BIFF
 
 # Max bytes scanned from Workbook stream for threat records
 _MAX_WORKBOOK_SCAN = 8 * 1024 * 1024
@@ -236,3 +240,71 @@ def assert_xls_safety(path: str) -> bytes:
     stream = _read_workbook_stream(path)
     scan_biff_threats(stream)
     return stream
+
+
+def extract_biff_formula_numeric_caches(
+    workbook_stream: bytes,
+) -> dict[tuple[int, int, int], float]:
+    """
+    Bounded read of BIFF FORMULA records for **cached numeric results only**.
+
+    xlrd 2.x does not expose formula cached values (returns empty text). This
+    parser does not evaluate formulas — it only decodes the IEEE double already
+    stored in the FORMULA record result field (MS-XLS).
+
+    Keys: (sheet_index_0based, row_0based, col_0based) → float cached value.
+    Non-numeric formula results (string/bool/error/blank special encodings)
+    are skipped.
+    """
+    data = workbook_stream
+    n = len(data)
+    pos = 0
+    records_seen = 0
+    max_records = 500_000
+    sheet_idx = -1
+    in_sheet = False
+    out: dict[tuple[int, int, int], float] = {}
+
+    while pos + 4 <= n:
+        if records_seen >= max_records:
+            break
+        rec_type, rec_len = struct.unpack_from("<HH", data, pos)
+        pos += 4
+        if rec_len < 0 or pos + rec_len > n:
+            break
+        payload = data[pos : pos + rec_len]
+        pos += rec_len
+        records_seen += 1
+
+        if rec_type == BIFF_BOF and len(payload) >= 4:
+            # dt at offset 2: 0x0010 worksheet, 0x0005 workbook, etc.
+            (dt,) = struct.unpack_from("<H", payload, 2)
+            if dt == 0x0010:  # worksheet
+                sheet_idx += 1
+                in_sheet = True
+            else:
+                in_sheet = False
+            continue
+
+        if rec_type == BIFF_EOF:
+            in_sheet = False
+            continue
+
+        if not in_sheet or sheet_idx < 0:
+            continue
+
+        if rec_type not in (BIFF_FORMULA, BIFF_FORMULA_OLD):
+            continue
+        # Need at least row/col/xf/result (2+2+2+8 = 14)
+        if len(payload) < 14:
+            continue
+        row, col, _xf = struct.unpack_from("<HHH", payload, 0)
+        # Special result: bytes 6-7 of the 8-byte result are 0xFFFF
+        (tag,) = struct.unpack_from("<H", payload, 6 + 6)
+        if tag == 0xFFFF:
+            # string / bool / error / blank — not a numeric cache for this proof
+            continue
+        (cached,) = struct.unpack_from("<d", payload, 6)
+        out[(sheet_idx, row, col)] = float(cached)
+
+    return out

@@ -1,17 +1,17 @@
 # S13-PR-002 Fourth Corrective Report
 
-**Task ID:** S13-PR-002 fourth corrective  
-**PR:** [#15](https://github.com/Reguluspt/valora-engineering/pull/15) — **DRAFT — NOT READY / NOT MERGED**  
-**Branch:** `s13-pr-002-legacy-workbook-source-artifact`  
-**Starting SHA:** `4d56228216440a5c592812a7b210a92baa0b49dd`  
-**Base main snapshot:** `949903f3912aa65f8b990852756aeef7981bca08`  
+**Task ID:** S13-PR-002 fourth corrective
+**PR:** [#15](https://github.com/Reguluspt/valora-engineering/pull/15) — **DRAFT — NOT READY / NOT MERGED**
+**Branch:** `s13-pr-002-legacy-workbook-source-artifact`
+**Starting SHA:** `4d56228216440a5c592812a7b210a92baa0b49dd`
+**Base main snapshot:** `949903f3912aa65f8b990852756aeef7981bca08`
 **Re-audit closed:** `2026-07-17__S13-PR-002__THIRD-CORRECTIVE-INDEPENDENT-RE-AUDIT__4D56228__REPORT.md` (FAIL F-01…F-09)
 
 ## 1. Design / ADR sources
 
-- Design Book v1.4 §5.1–§5.3  
-- ADR 0030  
-- S13–S16 remediation plan §S13-PR-002  
+- Design Book v1.4 §5.1–§5.3
+- ADR 0030
+- S13–S16 remediation plan §S13-PR-002
 - `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`
 
 ## 2. Commits / files changed (this corrective)
@@ -82,10 +82,10 @@ Allowed only: `.xls`/`.xlsx` adapters, immutable source-artifact lifecycle/stora
 
 ## 7. Known limitations
 
-1. D-07 full deterministic failpoint matrix incomplete (reservation/final-commit/stale-gen).  
-2. D-05 `.xls` exact numeric formula cache not proven under xlrd 2.x; non-execution proven.  
-3. D-06 not every bound for every format at HTTP layer.  
-4. D-08 constraint identity matrix still primarily third-corrective PG test + migration round-trip.  
+1. D-07 full deterministic failpoint matrix incomplete (reservation/final-commit/stale-gen).
+2. D-05 `.xls` exact numeric formula cache not proven under xlrd 2.x; non-execution proven.
+3. D-06 not every bound for every format at HTTP layer.
+4. D-08 constraint identity matrix still primarily third-corrective PG test + migration round-trip.
 5. Independent re-audit still required before Ready/merge.
 
 ## 8. Final status

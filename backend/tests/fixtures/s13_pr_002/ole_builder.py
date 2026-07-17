@@ -166,3 +166,39 @@ def write_threat_xls(path: str | Path, threat: str) -> Path:
     stream = make_threat_workbook_stream(threat=threat)
     write_ole_single_stream(path, "Workbook", stream)
     return path
+
+
+def write_xls_formula_cached(path: str | Path, *, cached: float = 6.0) -> None:
+    """
+    Write a safe non-macro .xls with a FORMULA cell whose BIFF cached IEEE value is known.
+
+    Sheet S: A1=2 (NUMBER), B1=FORMULA with cached result ``cached`` (default 6.0).
+    Does not require Excel or formula evaluation — patches the FORMULA result field.
+    """
+    import struct
+
+    import olefile
+    import xlwt
+
+    path = Path(path)
+    book = xlwt.Workbook()
+    sh = book.add_sheet("S")
+    sh.write(0, 0, 2)
+    sh.write(0, 1, xlwt.Formula("A1*3"))
+    book.save(str(path))
+    with olefile.OleFileIO(str(path)) as ole:
+        stream = bytearray(ole.openstream("Workbook").read())
+    i = 0
+    n = len(stream)
+    patched = 0
+    while i + 4 <= n:
+        op, ln = struct.unpack_from("<HH", stream, i)
+        if op == 0x0006 and ln >= 14:
+            struct.pack_into("<d", stream, i + 4 + 6, float(cached))
+            patched += 1
+        i += 4 + ln
+        if i > n:
+            break
+    if patched < 1:
+        raise RuntimeError("no FORMULA record to patch")
+    write_ole_single_stream(path, "Workbook", bytes(stream))

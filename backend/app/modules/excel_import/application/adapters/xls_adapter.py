@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from openpyxl.utils import get_column_letter
 
-from app.modules.excel_import.application.adapters.xls_safety import assert_xls_safety
+from app.modules.excel_import.application.adapters.xls_safety import (
+    assert_xls_safety,
+    extract_biff_formula_numeric_caches,
+)
 from app.modules.excel_import.domain.source_artifact import (
     DEFAULT_SOURCE_LIMITS,
     SourceArtifactLimits,
@@ -33,6 +36,9 @@ class XlsWorkbookAdapter:
     def __init__(self, limits: SourceArtifactLimits | None = None):
         self._limits = limits or DEFAULT_SOURCE_LIMITS
         self._book = None
+        # (sheet_idx, row0, col0) → IEEE cached formula result (no evaluation)
+        self._formula_cache: dict[tuple[int, int, int], float] = {}
+        self._sheet_index: int = 0
 
     def close(self) -> None:
         if self._book is not None:
@@ -41,6 +47,8 @@ class XlsWorkbookAdapter:
             except Exception:
                 pass
             self._book = None
+        self._formula_cache = {}
+        self._sheet_index = 0
 
     def _assert_signature(self, path: str) -> None:
         with open(path, "rb") as f:
@@ -132,6 +140,14 @@ class XlsWorkbookAdapter:
         else:
             ctype = "other"
 
+        # xlrd 2.x drops BIFF formula cache (often empty text). Overlay numeric
+        # cache from the FORMULA record without evaluating the formula.
+        if ctype in {"empty", "string"} and (val is None or val == ""):
+            key = (self._sheet_index, r_1based - 1, c_1based - 1)
+            if key in self._formula_cache:
+                val = self._formula_cache[key]
+                ctype = "number"
+
         if isinstance(val, str) and len(val) > self._limits.max_cell_chars:
             fail_adapter(
                 400,
@@ -194,7 +210,8 @@ class XlsWorkbookAdapter:
 
     def inspect(self, path: str) -> AdapterInspectionResult:
         self._assert_signature(path)
-        assert_xls_safety(path)
+        stream = assert_xls_safety(path)
+        self._formula_cache = extract_biff_formula_numeric_caches(stream)
         book = None
         try:
             # Merges require formatting_info — fail closed if unavailable
@@ -262,15 +279,18 @@ class XlsWorkbookAdapter:
 
     def iter_rows(self, path: str, sheet_name: str | None = None):
         self._assert_signature(path)
-        assert_xls_safety(path)
+        stream = assert_xls_safety(path)
+        self._formula_cache = extract_biff_formula_numeric_caches(stream)
         # Value iteration does not need formatting_info
         book = self._xlrd_open(path, formatting_info=False)
         self._book = book
         try:
             if sheet_name and sheet_name in book.sheet_names():
                 sh = book.sheet_by_name(sheet_name)
+                self._sheet_index = book.sheet_names().index(sheet_name)
             else:
                 sh = book.sheet_by_index(0)
+                self._sheet_index = 0
             width = sh.ncols
             if width > self._limits.max_columns:
                 fail_adapter(
