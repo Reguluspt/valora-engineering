@@ -17,19 +17,30 @@ BIFF_DCONNAME = 0x0052
 BIFF_DCONREF = 0x0051
 BIFF_MERGEDCELLS = 0x00E5
 BIFF_BOUNDSHEET = 0x0085
+BIFF_NAME = 0x0018
 
 # Max bytes scanned from Workbook stream for threat records
 _MAX_WORKBOOK_SCAN = 8 * 1024 * 1024
+
+# Internal self-reference SUPBOOK: ctab + cch==0x0401 (MS-XLS)
+_SUPBOOK_INTERNAL_TAIL = b"\x01\x04"
+# Add-in functions SUPBOOK (external reference machinery)
+_SUPBOOK_ADDIN = b"\x01\x00\x01\x3a"
+
+# BOUNDSHEET dt (sheet type): 0x00 worksheet only accepted
+_BOUNDSHEET_DT_WORKSHEET = 0x00
+_BOUNDSHEET_DT_MACROSHEET = 0x01
+_BOUNDSHEET_DT_CHART = 0x02
+_BOUNDSHEET_DT_VBAMODULE = 0x06
+
+# NAME option flags
+_NAME_F_MACRO = 0x0008
+_NAME_F_BINARY = 0x0010
 
 # OLE stream / storage name patterns indicating VBA/macro presence
 _VBA_NAME_RE = re.compile(
     r"(vba|_vba_project|_vba_project_cur|macrosheets?|xlm)",
     re.IGNORECASE,
-)
-
-# DDE / OLE link indicators in SUPBOOK payload (case-insensitive substrings)
-_EXTERNAL_MARKERS = (
-    b"\x01",  # SUPBOOK URL encoding often starts with 0x01
 )
 
 
@@ -49,9 +60,7 @@ def list_ole_stream_names(path: str) -> list[str]:
         with olefile.OleFileIO(path) as ole:
             names: list[str] = []
             for entry in ole.listdir():
-                # entry is a list of path segments
-                joined = "/".join(entry)
-                names.append(joined)
+                names.append("/".join(entry))
             return names
     except Exception as exc:
         from app.modules.excel_import.domain.workbook_adapter import AdapterError
@@ -77,20 +86,13 @@ def _read_workbook_stream(path: str, max_bytes: int = _MAX_WORKBOOK_SCAN) -> byt
 
     try:
         with olefile.OleFileIO(path) as ole:
-            # Classic BIFF workbook stream names
-            candidates = [
-                ["Workbook"],
-                ["Book"],
-                ["WORKBOOK"],
-                ["BOOK"],
-            ]
+            candidates = [["Workbook"], ["Book"], ["WORKBOOK"], ["BOOK"]]
             stream_path = None
             for c in candidates:
                 if ole.exists(c):
                     stream_path = c
                     break
             if stream_path is None:
-                # Some files use case variants via listdir
                 for entry in ole.listdir():
                     if len(entry) == 1 and entry[0].lower() in {"workbook", "book"}:
                         stream_path = entry
@@ -114,14 +116,73 @@ def _read_workbook_stream(path: str, max_bytes: int = _MAX_WORKBOOK_SCAN) -> byt
         fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
 
 
+def _reject_supbook(payload: bytes) -> None:
+    """
+    Allow only a structurally valid internal self-reference SUPBOOK:
+      length == 4 and payload[2:4] == 01 04
+    Reject add-in, DDE/OLE, external workbook, and malformed forms.
+    """
+    if len(payload) < 4:
+        fail_adapter(
+            400,
+            "external_link_not_allowed",
+            "Tệp Excel chứa liên kết ngoài không được phép.",
+        )
+    if len(payload) == 4 and payload[2:4] == _SUPBOOK_INTERNAL_TAIL:
+        return
+    # Explicit add-in form (also length 4 but not internal)
+    if payload[:4].lower() == _SUPBOOK_ADDIN or payload[:4] == b"\x01\x00\x01\x3A":
+        fail_adapter(
+            400,
+            "external_link_not_allowed",
+            "Tệp Excel chứa liên kết ngoài không được phép.",
+        )
+    fail_adapter(
+        400,
+        "external_link_not_allowed",
+        "Tệp Excel chứa liên kết ngoài không được phép.",
+    )
+
+
+def _reject_boundsheet(payload: bytes) -> None:
+    """Reject macro/XLM/VBA module sheets; charts allowed; worksheets allowed."""
+    # lbPlyPos(4) + hsState(1) + dt(1) + name...
+    if len(payload) < 6:
+        fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
+    dt = payload[5]
+    if dt in (_BOUNDSHEET_DT_MACROSHEET, _BOUNDSHEET_DT_VBAMODULE):
+        fail_adapter(
+            400,
+            "macro_not_allowed",
+            "Tệp Excel chứa macro hoặc mã VBA không được phép.",
+        )
+    # Unknown non-worksheet/non-chart types fail closed
+    if dt not in (_BOUNDSHEET_DT_WORKSHEET, _BOUNDSHEET_DT_CHART):
+        fail_adapter(
+            400,
+            "macro_not_allowed",
+            "Tệp Excel chứa macro hoặc mã VBA không được phép.",
+        )
+
+
+def _reject_name(payload: bytes) -> None:
+    """Reject macro/binary NAME records."""
+    if len(payload) < 2:
+        fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
+    (flags,) = struct.unpack_from("<H", payload, 0)
+    if flags & (_NAME_F_MACRO | _NAME_F_BINARY):
+        fail_adapter(
+            400,
+            "macro_not_allowed",
+            "Tệp Excel chứa macro hoặc mã VBA không được phép.",
+        )
+
+
 def scan_biff_threats(workbook_stream: bytes) -> None:
     """
-    Bounded sequential BIFF record scan for encryption and external links.
+    Bounded sequential BIFF record scan.
 
-    Rejects:
-    - FILEPASS (encrypted)
-    - SUPBOOK with external URL/DDE markers
-    - EXTERNNAME / DCON* when clearly external linking machinery is present with SUPBOOK
+    Rejects FILEPASS, unsafe SUPBOOK, EXTERNNAME, DCON*, macro BOUNDSHEET/NAME.
     """
     data = workbook_stream
     n = len(data)
@@ -141,6 +202,7 @@ def scan_biff_threats(workbook_stream: bytes) -> None:
         pos += 4
         if rec_len < 0 or pos + rec_len > n:
             fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
+        payload = data[pos : pos + rec_len]
         pos += rec_len
         records_seen += 1
 
@@ -148,70 +210,26 @@ def scan_biff_threats(workbook_stream: bytes) -> None:
             fail_adapter(400, "encrypted_workbook", "Tệp mã hóa không được hỗ trợ.")
 
         if rec_type == BIFF_SUPBOOK:
-            # Internal self-reference SUPBOOK is exactly 4 bytes (ctab + cch=0x0401).
-            # Any larger SUPBOOK carries an external workbook/DDE reference — fail closed.
-            if rec_len > 4:
-                fail_adapter(
-                    400,
-                    "external_link_not_allowed",
-                    "Tệp Excel chứa liên kết ngoài không được phép.",
-                )
+            _reject_supbook(payload)
 
-        if rec_type in (BIFF_EXTERNNAME, BIFF_DCONNAME):
-            # Named external/DDE references — presence is not allowed.
-            if rec_len > 0:
-                fail_adapter(
-                    400,
-                    "external_link_not_allowed",
-                    "Tệp Excel chứa liên kết ngoài không được phép.",
-                )
+        if rec_type in (BIFF_EXTERNNAME, BIFF_DCON, BIFF_DCONNAME, BIFF_DCONREF):
+            fail_adapter(
+                400,
+                "external_link_not_allowed",
+                "Tệp Excel chứa liên kết ngoài không được phép.",
+            )
 
+        if rec_type == BIFF_BOUNDSHEET:
+            _reject_boundsheet(payload)
 
-def parse_merged_cells_from_biff(workbook_stream: bytes, max_merged: int) -> list[tuple[int, int, int, int]]:
-    """
-    Parse MERGEDCELLS records from BIFF stream.
-
-    Returns list of (rlo, rhi, clo, chi) 0-based half-open style as in MS-XLS
-    (rhi/chi exclusive). Converted by caller to inclusive 1-based MergedRegion.
-    """
-    data = workbook_stream
-    n = len(data)
-    pos = 0
-    regions: list[tuple[int, int, int, int]] = []
-    while pos + 4 <= n:
-        rec_type, rec_len = struct.unpack_from("<HH", data, pos)
-        pos += 4
-        if rec_len < 0 or pos + rec_len > n:
-            break
-        payload = data[pos : pos + rec_len]
-        pos += rec_len
-        if rec_type != BIFF_MERGEDCELLS or rec_len < 2:
-            continue
-        (count,) = struct.unpack_from("<H", payload, 0)
-        need = 2 + count * 8
-        if need > rec_len:
-            fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
-        off = 2
-        for _ in range(count):
-            rlo, rhi, clo, chi = struct.unpack_from("<HHHH", payload, off)
-            off += 8
-            if rlo > rhi or clo > chi or rhi > 65535 or chi > 255:
-                fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
-            regions.append((rlo, rhi, clo, chi))
-            if len(regions) > max_merged:
-                fail_adapter(
-                    413,
-                    "merged_region_limit",
-                    "Số vùng gộp ô vượt quá giới hạn cho phép.",
-                    "merged",
-                )
-    return regions
+        if rec_type == BIFF_NAME:
+            _reject_name(payload)
 
 
 def assert_xls_safety(path: str) -> bytes:
     """
     Full pre-open safety: OLE inventory + BIFF threat scan.
-    Returns workbook stream bytes for optional merge parse reuse.
+    Returns workbook stream bytes (for diagnostics/tests only).
     """
     names = list_ole_stream_names(path)
     reject_ole_vba_presence(names)

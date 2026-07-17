@@ -79,13 +79,14 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("import_batch_id", "generation", name="uq_source_artifact_batch_generation"),
         UniqueConstraint("storage_object_key", name="uq_source_artifact_object_key"),
+        # Enables composite FK: batch (id, current_source_artifact_id) → (import_batch_id, id)
+        UniqueConstraint("import_batch_id", "id", name="uq_source_artifact_batch_id"),
         CheckConstraint("generation > 0", name="chk_source_artifact_generation_positive"),
         CheckConstraint("file_size_bytes >= 0", name="chk_source_artifact_size_nonneg"),
         CheckConstraint(
             "length(checksum_sha256) = 64",
             name="chk_source_artifact_checksum_len",
         ),
-        # Portable hex check: lowercase hex only (app also normalizes)
         CheckConstraint(
             "checksum_sha256 = lower(checksum_sha256)",
             name="chk_source_artifact_checksum_lower",
@@ -98,7 +99,6 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
             "detected_format IN ('xls', 'xlsx')",
             name="chk_source_artifact_format",
         ),
-        # Tenant consistency: batch must belong to same org+project
         ForeignKeyConstraint(
             ["organization_id", "project_id", "import_batch_id"],
             [

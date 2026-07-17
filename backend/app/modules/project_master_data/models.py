@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid
+from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -3606,18 +3606,8 @@ class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False
     )
-    # S13-PR-002: pointer to current successful Adaptive Intake source generation.
-    # use_alter avoids circular create_all with import_source_artifacts.
-    current_source_artifact_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid,
-        ForeignKey(
-            "import_source_artifacts.id",
-            ondelete="RESTRICT",
-            use_alter=True,
-            name="fk_import_batch_current_source_artifact",
-        ),
-        nullable=True,
-    )
+    # S13-PR-002: current successful source generation (same-batch enforced via composite FK).
+    current_source_artifact_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
 
     project: Mapped["Project"] = relationship("Project")
     creator: Mapped["User"] = relationship("User")
@@ -3625,12 +3615,19 @@ class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         Index("idx_import_batch_org", "organization_id"),
         Index("idx_import_batch_project", "project_id"),
-        # Tenant composite identity for ImportSourceArtifact FK (S13-PR-002).
         UniqueConstraint(
             "organization_id",
             "project_id",
             "id",
             name="uq_import_batch_tenant_id",
+        ),
+        # Same-batch pointer: batch.id must equal artifact.import_batch_id
+        ForeignKeyConstraint(
+            ["id", "current_source_artifact_id"],
+            ["import_source_artifacts.import_batch_id", "import_source_artifacts.id"],
+            name="fk_batch_current_artifact_same_batch",
+            ondelete="RESTRICT",
+            use_alter=True,
         ),
     )
 

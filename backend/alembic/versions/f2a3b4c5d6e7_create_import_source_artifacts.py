@@ -18,7 +18,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Composite unique so source artifacts can FK (org, project, batch) for tenant integrity.
     op.create_unique_constraint(
         "uq_import_batch_tenant_id",
         "project_asset_import_batches",
@@ -99,6 +98,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("import_batch_id", "generation", name="uq_source_artifact_batch_generation"),
         sa.UniqueConstraint("storage_object_key", name="uq_source_artifact_object_key"),
+        sa.UniqueConstraint("import_batch_id", "id", name="uq_source_artifact_batch_id"),
     )
     op.create_index("idx_source_artifact_org", "import_source_artifacts", ["organization_id"])
     op.create_index("idx_source_artifact_project", "import_source_artifacts", ["project_id"])
@@ -109,19 +109,20 @@ def upgrade() -> None:
         "project_asset_import_batches",
         sa.Column("current_source_artifact_id", sa.UUID(), nullable=True),
     )
+    # Same-batch invariant: (batch.id, current_source_artifact_id) → (artifact.import_batch_id, artifact.id)
     op.create_foreign_key(
-        "fk_import_batch_current_source_artifact",
+        "fk_batch_current_artifact_same_batch",
         "project_asset_import_batches",
         "import_source_artifacts",
-        ["current_source_artifact_id"],
-        ["id"],
+        ["id", "current_source_artifact_id"],
+        ["import_batch_id", "id"],
         ondelete="RESTRICT",
     )
 
 
 def downgrade() -> None:
     op.drop_constraint(
-        "fk_import_batch_current_source_artifact",
+        "fk_batch_current_artifact_same_batch",
         "project_asset_import_batches",
         type_="foreignkey",
     )

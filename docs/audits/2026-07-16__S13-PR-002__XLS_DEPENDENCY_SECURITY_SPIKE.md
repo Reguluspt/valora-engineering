@@ -48,8 +48,10 @@ Explicit non-goal.
 2. **`olefile.listdir()`** — reject stream/storage names matching VBA/macro patterns (`_VBA_PROJECT_CUR`, `vba`, `macrosheet`, …)
 3. **Bounded BIFF scan** of Workbook/Book stream:
    - `FILEPASS (0x002F)` → `encrypted_workbook`
-   - `SUPBOOK (0x01AE)` with length **> 4** → `external_link_not_allowed` (internal self-ref is 4 bytes)
-   - `EXTERNNAME` / `DCONNAME` non-empty → `external_link_not_allowed`
+   - `SUPBOOK (0x01AE)`: **only** allow `len==4` and `payload[2:4]==01 04` (internal self-ref); reject add-in `01 00 01 3A`, DDE/external, truncated
+   - `EXTERNNAME`, `DCON`, `DCONNAME`, `DCONREF` → `external_link_not_allowed`
+   - `BOUNDSHEET` macro/VBA module types → `macro_not_allowed`
+   - `NAME` with macro/binary flags → `macro_not_allowed`
 4. **xlrd open** after presence gates; map password errors → `encrypted_workbook`
 5. **Merged cells:** `formatting_info=True` when supported; else parse `MERGEDCELLS (0x00E5)` from BIFF
 6. **Positional cells:** `ragged_rows=False`; emit full sheet width including trailing blanks

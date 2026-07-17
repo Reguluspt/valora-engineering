@@ -137,19 +137,30 @@ class FakeObjectStorage:
 
 
 def _is_not_found_error(exc: BaseException) -> bool:
+    """Exact object missing only — never bucket/infra failures."""
     try:
         from botocore.exceptions import ClientError
 
         if isinstance(exc, ClientError):
             code = (exc.response or {}).get("Error", {}).get("Code", "")
-            return code in {"404", "NoSuchKey", "NotFound", "NoSuchBucket"}
+            # NoSuchBucket is infrastructure — must NOT be treated as object absence
+            if code in {"NoSuchBucket", "AccessDenied", "403", "401"}:
+                return False
+            return code in {"404", "NoSuchKey", "NotFound"}
     except Exception:
         pass
     name = type(exc).__name__
     msg = str(exc).lower()
-    if "nosuchkey" in msg or "not found" in msg or "404" in msg:
+    if "nosuchbucket" in msg or "accessdenied" in msg:
+        return False
+    if "nosuchkey" in msg:
         return True
-    return name in {"NoSuchKey", "NotFound"}
+    if name in {"NoSuchKey"}:
+        return True
+    # Avoid bare "not found" matching bucket errors
+    if "the specified key does not exist" in msg:
+        return True
+    return False
 
 
 class S3ObjectStorage:

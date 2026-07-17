@@ -111,7 +111,10 @@ def is_source_artifact_referenced(
 ) -> bool:
     """
     Extension point: future audit/review references may block object delete.
-    Current: current pointer on any batch or available successful history.
+
+    Protected when:
+    - successful available history (content identity must not be deleted)
+    - current pointer on any batch
     """
     if artifact.state == SourceArtifactState.AVAILABLE.value:
         return True
@@ -121,6 +124,18 @@ def is_source_artifact_referenced(
         .first()
     )
     return pointed is not None
+
+
+def _sha256_object(storage: ObjectStoragePort, key: str, *, chunk_size: int, expected_hex: str) -> str:
+    """Stream object and return lowercase hex digest; raises ObjectStorageError/ObjectNotFound."""
+    h = hashlib.sha256()
+    with storage.open_stream(key) as rs:
+        while True:
+            chunk = rs.read(chunk_size)
+            if not chunk:
+                break
+            h.update(chunk)
+    return _normalize_checksum(h.hexdigest())
 
 
 def _spool_and_hash(
@@ -584,12 +599,9 @@ def reconcile_source_artifacts(
                 continue
             if batch.current_source_artifact_id == art.id:
                 continue
-            if art.state == SourceArtifactState.AVAILABLE.value:
+            # Explicit protection: referenced pending/failed/available never force-mutated here
+            if ref_check(db, art):
                 continue
-            if ref_check(db, art) and art.state != SourceArtifactState.ORPHANED.value:
-                # Referenced pending/failed should not be force-deleted
-                if art.state == SourceArtifactState.AVAILABLE.value:
-                    continue
 
             created_ts = art.created_at.timestamp() if art.created_at else now_ts
             past_retention = created_ts < cutoff
@@ -599,6 +611,7 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
+                    db.rollback()
                     continue
                 if st is None:
                     if past_retention:
@@ -608,7 +621,7 @@ def reconcile_source_artifacts(
                             .with_for_update()
                             .first()
                         )
-                        if art2 and art2.state == SourceArtifactState.PENDING.value:
+                        if art2 and art2.state == SourceArtifactState.PENDING.value and not ref_check(db, art2):
                             _assert_transition(art2.state, SourceArtifactState.FAILED)
                             art2.state = SourceArtifactState.FAILED.value
                             art2.failed_at = _utcnow()
@@ -629,19 +642,40 @@ def reconcile_source_artifacts(
                             )
                             marked_failed += 1
                     continue
-                # Object present: size/checksum verify then orphan past retention
+                # Object present: size + SHA-256 verify (same bound as upload)
+                failure_code = None
                 if st.size != art.file_size_bytes:
+                    failure_code = "size_mismatch"
+                else:
+                    try:
+                        digest = _sha256_object(
+                            storage,
+                            art.storage_object_key,
+                            chunk_size=limits.read_chunk_size,
+                            expected_hex=art.checksum_sha256,
+                        )
+                        if digest != art.checksum_sha256:
+                            failure_code = "checksum_mismatch"
+                    except ObjectNotFound:
+                        failure_code = "pending_object_missing"
+                    except ObjectStorageError:
+                        errors += 1
+                        db.rollback()
+                        continue
+                    except Exception:
+                        failure_code = "checksum_mismatch"
+                if failure_code:
                     art2 = (
                         db.query(ImportSourceArtifact)
                         .filter(ImportSourceArtifact.id == art.id)
                         .with_for_update()
                         .first()
                     )
-                    if art2 and art2.state == SourceArtifactState.PENDING.value:
+                    if art2 and art2.state == SourceArtifactState.PENDING.value and not ref_check(db, art2):
                         _assert_transition(art2.state, SourceArtifactState.FAILED)
                         art2.state = SourceArtifactState.FAILED.value
                         art2.failed_at = _utcnow()
-                        art2.failure_code = "size_mismatch"
+                        art2.failure_code = failure_code
                         _audit(
                             db,
                             org_id=org_id,
@@ -669,6 +703,7 @@ def reconcile_source_artifacts(
                         art2
                         and art2.state == SourceArtifactState.PENDING.value
                         and batch.current_source_artifact_id != art2.id
+                        and not ref_check(db, art2)
                     ):
                         _assert_transition(art2.state, SourceArtifactState.ORPHANED)
                         art2.state = SourceArtifactState.ORPHANED.value
@@ -696,6 +731,7 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
+                    db.rollback()
                     continue
                 if st is not None and past_retention:
                     art2 = (
@@ -704,7 +740,11 @@ def reconcile_source_artifacts(
                         .with_for_update()
                         .first()
                     )
-                    if art2 and art2.state == SourceArtifactState.FAILED.value:
+                    if (
+                        art2
+                        and art2.state == SourceArtifactState.FAILED.value
+                        and not ref_check(db, art2)
+                    ):
                         _assert_transition(art2.state, SourceArtifactState.ORPHANED)
                         art2.state = SourceArtifactState.ORPHANED.value
                         art2.orphaned_at = _utcnow()
@@ -747,6 +787,7 @@ def reconcile_source_artifacts(
                     continue
                 if art2.state != SourceArtifactState.ORPHANED.value:
                     continue
+                # Re-check reference under lock immediately before delete
                 if ref_check(db, art2):
                     continue
                 key = art2.storage_object_key
@@ -754,14 +795,16 @@ def reconcile_source_artifacts(
                     storage.delete(key)
                 except ObjectStorageError:
                     errors += 1
+                    db.rollback()
                     continue
-                # Verify absent
                 try:
                     if storage.head(key) is not None:
                         errors += 1
+                        db.rollback()
                         continue
                 except ObjectStorageError:
                     errors += 1
+                    db.rollback()
                     continue
                 _audit(
                     db,
@@ -779,9 +822,17 @@ def reconcile_source_artifacts(
                 deleted += 1
         except HTTPException:
             errors += 1
+            try:
+                db.rollback()
+            except Exception:
+                pass
             continue
         except Exception:
             errors += 1
+            try:
+                db.rollback()
+            except Exception:
+                pass
             continue
 
     db.commit()

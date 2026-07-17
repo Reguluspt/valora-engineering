@@ -3,10 +3,7 @@ from __future__ import annotations
 
 from openpyxl.utils import get_column_letter
 
-from app.modules.excel_import.application.adapters.xls_safety import (
-    assert_xls_safety,
-    parse_merged_cells_from_biff,
-)
+from app.modules.excel_import.application.adapters.xls_safety import assert_xls_safety
 from app.modules.excel_import.domain.source_artifact import (
     DEFAULT_SOURCE_LIMITS,
     SourceArtifactLimits,
@@ -26,16 +23,11 @@ class XlsWorkbookAdapter:
     """
     xlrd-based BIFF reader with fail-closed presence detection.
 
-    Safety before value open:
-    - OLE signature + olefile stream inventory (VBA/macro names)
-    - BIFF FILEPASS / external SUPBOOK / DDE-related records
-    - formatting_info for merged cells when supported; BIFF MERGEDCELLS fallback
-    - full row/cell iteration for limits (not only nrows/ncols)
-    - ragged_rows=False so trailing blanks keep column positions
+    Merged regions require formatting_info=True (no incorrect global BIFF fallback).
     """
 
     name = "xls-xlrd"
-    version = "s13-pr-002-v2"
+    version = "s13-pr-002-v3"
     format = WorkbookFormat.XLS
 
     def __init__(self, limits: SourceArtifactLimits | None = None):
@@ -71,30 +63,38 @@ class XlsWorkbookAdapter:
             if "password" in msg or "encrypt" in msg or "file_pass" in msg:
                 fail_adapter(400, "encrypted_workbook", "Tệp mã hóa không được hỗ trợ.")
             if formatting_info:
-                raise
+                fail_adapter(
+                    400,
+                    "invalid_xls",
+                    "Không thể đọc metadata gộp ô an toàn từ tệp .xls.",
+                )
             fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
         except Exception:
             if formatting_info:
-                raise
+                fail_adapter(
+                    400,
+                    "invalid_xls",
+                    "Không thể đọc metadata gộp ô an toàn từ tệp .xls.",
+                )
             fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
 
-    def _merged_for_sheet(self, sh, workbook_stream: bytes | None) -> tuple[MergedRegion, ...]:
+    def _merged_for_sheet(self, sh) -> tuple[MergedRegion, ...]:
+        """Sheet-local merges from xlrd only (0-based half-open → 1-based inclusive)."""
         limits = self._limits
         regions: list[MergedRegion] = []
         raw = list(getattr(sh, "merged_cells", None) or [])
-        if not raw and workbook_stream is not None:
-            raw = parse_merged_cells_from_biff(workbook_stream, limits.max_merged_regions)
         for item in raw:
             if len(item) != 4:
                 fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
             rlo, rhi, clo, chi = item
+            # xlrd merged_cells: rlo/clo inclusive, rhi/chi exclusive (0-based)
             if rlo < 0 or clo < 0 or rhi <= rlo or chi <= clo:
                 fail_adapter(400, "invalid_xls", "Tệp Excel .xls không hợp lệ hoặc không thể đọc được.")
             regions.append(
                 MergedRegion(
                     min_row=rlo + 1,
                     min_col=clo + 1,
-                    max_row=rhi,
+                    max_row=rhi,  # exclusive end → inclusive 1-based max is rhi
                     max_col=chi,
                 )
             )
@@ -193,20 +193,12 @@ class XlsWorkbookAdapter:
         return sh.nrows, max(max_col_seen, width), cell_count
 
     def inspect(self, path: str) -> AdapterInspectionResult:
-        import xlrd
-
         self._assert_signature(path)
-        stream = assert_xls_safety(path)
+        assert_xls_safety(path)
         book = None
-        stream_for_merge: bytes | None = stream
         try:
-            try:
-                book = self._xlrd_open(path, formatting_info=True)
-                stream_for_merge = None
-            except (xlrd.XLRDError, Exception):
-                book = self._xlrd_open(path, formatting_info=False)
-                stream_for_merge = stream
-
+            # Merges require formatting_info — fail closed if unavailable
+            book = self._xlrd_open(path, formatting_info=True)
             names = tuple(book.sheet_names())
             if len(names) > self._limits.max_sheets:
                 fail_adapter(
@@ -229,7 +221,7 @@ class XlsWorkbookAdapter:
                         "Tổng số ô vượt quá giới hạn cho phép.",
                         "cells",
                     )
-                merged = self._merged_for_sheet(sh, stream_for_merge)
+                merged = self._merged_for_sheet(sh)
                 total_merged += len(merged)
                 if total_merged > self._limits.max_merged_regions:
                     fail_adapter(
@@ -258,6 +250,7 @@ class XlsWorkbookAdapter:
                     "library": "xlrd+olefile",
                     "total_cells_inspected": total_cells,
                     "total_merged_regions": total_merged,
+                    "merged_source": "xlrd_formatting_info",
                 },
             )
         finally:
@@ -270,6 +263,7 @@ class XlsWorkbookAdapter:
     def iter_rows(self, path: str, sheet_name: str | None = None):
         self._assert_signature(path)
         assert_xls_safety(path)
+        # Value iteration does not need formatting_info
         book = self._xlrd_open(path, formatting_info=False)
         self._book = book
         try:

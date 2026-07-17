@@ -1,54 +1,50 @@
-# S13-PR-002 Implementation Report (Corrective)
+# S13-PR-002 Implementation Report (Second Corrective)
 
 **Task ID:** S13-PR-002  
-**PR:** #15  
+**PR:** #15 (Draft)  
 **Branch:** `s13-pr-002-legacy-workbook-source-artifact`  
 **Base:** `949903f3912aa65f8b990852756aeef7981bca08`  
-**Pre-corrective audited head:** `eb0fc0de7eb0b6843e9a79ec0f14abd092bd5374`  
-**Status:** **DRAFT — NOT READY / NOT MERGED** (await independent re-audit)
+**Pre-corrective head:** `eb0fc0de7eb0b6843e9a79ec0f14abd092bd5374`  
+**First corrective head:** `1c098f21766a380239bae5bac620ab7221c59fb7` (CI `29577487790` PASS; re-audit FAIL)  
+**Second corrective head:** recorded after push  
+**Status:** **DRAFT — NOT READY / NOT MERGED**
 
 ---
 
-## Corrective scope (B-01 … B-07)
+## R-01 … R-09 closure (second corrective)
 
-| ID | Blocker | Closure |
-| --- | --- | --- |
-| B-01 | `.xls` fail-closed presence | `xls_safety.py` olefile inventory + BIFF FILEPASS/SUPBOOK/EXTERNNAME; tests for VBA name, FILEPASS, external SUPBOOK |
-| B-02 | Merged regions both formats | OOXML `xlsx_merge.py`; xlrd formatting_info + BIFF MERGEDCELLS; max_merged limits; malformed ref reject |
-| B-03 | Full bounded inspection | `inspect()` exhausts rows/cells for char/row/total cell limits; reject before reserve/object write (`test_reject_oversized_cell_before_object_write`) |
-| B-04 | Blank/duplicate positional | `ragged_rows=False`; full sheet width; xlsx pad to max_column; production-like header/data tests |
-| B-05 | DB immutability / tenant | RESTRICT FKs; composite tenant FK; state/format/generation/size/checksum checks; batch unique (org,project,id); model FK on `current_source_artifact_id` |
-| B-06 | Storage/reconciler truth | head/delete distinguish NotFound vs error; tenant+actor required; available terminal; residual failed→orphan; audit only after verified delete; errors counter |
-| B-07 | Executable proof matrix | Expanded `test_s13_pr_002_source_artifacts.py` |
+| ID | Issue | Closure | Tests |
+| --- | --- | --- | --- |
+| R-01 | 4-byte add-in SUPBOOK accepted | Allow only `len==4` and `payload[2:4]==01 04` | `test_supbook_internal_accepted_addin_rejected`, `test_e2e_threat_xls_upload_rejected[addin_supbook]` |
+| R-02 | Macro/DCON not scanned | BOUNDSHEET dt, NAME flags, DCON/DCONNAME/DCONREF | `test_biff_macro_and_dcon_rejected`, e2e macro/dconref |
+| R-03 | Threat tests not E2E | Synthetic OLE fixtures via `ole_builder` → source-artifact POST | `test_e2e_threat_xls_upload_rejected[*]` |
+| R-04 | BIFF merge fallback wrong | Removed fallback; require `formatting_info=True` sheet-local merges | `test_xls_multi_sheet_merges_independent`, `test_xls_merged_limit` |
+| R-05 | Cross-batch current pointer | Composite FK `(batch.id, current_id) → (artifact.import_batch_id, artifact.id)` | `test_pg_same_batch_current_pointer_enforced` (PG/CI) |
+| R-06 | Checksum not verified on reconcile | Stream SHA-256 pending objects | `test_reconciler_pending_checksum_mismatch` |
+| R-07 | NoSuchBucket as not-found | Excluded from `_is_not_found_error` | `test_nosuchbucket_not_object_not_found` |
+| R-08 | Ref-check incomplete | Early `if ref_check: continue` + re-check under lock before delete | `test_reconciler_ref_check_blocks` |
+| R-09 | Incomplete matrix | Expanded second corrective suite | `test_s13_pr_002_second_corrective.py` + prior suite |
 
 ---
 
 ## Dependencies
 
-- `xlrd>=2.0.1,<3`
-- `olefile>=0.46`
-- `boto3>=1.34.0`
-- `xlwt` (dev fixtures)
+- xlrd + **olefile** (presence detection)
+- boto3; xlwt (dev)
 
-Migration: `f2a3b4c5d6e7` (revised in place pre-merge) ← `e1f2a3b4c5d6`
+Claims limited to what tests prove: presence reject for listed BIFF forms; pending reconcile **does** SHA-256 stream verify.
 
 ---
 
-## API / S12 boundary
+## Non-goals
 
-Unchanged: S12 upload remains `.xlsx` staging v1; source-artifact path is separate; no staging/`ProjectAssetLine` mutation.
-
----
-
-## Known limitations (true non-goals only)
-
-- No Sprint 15 job scheduler for reconciler
-- No signed download URLs
-- No S13-PR-003 mapping/discovery
-- Not a general malware sandbox beyond presence + bounds + no execution
+- S15 job scheduler  
+- Signed download URLs  
+- S13-PR-003 mapping  
+- Full malware sandbox beyond listed presence + bounds  
 
 ---
 
 ## Gates
 
-Local focused S13 suite green; full suite + exact-head CI recorded after push.
+Local S13 suites green; full suite + exact-head CI after push.
