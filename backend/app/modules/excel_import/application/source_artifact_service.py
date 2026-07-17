@@ -54,6 +54,21 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _as_utc_timestamp(dt: datetime | None, *, fallback: float) -> float:
+    """
+    Convert a DB datetime to a UTC epoch timestamp.
+
+    SQLite (and some drivers) return naive datetimes for UTC wall-clock values.
+    Python's datetime.timestamp() treats naive values as *local* time, which
+    shifts retention cutoffs on non-UTC hosts. Treat naive as UTC.
+    """
+    if dt is None:
+        return fallback
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
 def _content_type_for(fmt: str) -> str:
     if fmt == "xls":
         return "application/vnd.ms-excel"
@@ -126,29 +141,48 @@ def is_source_artifact_referenced(
     return pointed is not None
 
 
-def _sha256_object(storage: ObjectStoragePort, key: str, *, chunk_size: int) -> str:
+def _sha256_object(
+    storage: ObjectStoragePort,
+    key: str,
+    *,
+    chunk_size: int,
+    expected_size: int,
+) -> str:
     """
-    Stream object and return lowercase hex digest.
+    Stream object, count bytes, return lowercase hex digest.
+
+    Only a complete stream of exactly expected_size may return a digest for
+    content comparison. Clean EOF short-read / oversize are infrastructure.
 
     Raises:
       ObjectNotFound — exact missing key
       ObjectStorageError — infrastructure/read failure (never content mismatch)
     """
+    if expected_size < 0:
+        raise ObjectStorageError("invalid_expected_size")
     try:
         h = hashlib.sha256()
+        total = 0
         with storage.open_stream(key) as rs:
             while True:
                 chunk = rs.read(chunk_size)
                 if not chunk:
                     break
+                total += len(chunk)
+                if total > expected_size:
+                    raise ObjectStorageError("object_too_large")
                 h.update(chunk)
+        if total < expected_size:
+            # Clean EOF before expected size — not content corruption
+            raise ObjectStorageError("short_read")
+        if total != expected_size:
+            raise ObjectStorageError("size_mismatch")
         return _normalize_checksum(h.hexdigest())
     except ObjectNotFound:
         raise
     except ObjectStorageError:
         raise
     except Exception as exc:
-        # Do not relabel infra/I/O as checksum corruption
         raise ObjectStorageError("hash_stream_failed", type(exc).__name__) from exc
 
 
@@ -561,6 +595,7 @@ def reconcile_source_artifacts(
 
     Per-item commit: one item failure cannot roll back earlier durable outcomes.
     Counters update only after successful item commit.
+    Always leaves the session without an open transaction.
     """
     if org_id is None:
         raise HTTPException(status_code=400, detail="Phạm vi tổ chức là bắt buộc cho đối soát.")
@@ -576,40 +611,42 @@ def reconcile_source_artifacts(
     now_ts = _utcnow().timestamp()
     cutoff = now_ts - limits.orphan_retention_seconds
 
-    # Snapshot ids first so later commits do not affect cursor; oldest first
-    id_rows = (
-        db.query(ImportSourceArtifact.id)
-        .filter(
-            ImportSourceArtifact.organization_id == org_id,
-            ImportSourceArtifact.state.in_(
-                [
-                    SourceArtifactState.PENDING.value,
-                    SourceArtifactState.FAILED.value,
-                    SourceArtifactState.ORPHANED.value,
-                ]
-            ),
-        )
-        .order_by(ImportSourceArtifact.created_at.asc(), ImportSourceArtifact.id.asc())
-        .limit(max_items)
-        .all()
-    )
-    artifact_ids = [r[0] for r in id_rows]
-
     scanned = 0
     marked_orphan = 0
     marked_failed = 0
     deleted = 0
     errors = 0
+    artifact_ids: list[uuid.UUID] = []
 
-    for art_id in artifact_ids:
-        scanned += 1
-        try:
-            # Ensure clean session per item
+    try:
+        id_rows = (
+            db.query(ImportSourceArtifact.id)
+            .filter(
+                ImportSourceArtifact.organization_id == org_id,
+                ImportSourceArtifact.state.in_(
+                    [
+                        SourceArtifactState.PENDING.value,
+                        SourceArtifactState.FAILED.value,
+                        SourceArtifactState.ORPHANED.value,
+                    ]
+                ),
+            )
+            .order_by(ImportSourceArtifact.created_at.asc(), ImportSourceArtifact.id.asc())
+            .limit(max_items)
+            .all()
+        )
+        artifact_ids = [r[0] for r in id_rows]
+    finally:
+        if db.in_transaction():
             try:
                 db.rollback()
             except Exception:
                 pass
 
+    for art_id in artifact_ids:
+        scanned += 1
+        committed = False
+        try:
             art = (
                 db.query(ImportSourceArtifact)
                 .filter(
@@ -637,7 +674,7 @@ def reconcile_source_artifacts(
             if ref_check(db, art):
                 continue
 
-            created_ts = art.created_at.timestamp() if art.created_at else now_ts
+            created_ts = _as_utc_timestamp(art.created_at, fallback=now_ts)
             past_retention = created_ts < cutoff
             item_failed = 0
             item_orphan = 0
@@ -648,7 +685,6 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
-                    db.rollback()
                     continue
                 if st is None:
                     if past_retention and not ref_check(db, art):
@@ -673,24 +709,21 @@ def reconcile_source_artifacts(
                         item_failed = 1
                 else:
                     failure_code = None
-                    if st.size != art.file_size_bytes:
-                        failure_code = "size_mismatch"
-                    else:
-                        try:
-                            digest = _sha256_object(
-                                storage,
-                                art.storage_object_key,
-                                chunk_size=limits.read_chunk_size,
-                            )
-                            if digest != art.checksum_sha256:
-                                failure_code = "checksum_mismatch"
-                        except ObjectNotFound:
-                            failure_code = "pending_object_missing"
-                        except ObjectStorageError:
-                            # Infrastructure — do not mutate content truth
-                            errors += 1
-                            db.rollback()
-                            continue
+                    try:
+                        digest = _sha256_object(
+                            storage,
+                            art.storage_object_key,
+                            chunk_size=limits.read_chunk_size,
+                            expected_size=art.file_size_bytes,
+                        )
+                        if digest != art.checksum_sha256:
+                            failure_code = "checksum_mismatch"
+                    except ObjectNotFound:
+                        failure_code = "pending_object_missing"
+                    except ObjectStorageError:
+                        # short_read / timeout / oversize — infrastructure only
+                        errors += 1
+                        continue
                     if failure_code and not ref_check(db, art):
                         _assert_transition(art.state, SourceArtifactState.FAILED)
                         art.state = SourceArtifactState.FAILED.value
@@ -741,7 +774,6 @@ def reconcile_source_artifacts(
                     st = storage.head(art.storage_object_key)
                 except ObjectStorageError:
                     errors += 1
-                    db.rollback()
                     continue
                 if st is not None and past_retention and not ref_check(db, art):
                     _assert_transition(art.state, SourceArtifactState.ORPHANED)
@@ -764,35 +796,26 @@ def reconcile_source_artifacts(
                     item_orphan = 1
 
             elif art.state == SourceArtifactState.ORPHANED.value:
-                orphan_ts = art.orphaned_at.timestamp() if art.orphaned_at else created_ts
+                orphan_ts = _as_utc_timestamp(art.orphaned_at, fallback=created_ts)
                 if orphan_ts < cutoff:
                     if batch.current_source_artifact_id == art.id:
-                        db.rollback()
                         continue
-                    # Late re-check under lock immediately before delete
                     if ref_check(db, art):
-                        db.rollback()
                         continue
                     key = art.storage_object_key
                     try:
                         storage.delete(key)
                     except ObjectStorageError:
                         errors += 1
-                        db.rollback()
                         continue
                     try:
                         if storage.head(key) is not None:
                             errors += 1
-                            db.rollback()
                             continue
                     except ObjectStorageError:
                         errors += 1
-                        db.rollback()
                         continue
-                    # Final ref re-check before durable audit (race protection)
                     if ref_check(db, art):
-                        # Object may already be deleted; do not claim Object-deleted audit
-                        db.rollback()
                         continue
                     _audit(
                         db,
@@ -810,16 +833,24 @@ def reconcile_source_artifacts(
                     item_deleted = 1
 
             db.commit()
+            committed = True
             marked_failed += item_failed
             marked_orphan += item_orphan
             deleted += item_deleted
         except Exception:
             errors += 1
-            try:
-                db.rollback()
-            except Exception:
-                pass
-            continue
+        finally:
+            if not committed and db.in_transaction():
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+    if db.in_transaction():
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     return {
         "scanned": scanned,
@@ -828,6 +859,7 @@ def reconcile_source_artifacts(
         "deleted_objects": deleted,
         "errors": errors,
     }
+
 
 
 def count_staging_rows(db: Session, batch_id: uuid.UUID) -> int:

@@ -136,14 +136,26 @@ def make_threat_workbook_stream(*, threat: str) -> bytes:
         mid = biff_record(0x01AE, b"\x01\x00" + b"http://evil.example/x.xls")
     elif threat == "internal_supbook":
         mid = biff_record(0x01AE, b"\x01\x00\x01\x04")  # ctab=1, cch=0x0401
+    elif threat == "dcon":
+        mid = biff_record(0x0050, b"\x00\x01")
+    elif threat == "dconname":
+        mid = biff_record(0x0052, b"\x00\x01")
     elif threat == "dconref":
         mid = biff_record(0x0051, b"\x00\x01")
+    elif threat == "externname":
+        mid = biff_record(0x0023, b"\x00\x01\x00")
     elif threat == "macro_boundsheet":
-        # lbPlyPos + hsState + dt=macro(0x01) + name "M"
         mid = biff_record(0x0085, struct.pack("<IBB", 0, 0, 0x01) + b"\x01\x00M")
+    elif threat == "vba_boundsheet":
+        mid = biff_record(0x0085, struct.pack("<IBB", 0, 0, 0x06) + b"\x01\x00V")
     elif threat == "macro_name":
-        # flags with fMacro
         mid = biff_record(0x0018, struct.pack("<H", 0x0008) + b"\x00" * 10)
+    elif threat == "binary_name":
+        mid = biff_record(0x0018, struct.pack("<H", 0x0010) + b"\x00" * 10)
+    elif threat == "truncated_biff":
+        # incomplete record header (type only, missing length/payload)
+        mid = struct.pack("<H", 0x002F)
+        return bof + mid  # no EOF — malformed
     else:
         raise ValueError(threat)
     return bof + mid + eof

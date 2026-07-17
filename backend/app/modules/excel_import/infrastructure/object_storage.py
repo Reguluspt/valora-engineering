@@ -81,6 +81,7 @@ class FakeObjectStorage:
         self.fail_after_put: bool = False
         self.fail_open_stream: bool = False
         self.fail_open_stream_code: str = "stream_read_timeout"
+        self.truncate_open_to: int | None = None  # clean EOF short-read simulation
         self.head_raises: Exception | None = None
         self.delete_raises: Exception | None = None
 
@@ -128,6 +129,8 @@ class FakeObjectStorage:
         data = self._objects.get(key)
         if data is None:
             raise ObjectNotFound(key)
+        if self.truncate_open_to is not None:
+            data = data[: self.truncate_open_to]
         return io.BytesIO(data)
 
     def delete(self, key: str) -> None:
