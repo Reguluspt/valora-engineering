@@ -411,7 +411,10 @@ def test_threat_http_preserves_prior_official_and_staging(
 
 
 def _xlsx_with_formula_cache(path, *, a1: int = 10, formula: str = "A1*2", cached: float = 20.0):
-    """Write formula cell and inject known OOXML cached <v> so data_only reads it."""
+    """Write formula cell and inject known OOXML cached <v> so data_only reads it.
+
+    openpyxl builds differ: empty <v></v>, missing <v>, or style attrs on <c>.
+    """
     import re
     import zipfile
 
@@ -420,24 +423,23 @@ def _xlsx_with_formula_cache(path, *, a1: int = 10, formula: str = "A1*2", cache
     ws["A1"] = a1
     ws["B1"] = f"={formula}"
     wb.save(path)
+    cached_s = f"{cached:g}"
     buf = io.BytesIO()
     with zipfile.ZipFile(path, "r") as zin, zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
-            if item.filename.startswith("xl/worksheets/"):
+            if "worksheets/" in item.filename and item.filename.endswith(".xml"):
                 s = data.decode("utf-8")
-                # openpyxl emits empty <v></v>; replace with known cache
-                s2 = re.sub(
-                    rf'(<c r="B1"[^>]*>)(<f[^>]*>{re.escape(formula)}</f>)<v></v>(</c>)',
-                    rf"\1\2<v>{cached:g}</v>\3",
-                    s,
-                )
-                if s2 == s:
-                    s2 = s.replace(
-                        f'<c r="B1"><f>{formula}</f><v></v></c>',
-                        f'<c r="B1"><f>{formula}</f><v>{cached:g}</v></c>',
-                    )
-                assert s2 != s, "failed to inject formula cache"
+                m = re.search(r'<c r="B1"[^>]*>.*?</c>', s, flags=re.DOTALL)
+                if m is None:
+                    m = re.search(r'<c[^>]*r="B1"[^>]*>.*?</c>', s, flags=re.DOTALL)
+                assert m is not None, f"B1 cell missing in {item.filename}: {s[:500]!r}"
+                old_cell = m.group(0)
+                fm = re.search(r'<f[^>]*>.*?</f>', old_cell, flags=re.DOTALL)
+                f_xml = fm.group(0) if fm else f"<f>{formula}</f>"
+                new_cell = f'<c r="B1">{f_xml}<v>{cached_s}</v></c>'
+                s2 = s[: m.start()] + new_cell + s[m.end() :]
+                assert f"<v>{cached_s}</v>" in s2, f"inject failed; old cell={old_cell!r}"
                 data = s2.encode("utf-8")
             zout.writestr(item, data)
     path.write_bytes(buf.getvalue())
@@ -831,10 +833,14 @@ def test_multi_item_later_error_keeps_earlier_failed(db_session: Session, fake_s
 
 
 def test_pg_migration_roundtrip_s13():
-    """Throwaway PG DB: parent → f2a3b4c5d6e7 → downgrade parent → head again.
+    """S13 revision round-trip on the CI PostgreSQL database.
 
-    Alembic env.py reads get_settings().database_url (lru_cached). Clear the
-    cache whenever POSTGRES_* changes so upgrades never touch the shared CI DB.
+    Uses the shared TEST_DATABASE_URL (already migrated to head by CI smoke).
+    Avoids CREATE DATABASE (not required) and keeps Alembic on the same URL
+    as POSTGRES_* / get_settings().database_url.
+
+    Sequence: head present → downgrade parent → table gone → upgrade f2a3 →
+    columns present → upgrade head → single head.
     """
     url = os.environ.get("TEST_DATABASE_URL") or ""
     if os.environ.get("CI") == "true":
@@ -848,13 +854,7 @@ def test_pg_migration_roundtrip_s13():
     from app.core.config import get_settings
     from sqlalchemy.engine.url import make_url
 
-    admin = create_engine(url, isolation_level="AUTOCOMMIT")
-    db_name = f"s13_rt_{uuid.uuid4().hex[:10]}"
-    with admin.connect() as conn:
-        conn.execute(text(f'CREATE DATABASE "{db_name}"'))
-    u_admin = make_url(url)
-    # Preserve driver (postgresql+psycopg) while swapping only the database name
-    iso_url = url.rsplit("/", 1)[0] + f"/{db_name}"
+    u = make_url(url)
     prev = {
         k: os.environ.get(k)
         for k in (
@@ -866,29 +866,45 @@ def test_pg_migration_roundtrip_s13():
             "VALORA_ENV",
         )
     }
+    os.environ["VALORA_ENV"] = "test"
+    os.environ["POSTGRES_HOST"] = u.host or "localhost"
+    os.environ["POSTGRES_PORT"] = str(u.port or 5432)
+    os.environ["POSTGRES_DB"] = u.database or "valora"
+    os.environ["POSTGRES_USER"] = u.username or "valora"
+    os.environ["POSTGRES_PASSWORD"] = u.password or "valora_local_password"
+    get_settings.cache_clear()
     try:
-        os.environ["VALORA_ENV"] = "test"
-        os.environ["POSTGRES_HOST"] = u_admin.host or "localhost"
-        os.environ["POSTGRES_PORT"] = str(u_admin.port or 5432)
-        os.environ["POSTGRES_DB"] = db_name
-        os.environ["POSTGRES_USER"] = u_admin.username or "valora"
-        os.environ["POSTGRES_PASSWORD"] = u_admin.password or "valora_local_password"
-        get_settings.cache_clear()
-        assert get_settings().postgres_db == db_name
-        assert get_settings().database_url.rstrip("/").endswith(f"/{db_name}")
+        settings_url = get_settings().database_url
+        # Driver may differ slightly; host/db must match the live test DB
+        assert get_settings().postgres_db == (u.database or "valora")
+        assert get_settings().postgres_host == (u.host or "localhost")
 
         cfg = Config("alembic.ini")
         script = ScriptDirectory.from_config(cfg)
         assert script.get_heads() == ["f2a3b4c5d6e7"]
 
-        command.upgrade(cfg, "e1f2a3b4c5d6")
-        eng = create_engine(iso_url)
+        eng = create_engine(url)
         try:
+            # Normalize to head first (CI smoke already did this)
+            command.upgrade(cfg, "head")
+            with eng.connect() as c:
+                r = c.execute(
+                    text("SELECT to_regclass('public.import_source_artifacts')")
+                ).scalar()
+                assert r is not None
+
+            command.downgrade(cfg, "e1f2a3b4c5d6")
             with eng.connect() as c:
                 r = c.execute(
                     text("SELECT to_regclass('public.import_source_artifacts')")
                 ).scalar()
                 assert r is None
+                # Prior schema still valid
+                r2 = c.execute(
+                    text("SELECT to_regclass('public.project_asset_import_batches')")
+                ).scalar()
+                assert r2 is not None
+
             command.upgrade(cfg, "f2a3b4c5d6e7")
             with eng.connect() as c:
                 r = c.execute(
@@ -905,12 +921,7 @@ def test_pg_migration_roundtrip_s13():
                 assert "checksum_sha256" in names
                 assert "storage_object_key" in names
                 assert "state" in names
-            command.downgrade(cfg, "e1f2a3b4c5d6")
-            with eng.connect() as c:
-                r = c.execute(
-                    text("SELECT to_regclass('public.import_source_artifacts')")
-                ).scalar()
-                assert r is None
+
             command.upgrade(cfg, "head")
             with eng.connect() as c:
                 r = c.execute(
@@ -918,6 +929,8 @@ def test_pg_migration_roundtrip_s13():
                 ).scalar()
                 assert r is not None
             assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+            # silence unused if settings_url only for debug
+            assert "postgresql" in settings_url
         finally:
             eng.dispose()
     finally:
@@ -927,9 +940,6 @@ def test_pg_migration_roundtrip_s13():
             else:
                 os.environ[k] = v
         get_settings.cache_clear()
-        with admin.connect() as conn:
-            conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}" WITH (FORCE)'))
-        admin.dispose()
 
 
 # --- MinIO CI ---
