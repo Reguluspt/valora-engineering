@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from fastapi import HTTPException, UploadFile
+from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
@@ -462,10 +463,11 @@ def upload_source_artifact(
                 detail="Không thể lưu tệp nguồn an toàn. Vui lòng thử lại.",
             ) from exc
 
-        # Finalize available + current pointer
+        # Finalize available + current pointer (fresh lock; concurrent reconciler may have won)
         project = (
             db.query(Project)
             .filter(Project.organization_id == org_id, Project.id == project_id)
+            .populate_existing()
             .with_for_update()
             .first()
         )
@@ -476,6 +478,7 @@ def upload_source_artifact(
                 ProjectAssetImportBatch.project_id == project_id,
                 ProjectAssetImportBatch.id == batch_id,
             )
+            .populate_existing()
             .with_for_update()
             .first()
         )
@@ -485,17 +488,74 @@ def upload_source_artifact(
                 ImportSourceArtifact.id == artifact_id,
                 ImportSourceArtifact.organization_id == org_id,
             )
+            .populate_existing()
             .with_for_update()
             .first()
         )
         if not project or not batch or not art:
             raise HTTPException(status_code=404, detail="Import batch not found")
 
-        # Stale finish: newer available current already wins — this pending → failed/orphan path
+        # Reconciler (or prior durable finalize) already owns the transition — no second audit.
+        # Roll back first so a stale batch pointer in this Session cannot clobber the winner.
+        if art.state == SourceArtifactState.AVAILABLE.value:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            art = (
+                db.query(ImportSourceArtifact)
+                .filter(
+                    ImportSourceArtifact.id == artifact_id,
+                    ImportSourceArtifact.organization_id == org_id,
+                )
+                .populate_existing()
+                .first()
+            )
+            if art is None:
+                raise HTTPException(status_code=404, detail="Source artifact not found")
+            if art.storage_etag is None and etag is not None:
+                art.storage_etag = etag
+                try:
+                    db.commit()
+                    db.refresh(art)
+                except Exception:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                    art = (
+                        db.query(ImportSourceArtifact)
+                        .filter(ImportSourceArtifact.id == artifact_id)
+                        .populate_existing()
+                        .first()
+                    )
+            return art
+
+        if art.state != SourceArtifactState.PENDING.value:
+            # Concurrent actor moved us to failed/orphaned — surface residual without inventing available.
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            art = (
+                db.query(ImportSourceArtifact)
+                .filter(
+                    ImportSourceArtifact.id == artifact_id,
+                    ImportSourceArtifact.organization_id == org_id,
+                )
+                .populate_existing()
+                .first()
+            )
+            if art is None:
+                raise HTTPException(status_code=404, detail="Source artifact not found")
+            return art
+
+        # Stale finish: newer available current already wins — this pending → orphan path
         if batch.current_source_artifact_id:
             current = (
                 db.query(ImportSourceArtifact)
                 .filter(ImportSourceArtifact.id == batch.current_source_artifact_id)
+                .populate_existing()
                 .first()
             )
             if (
@@ -551,6 +611,36 @@ def upload_source_artifact(
         except Exception as commit_exc:
             try:
                 db.rollback()
+            except Exception:
+                pass
+            # Ambiguity: commit may already be durable (disconnect after success).
+            try:
+                recovered = (
+                    db.query(ImportSourceArtifact)
+                    .filter(
+                        ImportSourceArtifact.id == artifact_id,
+                        ImportSourceArtifact.organization_id == org_id,
+                    )
+                    .populate_existing()
+                    .first()
+                )
+                batch_r = (
+                    db.query(ProjectAssetImportBatch)
+                    .filter(
+                        ProjectAssetImportBatch.id == batch_id,
+                        ProjectAssetImportBatch.organization_id == org_id,
+                    )
+                    .populate_existing()
+                    .first()
+                )
+                if (
+                    recovered is not None
+                    and recovered.state == SourceArtifactState.AVAILABLE.value
+                    and batch_r is not None
+                    and batch_r.current_source_artifact_id == recovered.id
+                ):
+                    # Durable success — never compensate into failed.
+                    return recovered
             except Exception:
                 pass
             try:
@@ -664,7 +754,7 @@ def reconcile_source_artifacts(
     if actor_id is None:
         raise HTTPException(status_code=400, detail="Tác nhân hệ thống là bắt buộc cho đối soát.")
 
-    limits = DEFAULT_SOURCE_LIMITS
+    limits = _source_limits_override or DEFAULT_SOURCE_LIMITS
     storage = storage or get_object_storage()
     max_items = max_items if max_items is not None else limits.reconcilers_max_items
     if max_items < 1:
@@ -727,10 +817,16 @@ def reconcile_source_artifacts(
                         ImportSourceArtifact.id == art_id,
                         ImportSourceArtifact.organization_id == org_id,
                     )
+                    .populate_existing()
                     .with_for_update()
                     .first()
                 )
                 if not art:
+                    if work.in_transaction():
+                        work.rollback()
+                    continue
+                # Concurrent uploader may have finalized between id-scan and lock.
+                if art.state == SourceArtifactState.AVAILABLE.value:
                     if work.in_transaction():
                         work.rollback()
                     continue
@@ -740,6 +836,7 @@ def reconcile_source_artifacts(
                         ProjectAssetImportBatch.id == art.import_batch_id,
                         ProjectAssetImportBatch.organization_id == org_id,
                     )
+                    .populate_existing()
                     .with_for_update()
                     .first()
                 )
@@ -987,6 +1084,69 @@ def reconcile_source_artifacts(
                             command_name="ReconcileImportSourceArtifact",
                         )
                         item_deleted = 1
+
+                # Re-validate pending→available against concurrent newer finalize before durability.
+                # Refresh batch from the store without dropping our intended pointer unless a
+                # newer available generation already won.
+                if (
+                    art.state == SourceArtifactState.AVAILABLE.value
+                    and item_failed == 0
+                    and item_orphan == 0
+                    and item_deleted == 0
+                ):
+                    intended_pointer = art.id
+                    # Bypass identity map so concurrent finalize pointer is visible.
+                    db_pointer = work.execute(
+                        text(
+                            "SELECT current_source_artifact_id "
+                            "FROM project_asset_import_batches WHERE id = :id"
+                        ),
+                        {"id": batch.id},
+                    ).scalar()
+                    if db_pointer and db_pointer != intended_pointer:
+                        cur = (
+                            work.query(ImportSourceArtifact)
+                            .filter(ImportSourceArtifact.id == db_pointer)
+                            .populate_existing()
+                            .first()
+                        )
+                        if (
+                            cur is not None
+                            and cur.generation > art.generation
+                            and cur.state == SourceArtifactState.AVAILABLE.value
+                        ):
+                            for obj in list(work.new):
+                                if (
+                                    isinstance(obj, AuditEvent)
+                                    and obj.entity_id == art.id
+                                    and obj.event_name == "ImportSourceArtifactAvailable"
+                                ):
+                                    work.expunge(obj)
+                            art.state = SourceArtifactState.ORPHANED.value
+                            art.available_at = None
+                            art.orphaned_at = _utcnow()
+                            art.failure_code = "stale_generation"
+                            batch.current_source_artifact_id = db_pointer
+                            _audit(
+                                work,
+                                org_id=org_id,
+                                actor_id=actor_id,
+                                event_name="ImportSourceArtifactOrphaned",
+                                entity_id=art.id,
+                                payload={
+                                    "import_batch_id": str(art.import_batch_id),
+                                    "generation": art.generation,
+                                    "reason": "stale_recovery_pre_commit",
+                                },
+                                correlation_id=None,
+                                command_name="ReconcileImportSourceArtifact",
+                            )
+                            item_orphan = 1
+                        else:
+                            # Older/equal current in DB — keep claiming pointer for this promote.
+                            batch.current_source_artifact_id = intended_pointer
+                    else:
+                        batch.current_source_artifact_id = intended_pointer
 
                 work.commit()
                 committed = True
