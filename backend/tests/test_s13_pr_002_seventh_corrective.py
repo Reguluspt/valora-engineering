@@ -1015,20 +1015,22 @@ def test_h04_pg_restrict_batch_delete_exact_constraint():
                     "uid": uid,
                 },
             )
-            # Discover exact FK name for import_batch_id
+            # Scalar FK only (composite tenant FK also includes import_batch_id)
             cname_expected = conn.execute(
                 text(
                     """
                     SELECT con.conname
                     FROM pg_constraint con
-                    JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY (con.conkey)
+                    JOIN pg_attribute a ON a.attrelid = con.conrelid
+                      AND a.attnum = con.conkey[1]
                     WHERE con.contype = 'f'
                       AND con.conrelid = 'import_source_artifacts'::regclass
+                      AND array_length(con.conkey, 1) = 1
                       AND a.attname = 'import_batch_id'
                     """
                 )
             ).scalar()
-            assert cname_expected
+            assert cname_expected == "import_source_artifacts_import_batch_id_fkey"
 
         with engine.begin() as conn:
             with pytest.raises(IntegrityError) as ei:
@@ -1036,7 +1038,7 @@ def test_h04_pg_restrict_batch_delete_exact_constraint():
                     text("DELETE FROM project_asset_import_batches WHERE id = :id"),
                     {"id": bid},
                 )
-            assert _cname(ei.value) == cname_expected
+            assert _cname(ei.value) == "import_source_artifacts_import_batch_id_fkey"
     finally:
         with engine.begin() as conn:
             conn.execute(
@@ -1400,27 +1402,14 @@ def test_h05_throwaway_migration_schema_and_dml_matrix():
                 cname = _cname(ei.value)
                 assert any(n in cname for n in names), cname
 
-        # RESTRICT batch delete
-        with eng.begin() as conn:
-            cname_expected = conn.execute(
-                text(
-                    """
-                    SELECT con.conname
-                    FROM pg_constraint con
-                    JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY (con.conkey)
-                    WHERE con.contype = 'f'
-                      AND con.conrelid = 'import_source_artifacts'::regclass
-                      AND a.attname = 'import_batch_id'
-                    """
-                )
-            ).scalar()
+        # RESTRICT batch delete — scalar import_batch_id FK only
         with eng.begin() as conn:
             with pytest.raises(IntegrityError) as ei:
                 conn.execute(
                     text("DELETE FROM project_asset_import_batches WHERE id = :id"),
                     {"id": b1},
                 )
-            assert _cname(ei.value) == cname_expected
+            assert _cname(ei.value) == "import_source_artifacts_import_batch_id_fkey"
 
     try:
         os.environ["VALORA_ENV"] = "test"
