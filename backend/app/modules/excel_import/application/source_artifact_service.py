@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from fastapi import HTTPException, UploadFile
-from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
@@ -48,6 +47,7 @@ __all__ = [
     "is_source_artifact_referenced",
     "set_reconcile_work_session_factory",
     "set_source_limits_override",
+    "set_pointer_probe_hook",
 ]
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -55,6 +55,7 @@ _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 # Test/injection seams (None = production defaults)
 _work_session_factory: Callable[[Any], Session] | None = None
 _source_limits_override: SourceArtifactLimits | None = None
+_pointer_probe_hook: Callable[[], None] | None = None
 
 
 def set_reconcile_work_session_factory(
@@ -71,8 +72,44 @@ def set_source_limits_override(limits: SourceArtifactLimits | None) -> None:
     _source_limits_override = limits
 
 
+def set_pointer_probe_hook(hook: Callable[[], None] | None) -> None:
+    """Inject pre-probe barrier for concurrent finalize race tests."""
+    global _pointer_probe_hook
+    _pointer_probe_hook = hook
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_uuid(value: Any) -> uuid.UUID | None:
+    if value is None:
+        return None
+    if isinstance(value, uuid.UUID):
+        return value
+    return uuid.UUID(str(value))
+
+
+def _read_committed_batch_pointer(bind: Any, batch_id: uuid.UUID) -> uuid.UUID | None:
+    """
+    Read durable current_source_artifact_id via a typed short-lived Session.
+
+    Bypasses the reconciler work Session identity map and uncommitted writes.
+    UUID binds correctly on both SQLite and PostgreSQL (no untyped text()).
+    """
+    if _pointer_probe_hook is not None:
+        _pointer_probe_hook()
+    Probe = sessionmaker(bind=bind, autoflush=False, autocommit=False)
+    probe = Probe()
+    try:
+        raw = (
+            probe.query(ProjectAssetImportBatch.current_source_artifact_id)
+            .filter(ProjectAssetImportBatch.id == batch_id)
+            .scalar()
+        )
+        return _as_uuid(raw)
+    finally:
+        probe.close()
 
 
 def _as_utc_timestamp(dt: datetime | None, *, fallback: float) -> float:
@@ -1086,8 +1123,9 @@ def reconcile_source_artifacts(
                         item_deleted = 1
 
                 # Re-validate pending→available against concurrent newer finalize before durability.
-                # Refresh batch from the store without dropping our intended pointer unless a
-                # newer available generation already won.
+                # Read committed pointer via a short-lived typed Session so we:
+                # - bind UUID correctly on SQLite and PostgreSQL
+                # - bypass this work Session's dirty identity map / uncommitted writes
                 if (
                     art.state == SourceArtifactState.AVAILABLE.value
                     and item_failed == 0
@@ -1095,15 +1133,8 @@ def reconcile_source_artifacts(
                     and item_deleted == 0
                 ):
                     intended_pointer = art.id
-                    # Bypass identity map so concurrent finalize pointer is visible.
-                    db_pointer = work.execute(
-                        text(
-                            "SELECT current_source_artifact_id "
-                            "FROM project_asset_import_batches WHERE id = :id"
-                        ),
-                        {"id": batch.id},
-                    ).scalar()
-                    if db_pointer and db_pointer != intended_pointer:
+                    db_pointer = _read_committed_batch_pointer(work.get_bind(), batch.id)
+                    if db_pointer is not None and db_pointer != intended_pointer:
                         cur = (
                             work.query(ImportSourceArtifact)
                             .filter(ImportSourceArtifact.id == db_pointer)
