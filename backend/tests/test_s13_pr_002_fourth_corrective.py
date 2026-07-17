@@ -831,63 +831,69 @@ def test_multi_item_later_error_keeps_earlier_failed(db_session: Session, fake_s
 
 
 def test_pg_migration_roundtrip_s13():
+    """Throwaway PG DB: parent → f2a3b4c5d6e7 → downgrade parent → head again.
+
+    Alembic env.py reads get_settings().database_url (lru_cached). Clear the
+    cache whenever POSTGRES_* changes so upgrades never touch the shared CI DB.
+    """
     url = os.environ.get("TEST_DATABASE_URL") or ""
     if os.environ.get("CI") == "true":
         assert url.startswith("postgresql")
     elif not url.startswith("postgresql"):
         pytest.skip("PostgreSQL required for migration round-trip")
 
-    # Throwaway database
+    from alembic import command
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+    from app.core.config import get_settings
+    from sqlalchemy.engine.url import make_url
+
     admin = create_engine(url, isolation_level="AUTOCOMMIT")
     db_name = f"s13_rt_{uuid.uuid4().hex[:10]}"
     with admin.connect() as conn:
         conn.execute(text(f'CREATE DATABASE "{db_name}"'))
-    base = url.rsplit("/", 1)[0]
-    iso_url = f"{base}/{db_name}"
+    u_admin = make_url(url)
+    # Preserve driver (postgresql+psycopg) while swapping only the database name
+    iso_url = url.rsplit("/", 1)[0] + f"/{db_name}"
+    prev = {
+        k: os.environ.get(k)
+        for k in (
+            "POSTGRES_HOST",
+            "POSTGRES_PORT",
+            "POSTGRES_DB",
+            "POSTGRES_USER",
+            "POSTGRES_PASSWORD",
+            "VALORA_ENV",
+        )
+    }
     try:
-        os.environ["POSTGRES_HOST"] = os.environ.get("POSTGRES_HOST", "localhost")
-        # Point alembic via env used by settings
-        from alembic.config import Config
-        from alembic import command
-        from alembic.script import ScriptDirectory
-
-        # Use app settings by monkeypatching POSTGRES_* from TEST_DATABASE_URL
-        from sqlalchemy.engine.url import make_url
-
-        u = make_url(iso_url)
-        prev = {
-            k: os.environ.get(k)
-            for k in (
-                "POSTGRES_HOST",
-                "POSTGRES_PORT",
-                "POSTGRES_DB",
-                "POSTGRES_USER",
-                "POSTGRES_PASSWORD",
-                "VALORA_ENV",
-            )
-        }
         os.environ["VALORA_ENV"] = "test"
-        os.environ["POSTGRES_HOST"] = u.host or "localhost"
-        os.environ["POSTGRES_PORT"] = str(u.port or 5432)
-        os.environ["POSTGRES_DB"] = u.database or db_name
-        os.environ["POSTGRES_USER"] = u.username or "valora"
-        os.environ["POSTGRES_PASSWORD"] = u.password or "valora_local_password"
+        os.environ["POSTGRES_HOST"] = u_admin.host or "localhost"
+        os.environ["POSTGRES_PORT"] = str(u_admin.port or 5432)
+        os.environ["POSTGRES_DB"] = db_name
+        os.environ["POSTGRES_USER"] = u_admin.username or "valora"
+        os.environ["POSTGRES_PASSWORD"] = u_admin.password or "valora_local_password"
+        get_settings.cache_clear()
+        assert get_settings().postgres_db == db_name
+        assert get_settings().database_url.rstrip("/").endswith(f"/{db_name}")
+
+        cfg = Config("alembic.ini")
+        script = ScriptDirectory.from_config(cfg)
+        assert script.get_heads() == ["f2a3b4c5d6e7"]
+
+        command.upgrade(cfg, "e1f2a3b4c5d6")
+        eng = create_engine(iso_url)
         try:
-            cfg = Config("alembic.ini")
-            script = ScriptDirectory.from_config(cfg)
-            assert script.get_heads() == ["f2a3b4c5d6e7"]
-            command.upgrade(cfg, "e1f2a3b4c5d6")
-            eng = create_engine(iso_url)
             with eng.connect() as c:
-                r = c.execute(text(
-                    "SELECT to_regclass('public.import_source_artifacts')"
-                )).scalar()
+                r = c.execute(
+                    text("SELECT to_regclass('public.import_source_artifacts')")
+                ).scalar()
                 assert r is None
             command.upgrade(cfg, "f2a3b4c5d6e7")
             with eng.connect() as c:
-                r = c.execute(text(
-                    "SELECT to_regclass('public.import_source_artifacts')"
-                )).scalar()
+                r = c.execute(
+                    text("SELECT to_regclass('public.import_source_artifacts')")
+                ).scalar()
                 assert r is not None
                 cols = c.execute(
                     text(
@@ -898,22 +904,29 @@ def test_pg_migration_roundtrip_s13():
                 names = {x[0] for x in cols}
                 assert "checksum_sha256" in names
                 assert "storage_object_key" in names
+                assert "state" in names
             command.downgrade(cfg, "e1f2a3b4c5d6")
             with eng.connect() as c:
-                r = c.execute(text(
-                    "SELECT to_regclass('public.import_source_artifacts')"
-                )).scalar()
+                r = c.execute(
+                    text("SELECT to_regclass('public.import_source_artifacts')")
+                ).scalar()
                 assert r is None
             command.upgrade(cfg, "head")
+            with eng.connect() as c:
+                r = c.execute(
+                    text("SELECT to_regclass('public.import_source_artifacts')")
+                ).scalar()
+                assert r is not None
             assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
-            eng.dispose()
         finally:
-            for k, v in prev.items():
-                if v is None:
-                    os.environ.pop(k, None)
-                else:
-                    os.environ[k] = v
+            eng.dispose()
     finally:
+        for k, v in prev.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        get_settings.cache_clear()
         with admin.connect() as conn:
             conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}" WITH (FORCE)'))
         admin.dispose()
