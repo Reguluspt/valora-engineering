@@ -6,7 +6,7 @@
 **Base:** `949903f3912aa65f8b990852756aeef7981bca08`  
 **Pre-corrective head:** `eb0fc0de7eb0b6843e9a79ec0f14abd092bd5374`  
 **First corrective head:** `1c098f21766a380239bae5bac620ab7221c59fb7` (CI `29577487790` PASS; re-audit FAIL)  
-**Second corrective head:** recorded after push  
+**Second corrective head:** `994d6fdd9df73ad1fb4075e08ebff1bad8bcc9f1`  
 **Status:** **DRAFT — NOT READY / NOT MERGED**
 
 ---
