@@ -353,14 +353,11 @@ def test_e01_upload_short_read_not_checksum_mismatch(
 # ---------------------------------------------------------------------------
 
 
-def test_e02_reconciler_rejects_dirty_caller_session(
+def test_e02_reconciler_preserves_dirty_caller_session(
     db_session: Session, fake_storage
 ):
-    """Clean-session precondition: reject before any query when caller has pending work."""
-    from fastapi import HTTPException
-
+    """Dedicated reconciler session: caller unflushed UOW is preserved."""
     org, user, proj, batch = _seed(db_session)
-    # Capture PKs before adding pending work (expired attrs + autoflush would flush)
     uid, oid = user.id, org.id
     pending = ProjectAssetLine(
         project_id=proj.id,
@@ -372,12 +369,10 @@ def test_e02_reconciler_rejects_dirty_caller_session(
     )
     db_session.add(pending)
     assert pending in db_session.new
-    with pytest.raises(HTTPException) as ei:
-        reconcile_source_artifacts(
-            db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
-        )
-    assert ei.value.status_code == 409
-    # Caller-owned pending insert preserved (never rolled back)
+    stats = reconcile_source_artifacts(
+        db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
+    )
+    assert stats["scanned"] == 0
     assert pending in db_session.new
     assert pending.asset_name == "Caller Pending"
 

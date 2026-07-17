@@ -330,20 +330,29 @@ def test_true_checksum_mismatch_after_full_stream(db_session: Session, fake_stor
 # --- D-02 transaction closure ---
 
 
-def test_reconciler_empty_run_closes_transaction(db_session: Session, fake_storage):
+def test_reconciler_empty_run_uses_dedicated_session(db_session: Session, fake_storage):
+    """Reconciler owns a dedicated session; caller session is not rolled back."""
     org, user, proj, batch = _seed(db_session)
-    if db_session.in_transaction():
-        db_session.rollback()
-    assert db_session.in_transaction() is False
+    uid, oid = user.id, org.id
+    pending = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="CallerKeep",
+        description="x",
+        quantity=1,
+        review_status=AssetLineReviewStatus.PENDING,
+        validation_status=AssetLineValidationStatus.UNVALIDATED,
+    )
+    db_session.add(pending)
     stats = reconcile_source_artifacts(
-        db_session, storage=fake_storage, max_items=5, actor_id=user.id, org_id=org.id
+        db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
     )
     assert stats["scanned"] == 0
-    assert db_session.in_transaction() is False
+    assert pending in db_session.new
 
 
-def test_reconciler_skip_paths_close_transaction(db_session: Session, fake_storage):
+def test_reconciler_skip_paths_preserve_caller(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
+    uid, oid = user.id, org.id
     key = f"k/{uuid.uuid4()}"
     fake_storage._objects[key] = b"x"
     art = ImportSourceArtifact(
@@ -362,12 +371,19 @@ def test_reconciler_skip_paths_close_transaction(db_session: Session, fake_stora
     )
     db_session.add(art)
     db_session.commit()
-    if db_session.in_transaction():
-        db_session.rollback()
-    reconcile_source_artifacts(
-        db_session, storage=fake_storage, max_items=5, actor_id=user.id, org_id=org.id
+    pending = ProjectAssetLine(
+        project_id=proj.id,
+        asset_name="SkipKeep",
+        description="x",
+        quantity=1,
+        review_status=AssetLineReviewStatus.PENDING,
+        validation_status=AssetLineValidationStatus.UNVALIDATED,
     )
-    assert db_session.in_transaction() is False
+    db_session.add(pending)
+    reconcile_source_artifacts(
+        db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
+    )
+    assert pending in db_session.new
 
 
 # --- D-03 / D-04 threat matrix with official lines ---
