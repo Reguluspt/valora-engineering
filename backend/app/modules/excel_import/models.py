@@ -10,6 +10,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
@@ -38,12 +39,12 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
-        ForeignKey("organization_profiles.id", ondelete="CASCADE"),
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
         nullable=False,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
-        ForeignKey("projects.id", ondelete="CASCADE"),
+        ForeignKey("projects.id", ondelete="RESTRICT"),
         nullable=False,
     )
     import_batch_id: Mapped[uuid.UUID] = mapped_column(
@@ -62,7 +63,9 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
     state: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     adapter_name: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     adapter_version: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    adapter_metadata: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False, default=dict)
+    adapter_metadata: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=dict
+    )
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -81,6 +84,30 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
         CheckConstraint(
             "length(checksum_sha256) = 64",
             name="chk_source_artifact_checksum_len",
+        ),
+        # Portable hex check: lowercase hex only (app also normalizes)
+        CheckConstraint(
+            "checksum_sha256 = lower(checksum_sha256)",
+            name="chk_source_artifact_checksum_lower",
+        ),
+        CheckConstraint(
+            "state IN ('pending', 'available', 'failed', 'orphaned')",
+            name="chk_source_artifact_state",
+        ),
+        CheckConstraint(
+            "detected_format IN ('xls', 'xlsx')",
+            name="chk_source_artifact_format",
+        ),
+        # Tenant consistency: batch must belong to same org+project
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_source_artifact_batch_tenant",
+            ondelete="RESTRICT",
         ),
         Index("idx_source_artifact_org", "organization_id"),
         Index("idx_source_artifact_project", "project_id"),

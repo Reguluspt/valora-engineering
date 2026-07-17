@@ -32,3 +32,5 @@ class SourceArtifactReconcileResponse(BaseModel):
     scanned: int
     marked_orphan: int
     deleted_objects: int
+    marked_failed: int = 0
+    errors: int = 0

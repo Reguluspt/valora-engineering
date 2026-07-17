@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import tempfile
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -24,6 +25,8 @@ from app.modules.excel_import.domain.source_artifact import (
 )
 from app.modules.excel_import.domain.workbook_adapter import AdapterError
 from app.modules.excel_import.infrastructure.object_storage import (
+    ObjectNotFound,
+    ObjectStorageError,
     ObjectStoragePort,
     get_object_storage,
 )
@@ -35,14 +38,16 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportStagingRow,
 )
 
-# re-export for clarity
 __all__ = [
     "upload_source_artifact",
     "list_source_artifacts",
     "get_source_artifact",
     "reconcile_source_artifacts",
     "count_staging_rows",
+    "is_source_artifact_referenced",
 ]
+
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _utcnow() -> datetime:
@@ -55,9 +60,17 @@ def _content_type_for(fmt: str) -> str:
     return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def _build_object_key(org_id: uuid.UUID, project_id: uuid.UUID, batch_id: uuid.UUID, artifact_id: uuid.UUID) -> str:
-    # Server-owned path from trusted IDs only — never raw filename
+def _build_object_key(
+    org_id: uuid.UUID, project_id: uuid.UUID, batch_id: uuid.UUID, artifact_id: uuid.UUID
+) -> str:
     return f"org/{org_id}/project/{project_id}/import-batch/{batch_id}/source/{artifact_id}"
+
+
+def _normalize_checksum(hex_digest: str) -> str:
+    out = hex_digest.lower()
+    if not _HEX64.match(out):
+        raise RuntimeError("invalid_checksum")
+    return out
 
 
 def _assert_transition(current: str, new: SourceArtifactState) -> None:
@@ -76,6 +89,7 @@ def _audit(
     entity_id: uuid.UUID,
     payload: dict[str, Any],
     correlation_id: str | None,
+    command_name: str = "UploadImportSourceArtifact",
 ) -> None:
     db.add(
         AuditEvent(
@@ -86,9 +100,27 @@ def _audit(
             entity_id=entity_id,
             payload=payload,
             correlation_id=correlation_id,
-            command_name="UploadImportSourceArtifact",
+            command_name=command_name,
         )
     )
+
+
+def is_source_artifact_referenced(
+    db: Session,
+    artifact: ImportSourceArtifact,
+) -> bool:
+    """
+    Extension point: future audit/review references may block object delete.
+    Current: current pointer on any batch or available successful history.
+    """
+    if artifact.state == SourceArtifactState.AVAILABLE.value:
+        return True
+    pointed = (
+        db.query(ProjectAssetImportBatch.id)
+        .filter(ProjectAssetImportBatch.current_source_artifact_id == artifact.id)
+        .first()
+    )
+    return pointed is not None
 
 
 def _spool_and_hash(
@@ -97,10 +129,8 @@ def _spool_and_hash(
     *,
     suffix: str = ".bin",
 ) -> tuple[str, int, str]:
-    """Stream to spool path with size limit; return (path, size, sha256 hex)."""
     h = hashlib.sha256()
     total = 0
-    # openpyxl validates extension; keep original suffix (.xlsx/.xls)
     safe_suffix = suffix if suffix.startswith(".") else f".{suffix}"
     fd, path = tempfile.mkstemp(prefix="valora-src-", suffix=safe_suffix)
     os.close(fd)
@@ -120,13 +150,52 @@ def _spool_and_hash(
                     )
                 h.update(chunk)
                 out.write(chunk)
-        return path, total, h.hexdigest()
+        return path, total, _normalize_checksum(h.hexdigest())
     except Exception:
         try:
             os.unlink(path)
         except OSError:
             pass
         raise
+
+
+def _mark_failed(
+    db: Session,
+    *,
+    artifact_id: uuid.UUID,
+    org_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    generation: int,
+    failure_code: str,
+    correlation_id: str | None,
+) -> None:
+    art = (
+        db.query(ImportSourceArtifact)
+        .filter(ImportSourceArtifact.id == artifact_id)
+        .with_for_update()
+        .first()
+    )
+    if not art or art.state != SourceArtifactState.PENDING.value:
+        return
+    _assert_transition(art.state, SourceArtifactState.FAILED)
+    art.state = SourceArtifactState.FAILED.value
+    art.failed_at = _utcnow()
+    art.failure_code = failure_code[:64]
+    _audit(
+        db,
+        org_id=org_id,
+        actor_id=actor_id,
+        event_name="ImportSourceArtifactFailed",
+        entity_id=artifact_id,
+        payload={
+            "import_batch_id": str(batch_id),
+            "generation": generation,
+            "failure_code": art.failure_code,
+        },
+        correlation_id=correlation_id,
+    )
+    db.commit()
 
 
 def upload_source_artifact(
@@ -145,12 +214,12 @@ def upload_source_artifact(
     """
     Adaptive Intake v2 source intake.
 
+    Full adapter safety inspection runs before DB reservation and object write.
     Does NOT create/modify staging rows or ProjectAssetLine.
     """
     limits = limits or DEFAULT_SOURCE_LIMITS
     storage = storage or get_object_storage()
 
-    # Request size limit (S12-compatible)
     size_hdr = get_request_size(request)
     if size_hdr is not None and size_hdr < 0:
         raise HTTPException(status_code=400, detail="Kích thước yêu cầu HTTP không hợp lệ.")
@@ -160,7 +229,6 @@ def upload_source_artifact(
             detail="Kích thước yêu cầu HTTP vượt quá giới hạn cho phép.",
         )
 
-    # Lock Project → batch
     project = (
         db.query(Project)
         .filter(Project.organization_id == org_id, Project.id == project_id)
@@ -188,11 +256,12 @@ def upload_source_artifact(
     if "." in sanitized:
         ext = sanitized[sanitized.rfind(".") :].lower()
     path = None
-    artifact: ImportSourceArtifact | None = None
+    artifact_id: uuid.UUID | None = None
+    next_gen = 0
     try:
         path, size, checksum = _spool_and_hash(file, limits, suffix=ext or ".bin")
 
-        # Format + safety inspection before reservation can become available
+        # Full bounded safety inspection BEFORE reservation/object write
         try:
             fmt, adapter = detect_format_and_adapter(path, sanitized)
             inspection = adapter.inspect(path)
@@ -249,7 +318,7 @@ def upload_source_artifact(
         )
         db.commit()
 
-        # Object write outside final pointer transaction
+        failure_code = "object_write_failed"
         try:
             storage.ensure_bucket()
             with open(path, "rb") as stream:
@@ -259,7 +328,6 @@ def upload_source_artifact(
                     content_type=artifact.content_type,
                     expected_size=size,
                 )
-            # Strong verify: re-hash object bytes
             with storage.open_stream(object_key) as rs:
                 rh = hashlib.sha256()
                 while True:
@@ -267,40 +335,31 @@ def upload_source_artifact(
                     if not chunk:
                         break
                     rh.update(chunk)
-                if rh.hexdigest() != checksum:
-                    try:
-                        storage.delete(object_key)
-                    except Exception:
-                        pass
+                got = _normalize_checksum(rh.hexdigest())
+                if got != checksum:
+                    failure_code = "checksum_mismatch"
                     raise RuntimeError("checksum_mismatch")
             etag = st.etag
         except Exception as exc:
-            # Mark failed; keep prior current
-            art = (
-                db.query(ImportSourceArtifact)
-                .filter(ImportSourceArtifact.id == artifact_id)
-                .with_for_update()
-                .first()
+            if isinstance(exc, ObjectStorageError):
+                failure_code = exc.code[:64]
+            elif "checksum" in str(exc).lower():
+                failure_code = "checksum_mismatch"
+            elif isinstance(exc, ObjectNotFound):
+                failure_code = "object_missing"
+            else:
+                failure_code = type(exc).__name__[:64]
+            # Residual object may remain on checksum mismatch after put — leave for reconciler
+            _mark_failed(
+                db,
+                artifact_id=artifact_id,
+                org_id=org_id,
+                actor_id=current_user.id,
+                batch_id=batch_id,
+                generation=next_gen,
+                failure_code=failure_code,
+                correlation_id=correlation_id,
             )
-            if art and art.state == SourceArtifactState.PENDING.value:
-                _assert_transition(art.state, SourceArtifactState.FAILED)
-                art.state = SourceArtifactState.FAILED.value
-                art.failed_at = _utcnow()
-                art.failure_code = type(exc).__name__[:64]
-                _audit(
-                    db,
-                    org_id=org_id,
-                    actor_id=current_user.id,
-                    event_name="ImportSourceArtifactFailed",
-                    entity_id=artifact_id,
-                    payload={
-                        "import_batch_id": str(batch_id),
-                        "generation": next_gen,
-                        "failure_code": art.failure_code,
-                    },
-                    correlation_id=correlation_id,
-                )
-                db.commit()
             raise HTTPException(
                 status_code=500,
                 detail="Không thể lưu tệp nguồn an toàn. Vui lòng thử lại.",
@@ -335,14 +394,18 @@ def upload_source_artifact(
         if not project or not batch or not art:
             raise HTTPException(status_code=404, detail="Import batch not found")
 
-        # Stale finish: if a higher successful generation already current, do not win
+        # Stale finish: newer available current already wins — this pending → failed/orphan path
         if batch.current_source_artifact_id:
             current = (
                 db.query(ImportSourceArtifact)
                 .filter(ImportSourceArtifact.id == batch.current_source_artifact_id)
                 .first()
             )
-            if current and current.generation > art.generation and current.state == "available":
+            if (
+                current
+                and current.generation > art.generation
+                and current.state == SourceArtifactState.AVAILABLE.value
+            ):
                 _assert_transition(art.state, SourceArtifactState.ORPHANED)
                 art.state = SourceArtifactState.ORPHANED.value
                 art.orphaned_at = _utcnow()
@@ -367,6 +430,9 @@ def upload_source_artifact(
         art.state = SourceArtifactState.AVAILABLE.value
         art.available_at = _utcnow()
         art.storage_etag = etag
+        # Current pointer only to same-batch artifact
+        if art.import_batch_id != batch.id:
+            raise HTTPException(status_code=500, detail="Không thể lưu tệp nguồn an toàn. Vui lòng thử lại.")
         batch.current_source_artifact_id = art.id
         _audit(
             db,
@@ -459,72 +525,210 @@ def reconcile_source_artifacts(
     max_items: int | None = None,
     actor_id: uuid.UUID | None = None,
     org_id: uuid.UUID | None = None,
+    reference_check: Callable[[Session, ImportSourceArtifact], bool] | None = None,
 ) -> dict[str, int]:
     """
     Bounded reconciler for pending/failed/orphaned artifacts.
 
-    - Does not delete available successful generations or current pointers.
-    - Deletes objects only for orphaned rows past retention when unreferenced.
+    Requires org_id tenant scope and actor_id for mutating audit.
+    Never deletes available successful history or current pointers.
     """
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="Phạm vi tổ chức là bắt buộc cho đối soát.")
+    if actor_id is None:
+        raise HTTPException(status_code=400, detail="Tác nhân hệ thống là bắt buộc cho đối soát.")
+
     limits = DEFAULT_SOURCE_LIMITS
     storage = storage or get_object_storage()
     max_items = max_items if max_items is not None else limits.reconcilers_max_items
-    cutoff = _utcnow().timestamp() - limits.orphan_retention_seconds
+    if max_items < 1:
+        raise HTTPException(status_code=400, detail="max_items phải >= 1.")
+    ref_check = reference_check or is_source_artifact_referenced
+    now_ts = _utcnow().timestamp()
+    cutoff = now_ts - limits.orphan_retention_seconds
 
     q = db.query(ImportSourceArtifact).filter(
+        ImportSourceArtifact.organization_id == org_id,
         ImportSourceArtifact.state.in_(
             [
                 SourceArtifactState.PENDING.value,
                 SourceArtifactState.FAILED.value,
                 SourceArtifactState.ORPHANED.value,
             ]
-        )
+        ),
     )
-    if org_id is not None:
-        q = q.filter(ImportSourceArtifact.organization_id == org_id)
-    rows = q.order_by(ImportSourceArtifact.created_at.asc()).limit(max_items).all()
+    # Deterministic: oldest first
+    rows = q.order_by(ImportSourceArtifact.created_at.asc(), ImportSourceArtifact.id.asc()).limit(
+        max_items
+    ).all()
 
     scanned = 0
     marked_orphan = 0
+    marked_failed = 0
     deleted = 0
+    errors = 0
+
     for art in rows:
         scanned += 1
-        batch = (
-            db.query(ProjectAssetImportBatch)
-            .filter(ProjectAssetImportBatch.id == art.import_batch_id)
-            .with_for_update()
-            .first()
-        )
-        if not batch:
-            continue
-        # Never touch current
-        if batch.current_source_artifact_id == art.id:
-            continue
-        # Never delete available history
-        if art.state == SourceArtifactState.AVAILABLE.value:
-            continue
-
-        # Pending with object present long enough → orphan for later cleanup
-        if art.state == SourceArtifactState.PENDING.value:
-            st = storage.head(art.storage_object_key)
-            if st is not None and art.created_at and art.created_at.timestamp() < cutoff:
-                art2 = (
-                    db.query(ImportSourceArtifact)
-                    .filter(ImportSourceArtifact.id == art.id)
-                    .with_for_update()
-                    .first()
+        try:
+            batch = (
+                db.query(ProjectAssetImportBatch)
+                .filter(
+                    ProjectAssetImportBatch.id == art.import_batch_id,
+                    ProjectAssetImportBatch.organization_id == org_id,
                 )
-                if art2 and art2.state == SourceArtifactState.PENDING.value:
-                    if batch.current_source_artifact_id != art2.id:
+                .with_for_update()
+                .first()
+            )
+            if not batch:
+                continue
+            if batch.current_source_artifact_id == art.id:
+                continue
+            if art.state == SourceArtifactState.AVAILABLE.value:
+                continue
+            if ref_check(db, art) and art.state != SourceArtifactState.ORPHANED.value:
+                # Referenced pending/failed should not be force-deleted
+                if art.state == SourceArtifactState.AVAILABLE.value:
+                    continue
+
+            created_ts = art.created_at.timestamp() if art.created_at else now_ts
+            past_retention = created_ts < cutoff
+
+            if art.state == SourceArtifactState.PENDING.value:
+                try:
+                    st = storage.head(art.storage_object_key)
+                except ObjectStorageError:
+                    errors += 1
+                    continue
+                if st is None:
+                    if past_retention:
+                        art2 = (
+                            db.query(ImportSourceArtifact)
+                            .filter(ImportSourceArtifact.id == art.id)
+                            .with_for_update()
+                            .first()
+                        )
+                        if art2 and art2.state == SourceArtifactState.PENDING.value:
+                            _assert_transition(art2.state, SourceArtifactState.FAILED)
+                            art2.state = SourceArtifactState.FAILED.value
+                            art2.failed_at = _utcnow()
+                            art2.failure_code = "pending_object_missing"
+                            _audit(
+                                db,
+                                org_id=org_id,
+                                actor_id=actor_id,
+                                event_name="ImportSourceArtifactFailed",
+                                entity_id=art2.id,
+                                payload={
+                                    "import_batch_id": str(art2.import_batch_id),
+                                    "generation": art2.generation,
+                                    "failure_code": art2.failure_code,
+                                },
+                                correlation_id=None,
+                                command_name="ReconcileImportSourceArtifact",
+                            )
+                            marked_failed += 1
+                    continue
+                # Object present: size/checksum verify then orphan past retention
+                if st.size != art.file_size_bytes:
+                    art2 = (
+                        db.query(ImportSourceArtifact)
+                        .filter(ImportSourceArtifact.id == art.id)
+                        .with_for_update()
+                        .first()
+                    )
+                    if art2 and art2.state == SourceArtifactState.PENDING.value:
+                        _assert_transition(art2.state, SourceArtifactState.FAILED)
+                        art2.state = SourceArtifactState.FAILED.value
+                        art2.failed_at = _utcnow()
+                        art2.failure_code = "size_mismatch"
+                        _audit(
+                            db,
+                            org_id=org_id,
+                            actor_id=actor_id,
+                            event_name="ImportSourceArtifactFailed",
+                            entity_id=art2.id,
+                            payload={
+                                "import_batch_id": str(art2.import_batch_id),
+                                "generation": art2.generation,
+                                "failure_code": art2.failure_code,
+                            },
+                            correlation_id=None,
+                            command_name="ReconcileImportSourceArtifact",
+                        )
+                        marked_failed += 1
+                    continue
+                if past_retention:
+                    art2 = (
+                        db.query(ImportSourceArtifact)
+                        .filter(ImportSourceArtifact.id == art.id)
+                        .with_for_update()
+                        .first()
+                    )
+                    if (
+                        art2
+                        and art2.state == SourceArtifactState.PENDING.value
+                        and batch.current_source_artifact_id != art2.id
+                    ):
                         _assert_transition(art2.state, SourceArtifactState.ORPHANED)
                         art2.state = SourceArtifactState.ORPHANED.value
                         art2.orphaned_at = _utcnow()
+                        _audit(
+                            db,
+                            org_id=org_id,
+                            actor_id=actor_id,
+                            event_name="ImportSourceArtifactOrphaned",
+                            entity_id=art2.id,
+                            payload={
+                                "import_batch_id": str(art2.import_batch_id),
+                                "generation": art2.generation,
+                                "reason": "pending_retention",
+                            },
+                            correlation_id=None,
+                            command_name="ReconcileImportSourceArtifact",
+                        )
                         marked_orphan += 1
-            continue
+                continue
 
-        if art.state == SourceArtifactState.ORPHANED.value:
-            if art.orphaned_at and art.orphaned_at.timestamp() < cutoff:
-                # Re-check under lock
+            if art.state == SourceArtifactState.FAILED.value:
+                # Residual object → orphan past retention for cleanup
+                try:
+                    st = storage.head(art.storage_object_key)
+                except ObjectStorageError:
+                    errors += 1
+                    continue
+                if st is not None and past_retention:
+                    art2 = (
+                        db.query(ImportSourceArtifact)
+                        .filter(ImportSourceArtifact.id == art.id)
+                        .with_for_update()
+                        .first()
+                    )
+                    if art2 and art2.state == SourceArtifactState.FAILED.value:
+                        _assert_transition(art2.state, SourceArtifactState.ORPHANED)
+                        art2.state = SourceArtifactState.ORPHANED.value
+                        art2.orphaned_at = _utcnow()
+                        _audit(
+                            db,
+                            org_id=org_id,
+                            actor_id=actor_id,
+                            event_name="ImportSourceArtifactOrphaned",
+                            entity_id=art2.id,
+                            payload={
+                                "import_batch_id": str(art2.import_batch_id),
+                                "generation": art2.generation,
+                                "reason": "failed_residual_object",
+                            },
+                            correlation_id=None,
+                            command_name="ReconcileImportSourceArtifact",
+                        )
+                        marked_orphan += 1
+                continue
+
+            if art.state == SourceArtifactState.ORPHANED.value:
+                orphan_ts = art.orphaned_at.timestamp() if art.orphaned_at else created_ts
+                if orphan_ts >= cutoff:
+                    continue  # retention not elapsed
                 art2 = (
                     db.query(ImportSourceArtifact)
                     .filter(ImportSourceArtifact.id == art.id)
@@ -543,24 +747,51 @@ def reconcile_source_artifacts(
                     continue
                 if art2.state != SourceArtifactState.ORPHANED.value:
                     continue
+                if ref_check(db, art2):
+                    continue
                 key = art2.storage_object_key
-                storage.delete(key)
-                if actor_id:
-                    _audit(
-                        db,
-                        org_id=art2.organization_id,
-                        actor_id=actor_id,
-                        event_name="ImportSourceArtifactObjectDeleted",
-                        entity_id=art2.id,
-                        payload={
-                            "import_batch_id": str(art2.import_batch_id),
-                            "generation": art2.generation,
-                        },
-                        correlation_id=None,
-                    )
+                try:
+                    storage.delete(key)
+                except ObjectStorageError:
+                    errors += 1
+                    continue
+                # Verify absent
+                try:
+                    if storage.head(key) is not None:
+                        errors += 1
+                        continue
+                except ObjectStorageError:
+                    errors += 1
+                    continue
+                _audit(
+                    db,
+                    org_id=org_id,
+                    actor_id=actor_id,
+                    event_name="ImportSourceArtifactObjectDeleted",
+                    entity_id=art2.id,
+                    payload={
+                        "import_batch_id": str(art2.import_batch_id),
+                        "generation": art2.generation,
+                    },
+                    correlation_id=None,
+                    command_name="ReconcileImportSourceArtifact",
+                )
                 deleted += 1
+        except HTTPException:
+            errors += 1
+            continue
+        except Exception:
+            errors += 1
+            continue
+
     db.commit()
-    return {"scanned": scanned, "marked_orphan": marked_orphan, "deleted_objects": deleted}
+    return {
+        "scanned": scanned,
+        "marked_orphan": marked_orphan,
+        "marked_failed": marked_failed,
+        "deleted_objects": deleted,
+        "errors": errors,
+    }
 
 
 def count_staging_rows(db: Session, batch_id: uuid.UUID) -> int:

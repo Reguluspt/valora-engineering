@@ -18,6 +18,13 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Composite unique so source artifacts can FK (org, project, batch) for tenant integrity.
+    op.create_unique_constraint(
+        "uq_import_batch_tenant_id",
+        "project_asset_import_batches",
+        ["organization_id", "project_id", "id"],
+    )
+
     op.create_table(
         "import_source_artifacts",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -51,10 +58,44 @@ def upgrade() -> None:
         sa.CheckConstraint("generation > 0", name="chk_source_artifact_generation_positive"),
         sa.CheckConstraint("file_size_bytes >= 0", name="chk_source_artifact_size_nonneg"),
         sa.CheckConstraint("length(checksum_sha256) = 64", name="chk_source_artifact_checksum_len"),
+        sa.CheckConstraint(
+            "checksum_sha256 = lower(checksum_sha256)",
+            name="chk_source_artifact_checksum_lower",
+        ),
+        sa.CheckConstraint(
+            "checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_source_artifact_checksum_hex",
+        ),
+        sa.CheckConstraint(
+            "state IN ('pending', 'available', 'failed', 'orphaned')",
+            name="chk_source_artifact_state",
+        ),
+        sa.CheckConstraint(
+            "detected_format IN ('xls', 'xlsx')",
+            name="chk_source_artifact_format",
+        ),
         sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["import_batch_id"], ["project_asset_import_batches.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["organization_id"], ["organization_profiles.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["import_batch_id"],
+            ["project_asset_import_batches.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["organization_id"],
+            ["organization_profiles.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_source_artifact_batch_tenant",
+            ondelete="RESTRICT",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("import_batch_id", "generation", name="uq_source_artifact_batch_generation"),
         sa.UniqueConstraint("storage_object_key", name="uq_source_artifact_object_key"),
@@ -90,3 +131,4 @@ def downgrade() -> None:
     op.drop_index("idx_source_artifact_project", table_name="import_source_artifacts")
     op.drop_index("idx_source_artifact_org", table_name="import_source_artifacts")
     op.drop_table("import_source_artifacts")
+    op.drop_constraint("uq_import_batch_tenant_id", "project_asset_import_batches", type_="unique")

@@ -1,165 +1,79 @@
-# S13-PR-002 — XLS Dependency / Security Spike
+# S13-PR-002 — XLS Dependency / Security Spike (Corrective)
 
 **Task:** S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact  
-**Date:** 2026-07-16  
+**Date:** 2026-07-16 (corrective 2026-07-17)  
 **Baseline:** `949903f3912aa65f8b990852756aeef7981bca08`  
-**Status:** Decision recorded — **select `xlrd` 2.x** for value-only `.xls` (BIFF) intake under fail-closed adapters
+**Audited draft head (pre-corrective):** `eb0fc0de7eb0b6843e9a79ec0f14abd092bd5374`  
+**Status:** Decision — **`xlrd` 2.x + `olefile`** for value-only BIFF with **presence-based** fail-closed gates
 
 ---
 
-## 1. Policy under evaluation
+## 1. Policy
 
-Adaptive Intake v2 must accept legacy `.xls` sources with:
+Adaptive Intake v2 must **detect and reject presence** of:
 
-- value-only cell reads (no formula execution, no macro/VBA/DDE/external link execution);
-- extension + content-signature checks (OLE compound document signature `D0 CF 11 E0…`);
-- fail-closed rejection of encrypted/malformed/unsupported workbooks;
-- bounded resource use (sheets/rows/columns/cells/strings);
-- no Office desktop/COM/LibreOffice automation;
-- Python `>=3.12` compatibility matching `valora-backend`.
+- encrypted/FILEPASS;
+- VBA/macro project streams;
+- external workbook links (SUPBOOK > internal self-ref);
+- EXTERNNAME / DCONNAME external naming;
+- malformed/unsupported OLE/BIFF.
 
----
-
-## 2. Candidates surveyed
-
-| Candidate | Role | Notes |
-| --- | --- | --- |
-| **xlrd 2.x** | BIFF `.xls` reader | Dropped `.xlsx` support intentionally; pure Python BIFF; widely used in data pipelines |
-| **python-calamine** | Fast multi-format via Rust calamine | Strong performance; dependency surface includes native wheels; newer ecosystem footprint |
-| **olefile / custom OLE walk** | Stream inspection only | Useful for signature/VBA heuristics; not a full value-preserving sheet reader by itself |
-| **xlwt** | Writer only | Used in **tests** to synthesize redacted `.xls` fixtures; not a runtime intake dependency |
-| **openpyxl** | `.xlsx` only | Already selected for OOXML; cannot read classic BIFF `.xls` |
-
-Office automation (Excel COM, LibreOffice headless convert) was **rejected a priori** by task non-goals and guardrails.
+Non-execution alone is **not** sufficient.
 
 ---
 
-## 3. Evaluation matrix
+## 2. Selected stack
 
-### 3.1 Python 3.12 compatibility
+| Package | Pin | Role | License |
+| --- | --- | --- | --- |
+| **xlrd** | `>=2.0.1,<3` | BIFF value-only cells + optional merged_cells | BSD |
+| **olefile** | `>=0.46` | OLE stream inventory + Workbook stream read | BSD |
+| openpyxl | existing | `.xlsx` only | MIT |
 
-| Package | Evidence |
-| --- | --- |
-| xlrd 2.0.1+ | Pure Python; installs and imports cleanly on CPython 3.12/3.13 in this workspace (`xlrd 2.0.2`) |
-| python-calamine | Requires native extension wheels; viable on manylinux CI but adds binary supply-chain surface |
+Python: `>=3.12` (verified on 3.12 CI / 3.13 local).
 
-### 3.2 Maintenance / release health
+### Why not python-calamine
 
-| Package | Evidence |
-| --- | --- |
-| xlrd | Mature; 2.x actively used; maintenance is slow but API is stable for BIFF-only reads. No new feature churn expected. |
-| python-calamine | Actively maintained with frequent releases; smaller production history in this codebase. |
-
-### 3.3 License
-
-| Package | License | Fit |
-| --- | --- | --- |
-| xlrd | BSD-style | Compatible with Valora backend deps |
-| boto3 (storage, separate) | Apache-2.0 | Compatible |
-| python-calamine | MIT | Compatible |
-
-### 3.4 Security / CVE posture
-
-- Runtime pin: `xlrd>=2.0.1,<3` (BIFF-only line; avoids xlrd 1.x `.xlsx` path).
-- `pip-audit` must be run in CI/local gate after install (see implementation report).
-- No known requirement to vendor patched forks for this spike window; if `pip-audit` flags a CVE, treat as blocker before Ready.
-
-### 3.5 BIFF / OLE coverage
-
-- **xlrd 2.x** opens classic OLE-wrapped BIFF workbooks (Excel 97–2003 style).
-- Signature gate is enforced **before** xlrd open: first 8 bytes must match `XLS_OLE_SIGNATURE`.
-- **Not covered as full parsers:** arbitrary OLE malformation beyond what xlrd rejects; exotic BIFF extensions may fail closed as `invalid_xls`.
-
-### 3.6 Value-only / formula behavior
-
-- xlrd returns **cached cell values** (numbers/strings/dates/booleans/error codes). It does **not** execute Excel formulas, VBA, DDE, or external links.
-- Adapter opens with `formatting_info=False`, `on_demand=True`, `ragged_rows=True` to reduce memory and avoid format-side channels.
-
-### 3.7 Encrypted workbook detection
-
-- Password-protected BIFF books raise `xlrd.XLRDError` with password/encrypt messaging.
-- Adapter maps those to fail-closed `encrypted_workbook` (HTTP 400, Vietnamese detail, no path leakage).
-
-### 3.8 Macro / VBA / DDE / external links
-
-| Threat | Handling |
-| --- | --- |
-| VBA/macro execution | xlrd does not execute macros. Residual risk is **parsing attacker-crafted BIFF**, mitigated by size/row/column/string limits and fail-closed open errors. |
-| Explicit VBA stream rejection | Full OLE directory enumeration is limited in xlrd 2.x without extra OLE libs; spike accepts **non-execution + limits** rather than claiming complete stream deny-listing. |
-| DDE / external links | Not executed by xlrd value path; treated as opaque values if present as text. |
-| `.xlsx` macros / external links | Handled on the **openpyxl + ZIP safety** path (separate adapter), not xlrd. |
-
-**Honest residual:** if a future threat model requires guaranteed rejection of every workbook that *contains* a VBA project stream (even without execution), add an `olefile` stream inventory gate in a follow-up corrective. S13-PR-002 policy is satisfied by **no execution + fail-closed open + bounds**.
-
-### 3.9 Streaming / memory / limits
-
-- File is spooled to a bounded temp path with max upload bytes before adapter open.
-- `on_demand=True` reduces sheet materialization.
-- Application enforces `max_sheets`, `max_physical_rows`, `max_columns`, `max_cell_chars`.
-- Merged regions: xlrd 2.x without `formatting_info` does not expose merged-region metadata; adapter returns empty merged metadata for `.xls` (documented limitation; coordinate/value preservation still holds).
-
-### 3.10 Sheet / cell / metadata preservation
-
-| Requirement | xlrd outcome |
-| --- | --- |
-| Sheet names | Yes |
-| Cell coordinates (row/col) | Yes via iteration |
-| Blank cells / duplicate header values | Preserved by coordinate iteration (not header-keyed dicts) |
-| Merged regions | **Not** exposed without formatting_info (limitation) |
-
----
-
-## 4. Decision
-
-**Choose `xlrd>=2.0.1,<3`** as the `.xls` runtime dependency for S13-PR-002.
-
-### Why xlrd
-
-1. Matches BIFF-only scope after 2.x split from OOXML.
-2. Pure Python → simpler CI/repro and fewer native wheels than calamine.
-3. Proven value-only semantics suitable for fail-closed intake.
-4. Clear error surface for encrypted/malformed books.
-
-### Why not python-calamine (for this PR)
-
-1. Adds native binary surface without proven Valora CI pin history.
-2. Spike does not show a safety gap that only calamine closes for value-only BIFF.
-3. Can be revisited if performance or format coverage becomes a measured blocker.
-
-### Why not OLE-only libraries alone
-
-They do not provide a complete sheet value iterator contract required by `WorkbookAdapter`.
+Native wheels add supply-chain surface without proving better presence detection for this PR. Revisit only if BIFF coverage blocks a measured case.
 
 ### Why not Office automation
 
-Explicit non-goal; non-deterministic; not deployable in Valora backend containers.
+Explicit non-goal.
 
 ---
 
-## 5. Companion storage dependency (recorded for checklist completeness)
+## 3. Presence detection design
 
-| Package | Purpose | License | Rationale |
-| --- | --- | --- | --- |
-| **boto3** | S3-compatible object storage client (MinIO/local/CI) | Apache-2.0 | Standard AWS SDK; used behind an internal `ObjectStoragePort`; credentials never returned on API |
+1. **OLE signature** `D0 CF 11 E0…`
+2. **`olefile.listdir()`** — reject stream/storage names matching VBA/macro patterns (`_VBA_PROJECT_CUR`, `vba`, `macrosheet`, …)
+3. **Bounded BIFF scan** of Workbook/Book stream:
+   - `FILEPASS (0x002F)` → `encrypted_workbook`
+   - `SUPBOOK (0x01AE)` with length **> 4** → `external_link_not_allowed` (internal self-ref is 4 bytes)
+   - `EXTERNNAME` / `DCONNAME` non-empty → `external_link_not_allowed`
+4. **xlrd open** after presence gates; map password errors → `encrypted_workbook`
+5. **Merged cells:** `formatting_info=True` when supported; else parse `MERGEDCELLS (0x00E5)` from BIFF
+6. **Positional cells:** `ragged_rows=False`; emit full sheet width including trailing blanks
 
----
+Error codes (stable): `encrypted_workbook`, `macro_not_allowed`, `external_link_not_allowed`, `invalid_xls`, `signature_mismatch`, limit codes.
 
-## 6. Adapter contract implications
-
-- `XlsWorkbookAdapter` name=`xls-xlrd`, version=`s13-pr-002-v1`.
-- Detection: extension ∈ `{.xls}` **and** OLE signature; mismatches → `signature_mismatch`.
-- S12 upload path remains `.xlsx`-only; `.xls` only enters Adaptive source-artifact endpoints.
-
----
-
-## 7. Residual risks / follow-ups (non-blocking for Draft)
-
-1. Optional `olefile` VBA-stream deny-list if audit demands content presence rejection, not only non-execution.
-2. Merged-region metadata for `.xls` if a later structure-discovery PR needs it (may require `formatting_info=True` with stricter bounds or another library).
-3. Keep `pip-audit` green on every Ready attempt; pin tighter if a CVE appears.
+Vietnamese details; no internal paths.
 
 ---
 
-## 8. Conclusion
+## 4. CVE / pip-audit
 
-**Proceed with `.xls` implementation via xlrd 2.x** under fail-closed adapter limits. No soft-accept path, no Office automation, no lowering of guardrails.
+CI runs `pip-audit` after install. Block Ready if critical findings on xlrd/olefile/boto3.
+
+---
+
+## 5. Residual (non-goal honesty)
+
+- Not a full antivirus/OLE exploit sandbox — resource bounds + presence reject + no code execution.
+- Exotic BIFF extensions fail closed as `invalid_xls` when unreadable.
+- Full CFB malicious polyglot corpus is out of scope; synthetic BIFF/OLE name fixtures prove policy paths.
+
+---
+
+## 6. Conclusion
+
+**Proceed** with xlrd + olefile presence-based fail-closed `.xls` intake. Corrective closes independent audit B-01 for presence detection.

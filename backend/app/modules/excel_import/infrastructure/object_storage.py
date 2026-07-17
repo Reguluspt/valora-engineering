@@ -13,6 +13,18 @@ _READ_CHUNK = 64 * 1024
 _MAX_OBJECT_BYTES = 10 * 1024 * 1024
 
 
+class ObjectStorageError(Exception):
+    """Non-not-found storage failure (permission/network/timeout/etc.)."""
+
+    def __init__(self, code: str, message: str = ""):
+        self.code = code
+        super().__init__(message or code)
+
+
+class ObjectNotFound(Exception):
+    """Exact object key missing."""
+
+
 def _read_stream_bounded(stream: BinaryIO, *, max_bytes: int, expected_size: int | None = None) -> bytes:
     """Read stream in chunks with a hard size ceiling (never bare stream.read())."""
     chunks: list[bytes] = []
@@ -23,11 +35,11 @@ def _read_stream_bounded(stream: BinaryIO, *, max_bytes: int, expected_size: int
             break
         total += len(chunk)
         if total > max_bytes:
-            raise RuntimeError("object_too_large")
+            raise ObjectStorageError("object_too_large")
         chunks.append(chunk)
     data = b"".join(chunks)
     if expected_size is not None and len(data) != expected_size:
-        raise RuntimeError("size_mismatch")
+        raise ObjectStorageError("size_mismatch")
     return data
 
 
@@ -64,7 +76,11 @@ class FakeObjectStorage:
         self._objects: dict[str, bytes] = {}
         self._content_types: dict[str, str] = {}
         self.fail_put: bool = False
-        self.fail_after_put: bool = False  # simulate post-write caller failure externally
+        self.fail_head: bool = False
+        self.fail_delete: bool = False
+        self.fail_after_put: bool = False
+        self.head_raises: Exception | None = None
+        self.delete_raises: Exception | None = None
 
     def ensure_bucket(self) -> None:
         return None
@@ -78,9 +94,9 @@ class FakeObjectStorage:
         expected_size: int | None = None,
     ) -> ObjectStat:
         if self.fail_put:
-            raise RuntimeError("fake_put_failed")
+            raise ObjectStorageError("fake_put_failed")
         if key in self._objects:
-            raise RuntimeError("object_key_exists")
+            raise ObjectStorageError("object_key_exists")
         data = _read_stream_bounded(
             stream,
             max_bytes=_MAX_OBJECT_BYTES,
@@ -91,6 +107,10 @@ class FakeObjectStorage:
         return ObjectStat(size=len(data), etag=hashlib.md5(data).hexdigest(), content_type=content_type)
 
     def head(self, key: str) -> ObjectStat | None:
+        if self.head_raises is not None:
+            raise self.head_raises
+        if self.fail_head:
+            raise ObjectStorageError("fake_head_failed")
         data = self._objects.get(key)
         if data is None:
             return None
@@ -103,12 +123,33 @@ class FakeObjectStorage:
     def open_stream(self, key: str) -> BinaryIO:
         data = self._objects.get(key)
         if data is None:
-            raise FileNotFoundError(key)
+            raise ObjectNotFound(key)
         return io.BytesIO(data)
 
     def delete(self, key: str) -> None:
+        """Idempotent for missing keys; raises ObjectStorageError on forced failure."""
+        if self.delete_raises is not None:
+            raise self.delete_raises
+        if self.fail_delete:
+            raise ObjectStorageError("fake_delete_failed")
         self._objects.pop(key, None)
         self._content_types.pop(key, None)
+
+
+def _is_not_found_error(exc: BaseException) -> bool:
+    try:
+        from botocore.exceptions import ClientError
+
+        if isinstance(exc, ClientError):
+            code = (exc.response or {}).get("Error", {}).get("Code", "")
+            return code in {"404", "NoSuchKey", "NotFound", "NoSuchBucket"}
+    except Exception:
+        pass
+    name = type(exc).__name__
+    msg = str(exc).lower()
+    if "nosuchkey" in msg or "not found" in msg or "404" in msg:
+        return True
+    return name in {"NoSuchKey", "NotFound"}
 
 
 class S3ObjectStorage:
@@ -139,19 +180,20 @@ class S3ObjectStorage:
     def ensure_bucket(self) -> None:
         try:
             self._client.head_bucket(Bucket=self._bucket)
-        except Exception:
-            # Local/CI: create if missing; production policy should pre-provision.
+        except Exception as exc:
             if os.environ.get("VALORA_ENV", "local") in {"local", "test"} or os.environ.get("CI") == "true":
                 try:
                     self._client.create_bucket(Bucket=self._bucket)
-                except Exception as exc:
-                    # Bucket may race-create
+                except Exception as create_exc:
                     try:
                         self._client.head_bucket(Bucket=self._bucket)
                     except Exception:
-                        raise RuntimeError(f"bucket_unavailable:{type(exc).__name__}") from exc
+                        raise ObjectStorageError(
+                            "bucket_unavailable",
+                            type(create_exc).__name__,
+                        ) from create_exc
             else:
-                raise RuntimeError("bucket_missing")
+                raise ObjectStorageError("bucket_missing") from exc
 
     def put_stream(
         self,
@@ -161,28 +203,31 @@ class S3ObjectStorage:
         content_type: str,
         expected_size: int | None = None,
     ) -> ObjectStat:
-        # Refuse overwrite: head first
         if self.head(key) is not None:
-            raise RuntimeError("object_key_exists")
+            raise ObjectStorageError("object_key_exists")
         extra = {"ContentType": content_type}
-        self._client.upload_fileobj(stream, self._bucket, key, ExtraArgs=extra)
+        try:
+            self._client.upload_fileobj(stream, self._bucket, key, ExtraArgs=extra)
+        except Exception as exc:
+            raise ObjectStorageError("put_failed", type(exc).__name__) from exc
         st = self.head(key)
         if st is None:
-            raise RuntimeError("put_verify_missing")
+            raise ObjectStorageError("put_verify_missing")
         if expected_size is not None and st.size != expected_size:
-            # best-effort cleanup of bad object
             try:
                 self.delete(key)
             except Exception:
                 pass
-            raise RuntimeError("size_mismatch")
+            raise ObjectStorageError("size_mismatch")
         return st
 
     def head(self, key: str) -> ObjectStat | None:
         try:
             resp = self._client.head_object(Bucket=self._bucket, Key=key)
-        except Exception:
-            return None
+        except Exception as exc:
+            if _is_not_found_error(exc):
+                return None
+            raise ObjectStorageError("head_failed", type(exc).__name__) from exc
         return ObjectStat(
             size=int(resp.get("ContentLength") or 0),
             etag=(resp.get("ETag") or "").strip('"') or None,
@@ -190,18 +235,28 @@ class S3ObjectStorage:
         )
 
     def open_stream(self, key: str) -> BinaryIO:
-        resp = self._client.get_object(Bucket=self._bucket, Key=key)
+        try:
+            resp = self._client.get_object(Bucket=self._bucket, Key=key)
+        except Exception as exc:
+            if _is_not_found_error(exc):
+                raise ObjectNotFound(key) from exc
+            raise ObjectStorageError("get_failed", type(exc).__name__) from exc
         body = resp["Body"]
-        # StreamingBody supports sized reads; bound total object materialization.
         data = _read_stream_bounded(body, max_bytes=_MAX_OBJECT_BYTES)
         return io.BytesIO(data)
 
     def delete(self, key: str) -> None:
+        """Delete exact key. Missing key is idempotent success; other errors propagate."""
         try:
             self._client.delete_object(Bucket=self._bucket, Key=key)
-        except Exception:
-            # idempotent
-            pass
+        except Exception as exc:
+            if _is_not_found_error(exc):
+                return
+            raise ObjectStorageError("delete_failed", type(exc).__name__) from exc
+        # Verify gone (or already gone)
+        st = self.head(key)
+        if st is not None:
+            raise ObjectStorageError("delete_verify_failed")
 
 
 def build_object_storage_from_settings(settings) -> ObjectStoragePort:
@@ -214,7 +269,6 @@ def build_object_storage_from_settings(settings) -> ObjectStoragePort:
     )
 
 
-# Process-wide override for tests
 _STORAGE_OVERRIDE: ObjectStoragePort | None = None
 
 

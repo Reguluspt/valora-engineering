@@ -1,10 +1,14 @@
-"""Value-only .xlsx adapter reusing S12 ZIP safety checks."""
+"""Value-only .xlsx adapter: ZIP safety + openpyxl + full bounds + OOXML merges."""
 from __future__ import annotations
 
 import zipfile
+
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
+from app.modules.excel_import.application.adapters.xlsx_merge import (
+    extract_merged_regions_from_xlsx,
+)
 from app.modules.excel_import.application.parse_workbook import (
     _is_unsafe_zip_path,
 )
@@ -21,7 +25,6 @@ from app.modules.excel_import.domain.source_artifact import (
 from app.modules.excel_import.domain.workbook_adapter import (
     AdapterInspectionResult,
     CellValue,
-    MergedRegion,
     SheetSummary,
     WorkbookFormat,
     fail_adapter,
@@ -30,7 +33,7 @@ from app.modules.excel_import.domain.workbook_adapter import (
 
 class XlsxWorkbookAdapter:
     name = "xlsx-openpyxl"
-    version = "s13-pr-002-v1"
+    version = "s13-pr-002-v2"
     format = WorkbookFormat.XLSX
 
     def __init__(self, limits: SourceArtifactLimits | None = None):
@@ -74,10 +77,22 @@ class XlsxWorkbookAdapter:
             for info in infos:
                 fn = info.filename
                 if _is_unsafe_zip_path(fn):
-                    fail_adapter(400, "unsafe_zip_path", "Đường dẫn tệp trong lưu trữ ZIP không an toàn.")
+                    fail_adapter(
+                        400,
+                        "unsafe_zip_path",
+                        "Đường dẫn tệp trong lưu trữ ZIP không an toàn.",
+                    )
                 if info.flag_bits & 0x1:
                     fail_adapter(400, "encrypted_archive", "Tệp mã hóa không được hỗ trợ.")
                 if fn in FORBIDDEN_ZIP_PARTS:
+                    fail_adapter(
+                        400,
+                        "macro_not_allowed",
+                        "Tệp Excel chứa macro hoặc mã VBA không được phép.",
+                    )
+                # Also reject case variants / nested vba
+                lower = fn.lower()
+                if "vbaproject" in lower.replace("\\", "/"):
                     fail_adapter(
                         400,
                         "macro_not_allowed",
@@ -89,6 +104,81 @@ class XlsxWorkbookAdapter:
                         "external_link_not_allowed",
                         "Tệp Excel chứa liên kết ngoài không được phép.",
                     )
+                if "externallinks" in lower.replace("\\", "/"):
+                    fail_adapter(
+                        400,
+                        "external_link_not_allowed",
+                        "Tệp Excel chứa liên kết ngoài không được phép.",
+                    )
+
+    def _pad_row(self, row, width: int) -> list:
+        vals = list(row)
+        if width and len(vals) < width:
+            vals.extend([None] * (width - len(vals)))
+        return vals
+
+    def _exhaust_sheet(self, ws) -> tuple[int, int, int]:
+        """Iterate real rows/cells; return max_row, max_col, cell_count."""
+        limits = self._limits
+        # Prefer declared width so trailing blanks keep column positions
+        declared_width = int(ws.max_column or 0)
+        if declared_width > limits.max_columns:
+            fail_adapter(
+                413,
+                "column_limit",
+                "Số lượng cột vượt quá giới hạn cho phép.",
+                "columns",
+            )
+        max_row = 0
+        max_col = 0
+        cell_count = 0
+        for r_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            if r_idx > limits.max_physical_rows:
+                fail_adapter(
+                    413,
+                    "physical_row_limit",
+                    "Số lượng dòng vật lý vượt quá giới hạn cho phép.",
+                    "rows",
+                )
+            max_row = r_idx
+            row_chars = 0
+            width = max(declared_width, len(row))
+            if width > limits.max_columns:
+                fail_adapter(
+                    413,
+                    "column_limit",
+                    "Số lượng cột vượt quá giới hạn cho phép.",
+                    "columns",
+                )
+            vals = self._pad_row(row, width)
+            for c_idx, val in enumerate(vals, start=1):
+                cell_count += 1
+                if cell_count > limits.max_total_cells:
+                    fail_adapter(
+                        413,
+                        "total_cell_limit",
+                        "Tổng số ô vượt quá giới hạn cho phép.",
+                        "cells",
+                    )
+                if c_idx > max_col:
+                    max_col = c_idx
+                if isinstance(val, str):
+                    if len(val) > limits.max_cell_chars:
+                        fail_adapter(
+                            400,
+                            "cell_length_limit",
+                            "Ô dữ liệu vượt quá độ dài ký tự cho phép.",
+                            "cell",
+                        )
+                    row_chars += len(val)
+            if row_chars > limits.max_row_chars:
+                fail_adapter(
+                    413,
+                    "row_char_limit",
+                    "Tổng độ dài ký tự trên một dòng vượt quá giới hạn cho phép.",
+                    "row_chars",
+                )
+        return max_row, max(max_col, declared_width), cell_count
 
     def inspect(self, path: str) -> AdapterInspectionResult:
         with open(path, "rb") as f:
@@ -96,6 +186,13 @@ class XlsxWorkbookAdapter:
         if not sig.startswith(XLSX_ZIP_SIGNATURE):
             fail_adapter(400, "signature_mismatch", "Chữ ký tệp không khớp định dạng .xlsx.")
         self._validate_zip(path)
+
+        merges_by_sheet = extract_merged_regions_from_xlsx(
+            path,
+            max_merged_total=self._limits.max_merged_regions,
+            max_merged_per_sheet=self._limits.max_merged_regions_per_sheet,
+        )
+
         wb = None
         try:
             wb = load_workbook(
@@ -114,53 +211,34 @@ class XlsxWorkbookAdapter:
                     "sheets",
                 )
             sheets: list[SheetSummary] = []
+            total_cells = 0
+            total_merged = 0
             for name in names:
                 ws = wb[name]
-                # dimensions may be None in read_only
-                max_row = ws.max_row or 0
-                max_col = ws.max_column or 0
-                if max_row > self._limits.max_physical_rows:
+                max_row, max_col, cells = self._exhaust_sheet(ws)
+                total_cells += cells
+                if total_cells > self._limits.max_total_cells:
                     fail_adapter(
                         413,
-                        "physical_row_limit",
-                        "Số lượng dòng vật lý vượt quá giới hạn cho phép.",
-                        "rows",
+                        "total_cell_limit",
+                        "Tổng số ô vượt quá giới hạn cho phép.",
+                        "cells",
                     )
-                if max_col > self._limits.max_columns:
-                    fail_adapter(
-                        413,
-                        "column_limit",
-                        "Số lượng cột vượt quá giới hạn cho phép.",
-                        "columns",
-                    )
-                merged: list[MergedRegion] = []
-                # read_only workbooks may not expose merged_cells; use empty when unavailable
-                try:
-                    ranges = list(getattr(ws, "merged_cells", None).ranges)  # type: ignore[union-attr]
-                except Exception:
-                    ranges = []
-                if len(ranges) > self._limits.max_merged_regions:
+                merged = merges_by_sheet.get(name, ())
+                total_merged += len(merged)
+                if total_merged > self._limits.max_merged_regions:
                     fail_adapter(
                         413,
                         "merged_region_limit",
                         "Số vùng gộp ô vượt quá giới hạn cho phép.",
                         "merged",
                     )
-                for mr in ranges:
-                    merged.append(
-                        MergedRegion(
-                            min_row=mr.min_row,
-                            min_col=mr.min_col,
-                            max_row=mr.max_row,
-                            max_col=mr.max_col,
-                        )
-                    )
                 sheets.append(
                     SheetSummary(
                         name=name,
                         max_row=max_row,
                         max_column=max_col,
-                        merged_regions=tuple(merged),
+                        merged_regions=merged,
                     )
                 )
             return AdapterInspectionResult(
@@ -169,7 +247,12 @@ class XlsxWorkbookAdapter:
                 adapter_version=self.version,
                 sheet_names=names,
                 sheets=tuple(sheets),
-                safe_metadata={"sheet_count": len(names), "limit_version": self._limits.limit_version},
+                safe_metadata={
+                    "sheet_count": len(names),
+                    "limit_version": self._limits.limit_version,
+                    "total_cells_inspected": total_cells,
+                    "total_merged_regions": total_merged,
+                },
             )
         except Exception as exc:
             from app.modules.excel_import.domain.workbook_adapter import AdapterError
@@ -197,6 +280,14 @@ class XlsxWorkbookAdapter:
         try:
             name = sheet_name if sheet_name and sheet_name in wb.sheetnames else wb.sheetnames[0]
             ws = wb[name]
+            declared_width = int(ws.max_column or 0)
+            if declared_width > self._limits.max_columns:
+                fail_adapter(
+                    413,
+                    "column_limit",
+                    "Số lượng cột vượt quá giới hạn cho phép.",
+                    "columns",
+                )
             for r_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
                 if r_idx > self._limits.max_physical_rows:
                     fail_adapter(
@@ -206,14 +297,17 @@ class XlsxWorkbookAdapter:
                         "rows",
                     )
                 cells: list[CellValue] = []
-                for c_idx, val in enumerate(row, start=1):
-                    if c_idx > self._limits.max_columns:
-                        fail_adapter(
-                            413,
-                            "column_limit",
-                            "Số lượng cột vượt quá giới hạn cho phép.",
-                            "columns",
-                        )
+                row_chars = 0
+                width = max(declared_width, len(row))
+                if width > self._limits.max_columns:
+                    fail_adapter(
+                        413,
+                        "column_limit",
+                        "Số lượng cột vượt quá giới hạn cho phép.",
+                        "columns",
+                    )
+                vals = self._pad_row(row, width)
+                for c_idx, val in enumerate(vals, start=1):
                     if isinstance(val, str) and len(val) > self._limits.max_cell_chars:
                         fail_adapter(
                             400,
@@ -221,6 +315,8 @@ class XlsxWorkbookAdapter:
                             "Ô dữ liệu vượt quá độ dài ký tự cho phép.",
                             "cell",
                         )
+                    if isinstance(val, str):
+                        row_chars += len(val)
                     cells.append(
                         CellValue(
                             row=r_idx,
@@ -229,6 +325,13 @@ class XlsxWorkbookAdapter:
                             value=val,
                             cell_type=_cell_type(val),
                         )
+                    )
+                if row_chars > self._limits.max_row_chars:
+                    fail_adapter(
+                        413,
+                        "row_char_limit",
+                        "Tổng độ dài ký tự trên một dòng vượt quá giới hạn cho phép.",
+                        "row_chars",
                     )
                 yield tuple(cells)
         finally:
