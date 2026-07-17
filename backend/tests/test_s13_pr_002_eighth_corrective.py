@@ -1727,16 +1727,25 @@ def test_i05_pg_ownership_flushed_uow_with_work_transition(case):
 
             # Competing lock cannot acquire caller's row lock (update/readonly hold FOR UPDATE)
             if case in {"update", "readonly"}:
-                with pytest.raises((OperationalError, Exception)):
+                with pytest.raises(OperationalError) as lock_ei:
                     other.execute(
                         text(
                             "SELECT id FROM project_asset_import_batches WHERE id = :id FOR UPDATE NOWAIT"
                         ),
                         {"id": lock_target_id},
                     )
+                # Accept PG lock_not_available / could not obtain lock
+                msg = str(lock_ei.value).lower()
+                assert "lock" in msg or "could not obtain" in msg or "55p03" in msg
+                try:
                     other.rollback()
+                except Exception:
+                    pass
         finally:
-            other.close()
+            try:
+                other.close()
+            except Exception:
+                pass
 
         # Reconcile separate committed pending via dedicated work Session → durable available
         stats = reconcile_source_artifacts(
@@ -1807,10 +1816,23 @@ def test_i05_pg_ownership_flushed_uow_with_work_transition(case):
             caller.rollback()
     finally:
         try:
+            if caller.in_transaction():
+                caller.rollback()
+        except Exception:
+            pass
+        try:
             caller.close()
         except Exception:
             pass
         with engine.begin() as conn:
+            # Clear current pointer before artifact delete (fk_batch_current_artifact_same_batch).
+            conn.execute(
+                text(
+                    "UPDATE project_asset_import_batches "
+                    "SET current_source_artifact_id = NULL WHERE organization_id = :oid"
+                ),
+                {"oid": oid},
+            )
             conn.execute(
                 text("DELETE FROM import_source_artifacts WHERE organization_id = :oid"),
                 {"oid": oid},
