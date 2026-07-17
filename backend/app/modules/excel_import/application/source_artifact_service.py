@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from fastapi import HTTPException, UploadFile
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
@@ -90,26 +91,94 @@ def _as_uuid(value: Any) -> uuid.UUID | None:
     return uuid.UUID(str(value))
 
 
+def _engine_from_bind(bind: Any) -> Any:
+    """Return an Engine (never a live Connection) for short-lived probe sessions."""
+    return getattr(bind, "engine", bind)
+
+
 def _read_committed_batch_pointer(bind: Any, batch_id: uuid.UUID) -> uuid.UUID | None:
     """
-    Read durable current_source_artifact_id via a typed short-lived Session.
+    Read durable current_source_artifact_id outside the work Session identity map.
 
-    Bypasses the reconciler work Session identity map and uncommitted writes.
-    UUID binds correctly on both SQLite and PostgreSQL (no untyped text()).
+    Uses an AUTOCOMMIT connection from the Engine so:
+    - UUID binds are typed (no raw text())
+    - concurrent committed pointer updates are visible on file/PG dialects
+    - returning the connection cannot roll back the caller's open transaction
+      (a second Session/connection checkout on SQLite StaticPool/singleton
+      pools previously rolled back the finalize transaction mid-flight)
     """
+    engine = _engine_from_bind(bind)
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        raw = conn.execute(
+            select(ProjectAssetImportBatch.current_source_artifact_id).where(
+                ProjectAssetImportBatch.id == batch_id
+            )
+        ).scalar()
+        return _as_uuid(raw)
+
+
+def _atomic_claim_current_pointer(
+    session: Session,
+    *,
+    batch_id: uuid.UUID,
+    art_id: uuid.UUID,
+    art_generation: int,
+) -> bool:
+    """
+    Atomically claim batch.current_source_artifact_id for ``art_id`` if no
+    higher-generation current pointer is already durable.
+
+    The winner decision is a single conditional UPDATE evaluated against DB
+    state at write time (not an earlier non-atomic read). A later ORM flush
+    must not issue an unconditional pointer overwrite: callers must not assign
+    ``batch.current_source_artifact_id`` except after a successful claim, and
+    must expire the attribute so SQLAlchemy does not emit a stale UPDATE.
+
+    Race harness: optional probe hook fires after the pre-claim observation of
+    the durable pointer and before the CAS UPDATE, so a concurrent finalize can
+    commit between observe and write.
+    """
+    # Observe durable pointer first (typed, cross-dialect), then optional barrier.
+    observed = _read_committed_batch_pointer(session.get_bind(), batch_id)
     if _pointer_probe_hook is not None:
         _pointer_probe_hook()
-    Probe = sessionmaker(bind=bind, autoflush=False, autocommit=False)
-    probe = Probe()
-    try:
-        raw = (
-            probe.query(ProjectAssetImportBatch.current_source_artifact_id)
-            .filter(ProjectAssetImportBatch.id == batch_id)
-            .scalar()
+
+    # Correlated generation of the currently pointed artifact (NULL if none).
+    current_gen = (
+        select(ImportSourceArtifact.generation)
+        .where(ImportSourceArtifact.id == ProjectAssetImportBatch.current_source_artifact_id)
+        .correlate(ProjectAssetImportBatch)
+        .scalar_subquery()
+    )
+    stmt = (
+        update(ProjectAssetImportBatch)
+        .where(
+            ProjectAssetImportBatch.id == batch_id,
+            or_(
+                ProjectAssetImportBatch.current_source_artifact_id.is_(None),
+                ProjectAssetImportBatch.current_source_artifact_id == art_id,
+                current_gen.is_(None),
+                current_gen < art_generation,
+            ),
         )
-        return _as_uuid(raw)
-    finally:
-        probe.close()
+        .values(current_source_artifact_id=art_id)
+        # Never synchronize/expire ORM identity map here — a false expire+reload of
+        # ImportSourceArtifact mid-finalize drops the pending→available dirty state.
+        .execution_options(synchronize_session=False)
+    )
+    # Flush pending ORM state (including art.state=available) before the CAS so the
+    # pointer FK target and generation rows are visible within this transaction.
+    session.flush()
+    with session.no_autoflush:
+        result = session.execute(stmt)
+    won = bool(result.rowcount and result.rowcount > 0)
+    batch = session.get(ProjectAssetImportBatch, batch_id)
+    if batch is not None:
+        # Reload pointer from this transaction; do not dirty-assign (avoids a second
+        # unconditional ORM UPDATE of current_source_artifact_id on commit).
+        session.expire(batch, ["current_source_artifact_id"])
+    _ = observed
+    return won
 
 
 def _as_utc_timestamp(dt: datetime | None, *, fallback: float) -> float:
@@ -627,7 +696,34 @@ def upload_source_artifact(
         # Current pointer only to same-batch artifact
         if art.import_batch_id != batch.id:
             raise HTTPException(status_code=500, detail="Không thể lưu tệp nguồn an toàn. Vui lòng thử lại.")
-        batch.current_source_artifact_id = art.id
+        # Atomic CAS first; only emit Available audit after a winning claim so a
+        # concurrent higher generation cannot leave a durable Available trail.
+        claimed = _atomic_claim_current_pointer(
+            db,
+            batch_id=batch.id,
+            art_id=art.id,
+            art_generation=art.generation,
+        )
+        if not claimed:
+            art.state = SourceArtifactState.ORPHANED.value
+            art.available_at = None
+            art.orphaned_at = _utcnow()
+            art.failure_code = "stale_generation"
+            _audit(
+                db,
+                org_id=org_id,
+                actor_id=current_user.id,
+                event_name="ImportSourceArtifactOrphaned",
+                entity_id=artifact_id,
+                payload={
+                    "import_batch_id": str(batch_id),
+                    "generation": art.generation,
+                    "reason": "stale_generation",
+                },
+                correlation_id=correlation_id,
+            )
+            db.commit()
+            return art
         _audit(
             db,
             org_id=org_id,
@@ -1029,21 +1125,48 @@ def reconcile_source_artifacts(
                                 art.state = SourceArtifactState.AVAILABLE.value
                                 art.available_at = _utcnow()
                                 art.failure_code = None
-                                batch.current_source_artifact_id = art.id
-                                _audit(
+                                # Atomic CAS first; Available audit only after win.
+                                claimed = _atomic_claim_current_pointer(
                                     work,
-                                    org_id=org_id,
-                                    actor_id=actor_id,
-                                    event_name="ImportSourceArtifactAvailable",
-                                    entity_id=art.id,
-                                    payload={
-                                        "import_batch_id": str(art.import_batch_id),
-                                        "generation": art.generation,
-                                        "reason": "reconcile_promote_verified_pending",
-                                    },
-                                    correlation_id=None,
-                                    command_name="ReconcileImportSourceArtifact",
+                                    batch_id=batch.id,
+                                    art_id=art.id,
+                                    art_generation=art.generation,
                                 )
+                                if not claimed:
+                                    art.state = SourceArtifactState.ORPHANED.value
+                                    art.available_at = None
+                                    art.orphaned_at = _utcnow()
+                                    art.failure_code = "stale_generation"
+                                    _audit(
+                                        work,
+                                        org_id=org_id,
+                                        actor_id=actor_id,
+                                        event_name="ImportSourceArtifactOrphaned",
+                                        entity_id=art.id,
+                                        payload={
+                                            "import_batch_id": str(art.import_batch_id),
+                                            "generation": art.generation,
+                                            "reason": "stale_recovery_cas",
+                                        },
+                                        correlation_id=None,
+                                        command_name="ReconcileImportSourceArtifact",
+                                    )
+                                    item_orphan = 1
+                                else:
+                                    _audit(
+                                        work,
+                                        org_id=org_id,
+                                        actor_id=actor_id,
+                                        event_name="ImportSourceArtifactAvailable",
+                                        entity_id=art.id,
+                                        payload={
+                                            "import_batch_id": str(art.import_batch_id),
+                                            "generation": art.generation,
+                                            "reason": "reconcile_promote_verified_pending",
+                                        },
+                                        correlation_id=None,
+                                        command_name="ReconcileImportSourceArtifact",
+                                    )
 
                 elif art.state == SourceArtifactState.FAILED.value:
                     try:
@@ -1122,63 +1245,9 @@ def reconcile_source_artifacts(
                         )
                         item_deleted = 1
 
-                # Re-validate pending→available against concurrent newer finalize before durability.
-                # Read committed pointer via a short-lived typed Session so we:
-                # - bind UUID correctly on SQLite and PostgreSQL
-                # - bypass this work Session's dirty identity map / uncommitted writes
-                if (
-                    art.state == SourceArtifactState.AVAILABLE.value
-                    and item_failed == 0
-                    and item_orphan == 0
-                    and item_deleted == 0
-                ):
-                    intended_pointer = art.id
-                    db_pointer = _read_committed_batch_pointer(work.get_bind(), batch.id)
-                    if db_pointer is not None and db_pointer != intended_pointer:
-                        cur = (
-                            work.query(ImportSourceArtifact)
-                            .filter(ImportSourceArtifact.id == db_pointer)
-                            .populate_existing()
-                            .first()
-                        )
-                        if (
-                            cur is not None
-                            and cur.generation > art.generation
-                            and cur.state == SourceArtifactState.AVAILABLE.value
-                        ):
-                            for obj in list(work.new):
-                                if (
-                                    isinstance(obj, AuditEvent)
-                                    and obj.entity_id == art.id
-                                    and obj.event_name == "ImportSourceArtifactAvailable"
-                                ):
-                                    work.expunge(obj)
-                            art.state = SourceArtifactState.ORPHANED.value
-                            art.available_at = None
-                            art.orphaned_at = _utcnow()
-                            art.failure_code = "stale_generation"
-                            batch.current_source_artifact_id = db_pointer
-                            _audit(
-                                work,
-                                org_id=org_id,
-                                actor_id=actor_id,
-                                event_name="ImportSourceArtifactOrphaned",
-                                entity_id=art.id,
-                                payload={
-                                    "import_batch_id": str(art.import_batch_id),
-                                    "generation": art.generation,
-                                    "reason": "stale_recovery_pre_commit",
-                                },
-                                correlation_id=None,
-                                command_name="ReconcileImportSourceArtifact",
-                            )
-                            item_orphan = 1
-                        else:
-                            # Older/equal current in DB — keep claiming pointer for this promote.
-                            batch.current_source_artifact_id = intended_pointer
-                    else:
-                        batch.current_source_artifact_id = intended_pointer
-
+                # Pointer claim is atomic at UPDATE time (_atomic_claim_current_pointer).
+                # Do not re-assign batch.current_source_artifact_id here — that would
+                # re-introduce an unconditional ORM overwrite on flush/commit.
                 work.commit()
                 committed = True
                 marked_failed += item_failed
