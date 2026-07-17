@@ -619,8 +619,14 @@ def test_pg_same_batch_pointer_dml_enforcement():
             conn.execute(
                 text(
                     """
-                    INSERT INTO projects (id, organization_id, customer_id, name, code, status, created_by, created_at, updated_at)
-                    VALUES (:id, :oid, :cid, 'P', :code, 'draft', :uid, now(), now())
+                    INSERT INTO projects (
+                      id, organization_id, customer_id, name, code, status,
+                      knowledge_status, fee_amount, created_by, created_at, updated_at
+                    )
+                    VALUES (
+                      :id, :oid, :cid, 'P', :code, 'draft',
+                      'pending', 0, :uid, now(), now()
+                    )
                     """
                 ),
                 {"id": pid, "oid": oid, "cid": cid, "code": slug[:20], "uid": uid},
