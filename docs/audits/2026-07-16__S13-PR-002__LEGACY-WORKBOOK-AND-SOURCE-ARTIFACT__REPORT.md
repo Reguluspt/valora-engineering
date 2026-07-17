@@ -7,8 +7,8 @@
 **Pre-corrective head:** `eb0fc0de7eb0b6843e9a79ec0f14abd092bd5374`  
 **First corrective head:** `1c098f21766a380239bae5bac620ab7221c59fb7` (CI `29577487790` PASS; re-audit FAIL)  
 **Second corrective head:** `994d6fdd9df73ad1fb4075e08ebff1bad8bcc9f1`  
-**Exact tip (docs pin):** `d0880aab5556962aca5baeca30ab7ff857b330bf`  
-**Exact-head CI:** run `29579039489` PASS (backend/frontend/worker)  
+**Exact tip:** `dcd9ac944cea3870bc71123cd5697855bf042775` (docs CI evidence only after code `994d6fd`)  
+**CI on code+docs tip `d0880aa`:** run `29579039489` PASS (backend/frontend/worker; includes second corrective suite)  
 **Local S13 suites:** 40 passed, 2 skipped (local MinIO; local PG constraint when no TEST_DATABASE_URL)  
 **Status:** **DRAFT — NOT READY / NOT MERGED**
 
