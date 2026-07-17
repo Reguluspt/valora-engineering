@@ -963,6 +963,10 @@ def reconcile_source_artifacts(
                     if work.in_transaction():
                         work.rollback()
                     continue
+                # Do not FOR UPDATE the batch row: the atomic pointer CAS serializes
+                # concurrent finalize/reconcile winners. Holding a batch row lock
+                # across promote would deadlock a concurrent uploader FOR UPDATE
+                # on the same batch (PostgreSQL).
                 batch = (
                     work.query(ProjectAssetImportBatch)
                     .filter(
@@ -970,7 +974,6 @@ def reconcile_source_artifacts(
                         ProjectAssetImportBatch.organization_id == org_id,
                     )
                     .populate_existing()
-                    .with_for_update()
                     .first()
                 )
                 if not batch:
