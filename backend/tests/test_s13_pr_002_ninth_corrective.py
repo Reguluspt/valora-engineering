@@ -35,6 +35,10 @@ from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
+from tests.support.s13_pr_002_http_preserve import (
+    assert_http_rejection_preserve,
+    snapshot_source_intake_preserve,
+)
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
     OrganizationProfile,
@@ -220,7 +224,9 @@ def _xlsx_inflated_uncompressed(base: bytes, min_uncompressed: int) -> bytes:
 def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     payload = _xlsx_bytes()
     key = f"org/{org.id}/prior-{uuid.uuid4().hex[:8]}"
+    ct = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     fake_storage._objects[key] = payload
+    fake_storage._content_types[key] = ct
     prior = ImportSourceArtifact(
         organization_id=org.id,
         project_id=proj.id,
@@ -228,7 +234,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
         generation=1,
         original_filename="prior.xlsx",
         detected_format="xlsx",
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content_type=ct,
         file_size_bytes=len(payload),
         checksum_sha256=hashlib.sha256(payload).hexdigest(),
         storage_object_key=key,
@@ -268,38 +274,47 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = {
-        "prior_id": prior.id,
-        "prior_checksum": prior.checksum_sha256,
-        "prior_key": prior.storage_object_key,
-        "prior_state": prior.state,
-        "prior_gen": prior.generation,
-        "batch_current": batch.current_source_artifact_id,
-        "batch_status": batch.status,
-        "batch_total": batch.total_rows,
-        "batch_valid": batch.valid_rows,
-        "staging_id": staging.id,
-        "staging_raw": dict(staging.raw_values),
-        "staging_mapped": dict(staging.mapped_values),
-        "staging_name": staging.proposed_asset_name,
-        "staging_desc": staging.proposed_description,
-        "staging_qty": staging.proposed_quantity,
-        "staging_unit": staging.proposed_unit,
-        "staging_status": staging.validation_status,
-        "line_id": line.id,
-        "line_name": line.asset_name,
-        "line_desc": line.description,
-        "line_qty": float(line.quantity),
-        "line_review": line.review_status,
-        "line_val": line.validation_status,
-        "objects": {k: bytes(v) for k, v in fake_storage._objects.items()},
-        "art_count": db.query(ImportSourceArtifact).count(),
-        "line_count": db.query(ProjectAssetLine).filter_by(project_id=proj.id).count(),
-    }
+    snap = snapshot_source_intake_preserve(
+        db, fake_storage, project_id=proj.id, batch_id=batch.id
+    )
+    # Legacy convenience keys still used by non-reject nodes in this suite.
+    snap.update(
+        {
+            "prior_id": prior.id,
+            "prior_checksum": prior.checksum_sha256,
+            "prior_key": prior.storage_object_key,
+            "prior_state": prior.state,
+            "prior_gen": prior.generation,
+            "batch_current": batch.current_source_artifact_id,
+            "batch_status": batch.status,
+            "batch_total": batch.total_rows,
+            "batch_valid": batch.valid_rows,
+            "staging_id": staging.id,
+            "staging_raw": dict(staging.raw_values),
+            "staging_mapped": dict(staging.mapped_values),
+            "staging_name": staging.proposed_asset_name,
+            "staging_desc": staging.proposed_description,
+            "staging_qty": staging.proposed_quantity,
+            "staging_unit": staging.proposed_unit,
+            "staging_status": staging.validation_status,
+            "line_id": line.id,
+            "line_name": line.asset_name,
+            "line_desc": line.description,
+            "line_qty": float(line.quantity),
+            "line_review": line.review_status,
+            "line_val": line.validation_status,
+            "art_count": len(snap["artifacts"]),
+            "line_count": len(snap["lines"]),
+        }
+    )
     return prior, staging, line, snap
 
 
 def _assert_preserved(db, fake_storage, proj, batch, staging, line, snap):
+    """Field-level prior/staging/line preserve for non-reject paths.
+
+    HTTP N+1 rejections use _assert_reject_preserve → assert_http_rejection_preserve.
+    """
     db.expire_all()
     prior = db.get(ImportSourceArtifact, snap["prior_id"])
     batch = db.get(ProjectAssetImportBatch, batch.id)
@@ -326,7 +341,7 @@ def _assert_preserved(db, fake_storage, proj, batch, staging, line, snap):
     assert float(line.quantity) == snap["line_qty"]
     assert line.review_status == snap["line_review"]
     assert line.validation_status == snap["line_val"]
-    assert {k: bytes(v) for k, v in fake_storage._objects.items()} == snap["objects"]
+    assert snap["prior_key"] in fake_storage._objects
     assert db.query(ProjectAssetLine).filter_by(project_id=proj.id).count() == snap["line_count"]
 
 
@@ -1134,20 +1149,14 @@ def _post_source(client, proj, batch, user, filename, payload, content_type):
 def _assert_reject_preserve(
     res, *, status, error_code, db, fake_storage, proj, batch, staging, line, snap
 ):
-    assert res.status_code == status, res.text
-    _assert_error_code(res, error_code)
-    assert db.query(ImportSourceArtifact).count() == snap["art_count"]
-    # exact object dict (bytes), not key-set only
-    assert {k: bytes(v) for k, v in fake_storage._objects.items()} == snap["objects"]
-    _assert_preserved(db, fake_storage, proj, batch, staging, line, snap)
-    assert (
-        db.query(AuditEvent)
-        .filter(
-            AuditEvent.event_name == "ImportSourceArtifactReserved",
-            AuditEvent.entity_id != snap["prior_id"],
-        )
-        .count()
-        == 0
+    # Full immutable contract: objects/content_types/artifacts/batch/staging/lines/audits.
+    assert_http_rejection_preserve(
+        res,
+        status=status,
+        error_code=error_code,
+        db=db,
+        fake_storage=fake_storage,
+        snap=snap,
     )
 
 

@@ -33,6 +33,10 @@ from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
+from tests.support.s13_pr_002_http_preserve import (
+    assert_http_rejection_preserve,
+    snapshot_source_intake_preserve,
+)
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
     OrganizationProfile,
@@ -181,7 +185,9 @@ def _xls_bytes(tmp_path, *, sheets=1, rows=1, cols=1, cell="x") -> bytes:
 def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     payload = _xlsx_bytes()
     key = f"org/{org.id}/prior-{uuid.uuid4().hex[:8]}"
+    ct = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     fake_storage._objects[key] = payload
+    fake_storage._content_types[key] = ct
     prior = ImportSourceArtifact(
         organization_id=org.id,
         project_id=proj.id,
@@ -189,7 +195,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
         generation=1,
         original_filename="prior.xlsx",
         detected_format="xlsx",
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content_type=ct,
         file_size_bytes=len(payload),
         checksum_sha256=hashlib.sha256(payload).hexdigest(),
         storage_object_key=key,
@@ -229,39 +235,47 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = {
-        "prior_id": prior.id,
-        "prior_checksum": prior.checksum_sha256,
-        "prior_key": prior.storage_object_key,
-        "prior_state": prior.state,
-        "prior_gen": prior.generation,
-        "batch_current": batch.current_source_artifact_id,
-        "batch_status": batch.status,
-        "batch_total": batch.total_rows,
-        "batch_valid": batch.valid_rows,
-        "staging_id": staging.id,
-        "staging_raw": dict(staging.raw_values),
-        "staging_mapped": dict(staging.mapped_values),
-        "staging_name": staging.proposed_asset_name,
-        "staging_desc": staging.proposed_description,
-        "staging_qty": staging.proposed_quantity,
-        "staging_unit": staging.proposed_unit,
-        "staging_status": staging.validation_status,
-        "line_id": line.id,
-        "line_name": line.asset_name,
-        "line_desc": line.description,
-        "line_qty": float(line.quantity),
-        "line_review": line.review_status,
-        "line_val": line.validation_status,
-        "objects": dict(fake_storage._objects),
-        "art_count": db.query(ImportSourceArtifact).count(),
-        "line_count": db.query(ProjectAssetLine).filter_by(project_id=proj.id).count(),
-        "object_keys": set(fake_storage._objects.keys()),
-    }
+    snap = snapshot_source_intake_preserve(
+        db, fake_storage, project_id=proj.id, batch_id=batch.id
+    )
+    snap.update(
+        {
+            "prior_id": prior.id,
+            "prior_checksum": prior.checksum_sha256,
+            "prior_key": prior.storage_object_key,
+            "prior_state": prior.state,
+            "prior_gen": prior.generation,
+            "batch_current": batch.current_source_artifact_id,
+            "batch_status": batch.status,
+            "batch_total": batch.total_rows,
+            "batch_valid": batch.valid_rows,
+            "staging_id": staging.id,
+            "staging_raw": dict(staging.raw_values),
+            "staging_mapped": dict(staging.mapped_values),
+            "staging_name": staging.proposed_asset_name,
+            "staging_desc": staging.proposed_description,
+            "staging_qty": staging.proposed_quantity,
+            "staging_unit": staging.proposed_unit,
+            "staging_status": staging.validation_status,
+            "line_id": line.id,
+            "line_name": line.asset_name,
+            "line_desc": line.description,
+            "line_qty": float(line.quantity),
+            "line_review": line.review_status,
+            "line_val": line.validation_status,
+            "object_keys": set(snap["objects"].keys()),
+            "art_count": len(snap["artifacts"]),
+            "line_count": len(snap["lines"]),
+        }
+    )
     return prior, staging, line, snap
 
 
 def _assert_preserved(db, fake_storage, proj, batch, staging, line, snap):
+    """Field-level prior/staging/line preserve for non-reject paths.
+
+    HTTP N+1 rejections use assert_http_rejection_preserve.
+    """
     db.expire_all()
     prior = db.get(ImportSourceArtifact, snap["prior_id"])
     batch = db.get(ProjectAssetImportBatch, batch.id)
@@ -293,7 +307,8 @@ def _assert_preserved(db, fake_storage, proj, batch, staging, line, snap):
 
 
 def _assert_zero_new_objects(fake_storage, snap):
-    assert set(fake_storage._objects.keys()) == snap["object_keys"]
+    assert {k: bytes(v) for k, v in fake_storage._objects.items()} == snap["objects"]
+    assert dict(fake_storage._content_types) == snap["content_types"]
 
 
 def _assert_error_code(res, expected_code: str):
@@ -764,23 +779,13 @@ def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
             content=body + b"X",
             headers={**headers_base, "Content-Length": str(n + 1)},
         )
-        assert res_bad.status_code == 413
-        _assert_error_code(res_bad, "request_too_large")
-        assert db_session.query(ImportSourceArtifact).count() == snap["art_count"]
-        _assert_zero_new_objects(fake_storage, snap)
-        _assert_preserved(db_session, fake_storage, proj, batch, staging, line, snap)
-        assert (
-            db_session.query(AuditEvent)
-            .filter(AuditEvent.event_name == "ImportSourceArtifactReserved")
-            .count()
-            == 0
-            or db_session.query(AuditEvent)
-            .filter(
-                AuditEvent.event_name == "ImportSourceArtifactReserved",
-                AuditEvent.entity_id != snap["prior_id"],
-            )
-            .count()
-            == 0
+        assert_http_rejection_preserve(
+            res_bad,
+            status=413,
+            error_code="request_too_large",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
         )
 
         # exact N accepted
@@ -819,11 +824,14 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             },
             headers={"X-User-Id": str(user.id)},
         )
-        assert res_bad.status_code == 413, res_bad.text
-        _assert_error_code(res_bad, "upload_too_large")
-        assert db_session.query(ImportSourceArtifact).count() == snap["art_count"]
-        _assert_zero_new_objects(fake_storage, snap)
-        _assert_preserved(db_session, fake_storage, proj, batch, staging, line, snap)
+        assert_http_rejection_preserve(
+            res_bad,
+            status=413,
+            error_code="upload_too_large",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
 
         res_ok = client.post(
             url,
@@ -909,20 +917,15 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
             },
             headers={"X-User-Id": str(user.id)},
         )
-        assert res_bad.status_code == bad_status, res_bad.text
-        _assert_error_code(res_bad, error_code)
-        assert db_session.query(ImportSourceArtifact).count() == snap["art_count"]
-        assert set(fake_storage._objects.keys()) == objects_before
-        _assert_preserved(db_session, fake_storage, proj, batch, staging, line, snap)
-        assert (
-            db_session.query(AuditEvent)
-            .filter(
-                AuditEvent.event_name == "ImportSourceArtifactReserved",
-                AuditEvent.entity_id != snap["prior_id"],
-            )
-            .count()
-            == 0
+        assert_http_rejection_preserve(
+            res_bad,
+            status=bad_status,
+            error_code=error_code,
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
         )
+        assert set(fake_storage._objects.keys()) == objects_before
 
         # exact N accept
         res_ok = client.post(
@@ -981,11 +984,15 @@ def test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one(
             },
             headers={"X-User-Id": str(user.id)},
         )
-        assert res_bad.status_code == bad_status, res_bad.text
-        _assert_error_code(res_bad, error_code)
-        assert db_session.query(ImportSourceArtifact).count() == snap["art_count"]
+        assert_http_rejection_preserve(
+            res_bad,
+            status=bad_status,
+            error_code=error_code,
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
         assert set(fake_storage._objects.keys()) == objects_before
-        _assert_preserved(db_session, fake_storage, proj, batch, staging, line, snap)
 
         res_ok = client.post(
             url,

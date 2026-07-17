@@ -33,6 +33,10 @@ from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
+from tests.support.s13_pr_002_http_preserve import (
+    assert_http_rejection_preserve,
+    snapshot_source_intake_preserve,
+)
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
     OrganizationProfile,
@@ -216,94 +220,46 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    audits = [
+    snap = snapshot_source_intake_preserve(
+        db, fake_storage, project_id=proj.id, batch_id=batch.id
+    )
+    snap.update(
         {
-            "id": a.id,
-            "event_name": a.event_name,
-            "entity_id": a.entity_id,
-            "command_name": a.command_name,
-            "payload": dict(a.payload or {}),
+            "prior_id": prior.id,
+            "prior_checksum": prior.checksum_sha256,
+            "prior_key": prior.storage_object_key,
+            "prior_state": prior.state,
+            "prior_gen": prior.generation,
+            "batch_current": batch.current_source_artifact_id,
+            "batch_status": batch.status,
+            "batch_total": batch.total_rows,
+            "batch_valid": batch.valid_rows,
+            "staging_id": staging.id,
+            "staging_raw": dict(staging.raw_values),
+            "staging_mapped": dict(staging.mapped_values),
+            "staging_name": staging.proposed_asset_name,
+            "staging_desc": staging.proposed_description,
+            "staging_qty": staging.proposed_quantity,
+            "staging_unit": staging.proposed_unit,
+            "staging_status": staging.validation_status,
+            "line_id": line.id,
+            "line_name": line.asset_name,
+            "line_desc": line.description,
+            "line_qty": float(line.quantity),
+            "line_review": line.review_status,
+            "line_val": line.validation_status,
+            "art_count": len(snap["artifacts"]),
+            "line_count": len(snap["lines"]),
         }
-        for a in db.query(AuditEvent).order_by(AuditEvent.id).all()
-    ]
-    snap = {
-        "prior_id": prior.id,
-        "prior_checksum": prior.checksum_sha256,
-        "prior_key": prior.storage_object_key,
-        "prior_state": prior.state,
-        "prior_gen": prior.generation,
-        "batch_current": batch.current_source_artifact_id,
-        "batch_status": batch.status,
-        "batch_total": batch.total_rows,
-        "batch_valid": batch.valid_rows,
-        "staging_id": staging.id,
-        "staging_raw": dict(staging.raw_values),
-        "staging_mapped": dict(staging.mapped_values),
-        "staging_name": staging.proposed_asset_name,
-        "staging_desc": staging.proposed_description,
-        "staging_qty": staging.proposed_quantity,
-        "staging_unit": staging.proposed_unit,
-        "staging_status": staging.validation_status,
-        "line_id": line.id,
-        "line_name": line.asset_name,
-        "line_desc": line.description,
-        "line_qty": float(line.quantity),
-        "line_review": line.review_status,
-        "line_val": line.validation_status,
-        "objects": {k: bytes(v) for k, v in fake_storage._objects.items()},
-        "content_types": dict(fake_storage._content_types),
-        "art_count": db.query(ImportSourceArtifact).count(),
-        "line_count": db.query(ProjectAssetLine).filter_by(project_id=proj.id).count(),
-        "audits": audits,
-    }
+    )
     return prior, staging, line, snap
 
 
-def _audit_snapshot(db: Session) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": a.id,
-            "event_name": a.event_name,
-            "entity_id": a.entity_id,
-            "command_name": a.command_name,
-            "payload": dict(a.payload or {}),
-        }
-        for a in db.query(AuditEvent).order_by(AuditEvent.id).all()
-    ]
-
-
 def _assert_preserved_full(db, fake_storage, proj, batch, staging, line, snap):
-    db.expire_all()
-    prior = db.get(ImportSourceArtifact, snap["prior_id"])
-    batch = db.get(ProjectAssetImportBatch, batch.id)
-    staging = db.get(ProjectAssetImportStagingRow, staging.id)
-    line = db.get(ProjectAssetLine, line.id)
-    assert prior is not None
-    assert prior.checksum_sha256 == snap["prior_checksum"]
-    assert prior.storage_object_key == snap["prior_key"]
-    assert prior.state == snap["prior_state"]
-    assert prior.generation == snap["prior_gen"]
-    assert batch.current_source_artifact_id == snap["batch_current"]
-    assert batch.status == snap["batch_status"]
-    assert batch.total_rows == snap["batch_total"]
-    assert batch.valid_rows == snap["batch_valid"]
-    assert staging.raw_values == snap["staging_raw"]
-    assert staging.mapped_values == snap["staging_mapped"]
-    assert staging.proposed_asset_name == snap["staging_name"]
-    assert staging.proposed_description == snap["staging_desc"]
-    assert staging.proposed_quantity == snap["staging_qty"]
-    assert staging.proposed_unit == snap["staging_unit"]
-    assert staging.validation_status == snap["staging_status"]
-    assert line.asset_name == snap["line_name"]
-    assert line.description == snap["line_desc"]
-    assert float(line.quantity) == snap["line_qty"]
-    assert line.review_status == snap["line_review"]
-    assert line.validation_status == snap["line_val"]
-    assert {k: bytes(v) for k, v in fake_storage._objects.items()} == snap["objects"]
-    assert dict(fake_storage._content_types) == snap["content_types"]
-    assert db.query(ProjectAssetLine).filter_by(project_id=proj.id).count() == snap["line_count"]
-    assert db.query(ImportSourceArtifact).count() == snap["art_count"]
-    assert _audit_snapshot(db) == snap["audits"]
+    """Full L-02/L-03 contract for HTTP rejection nodes."""
+    from tests.support.s13_pr_002_http_preserve import assert_source_intake_preserve
+
+    assert_source_intake_preserve(db, fake_storage, snap)
 
 
 def _assert_error_code(res, expected_code: str):
@@ -784,9 +740,14 @@ def test_k03_reject_preserves_objects_content_types_and_all_audits(
             _xlsx_bytes(sheets=2),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        assert res.status_code == 413, res.text
-        _assert_error_code(res, "sheet_limit")
-        _assert_preserved_full(db_session, fake_storage, proj, batch, staging, line, snap)
+        assert_http_rejection_preserve(
+            res,
+            status=413,
+            error_code="sheet_limit",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
     finally:
         set_source_limits_override(None)
 
@@ -826,9 +787,14 @@ def test_k03_xlsx_rejects_full_snapshot(
             build_bad(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        assert res.status_code == status, res.text
-        _assert_error_code(res, error_code)
-        _assert_preserved_full(db_session, fake_storage, proj, batch, staging, line, snap)
+        assert_http_rejection_preserve(
+            res,
+            status=status,
+            error_code=error_code,
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
     finally:
         set_source_limits_override(None)
 
@@ -852,9 +818,14 @@ def test_k03_upload_too_large_full_snapshot(client: TestClient, db_session: Sess
             payload + b"X",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        assert res.status_code == 413
-        _assert_error_code(res, "upload_too_large")
-        _assert_preserved_full(db_session, fake_storage, proj, batch, staging, line, snap)
+        assert_http_rejection_preserve(
+            res,
+            status=413,
+            error_code="upload_too_large",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
     finally:
         set_source_limits_override(None)
 
