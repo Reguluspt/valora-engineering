@@ -288,6 +288,7 @@ class XlsxWorkbookAdapter:
                     "Số lượng cột vượt quá giới hạn cho phép.",
                     "columns",
                 )
+            total_cells = 0
             for r_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
                 if r_idx > self._limits.max_physical_rows:
                     fail_adapter(
@@ -308,6 +309,14 @@ class XlsxWorkbookAdapter:
                     )
                 vals = self._pad_row(row, width)
                 for c_idx, val in enumerate(vals, start=1):
+                    total_cells += 1
+                    if total_cells > self._limits.max_total_cells:
+                        fail_adapter(
+                            413,
+                            "total_cell_limit",
+                            "Tổng số ô vượt quá giới hạn cho phép.",
+                            "cells",
+                        )
                     if isinstance(val, str) and len(val) > self._limits.max_cell_chars:
                         fail_adapter(
                             400,

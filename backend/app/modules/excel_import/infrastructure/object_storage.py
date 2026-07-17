@@ -79,6 +79,8 @@ class FakeObjectStorage:
         self.fail_head: bool = False
         self.fail_delete: bool = False
         self.fail_after_put: bool = False
+        self.fail_open_stream: bool = False
+        self.fail_open_stream_code: str = "stream_read_timeout"
         self.head_raises: Exception | None = None
         self.delete_raises: Exception | None = None
 
@@ -121,6 +123,8 @@ class FakeObjectStorage:
         )
 
     def open_stream(self, key: str) -> BinaryIO:
+        if self.fail_open_stream:
+            raise ObjectStorageError(self.fail_open_stream_code)
         data = self._objects.get(key)
         if data is None:
             raise ObjectNotFound(key)
@@ -253,7 +257,12 @@ class S3ObjectStorage:
                 raise ObjectNotFound(key) from exc
             raise ObjectStorageError("get_failed", type(exc).__name__) from exc
         body = resp["Body"]
-        data = _read_stream_bounded(body, max_bytes=_MAX_OBJECT_BYTES)
+        try:
+            data = _read_stream_bounded(body, max_bytes=_MAX_OBJECT_BYTES)
+        except ObjectStorageError:
+            raise
+        except Exception as exc:
+            raise ObjectStorageError("get_body_failed", type(exc).__name__) from exc
         return io.BytesIO(data)
 
     def delete(self, key: str) -> None:

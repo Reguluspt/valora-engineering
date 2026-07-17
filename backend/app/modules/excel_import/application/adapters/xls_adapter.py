@@ -279,6 +279,7 @@ class XlsWorkbookAdapter:
                     "Số lượng cột vượt quá giới hạn cho phép.",
                     "columns",
                 )
+            total_cells = 0
             for r_idx in range(sh.nrows):
                 if r_idx + 1 > self._limits.max_physical_rows:
                     fail_adapter(
@@ -290,6 +291,14 @@ class XlsWorkbookAdapter:
                 row_chars = 0
                 cells: list[CellValue] = []
                 for c_idx in range(width):
+                    total_cells += 1
+                    if total_cells > self._limits.max_total_cells:
+                        fail_adapter(
+                            413,
+                            "total_cell_limit",
+                            "Tổng số ô vượt quá giới hạn cho phép.",
+                            "cells",
+                        )
                     cv = self._cell_value(book, sh.cell(r_idx, c_idx), r_idx + 1, c_idx + 1)
                     if isinstance(cv.value, str):
                         row_chars += len(cv.value)
