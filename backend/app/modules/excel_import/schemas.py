@@ -34,3 +34,24 @@ class SourceArtifactReconcileResponse(BaseModel):
     deleted_objects: int
     marked_failed: int = 0
     errors: int = 0
+
+
+class WorkbookStructureSnapshotResponse(BaseModel):
+    """Public, digest-bound structure evidence; no storage object key."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    import_batch_id: uuid.UUID
+    source_artifact_id: uuid.UUID
+    snapshot_version: int
+    source_checksum_sha256: str
+    rule_version: str
+    adapter_name: str
+    adapter_version: str
+    disposition: str
+    candidate_count: int
+    structure_payload: dict[str, Any]
+    analysis_digest_sha256: str
+    created_by_user_id: uuid.UUID
+    created_at: datetime
