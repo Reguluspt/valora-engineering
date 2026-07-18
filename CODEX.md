@@ -42,12 +42,9 @@ Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a
 parent a3672f41bc54f42420fb70639a27bf50d604376a);
 post-merge main CI run 29504915362 PASS.
 
-Runtime assignment state: NONE.
-No Sprint 13 runtime implementation is authorized without a separate owner-assigned task ID.
-
-Next runtime candidate: S13-PR-002 (Legacy Workbook Adapter and Immutable Source Artifact).
-S13-PR-002 is NOT STARTED. It may start only under a separate explicit owner assignment,
-from the then-current accepted origin/main, and only under that task ID.
+Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
+S13-PR-002 is owner-authorized runtime work on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
+Further Sprint 13+ runtime slices (S13-PR-003 onward) still require separate owner assignment after merge from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
