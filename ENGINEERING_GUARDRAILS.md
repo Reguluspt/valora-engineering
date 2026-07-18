@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Last reconciled:** 2026-07-18 (S13-PR-002 post-merge live-gate reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,7 +11,7 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Post Gate 0c — Runtime Handoff Preparation
+Sprint 13 — Workbook Structure Discovery and Row Classification
 
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
@@ -20,11 +20,14 @@ is CLOSED / SATISFIED.
 Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
 main CI 29504915362 PASS.
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is the first Adaptive Intake runtime slice (feature branch only; not merged). Mapping memory / later S13 slices remain unauthorized until separately assigned.
+S13-PR-002 is MERGED / CLOSED as PR #15. Independent audit PASS was issued on
+exact head 11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5; exact-head CI 29640226850 PASS;
+main squash 137f8c527422b656974e569c924dafa8150b8b22; post-merge main CI 29641452155 PASS.
 
-Active runtime assignment: S13-PR-002 on branch s13-pr-002-legacy-workbook-source-artifact (not merged). Further candidates still require separate
-explicit owner assignment from the then-current accepted origin/main.
+Active runtime assignment: S13-PR-003 on branch s13-pr-003-workbook-structure-discovery
+from accepted main 137f8c527422b656974e569c924dafa8150b8b22.
+Scope is limited to deterministic structure discovery and row classification (G-02/G-04).
+S13-PR-004 onward require separate explicit owner assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
@@ -45,6 +48,7 @@ Sprint 12 — Excel import pipeline          [PR-001…PR-004 merged; Apply v1 f
 S12-R-001…008 — Remediation / recon        [merged to main]
 S12-PR-004 — Apply Command & Provenance    [MERGED; engineering gate closed]
 S13-PR-001 — Design authority reconciliation [merged / gate closed; main 7f7473e…]
+S13-PR-002 — Legacy workbook/source artifact [merged / closed; main 137f8c5…]
 ```
 
 Sprint 0 “foundation only” boundaries are **historical**. They must not be stated as the current repository status.
@@ -93,8 +97,9 @@ Word and Excel are input/output only.
 They are not the source of truth.
 Excel upload/validate target import batch + staging only.
 Official promotion for S12 staging uses Apply (ADR 0029 / s12-pr-004-v1) — implemented.
-S12 parser v1 remains .xlsx + fixed aliases; Adaptive Intake v2 (.xls/.xlsx, mapping memory)
-is design authority only until S13 runtime PRs are authorized.
+S12 parser v1 remains .xlsx + fixed aliases for the established staging path.
+S13-PR-002 adds safe .xls/.xlsx source-artifact intake and replay without semantic mapping.
+S13-PR-003 structure discovery/row classification is active; mapping memory remains separately gated.
 ```
 
 ### Price

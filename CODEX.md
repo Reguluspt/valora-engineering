@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Last reconciled:** 2026-07-18 (S13-PR-002 post-merge live-gate reconciliation)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -28,7 +28,7 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Post Gate 0c — Runtime Handoff Preparation
+Engineering Phase / Sprint 13 — Workbook Structure Discovery and Row Classification
 ```
 
 ### Live task gate (fetch origin/main before acting)
@@ -42,9 +42,15 @@ Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a
 parent a3672f41bc54f42420fb70639a27bf50d604376a);
 post-merge main CI run 29504915362 PASS.
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is owner-authorized runtime work on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
-Further Sprint 13+ runtime slices (S13-PR-003 onward) still require separate owner assignment after merge from the then-current accepted origin/main.
+S13-PR-002 is MERGED / CLOSED as PR #15. Independent audit PASS was issued on
+exact head 11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5; exact-head CI 29640226850 PASS;
+main squash 137f8c527422b656974e569c924dafa8150b8b22; post-merge main CI 29641452155 PASS.
+
+Runtime assignment state: S13-PR-003 owner-assigned on 2026-07-18.
+Branch: s13-pr-003-workbook-structure-discovery.
+Baseline: accepted main 137f8c527422b656974e569c924dafa8150b8b22.
+Scope is limited to Workbook Structure Discovery and Row Classification (G-02/G-04).
+S13-PR-004 onward still require separate owner assignment from the then-current accepted origin/main.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.

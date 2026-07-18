@@ -2,12 +2,13 @@
 
 **Status:** Active implementation plan after S12-PR-004 engineering closure and S13-PR-001 design-authority merge; runtime tasks remain individually gated.
 **Design authority:** Design Book v1.4 adaptive-intake/bounded-automation addendum + ADR 0030–0034 + Design Authority Index.
-**Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
+**Accepted main baseline evidence (not evergreen):** S13-PR-002 squash `137f8c527422b656974e569c924dafa8150b8b22` (PR #15); post-merge main CI `29641452155` PASS. Prior S13-PR-001: `7f7473e…` / CI `29429680504`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
 **Gate 0c (bounded-AI automation readiness):** **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`; CI `29504915362` PASS).
-**Runtime assignment state:** **S13-PR-002** assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-**Rule:** S13-PR-002 is owner-authorized on its feature branch only. Do not start S13-PR-003+ until a separate explicit owner assignment authorizes that task ID. Branch runtime from the then-current accepted `origin/main` only.
+**S13-PR-002 gate:** **merged / closed** (PR #15; audited head `11bf7dd…`; exact-head CI `29640226850`; main `137f8c5…`; post-merge CI `29641452155`).
+**Runtime assignment state:** **S13-PR-003** separately owner-assigned on 2026-07-18 on branch `s13-pr-003-workbook-structure-discovery` from accepted main `137f8c527422b656974e569c924dafa8150b8b22`.
+**Rule:** S13-PR-003 scope is G-02/G-04 only. Do not start S13-PR-004+ without a separate explicit owner assignment. Branch runtime from the then-current accepted `origin/main` only.
 
 ---
 
@@ -35,7 +36,7 @@ The target remains human-controlled. No task below authorizes AI auto-approval, 
 
 | ID | Current gap | Current evidence | Target owner |
 | --- | --- | --- | --- |
-| G-01 | Parser accepts `.xlsx` only | `excel_import/domain/ACCEPTED_EXTENSIONS` | Sprint 13 workbook adapter |
+| G-01 | **Closed by S13-PR-002**: safe `.xls`/`.xlsx` source-artifact intake | PR #15 / main `137f8c5…` / CI `29641452155` | Closed |
 | G-02 | First non-empty row becomes header | `_LazyWorkbook._find_headers()` | Sprint 13 structure discovery |
 | G-03 | Fixed aliases miss real headers/blank I | `COLUMN_ALIASES`, `_map_columns()` | Sprint 13 Column Mapping Memory |
 | G-04 | No section/subtotal/total classification | parser emits each non-empty row | Sprint 13 row classifier |
@@ -94,13 +95,14 @@ Evidence:
 - post-merge main CI `29504915362` PASS (backend/frontend/worker);
 - no Adaptive Intake runtime, provider calls, or R2 capability mixed into the design package.
 
-S13-PR-002 was subsequently owner-authorized as the first Adaptive Intake runtime task (feature branch only; not merged).
+S13-PR-002 was subsequently owner-authorized, independently audited PASS, and merged as PR #15 at main `137f8c527422b656974e569c924dafa8150b8b22`; post-merge CI `29641452155` passed.
 
 ### Post-merge live-gate reconciliation provenance
 
 After Gate 0c merged and main CI passed, live operating documents were reconciled so they no longer
 describe Gate 0c as pending. That reconciliation is **provenance only** (not a durable live task).
-Durable state after closeout main: Gate 0c closed/satisfied. Current branch live state: S13-PR-002 assigned / in progress (not merged).
+Durable state after closeout main: Gate 0c closed/satisfied and S13-PR-002 merged/closed.
+Current runtime state: S13-PR-003 separately owner-assigned from accepted main `137f8c5…`.
 
 ### Gate 1 — deterministic baseline before external AI
 
@@ -124,18 +126,19 @@ The durable outbox/job/attempt boundary must exist before production DOCX/PDF/OC
 **Status:** **merged / closed** (PR #11 squash `7f7473e…`; main CI `29429680504` PASS).
 **Scope delivered:** Design Book v1.4, ADR 0030–0032, Authority Index, contract/handoff/CODEX/guardrails reconciliation, this plan.
 **Not implemented by S13-PR-001:** runtime code, migrations, dependencies, AI calls.
-**Does not authorize by itself:** S13-PR-002 or any S13 runtime work (runtime still needed separate assignment — later issued for S13-PR-002 only).
+**Does not authorize by itself:** any S13 runtime work (separate assignments were later issued for S13-PR-002 and S13-PR-003).
 
 ### Post-merge live-gate reconciliation provenance
 
 After S13-PR-001 merged, live operating documents were reconciled so they no longer
 describe S13-PR-001 as an active docs gate. That reconciliation is **provenance only**
 (not a durable live task). Durable historical state after design gates: S13-PR-001 closed, Gate 0b/0c satisfied.
-Current branch live state: S13-PR-002 assigned / in progress (not merged).
+Current runtime state: S13-PR-003 assigned on `s13-pr-003-workbook-structure-discovery` from accepted main `137f8c5…`.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 
-**Status:** **assigned / in progress** on branch `s13-pr-002-legacy-workbook-source-artifact` from baseline `949903f3912aa65f8b990852756aeef7981bca08` (not merged).
+**Status:** **merged / closed** as PR #15 at main `137f8c527422b656974e569c924dafa8150b8b22`.
+Independent audit PASS: exact head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI `29640226850`; post-merge main CI `29641452155` PASS.
 **Closes:** G-01 and the source-replay prerequisite.
 
 Scope:
@@ -170,6 +173,7 @@ Non-goals:
 
 ### S13-PR-003 — Workbook Structure Discovery and Row Classification
 
+**Status:** **owner-assigned / in progress** on branch `s13-pr-003-workbook-structure-discovery` from accepted main `137f8c527422b656974e569c924dafa8150b8b22`.
 **Closes:** G-02 and G-04.
 
 Scope:

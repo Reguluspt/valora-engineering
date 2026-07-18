@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Reconciled:** 2026-07-18 (S13-PR-002 post-merge live-gate reconciliation)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -42,6 +42,11 @@ Gate 0c design authority squash-merged to main:
    parent a3672f41bc54f42420fb70639a27bf50d604376a)
 Post-merge main CI:
   run 29504915362 — PASS
+S13-PR-002 source-artifact runtime:
+  audited head 11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5 — independent PASS
+  exact-head CI 29640226850 — PASS
+  PR #15 squash 137f8c527422b656974e569c924dafa8150b8b22
+  post-merge main CI 29641452155 — PASS
 Prior S13-PR-001 / closeout evidence (historical):
   7f7473e… / CI 29429680504; a3672f4… / CI 29474065397
 Prior S12-PR-004 evidence (historical):
@@ -57,9 +62,10 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 S12-PR-004 engineering gate: CLOSED (merged)
 S13-PR-001 design-authority gate: CLOSED (merged)
 Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
-Runtime assignment state: S13-PR-002 assigned / in progress (branch s13-pr-002-legacy-workbook-source-artifact; not merged)
-→ S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact (in progress on feature branch; not merged)
-→ S13-PR-003+ Column Mapping Memory / Adaptive Intake follow-ons (require separate owner assignment)
+S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact: MERGED / CLOSED (PR #15; main 137f8c5…)
+Runtime assignment state: S13-PR-003 assigned (branch s13-pr-003-workbook-structure-discovery; baseline 137f8c5…)
+→ S13-PR-003 Workbook Structure Discovery and Row Classification (active assigned slice)
+→ S13-PR-004+ Column Mapping Memory / Adaptive Intake follow-ons (require separate owner assignment)
 → S14 Asset Identity Memory
 → S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
 → S16 reliable audited AI suggestion runtime and shadow evaluation
@@ -108,7 +114,8 @@ Before any S13 runtime PR (still required for each task ID):
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 is **assigned / in progress** on branch `s13-pr-002-legacy-workbook-source-artifact` from baseline `949903f3912aa65f8b990852756aeef7981bca08`; it is **not merged**. S13-PR-003+ still require separate owner assignment.
+S13-PR-002 is **merged / closed** as PR #15 at main `137f8c527422b656974e569c924dafa8150b8b22`; post-merge main CI `29641452155` passed.
+S13-PR-003 was separately owner-assigned on 2026-07-18 on branch `s13-pr-003-workbook-structure-discovery` from that accepted main baseline. S13-PR-004+ still require separate owner assignment.
 
 ## 7. Module ownership (future runtime)
 

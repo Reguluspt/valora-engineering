@@ -1,9 +1,9 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-16 — Gate 0c closeout / live-gate reconciliation
-**Main evidence (not evergreen):** `99dfccbc7bf2893fa5b0dce8d52a01068655e39a` (Gate 0c PR #13)
-**Main CI evidence:** run `29504915362` PASS
+**Reconciled:** 2026-07-18 — S13-PR-002 post-merge live-gate reconciliation
+**Main evidence (not evergreen):** `137f8c527422b656974e569c924dafa8150b8b22` (S13-PR-002 PR #15)
+**Main CI evidence:** run `29641452155` PASS
 
 ### Live task gate
 
@@ -14,9 +14,15 @@ Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
 Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
 main CI 29504915362 PASS; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076.
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is owner-authorized on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
-Further candidates (S13-PR-003 onward) still require separate explicit owner assignment from the then-current accepted origin/main.
+S13-PR-002 is MERGED / CLOSED as PR #15. Independent audit PASS was issued on
+exact head 11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5; exact-head CI 29640226850 PASS;
+main squash 137f8c527422b656974e569c924dafa8150b8b22; post-merge main CI 29641452155 PASS.
+
+Runtime assignment state: S13-PR-003 owner-assigned on 2026-07-18.
+Branch: s13-pr-003-workbook-structure-discovery.
+Baseline: accepted main 137f8c527422b656974e569c924dafa8150b8b22.
+Scope is Workbook Structure Discovery and Row Classification (G-02/G-04).
+S13-PR-004 onward still require separate explicit owner assignment.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -50,7 +56,7 @@ The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt p
 | `workflow_workbench` | Workflow + workbench session helpers; future patterns derive from domain commands/outcomes, not UI clickstream |
 | `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
 | `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only in S13–S16 |
-| `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
+| `excel_import` | S12 streaming staging + Apply; S13 source-artifact intake; active structure discovery; planned Column Mapping Memory |
 
 API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench under `frontend/src/components/workbench/*`.
 
@@ -101,7 +107,8 @@ Apply (s12-pr-004-v1) → human confirm, DRAFT-only, all-valid all-or-nothing,
   lineage columns, atomic success audit
 ```
 
-Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.cells`. It does **not** implement Adaptive Intake v2.
+Current S12 v1 staging parser remains **`.xlsx` only**, with fixed aliases and positional `raw_values.cells`.
+S13-PR-002 separately implements safe `.xls`/`.xlsx` source-artifact intake and replay; it does not perform semantic mapping.
 
 ## 8. Progress snapshot
 
@@ -113,28 +120,29 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | S12-PR-003 | Validation Engine |
 | **S12-PR-004** | Apply Command & Provenance — **merged** PR #10 at `a9f2c1e…` |
 | **S13-PR-001** | Design Authority and Contract Reconciliation — **merged** PR #11 at `7f7473e…` |
+| **S13-PR-002** | Legacy Workbook Adapter and Immutable Source Artifact — **merged** PR #15 at `137f8c5…` |
 
 ### Runtime assignment state
 
 ```text
-Active runtime assignment: S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
-Branch: s13-pr-002-legacy-workbook-source-artifact (not merged)
-Baseline: 949903f3912aa65f8b990852756aeef7981bca08
-Gate 0c: CLOSED / SATISFIED (main 99dfccb…; CI 29504915362)
+Active runtime assignment: S13-PR-003 — Workbook Structure Discovery and Row Classification
+Branch: s13-pr-003-workbook-structure-discovery
+Baseline: 137f8c527422b656974e569c924dafa8150b8b22
+S13-PR-002: MERGED / CLOSED (PR #15; main CI 29641452155 PASS)
 ```
 
-### Next candidate after S13-PR-002 merge (requires separate owner assignment)
+### Next candidate after S13-PR-003 merge (requires separate owner assignment)
 
 ```text
-S13-PR-003 — structure discovery / Column Mapping Memory (per remediation plan)
+S13-PR-004 — Column Mapping Memory Persistence and Application Services
 ```
 
 Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier/job foundation → reliable audited AI suggestions and shadow evaluation.
 
 ## 9. Out of scope (still)
 
-- Adaptive `.xls`/`.xlsx` runtime and mapping-confirmation UX
-- Column Mapping Memory / Asset Identity Memory runtime
+- Mapping-confirmation UX
+- Column Mapping Memory / Asset Identity Memory runtime beyond the assigned S13-PR-003 structure slice
 - Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
 - AI provider runtime and end-to-end AI mapping/matching
 - `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
@@ -152,7 +160,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart closed S13-PR-001 or Gate 0c. S13-PR-002 is the active assigned runtime task on its feature branch only (not merged). Do not start S13-PR-003+ until a separate owner assignment names that task ID from accepted main.
+6. Do not restart closed S13-PR-001, Gate 0c or S13-PR-002. S13-PR-003 is the active assigned runtime task from accepted main `137f8c5…`. Do not start S13-PR-004+ without a separate owner assignment.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.
