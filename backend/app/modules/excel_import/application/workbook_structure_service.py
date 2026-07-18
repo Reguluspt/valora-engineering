@@ -306,13 +306,19 @@ def _verify_snapshot_core(
             "structure_snapshot_integrity_failure",
             "Phiên bản quy tắc phân tích cấu trúc không được hỗ trợ.",
         )
-    if not payload_digest_matches(snapshot.structure_payload, snapshot.analysis_digest_sha256):
+    payload = snapshot.structure_payload
+    if not isinstance(payload, dict):
         raise _error(
             500,
             "structure_snapshot_integrity_failure",
             "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
         )
-    payload = snapshot.structure_payload
+    if not payload_digest_matches(payload, snapshot.analysis_digest_sha256):
+        raise _error(
+            500,
+            "structure_snapshot_integrity_failure",
+            "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
+        )
     if (
         payload.get("rule_version") != snapshot.rule_version
         or payload.get("disposition") != snapshot.disposition

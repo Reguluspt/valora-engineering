@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import openpyxl
 import pytest
@@ -801,6 +802,160 @@ def test_canonical_digest_is_order_independent_and_tamper_sensitive():
     right = {"a": {"x": 1, "y": "đ"}, "b": [2, 1]}
     assert canonical_payload_digest(left) == canonical_payload_digest(right)
     assert canonical_payload_digest(left) != canonical_payload_digest({**right, "b": [1, 2]})
+
+
+@pytest.mark.parametrize(
+    ("malformed_payload", "expected_type"),
+    [
+        pytest.param([{}], list, id="array"),
+        pytest.param("scalar", str, id="string"),
+        pytest.param(7, int, id="number"),
+        pytest.param(True, bool, id="boolean"),
+        pytest.param(None, type(None), id="json-null"),
+    ],
+)
+def test_non_object_payload_with_matching_digest_fails_list_and_get_stably(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    malformed_payload,
+    expected_type: type,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    assert created.status_code == 201, created.text
+    snapshot_id = uuid.UUID(created.json()["id"])
+    user_id = user.id
+    snapshot = structure_db.get(WorkbookStructureSnapshot, snapshot_id)
+    seal = (
+        structure_db.query(AuditEvent)
+        .filter(
+            AuditEvent.event_name == "WorkbookStructureAnalyzed",
+            AuditEvent.entity_id == snapshot_id,
+        )
+        .one()
+    )
+    seal_id = seal.id
+    original_seal_payload = json.dumps(
+        seal.payload, ensure_ascii=False, sort_keys=True
+    )
+    snapshot.structure_payload = malformed_payload
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(malformed_payload)
+    structure_db.commit()
+    structure_db.expunge_all()
+
+    durable_snapshot = structure_db.get(WorkbookStructureSnapshot, snapshot_id)
+    durable_seal = structure_db.get(AuditEvent, seal_id)
+    assert type(durable_snapshot.structure_payload) is expected_type
+    assert durable_snapshot.structure_payload == malformed_payload
+    assert durable_snapshot.analysis_digest_sha256 == canonical_payload_digest(
+        malformed_payload
+    )
+    assert (
+        json.dumps(durable_seal.payload, ensure_ascii=False, sort_keys=True)
+        == original_seal_payload
+    )
+    structure_db.expunge_all()
+
+    expected_detail = {
+        "error_code": "structure_snapshot_integrity_failure",
+        "detail": "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
+    }
+    listed = structure_client.get(path, headers={"X-User-Id": str(user_id)})
+    assert listed.status_code == 500
+    assert listed.json()["detail"] == expected_detail
+    replayed = structure_client.get(
+        f"{path}/{snapshot_id}", headers={"X-User-Id": str(user_id)}
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"] == expected_detail
+
+    structure_db.expire_all()
+    assert (
+        json.dumps(
+            structure_db.get(AuditEvent, seal_id).payload,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        == original_seal_payload
+    )
+
+
+def test_non_object_payload_with_stale_digest_has_identical_public_failure(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot_id = uuid.UUID(created.json()["id"])
+    user_id = user.id
+    snapshot = structure_db.get(WorkbookStructureSnapshot, snapshot_id)
+    snapshot.structure_payload = ["stale-digest"]
+    snapshot.analysis_digest_sha256 = "0" * 64
+    structure_db.commit()
+    structure_db.expunge_all()
+
+    durable_snapshot = structure_db.get(WorkbookStructureSnapshot, snapshot_id)
+    assert type(durable_snapshot.structure_payload) is list
+    assert durable_snapshot.structure_payload == ["stale-digest"]
+    assert durable_snapshot.analysis_digest_sha256 != canonical_payload_digest(
+        durable_snapshot.structure_payload
+    )
+    structure_db.expunge_all()
+    expected_detail = {
+        "error_code": "structure_snapshot_integrity_failure",
+        "detail": "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
+    }
+
+    listed = structure_client.get(path, headers={"X-User-Id": str(user_id)})
+    replayed = structure_client.get(
+        f"{path}/{snapshot_id}", headers={"X-User-Id": str(user_id)}
+    )
+    assert listed.status_code == replayed.status_code == 500
+    assert listed.json()["detail"] == replayed.json()["detail"] == expected_detail
+
+
+def test_verify_snapshot_core_checks_rule_then_object_shape_before_digest(monkeypatch):
+    digest_calls = 0
+
+    def forbidden_digest_check(_payload, _digest):
+        nonlocal digest_calls
+        digest_calls += 1
+        raise AssertionError("digest evaluation must not run for a non-object payload")
+
+    monkeypatch.setattr(
+        structure_service,
+        "payload_digest_matches",
+        forbidden_digest_check,
+    )
+    snapshot = SimpleNamespace(
+        rule_version=STRUCTURE_RULE_VERSION,
+        structure_payload=[],
+        analysis_digest_sha256=canonical_payload_digest([]),
+    )
+    with pytest.raises(HTTPException) as malformed:
+        structure_service._verify_snapshot_core(snapshot)
+    assert malformed.value.status_code == 500
+    assert malformed.value.detail == {
+        "error_code": "structure_snapshot_integrity_failure",
+        "detail": "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
+    }
+    assert digest_calls == 0
+
+    snapshot.rule_version = "s13-pr-003-v999"
+    with pytest.raises(HTTPException) as unknown_rule:
+        structure_service._verify_snapshot_core(snapshot)
+    assert unknown_rule.value.status_code == 500
+    assert unknown_rule.value.detail == {
+        "error_code": "structure_snapshot_integrity_failure",
+        "detail": "Phiên bản quy tắc phân tích cấu trúc không được hỗ trợ.",
+    }
+    assert digest_calls == 0
 
 
 def _cells(row_number: int, values: list[object]) -> tuple[CellValue, ...]:
@@ -2367,6 +2522,79 @@ def test_v3_page_integrity_is_local_and_bulk_query_budget_is_constant(
     )
     assert corrupt_page.status_code == 500
     assert corrupt_page.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_non_object_payload_at_version_21_is_page_local(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact_body = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact_body["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=25)
+    malformed = (
+        structure_db.query(WorkbookStructureSnapshot)
+        .filter(
+            WorkbookStructureSnapshot.source_artifact_id
+            == uuid.UUID(artifact_body["id"]),
+            WorkbookStructureSnapshot.snapshot_version == 21,
+        )
+        .one()
+    )
+    seal = (
+        structure_db.query(AuditEvent)
+        .filter(
+            AuditEvent.event_name == "WorkbookStructureAnalyzed",
+            AuditEvent.entity_id == malformed.id,
+        )
+        .one()
+    )
+    malformed_id = malformed.id
+    seal_id = seal.id
+    user_id = user.id
+    original_seal_payload = json.dumps(
+        seal.payload, ensure_ascii=False, sort_keys=True
+    )
+    malformed.structure_payload = [{"not": "an object payload"}]
+    malformed.analysis_digest_sha256 = canonical_payload_digest(
+        malformed.structure_payload
+    )
+    structure_db.commit()
+    structure_db.expunge_all()
+
+    durable_malformed = structure_db.get(WorkbookStructureSnapshot, malformed_id)
+    assert durable_malformed.snapshot_version == 21
+    assert type(durable_malformed.structure_payload) is list
+    assert durable_malformed.structure_payload == [{"not": "an object payload"}]
+    structure_db.expunge_all()
+
+    first_page = structure_client.get(path, headers={"X-User-Id": str(user_id)})
+    assert first_page.status_code == 200, first_page.text
+    assert [item["snapshot_version"] for item in first_page.json()] == list(
+        range(1, 21)
+    )
+    malformed_page = structure_client.get(
+        path,
+        params={"cursor": 20},
+        headers={"X-User-Id": str(user_id)},
+    )
+    assert malformed_page.status_code == 500
+    assert malformed_page.json()["detail"] == {
+        "error_code": "structure_snapshot_integrity_failure",
+        "detail": "Bằng chứng phân tích cấu trúc không còn toàn vẹn.",
+    }
+    structure_db.expire_all()
+    assert (
+        json.dumps(
+            structure_db.get(AuditEvent, seal_id).payload,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        == original_seal_payload
+    )
 
 
 def test_v3_referenced_pages_and_get_one_stay_within_five_sql_statements(
