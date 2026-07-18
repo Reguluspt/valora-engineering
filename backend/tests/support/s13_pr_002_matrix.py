@@ -1,4 +1,5 @@
 """Static ledger load + pure validation for S13-PR-002 evidence gate (R-02/R-07)."""
+
 from __future__ import annotations
 
 import json
@@ -10,7 +11,6 @@ from tests.support.s13_pr_002_http_preserve import (
     AcceptedEvent,
     CaseInput,
     RejectionEvent,
-    get_case_input,
 )
 
 LEDGER_PATH = Path(__file__).resolve().parents[1] / "data" / "s13_pr_002_http_nplus1_ledger.json"
@@ -97,9 +97,7 @@ def validate_ledger_invariants(rows: Sequence[dict[str, Any]]) -> None:
             if ev["accepted_execution"] != "same_node":
                 raise AssertionError(f"evidence not same_node: {ev['row_id']}")
             if (ev["reachability"], ev["bound"]) != (r["reachability"], r["bound"]):
-                raise AssertionError(
-                    f"evidence group mismatch {r['row_id']} -> {ev['row_id']}"
-                )
+                raise AssertionError(f"evidence group mismatch {r['row_id']} -> {ev['row_id']}")
     if set(groups.keys()) != EXPECTED_FORMAT_BOUND:
         raise AssertionError(
             f"format/bound mismatch missing={EXPECTED_FORMAT_BOUND - set(groups)} "
@@ -127,47 +125,10 @@ def validate_collection_matches_ledger(
         )
 
 
-def case_input_from_request(request) -> CaseInput:
-    """Build B from callspec when parametrized; non-param must register explicitly."""
-    nodeid = request.node.nodeid
-    callspec = getattr(request.node, "callspec", None)
-    if callspec is not None and "limit_field" in callspec.params:
-        bound = str(callspec.params["limit_field"])
-        # reachability from test module identity in nodeid path + function tokens
-        # NOT heuristic on xlsx_extra substring: use explicit path segments
-        func = nodeid.split("::")[-1].split("[", 1)[0]
-        if "request_bytes" in func or "upload_bytes" in func or "upload_too_large" in func:
-            reach = "intake"
-        elif "endpoint_xls_" in func or func.endswith("_xls_adapter_limits") or "xls_extra" in func:
-            # After xlsx check: function names use endpoint_xls_ or xls_extra (not xlsx)
-            if "xlsx" in func:
-                reach = "xlsx"
-            else:
-                reach = "xls"
-        elif "xlsx" in func or "cell_limit" in func or "endpoint_cell" in func:
-            reach = "xlsx"
-        else:
-            reach = "xlsx"
-        # Fix: j03/i03 use xlsx_extra / xls_extra carefully
-        if "xlsx" in func:
-            reach = "xlsx"
-        elif "_xls_" in func or "xls_adapter" in func or "xls_extra" in func or "endpoint_xls" in func:
-            reach = "xls"
-        case_id = f"{func}::{bound}"
-        return CaseInput(reachability=reach, bound=bound, case_id=case_id)
-    # non-param: must already be registered during test body before helper
-    existing = get_case_input()
-    if existing is None:
-        raise AssertionError(
-            f"{nodeid}: non-parametrized marked test must call register_case_input() "
-            "with the same bound used to configure limits/payload"
-        )
-    return existing
-
-
 def assert_runtime_guard(
     *,
     actual_nodeid: str,
+    actual_case_id: str,
     ledger_row: dict[str, Any],
     rejection_events: Sequence[RejectionEvent],
     accepted_events: Sequence[AcceptedEvent],
@@ -184,6 +145,10 @@ def assert_runtime_guard(
         raise AssertionError(f"actual_nodeid {ev.actual_nodeid!r} != {actual_nodeid!r}")
     if ev.actual_nodeid != ledger_row["nodeid"]:
         raise AssertionError("event nodeid != ledger nodeid")
+    if ev.actual_case_id != actual_case_id:
+        raise AssertionError(
+            f"actual_case_id {ev.actual_case_id!r} != pytest runtime {actual_case_id!r}"
+        )
     if case.reachability != ledger_row["reachability"] or case.bound != ledger_row["bound"]:
         raise AssertionError(
             f"case B {(case.reachability, case.bound)} != ledger "
@@ -191,7 +156,10 @@ def assert_runtime_guard(
         )
     if ev.actual_reachability != case.reachability or ev.actual_bound != case.bound:
         raise AssertionError("event actual_* != registered case input B")
-    if ev.declared_reachability != ledger_row["reachability"] or ev.declared_bound != ledger_row["bound"]:
+    if (
+        ev.declared_reachability != ledger_row["reachability"]
+        or ev.declared_bound != ledger_row["bound"]
+    ):
         raise AssertionError("declared_* on event != ledger A")
     if ev.observed_status != ledger_row["reject_status"]:
         raise AssertionError(
@@ -215,7 +183,11 @@ def assert_runtime_guard(
             raise AssertionError(
                 f"accepted status {ae.observed_accepted_status} != {ledger_row['accepted_status']}"
             )
-        if ae.row_id != ledger_row["row_id"] or ae.actual_nodeid != actual_nodeid:
+        if (
+            ae.row_id != ledger_row["row_id"]
+            or ae.actual_nodeid != actual_nodeid
+            or ae.actual_case_id != actual_case_id
+        ):
             raise AssertionError("accepted event identity mismatch")
     else:
         # other_node: static reference only (no accepted event required in isolation)
@@ -273,8 +245,7 @@ def validate_adversarial_mutations(base_rows: list[dict[str, Any]]) -> list[str]
                 target = next(
                     s
                     for s in same
-                    if (s["reachability"], s["bound"])
-                    != (r["reachability"], r["bound"])
+                    if (s["reachability"], s["bound"]) != (r["reachability"], r["bound"])
                 )
                 bad[i] = dict(r, accepted_evidence_row_id=target["row_id"])
                 break
@@ -285,7 +256,12 @@ def validate_adversarial_mutations(base_rows: list[dict[str, Any]]) -> list[str]
         bad = [dict(r) for r in base_rows]
         for i, r in enumerate(bad):
             if r["row_id"] == other[0]["row_id"]:
-                bad[i] = dict(r, accepted_evidence_row_id=other[1]["row_id"] if len(other) > 1 else other[0]["row_id"])
+                bad[i] = dict(
+                    r,
+                    accepted_evidence_row_id=other[1]["row_id"]
+                    if len(other) > 1
+                    else other[0]["row_id"],
+                )
                 # force evidence to be an other_node row
                 if bad[i]["accepted_evidence_row_id"] == r["row_id"]:
                     bad[i]["accepted_evidence_row_id"] = other[-1]["row_id"]

@@ -1,4 +1,5 @@
 """S13-PR-002 seventh corrective: H-01…H-06 proof integrity."""
+
 from __future__ import annotations
 
 import hashlib
@@ -26,15 +27,16 @@ from app.modules.excel_import.application.source_artifact_service import (
     upload_source_artifact,
     _sha256_object,
 )
-from app.modules.excel_import.domain.source_artifact import SourceArtifactLimits
 from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -103,7 +105,9 @@ def client(db_session: Session, fake_storage) -> TestClient:
 
 def _seed(db: Session):
     org = OrganizationProfile(
-        legal_name="Org", organization_slug=f"o-{uuid.uuid4().hex[:6]}", status=OrganizationStatus.ACTIVE
+        legal_name="Org",
+        organization_slug=f"o-{uuid.uuid4().hex[:6]}",
+        status=OrganizationStatus.ACTIVE,
     )
     db.add(org)
     db.commit()
@@ -228,9 +232,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     snap.update(
         {
             "prior_id": prior.id,
@@ -298,7 +300,6 @@ def _assert_preserved(db, fake_storage, proj, batch, staging, line, snap):
     assert db.query(ProjectAssetLine).filter_by(project_id=proj.id).count() == snap["line_count"]
 
 
-
 def _work_factory_fail_nth_commit(bind, *, fail_on: int, hook: dict):
     """Create work Session that fails on the Nth commit (1-based)."""
     Work = sessionmaker(bind=bind, autoflush=False, autocommit=False)
@@ -323,9 +324,7 @@ def _work_factory_fail_nth_commit(bind, *, fail_on: int, hook: dict):
 # ---------------------------------------------------------------------------
 
 
-def test_h01_later_work_commit_fails_preserves_earlier(
-    db_session: Session, fake_storage
-):
+def test_h01_later_work_commit_fails_preserves_earlier(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
     now = datetime.now(timezone.utc) - timedelta(hours=3)
@@ -394,9 +393,7 @@ def test_h01_later_work_commit_fails_preserves_earlier(
     assert stats["errors"] >= 1
 
 
-def test_h01_delete_audit_commit_fails_then_retry_repairs(
-    db_session: Session, fake_storage
-):
+def test_h01_delete_audit_commit_fails_then_retry_repairs(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
     frozen = datetime(2026, 7, 17, 18, 0, 0, tzinfo=timezone.utc)
@@ -623,9 +620,7 @@ def test_h02_finalize_commit_raises_before_durability(
     _assert_preserved(db_session, fake_storage, proj, batch, staging, line, snap)
 
 
-def test_h02_retry_idempotent_when_already_available(
-    db_session: Session, fake_storage
-):
+def test_h02_retry_idempotent_when_already_available(db_session: Session, fake_storage):
     """If finalize actually committed (available+pointer), retry must not double-audit."""
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
@@ -680,9 +675,7 @@ def test_h02_retry_idempotent_when_already_available(
     assert avail_audits_after == avail_audits_before
 
 
-def test_h02_newer_finalize_wins_over_older_pending_recovery(
-    db_session: Session, fake_storage
-):
+def test_h02_newer_finalize_wins_over_older_pending_recovery(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
     now = datetime.now(timezone.utc)
@@ -767,18 +760,10 @@ def _multipart_body(filename: str, payload: bytes, content_type: str, boundary: 
 def test_h03_request_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_request_bytes",
-            case_id="test_h03_request_bytes_exact_n_and_n_plus_one::max_request_bytes",
-        )
-    )
+    case = CaseInput(reachability="intake", bound="max_request_bytes")
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    payload = _xlsx_bytes()
+    payload = case.build_artifact(intake=_xlsx_bytes())
     boundary = "----ValoraBoundaryH03Fixed"
     body = _multipart_body(
         "a.xlsx",
@@ -787,15 +772,12 @@ def test_h03_request_bytes_exact_n_and_n_plus_one(
         boundary,
     )
     n = len(body)
-    set_source_limits_override(
-        SourceArtifactLimits(max_request_bytes=n, max_upload_bytes=10 * 1024 * 1024)
-    )
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
     headers_base = {
         "X-User-Id": str(user.id),
         "Content-Type": f"multipart/form-data; boundary={boundary}",
     }
-    try:
+    with source_case_limits(case, n, max_upload_bytes=10 * 1024 * 1024):
         res_bad = client.post(
             url,
             content=body + b"X",
@@ -815,33 +797,21 @@ def test_h03_request_bytes_exact_n_and_n_plus_one(
             headers={**headers_base, "Content-Length": str(n)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_upload_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_upload_bytes",
-            case_id="test_h03_upload_bytes_exact_n_and_n_plus_one::max_upload_bytes",
-        )
-    )
+    case = CaseInput(reachability="intake", bound="max_upload_bytes")
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    payload = _xlsx_bytes()
-    n = len(payload)
-    set_source_limits_override(
-        SourceArtifactLimits(max_upload_bytes=n, max_request_bytes=12 * 1024 * 1024)
-    )
-    try:
+    base = _xlsx_bytes()
+    n = len(base)
+    big = case.build_artifact(intake=lambda: base + b"X")
+    payload = case.build_artifact(intake=base)
+    with source_case_limits(case, n, max_request_bytes=12 * 1024 * 1024):
         # N+1 reject first (preserves prior)
-        big = payload + b"X"
         res_bad = client.post(
             f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
             files={
@@ -875,29 +845,38 @@ def test_h03_upload_bytes_exact_n_and_n_plus_one(
             headers={"X-User-Id": str(user.id)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.parametrize(
-    "limit_field,n,build,error_code,status",
+    "case,n,build,error_code,status",
     [
-        ("max_sheets", 1, lambda: _xlsx_bytes(sheets=2), "sheet_limit", 413),
-        ("max_physical_rows", 1, lambda: _xlsx_bytes(rows=2), "physical_row_limit", 413),
-        ("max_columns", 1, lambda: _xlsx_bytes(cols=2), "column_limit", 413),
-        ("max_cell_chars", 3, lambda: _xlsx_bytes(cell="abcd"), "cell_length_limit", 400),
+        (CaseInput("xlsx", "max_sheets"), 1, lambda: _xlsx_bytes(sheets=2), "sheet_limit", 413),
+        (
+            CaseInput("xlsx", "max_physical_rows"),
+            1,
+            lambda: _xlsx_bytes(rows=2),
+            "physical_row_limit",
+            413,
+        ),
+        (CaseInput("xlsx", "max_columns"), 1, lambda: _xlsx_bytes(cols=2), "column_limit", 413),
+        (
+            CaseInput("xlsx", "max_cell_chars"),
+            3,
+            lambda: _xlsx_bytes(cell="abcd"),
+            "cell_length_limit",
+            400,
+        ),
     ],
     ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_endpoint_xlsx_adapter_limits(
-    client: TestClient, db_session: Session, fake_storage, limit_field, n, build, error_code, status
+    client: TestClient, db_session: Session, fake_storage, case, n, build, error_code, status
 ):
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n}))
-    try:
-        payload = build()
+    payload = case.build_artifact(xlsx=build)
+    with source_case_limits(case, n):
         res = client.post(
             f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
             files={
@@ -917,17 +896,15 @@ def test_h03_endpoint_xlsx_adapter_limits(
             fake_storage=fake_storage,
             snap=snap,
         )
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.parametrize(
-    "limit_field,n,kwargs,error_code,status",
+    "case,n,kwargs,error_code,status",
     [
-        ("max_sheets", 1, {"sheets": 2}, "sheet_limit", 413),
-        ("max_physical_rows", 1, {"rows": 2}, "physical_row_limit", 413),
-        ("max_columns", 1, {"cols": 2}, "column_limit", 413),
-        ("max_cell_chars", 3, {"cell": "abcd"}, "cell_length_limit", 400),
+        (CaseInput("xls", "max_sheets"), 1, {"sheets": 2}, "sheet_limit", 413),
+        (CaseInput("xls", "max_physical_rows"), 1, {"rows": 2}, "physical_row_limit", 413),
+        (CaseInput("xls", "max_columns"), 1, {"cols": 2}, "column_limit", 413),
+        (CaseInput("xls", "max_cell_chars"), 3, {"cell": "abcd"}, "cell_length_limit", 400),
     ],
     ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
@@ -937,7 +914,7 @@ def test_h03_endpoint_xls_adapter_limits(
     db_session: Session,
     fake_storage,
     tmp_path,
-    limit_field,
+    case,
     n,
     kwargs,
     error_code,
@@ -945,9 +922,8 @@ def test_h03_endpoint_xls_adapter_limits(
 ):
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n}))
-    try:
-        payload = _xls_bytes(tmp_path, **kwargs)
+    payload = case.build_artifact(xls=lambda: _xls_bytes(tmp_path, **kwargs))
+    with source_case_limits(case, n):
         res = client.post(
             f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
             files={"file": ("lim.xls", io.BytesIO(payload), "application/vnd.ms-excel")},
@@ -961,8 +937,6 @@ def test_h03_endpoint_xls_adapter_limits(
             fake_storage=fake_storage,
             snap=snap,
         )
-    finally:
-        set_source_limits_override(None)
 
 
 # ---------------------------------------------------------------------------

@@ -2,11 +2,14 @@
 
 R-03/R-04: actual_* never copied from ledger; observed_* from real HTTP response.
 """
+
 from __future__ import annotations
 
 import re
+import hashlib
 import threading
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
@@ -17,6 +20,8 @@ from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
 from app.modules.excel_import.models import ImportSourceArtifact
+from app.modules.excel_import.application import source_artifact_service
+from app.modules.excel_import.domain.source_artifact import SourceArtifactLimits
 from app.modules.project_master_data.models import (
     AuditEvent,
     ProjectAssetImportBatch,
@@ -33,11 +38,72 @@ _tls = threading.local()
 
 @dataclass(frozen=True)
 class CaseInput:
-    """B: actual case identity bound to the test setup path."""
+    """B: one immutable input drives both limits and artifact reachability."""
 
     reachability: str
     bound: str
-    case_id: str
+
+    def default_limit_value(self) -> int:
+        if self.bound not in SourceArtifactLimits.__dataclass_fields__:
+            raise AssertionError(f"unknown SourceArtifactLimits field: {self.bound}")
+        value = getattr(SourceArtifactLimits(), self.bound)
+        if not isinstance(value, int):
+            raise AssertionError(f"non-integer SourceArtifactLimits field: {self.bound}")
+        return value
+
+    def build_artifact(
+        self,
+        *,
+        intake: Any = None,
+        xlsx: Any = None,
+        xls: Any = None,
+    ) -> bytes:
+        """Build bytes through the branch selected by this exact CaseInput."""
+        builders = {"intake": intake, "xlsx": xlsx, "xls": xls}
+        if self.reachability not in builders:
+            raise AssertionError(f"unsupported reachability: {self.reachability}")
+        supplied = [name for name, builder in builders.items() if builder is not None]
+        if supplied != [self.reachability]:
+            raise AssertionError(
+                f"CaseInput reachability {self.reachability!r} requires only its "
+                f"matching artifact builder; supplied={supplied}"
+            )
+        builder = builders[self.reachability]
+        raw = builder() if callable(builder) else builder
+        if not isinstance(raw, (bytes, bytearray, memoryview)):
+            raise AssertionError(f"artifact builder returned {type(raw)!r}, expected bytes")
+        payload = bytes(raw)
+        register_case_input(self)
+        receipts = getattr(_tls, "artifact_receipts", None)
+        if receipts is None:
+            _tls.artifact_receipts = []
+            receipts = _tls.artifact_receipts
+        receipts.append(
+            ArtifactReceipt(
+                case=self,
+                reachability=self.reachability,
+                payload=payload,
+                sha256=hashlib.sha256(payload).hexdigest(),
+                size=len(payload),
+            )
+        )
+        return payload
+
+
+@dataclass(frozen=True)
+class ArtifactReceipt:
+    case: CaseInput
+    reachability: str
+    payload: bytes
+    sha256: str
+    size: int
+
+
+@dataclass(frozen=True)
+class AppliedLimitBinding:
+    case: CaseInput
+    limits: SourceArtifactLimits
+    limit_value: int
 
 
 @dataclass(frozen=True)
@@ -57,6 +123,7 @@ class RejectionEvent:
 class AcceptedEvent:
     row_id: str
     actual_nodeid: str
+    actual_case_id: str
     observed_accepted_status: int
 
 
@@ -65,12 +132,21 @@ def clear_evidence_context() -> None:
     _tls.accepted_events = []
     _tls.case_input = None
     _tls.actual_nodeid = None
+    _tls.actual_case_id = None
+    _tls.limit_binding = None
+    _tls.artifact_receipts = []
     _tls.ledger_row = None
     _tls.declared = None
 
 
-def set_runtime_node(nodeid: str) -> None:
+def set_runtime_identity(nodeid: str, case_id: str) -> None:
     _tls.actual_nodeid = nodeid
+    _tls.actual_case_id = case_id
+
+
+def set_runtime_node(nodeid: str) -> None:
+    """Legacy alias; new gate binds nodeid and runtime case id together."""
+    set_runtime_identity(nodeid, nodeid.split("::")[-1])
 
 
 def set_ledger_row(row: dict[str, Any]) -> None:
@@ -89,8 +165,37 @@ def set_ledger_row(row: dict[str, Any]) -> None:
 
 def register_case_input(case: CaseInput) -> CaseInput:
     """Register B — must use the same values that configure limits/payload."""
+    existing = getattr(_tls, "case_input", None)
+    if existing is not None and existing is not case:
+        raise AssertionError("one marked node must use one identical CaseInput object")
     _tls.case_input = case
     return case
+
+
+@contextmanager
+def source_case_limits(
+    case: CaseInput,
+    limit_value: int,
+    **additional_limits: int,
+):
+    """Apply production's real HTTP limit seam from the exact CaseInput."""
+    if case.bound in additional_limits:
+        raise AssertionError(
+            f"duplicate target bound {case.bound!r}: CaseInput must be sole authority"
+        )
+    if case.bound not in SourceArtifactLimits.__dataclass_fields__:
+        raise AssertionError(f"unknown SourceArtifactLimits field: {case.bound}")
+    register_case_input(case)
+    if getattr(_tls, "limit_binding", None) is not None:
+        raise AssertionError("only one active source_case_limits binding is allowed")
+    limits = SourceArtifactLimits(**{case.bound: limit_value, **additional_limits})
+    binding = AppliedLimitBinding(case=case, limits=limits, limit_value=limit_value)
+    _tls.limit_binding = binding
+    source_artifact_service.set_source_limits_override(limits)
+    try:
+        yield limits
+    finally:
+        source_artifact_service.set_source_limits_override(None)
 
 
 def get_case_input() -> CaseInput | None:
@@ -105,6 +210,22 @@ def get_accepted_events() -> list[AcceptedEvent]:
     return list(getattr(_tls, "accepted_events", []) or [])
 
 
+def evidence_context_is_clean() -> bool:
+    """Observe cleanup without mutating TLS (used by a real subprocess probe)."""
+    return (
+        not (getattr(_tls, "rejection_events", None) or [])
+        and not (getattr(_tls, "accepted_events", None) or [])
+        and not (getattr(_tls, "artifact_receipts", None) or [])
+        and getattr(_tls, "case_input", None) is None
+        and getattr(_tls, "actual_nodeid", None) is None
+        and getattr(_tls, "actual_case_id", None) is None
+        and getattr(_tls, "limit_binding", None) is None
+        and getattr(_tls, "ledger_row", None) is None
+        and getattr(_tls, "declared", None) is None
+        and source_artifact_service._source_limits_override is None
+    )
+
+
 def make_synthetic_rejection_event(**kwargs: Any) -> RejectionEvent:
     """Test-only factory — does not mark runtime completion."""
     return RejectionEvent(**kwargs)
@@ -114,20 +235,38 @@ def make_synthetic_accepted_event(**kwargs: Any) -> AcceptedEvent:
     return AcceptedEvent(**kwargs)
 
 
-def _append_rejection_event(ev: RejectionEvent) -> None:
-    events = getattr(_tls, "rejection_events", None)
-    if events is None:
-        _tls.rejection_events = []
-        events = _tls.rejection_events
-    events.append(ev)
-
-
-def _append_accepted_event(ev: AcceptedEvent) -> None:
-    events = getattr(_tls, "accepted_events", None)
-    if events is None:
-        _tls.accepted_events = []
-        events = _tls.accepted_events
-    events.append(ev)
+def _assert_active_case_evidence(res: Any) -> tuple[CaseInput, str, str, dict[str, Any]]:
+    case = get_case_input()
+    assert case is not None, "CaseInput must build the artifact and configure limits"
+    binding = getattr(_tls, "limit_binding", None)
+    assert binding is not None, "source_case_limits() must configure the actual HTTP path"
+    assert binding.case is case, "artifact and limit configuration used different CaseInput objects"
+    assert source_artifact_service._source_limits_override is binding.limits, (
+        "actual source service is not using the CaseInput-bound limits object"
+    )
+    assert getattr(binding.limits, case.bound) == binding.limit_value
+    receipts = [
+        receipt
+        for receipt in (getattr(_tls, "artifact_receipts", None) or [])
+        if receipt.case is case and receipt.reachability == case.reachability
+    ]
+    assert receipts, "CaseInput did not drive the artifact branch"
+    request = getattr(res, "request", None)
+    try:
+        request_content = request.content
+    except Exception as exc:  # pragma: no cover - fail-closed diagnostic
+        raise AssertionError("HTTP response does not expose its consumed request bytes") from exc
+    assert isinstance(request_content, bytes), "consumed HTTP request bytes are unavailable"
+    assert any(receipt.payload in request_content for receipt in receipts), (
+        "HTTP request did not contain an artifact built by the active CaseInput"
+    )
+    nodeid = getattr(_tls, "actual_nodeid", None)
+    runtime_case_id = getattr(_tls, "actual_case_id", None)
+    declared = getattr(_tls, "declared", None)
+    assert nodeid, "actual_nodeid not bound"
+    assert runtime_case_id, "pytest runtime case id not bound"
+    assert declared is not None, "ledger row not bound"
+    return case, nodeid, runtime_case_id, declared
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +423,9 @@ def _as_uuid(value: Any):
     return uuid.UUID(str(value))
 
 
-def snapshot_source_intake_preserve(db: Session, fake_storage, *, project_id, batch_id) -> dict[str, Any]:
+def snapshot_source_intake_preserve(
+    db: Session, fake_storage, *, project_id, batch_id
+) -> dict[str, Any]:
     assert_field_sets_match_mappers()
     db.expire_all()
     pid, bid = _as_uuid(project_id), _as_uuid(batch_id)
@@ -359,17 +500,13 @@ def assert_http_rejection_preserve(
     observed_error = detail.get("error_code")
     assert observed_error == error_code
 
-    case = get_case_input()
-    assert case is not None, "register_case_input() required before reject helper"
-    nodeid = getattr(_tls, "actual_nodeid", None)
-    assert nodeid, "actual_nodeid not bound"
-    declared = getattr(_tls, "declared", None)
-    assert declared is not None, "ledger row not bound"
-
-    _append_rejection_event(
+    case, nodeid, runtime_case_id, declared = _assert_active_case_evidence(res)
+    events = getattr(_tls, "rejection_events", None)
+    assert events is not None, "evidence context not initialized"
+    events.append(
         RejectionEvent(
             actual_nodeid=nodeid,
-            actual_case_id=case.case_id,
+            actual_case_id=runtime_case_id,
             actual_reachability=case.reachability,
             actual_bound=case.bound,
             declared_reachability=declared["reachability"],
@@ -385,14 +522,14 @@ def assert_accepted_source_upload(res, *, status: int = 201) -> None:
     """Accept path: assert real response status, record accepted observation from C."""
     assert res.status_code == status, getattr(res, "text", res)
     observed = int(res.status_code)
-    declared = getattr(_tls, "declared", None)
-    assert declared is not None, "ledger row not bound for accept"
-    nodeid = getattr(_tls, "actual_nodeid", None)
-    assert nodeid
-    _append_accepted_event(
+    _case, nodeid, runtime_case_id, declared = _assert_active_case_evidence(res)
+    events = getattr(_tls, "accepted_events", None)
+    assert events is not None, "evidence context not initialized"
+    events.append(
         AcceptedEvent(
             row_id=declared["row_id"],
             actual_nodeid=nodeid,
+            actual_case_id=runtime_case_id,
             observed_accepted_status=observed,
         )
     )

@@ -4,6 +4,7 @@ Evidence-completeness only — no production CAS changes.
 Every retained HTTP N+1 rejection path must use the shared immutable snapshot
 contract in tests.support.s13_pr_002_http_preserve.
 """
+
 from __future__ import annotations
 
 import ast
@@ -21,9 +22,6 @@ from sqlalchemy.orm import Session
 from app.main import app as fastapi_app
 from app.db import Base, get_db
 import app.modules.excel_import.models  # noqa: F401
-from app.modules.excel_import.application.source_artifact_service import (
-    set_source_limits_override,
-)
 from app.modules.excel_import.domain.source_artifact import SourceArtifactLimits
 from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
@@ -33,11 +31,13 @@ from tests.support.s13_pr_002_http_preserve import (
     ARTIFACT_FIELDS,
     AUDIT_FIELDS,
     BATCH_FIELDS,
+    CaseInput,
     LINE_FIELDS,
     STAGING_FIELDS,
     assert_audit_snapshot_detects_mutations,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -653,9 +653,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     return prior, staging, line, snap
 
 
@@ -704,9 +702,8 @@ def _load_suite_function_map() -> dict[str, set[str]]:
                 if isinstance(node, ast.FunctionDef) and node.name == "_assert_preserved":
                     if "assert_source_intake_preserve" in ast.dump(node):
                         for tnode in tree.body:
-                            if (
-                                isinstance(tnode, ast.FunctionDef)
-                                and tnode.name.startswith("test_")
+                            if isinstance(tnode, ast.FunctionDef) and tnode.name.startswith(
+                                "test_"
                             ):
                                 for n in ast.walk(tnode):
                                     if isinstance(n, ast.Name) and n.id == "_assert_preserved":
@@ -738,9 +735,7 @@ def test_l02_snapshot_schema_fields_are_complete():
 
 def test_l02_snapshot_deep_copy_isolation(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     assert set(snap.keys()) >= {
         "objects",
         "content_types",
@@ -876,14 +871,38 @@ def test_l04_ninth_xls_extra_params_still_four():
 
 
 @pytest.mark.parametrize(
-    "limit_field,n,build_bad,error_code,status",
+    "case,n,build_bad,error_code,status",
     [
-        ("max_sheets", 1, lambda: _xlsx_bytes(sheets=2), "sheet_limit", 413),
-        ("max_physical_rows", 1, lambda: _xlsx_bytes(rows=2), "physical_row_limit", 413),
-        ("max_columns", 1, lambda: _xlsx_bytes(cols=2), "column_limit", 413),
-        ("max_cell_chars", 3, lambda: _xlsx_bytes(cell="abcd"), "cell_length_limit", 400),
-        ("max_row_chars", 4, lambda: _xlsx_bytes(cols=3, cell="ab"), "row_char_limit", 413),
-        ("max_total_cells", 4, lambda: _xlsx_bytes(rows=2, cols=3), "total_cell_limit", 413),
+        (CaseInput("xlsx", "max_sheets"), 1, lambda: _xlsx_bytes(sheets=2), "sheet_limit", 413),
+        (
+            CaseInput("xlsx", "max_physical_rows"),
+            1,
+            lambda: _xlsx_bytes(rows=2),
+            "physical_row_limit",
+            413,
+        ),
+        (CaseInput("xlsx", "max_columns"), 1, lambda: _xlsx_bytes(cols=2), "column_limit", 413),
+        (
+            CaseInput("xlsx", "max_cell_chars"),
+            3,
+            lambda: _xlsx_bytes(cell="abcd"),
+            "cell_length_limit",
+            400,
+        ),
+        (
+            CaseInput("xlsx", "max_row_chars"),
+            4,
+            lambda: _xlsx_bytes(cols=3, cell="ab"),
+            "row_char_limit",
+            413,
+        ),
+        (
+            CaseInput("xlsx", "max_total_cells"),
+            4,
+            lambda: _xlsx_bytes(rows=2, cols=3),
+            "total_cell_limit",
+            413,
+        ),
     ],
     ids=[
         "max_sheets",
@@ -899,24 +918,22 @@ def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
     client: TestClient,
     db_session: Session,
     fake_storage,
-    limit_field,
+    case,
     n,
     build_bad,
     error_code,
     status,
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n}))
-    try:
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
+    payload = case.build_artifact(xlsx=build_bad)
+    with source_case_limits(case, n):
         res = client.post(
             f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
             files={
                 "file": (
                     "lim.xlsx",
-                    io.BytesIO(build_bad()),
+                    io.BytesIO(payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -936,36 +953,22 @@ def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
         assert b is not None
         assert b.current_source_artifact_id == prior.id
         assert db_session.query(ImportSourceArtifact).count() == 1
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_l03_upload_too_large_full_preserve(client: TestClient, db_session: Session, fake_storage):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_upload_bytes",
-            case_id="test_l03_upload_too_large_full_preserve::max_upload_bytes",
-        )
-    )
+    case = CaseInput(reachability="intake", bound="max_upload_bytes")
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
-    payload = _xlsx_bytes()
-    set_source_limits_override(
-        SourceArtifactLimits(max_upload_bytes=len(payload), max_request_bytes=12 * 1024 * 1024)
-    )
-    try:
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
+    base = _xlsx_bytes()
+    payload = case.build_artifact(intake=lambda: base + b"X")
+    with source_case_limits(case, len(base), max_request_bytes=12 * 1024 * 1024):
         res = client.post(
             f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
             files={
                 "file": (
                     "big.xlsx",
-                    io.BytesIO(payload + b"X"),
+                    io.BytesIO(payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -979,8 +982,6 @@ def test_l03_upload_too_large_full_preserve(client: TestClient, db_session: Sess
             fake_storage=fake_storage,
             snap=snap,
         )
-    finally:
-        set_source_limits_override(None)
 
 
 def test_l01_inventory_required_nodes_nonempty():

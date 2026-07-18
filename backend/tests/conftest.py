@@ -16,50 +16,16 @@ def pytest_configure(config):
     )
 
 
-def _reachability_from_func(func: str) -> str:
-    if (
-        "request_bytes" in func
-        or "upload_bytes" in func
-        or "upload_too_large" in func
-    ):
-        return "intake"
-    # xlsx before xls (xlsx_extra contains xls_extra as substring)
-    if "xlsx" in func:
-        return "xlsx"
-    if (
-        "_xls_" in func
-        or "xls_adapter" in func
-        or "xls_extra" in func
-        or "endpoint_xls" in func
-    ):
-        return "xls"
-    if "cell_limit" in func or "endpoint_cell" in func:
-        return "xlsx"
-    return "xlsx"
-
-
 @pytest.fixture(autouse=True)
 def _s13_pr_002_strong_helper_runtime_guard(request):
     """R-06: per-marked-node A/B/C guard with unconditional finally clear."""
-    marker = request.node.get_closest_marker("s13_pr_002_http_nplus1_reject")
-    if marker is None:
-        # Ensure unmarked tests do not see dirty TLS
-        from tests.support.s13_pr_002_http_preserve import clear_evidence_context
-
-        clear_evidence_context()
-        yield
-        clear_evidence_context()
-        return
-
     from tests.support.s13_pr_002_http_preserve import (
-        CaseInput,
         clear_evidence_context,
         get_accepted_events,
         get_case_input,
         get_rejection_events,
-        register_case_input,
         set_ledger_row,
-        set_runtime_node,
+        set_runtime_identity,
     )
     from tests.support.s13_pr_002_matrix import (
         assert_runtime_guard as matrix_guard,
@@ -68,35 +34,31 @@ def _s13_pr_002_strong_helper_runtime_guard(request):
     )
 
     clear_evidence_context()
-    nodeid = request.node.nodeid
-    set_runtime_node(nodeid)
-    by_node = ledger_by_nodeid()
-    if nodeid not in by_node:
-        clear_evidence_context()
-        raise AssertionError(f"marked node missing from static ledger: {nodeid}")
-    row = by_node[nodeid]
-    set_ledger_row(row)
-
-    # Bind B early for parametrized cases (limit_field from callspec)
-    callspec = getattr(request.node, "callspec", None)
-    if callspec is not None and "limit_field" in getattr(callspec, "params", {}):
-        bound = str(callspec.params["limit_field"])
-        func = nodeid.split("::")[-1].split("[", 1)[0]
-        reach = _reachability_from_func(func)
-        register_case_input(
-            CaseInput(reachability=reach, bound=bound, case_id=f"{func}::{bound}")
-        )
-
     try:
+        marker = request.node.get_closest_marker("s13_pr_002_http_nplus1_reject")
+        if marker is None:
+            yield
+            return
+
+        nodeid = request.node.nodeid
+        runtime_case_id = request.node.name
+        set_runtime_identity(nodeid, runtime_case_id)
+        by_node = ledger_by_nodeid()
+        if nodeid not in by_node:
+            raise AssertionError(f"marked node missing from static ledger: {nodeid}")
+        row = by_node[nodeid]
+        set_ledger_row(row)
+
         yield
         case = get_case_input()
         if case is None:
             raise AssertionError(
-                f"{nodeid}: missing CaseInput — parametrized tests auto-bind; "
-                "non-param must call register_case_input() before helpers"
+                f"{nodeid}: missing CaseInput — the test must use one CaseInput "
+                "for its actual limits and artifact branch"
             )
         matrix_guard(
             actual_nodeid=nodeid,
+            actual_case_id=runtime_case_id,
             ledger_row=row,
             rejection_events=get_rejection_events(),
             accepted_events=get_accepted_events(),
@@ -109,10 +71,7 @@ def _s13_pr_002_strong_helper_runtime_guard(request):
 
 @pytest.fixture(autouse=True)
 def setup_test_auth():
-    def override_get_current_user(
-        request: Request,
-        db: Session = Depends(get_db)
-    ) -> User:
+    def override_get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         x_user_id = request.headers.get("X-User-Id")
         if x_user_id:
             try:
@@ -125,14 +84,16 @@ def setup_test_auth():
             return user
 
         from app.api.auth import get_cookie_keys, hash_token
+
         acc_key, _ = get_cookie_keys()
         access_token = request.cookies.get(acc_key)
         if access_token:
             acc_hash = hash_token(access_token)
-            session = db.query(UserSession).filter(
-                UserSession.access_token_hash == acc_hash,
-                UserSession.status == "active"
-            ).first()
+            session = (
+                db.query(UserSession)
+                .filter(UserSession.access_token_hash == acc_hash, UserSession.status == "active")
+                .first()
+            )
             if session:
                 user = db.query(User).filter(User.id == session.user_id).first()
                 if user:

@@ -1,4 +1,5 @@
 """S13-PR-002 ninth corrective: J-01…J-05 cross-dialect ownership and complete matrix."""
+
 from __future__ import annotations
 
 import hashlib
@@ -30,15 +31,16 @@ from app.modules.excel_import.application.source_artifact_service import (
     upload_source_artifact,
     _sha256_object,
 )
-from app.modules.excel_import.domain.source_artifact import SourceArtifactLimits
 from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -162,9 +164,7 @@ def _xlsx_bytes(*, sheets=1, rows=1, cols=1, cell="x", merges=0) -> bytes:
     for i in range(merges):
         col = (i % max(cols, 1)) + 1
         end_col = min(col + 1, max(cols + 1, 2))
-        wb.active.merge_cells(
-            start_row=1, start_column=col, end_row=1, end_column=end_col
-        )
+        wb.active.merge_cells(start_row=1, start_column=col, end_row=1, end_column=end_col)
     for i in range(1, sheets):
         wb.create_sheet(f"S{i + 1}")
     buf = io.BytesIO()
@@ -275,9 +275,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     # Legacy convenience keys still used by non-reject nodes in this suite.
     snap.update(
         {
@@ -388,9 +386,7 @@ def _pg_sqlstate(exc: BaseException) -> str:
 def test_j01_sqlite_verified_pending_promotion(db_session: Session, fake_storage):
     """At 392614c this returned errors=1 (UUID bind). Must promote with errors=0."""
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     body = b"fresh-valid-pending"
     key = f"pending/{uuid.uuid4()}"
     fake_storage._objects[key] = body
@@ -609,9 +605,7 @@ def test_j01_pg_verified_pending_promotion():
 
 def test_j01_overlap_reconciler_wins_uploader_idempotent(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
     hooks = {"mid_put": 0, "reconcile_stats": None}
     real_put = fake_storage.put_stream
@@ -697,9 +691,7 @@ def test_j01_overlap_reconciler_wins_uploader_idempotent(db_session: Session, fa
 
 def test_j01_overlap_uploader_wins_reconciler_skips(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
 
     class R:
@@ -1059,9 +1051,7 @@ def test_j02_durable_then_raise_fresh_session_recovery(
     db_session: Session, fake_storage, monkeypatch, tmp_path
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
     p = tmp_path / "d.xlsx"
     p.write_bytes(payload)
@@ -1162,10 +1152,10 @@ def _assert_reject_preserve(
 
 
 @pytest.mark.parametrize(
-    "limit_field,n_limit,build_ok,build_bad,error_code,bad_status",
+    "case,n_limit,build_ok,build_bad,error_code,bad_status",
     [
         (
-            "max_zip_entries",
+            CaseInput("xlsx", "max_zip_entries"),
             None,  # computed from fixture
             None,
             None,
@@ -1173,7 +1163,7 @@ def _assert_reject_preserve(
             413,
         ),
         (
-            "max_uncompressed_zip_bytes",
+            CaseInput("xlsx", "max_uncompressed_zip_bytes"),
             None,
             None,
             None,
@@ -1181,7 +1171,7 @@ def _assert_reject_preserve(
             413,
         ),
         (
-            "max_row_chars",
+            CaseInput("xlsx", "max_row_chars"),
             4,
             lambda: _xlsx_bytes(cols=2, cell="ab"),
             lambda: _xlsx_bytes(cols=3, cell="ab"),
@@ -1189,7 +1179,7 @@ def _assert_reject_preserve(
             413,
         ),
         (
-            "max_total_cells",
+            CaseInput("xlsx", "max_total_cells"),
             4,
             lambda: _xlsx_bytes(rows=2, cols=2),
             lambda: _xlsx_bytes(rows=2, cols=3),
@@ -1197,7 +1187,7 @@ def _assert_reject_preserve(
             413,
         ),
         (
-            "max_merged_regions",
+            CaseInput("xlsx", "max_merged_regions"),
             1,
             lambda: _xlsx_bytes(merges=1, cols=2),
             lambda: _xlsx_bytes(merges=2, cols=3),
@@ -1205,7 +1195,7 @@ def _assert_reject_preserve(
             413,
         ),
         (
-            "max_merged_regions_per_sheet",
+            CaseInput("xlsx", "max_merged_regions_per_sheet"),
             1,
             lambda: _xlsx_bytes(merges=1, cols=2),
             lambda: _xlsx_bytes(merges=2, cols=3),
@@ -1227,7 +1217,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
     client: TestClient,
     db_session: Session,
     fake_storage,
-    limit_field,
+    case,
     n_limit,
     build_ok,
     build_bad,
@@ -1235,29 +1225,26 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
     bad_status,
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     base = _xlsx_bytes()
-    if limit_field == "max_zip_entries":
+    if case.bound == "max_zip_entries":
         with zipfile.ZipFile(io.BytesIO(base)) as zf:
             n_ok = len(zf.infolist())
-        ok_payload = base
-        bad_payload = _xlsx_with_extra_zip_entries(base, 1)
-        limits = SourceArtifactLimits(max_zip_entries=n_ok)
-    elif limit_field == "max_uncompressed_zip_bytes":
+        n_limit = n_ok
+        ok_payload = case.build_artifact(xlsx=base)
+        bad_payload = case.build_artifact(xlsx=lambda: _xlsx_with_extra_zip_entries(base, 1))
+    elif case.bound == "max_uncompressed_zip_bytes":
         with zipfile.ZipFile(io.BytesIO(base)) as zf:
             n_ok = sum(i.file_size for i in zf.infolist())
-        ok_payload = base
-        bad_payload = _xlsx_inflated_uncompressed(base, n_ok)
-        limits = SourceArtifactLimits(max_uncompressed_zip_bytes=n_ok)
+        n_limit = n_ok
+        ok_payload = case.build_artifact(xlsx=base)
+        bad_payload = case.build_artifact(xlsx=lambda: _xlsx_inflated_uncompressed(base, n_ok))
     else:
-        ok_payload = build_ok()
-        bad_payload = build_bad()
-        limits = SourceArtifactLimits(**{limit_field: n_limit})
+        ok_payload = case.build_artifact(xlsx=build_ok)
+        bad_payload = case.build_artifact(xlsx=build_bad)
 
-    set_source_limits_override(limits)
-    try:
+    assert n_limit is not None
+    with source_case_limits(case, n_limit):
         res_bad = _post_source(
             client,
             proj,
@@ -1289,15 +1276,13 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.parametrize(
-    "limit_field,n_limit,ok_kwargs,bad_kwargs,error_code,bad_status",
+    "case,n_limit,ok_kwargs,bad_kwargs,error_code,bad_status",
     [
         (
-            "max_row_chars",
+            CaseInput("xls", "max_row_chars"),
             4,
             {"cols": 2, "cell": "ab"},
             {"cols": 3, "cell": "ab"},
@@ -1305,7 +1290,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             413,
         ),
         (
-            "max_total_cells",
+            CaseInput("xls", "max_total_cells"),
             4,
             {"rows": 2, "cols": 2},
             {"rows": 2, "cols": 3},
@@ -1313,7 +1298,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             413,
         ),
         (
-            "max_merged_regions",
+            CaseInput("xls", "max_merged_regions"),
             1,
             {"merges": 1, "cols": 2},
             {"merges": 2, "cols": 4},
@@ -1321,7 +1306,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             413,
         ),
         (
-            "max_merged_regions_per_sheet",
+            CaseInput("xls", "max_merged_regions_per_sheet"),
             1,
             {"merges": 1, "cols": 2},
             {"merges": 2, "cols": 4},
@@ -1342,7 +1327,7 @@ def test_j03_endpoint_xls_extra_adapter_bounds(
     db_session: Session,
     fake_storage,
     tmp_path,
-    limit_field,
+    case,
     n_limit,
     ok_kwargs,
     bad_kwargs,
@@ -1351,18 +1336,17 @@ def test_j03_endpoint_xls_extra_adapter_bounds(
 ):
     # max_zip_entries / max_uncompressed_zip_bytes are xlsx-only (OLE path has no zip).
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n_limit}))
-    try:
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
+    bad_payload = case.build_artifact(xls=lambda: _xls_bytes(tmp_path, **bad_kwargs))
+    ok_payload = case.build_artifact(xls=lambda: _xls_bytes(tmp_path, **ok_kwargs))
+    with source_case_limits(case, n_limit):
         res_bad = _post_source(
             client,
             proj,
             batch,
             user,
             "lim.xls",
-            _xls_bytes(tmp_path, **bad_kwargs),
+            bad_payload,
             "application/vnd.ms-excel",
         )
         _assert_reject_preserve(
@@ -1383,12 +1367,10 @@ def test_j03_endpoint_xls_extra_adapter_bounds(
             batch,
             user,
             "ok.xls",
-            _xls_bytes(tmp_path, **ok_kwargs),
+            ok_payload,
             "application/vnd.ms-excel",
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 def test_j03_xls_zip_limits_not_externally_reachable_documented():

@@ -1,4 +1,5 @@
 """S13-PR-002 fourth corrective: F-01..F-09 / D-01..D-10 proofs."""
+
 from __future__ import annotations
 
 import hashlib
@@ -31,9 +32,11 @@ from app.modules.excel_import.infrastructure.object_storage import (
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_http_rejection_preserve,
     assert_source_intake_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -97,7 +100,9 @@ def client(db_session: Session, fake_storage) -> TestClient:
 
 def _seed(db: Session):
     org = OrganizationProfile(
-        legal_name="Org", organization_slug=f"o-{uuid.uuid4().hex[:6]}", status=OrganizationStatus.ACTIVE
+        legal_name="Org",
+        organization_slug=f"o-{uuid.uuid4().hex[:6]}",
+        status=OrganizationStatus.ACTIVE,
     )
     db.add(org)
     db.commit()
@@ -199,9 +204,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     snap.update(
         {
             "prior_id": prior.id,
@@ -430,7 +433,9 @@ def test_threat_http_preserves_prior_official_and_staging(
     write_threat_xls(path, threat)
     res = client.post(
         f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-        files={"file": (f"{threat}.xls", io.BytesIO(path.read_bytes()), "application/vnd.ms-excel")},
+        files={
+            "file": (f"{threat}.xls", io.BytesIO(path.read_bytes()), "application/vnd.ms-excel")
+        },
         headers={"X-User-Id": str(user.id)},
     )
     assert res.status_code == 400, res.text
@@ -465,7 +470,7 @@ def _xlsx_with_formula_cache(path, *, a1: int = 10, formula: str = "A1*2", cache
                     m = re.search(r'<c[^>]*r="B1"[^>]*>.*?</c>', s, flags=re.DOTALL)
                 assert m is not None, f"B1 cell missing in {item.filename}: {s[:500]!r}"
                 old_cell = m.group(0)
-                fm = re.search(r'<f[^>]*>.*?</f>', old_cell, flags=re.DOTALL)
+                fm = re.search(r"<f[^>]*>.*?</f>", old_cell, flags=re.DOTALL)
                 f_xml = fm.group(0) if fm else f"<f>{formula}</f>"
                 new_cell = f'<c r="B1">{f_xml}<v>{cached_s}</v></c>'
                 s2 = s[: m.start()] + new_cell + s[m.end() :]
@@ -686,41 +691,36 @@ def test_xlsx_cell_chars_exact_and_max_plus_one(tmp_path):
 def test_endpoint_cell_limit_no_reservation(
     client: TestClient, db_session: Session, fake_storage, tmp_path
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="xlsx",
-            bound="max_cell_chars",
-            case_id="test_endpoint_cell_limit_no_reservation::max_cell_chars",
-        )
-    )
+    case = CaseInput(reachability="xlsx", bound="max_cell_chars")
+    n = case.default_limit_value()
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     # Cannot inject adapter limits via API — use default max 10000 with huge cell
     wb = openpyxl.Workbook()
-    wb.active["A1"] = "Z" * 10001
+    wb.active["A1"] = "Z" * (n + 1)
     buf = io.BytesIO()
     wb.save(buf)
-    res = client.post(
-        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-        files={
-            "file": (
-                "huge.xlsx",
-                io.BytesIO(buf.getvalue()),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        },
-        headers={"X-User-Id": str(user.id)},
-    )
-    assert_http_rejection_preserve(
-        res,
-        status=400,
-        error_code="cell_length_limit",
-        db=db_session,
-        fake_storage=fake_storage,
-        snap=snap,
-    )
+    payload = case.build_artifact(xlsx=buf.getvalue())
+    with source_case_limits(case, n):
+        res = client.post(
+            f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
+            files={
+                "file": (
+                    "huge.xlsx",
+                    io.BytesIO(payload),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers={"X-User-Id": str(user.id)},
+        )
+        assert_http_rejection_preserve(
+            res,
+            status=400,
+            error_code="cell_length_limit",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
 
 
 # --- D-07 retention boundary ---
@@ -934,16 +934,12 @@ def test_pg_migration_roundtrip_s13():
             # Normalize to head first (CI smoke already did this)
             command.upgrade(cfg, "head")
             with eng.connect() as c:
-                r = c.execute(
-                    text("SELECT to_regclass('public.import_source_artifacts')")
-                ).scalar()
+                r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
 
             command.downgrade(cfg, "e1f2a3b4c5d6")
             with eng.connect() as c:
-                r = c.execute(
-                    text("SELECT to_regclass('public.import_source_artifacts')")
-                ).scalar()
+                r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is None
                 # Prior schema still valid
                 r2 = c.execute(
@@ -953,9 +949,7 @@ def test_pg_migration_roundtrip_s13():
 
             command.upgrade(cfg, "f2a3b4c5d6e7")
             with eng.connect() as c:
-                r = c.execute(
-                    text("SELECT to_regclass('public.import_source_artifacts')")
-                ).scalar()
+                r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
                 cols = c.execute(
                     text(
@@ -970,9 +964,7 @@ def test_pg_migration_roundtrip_s13():
 
             command.upgrade(cfg, "head")
             with eng.connect() as c:
-                r = c.execute(
-                    text("SELECT to_regclass('public.import_source_artifacts')")
-                ).scalar()
+                r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
             assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
             # silence unused if settings_url only for debug
@@ -1008,7 +1000,9 @@ def test_s3_minio_roundtrip_ci():
     store.ensure_bucket()
     key = f"fourth/{uuid.uuid4()}"
     body = b"fourth-corrective"
-    store.put_stream(key, io.BytesIO(body), content_type="application/octet-stream", expected_size=len(body))
+    store.put_stream(
+        key, io.BytesIO(body), content_type="application/octet-stream", expected_size=len(body)
+    )
     digest = _sha256_object(store, key, chunk_size=64, expected_size=len(body))
     assert digest == hashlib.sha256(body).hexdigest()
     store.delete(key)

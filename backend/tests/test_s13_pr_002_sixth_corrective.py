@@ -1,4 +1,5 @@
 """S13-PR-002 sixth corrective: G-01…G-06 state-based proofs."""
+
 from __future__ import annotations
 
 import hashlib
@@ -32,8 +33,10 @@ from app.modules.excel_import.infrastructure.object_storage import (
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -103,9 +106,9 @@ def client(db_session: Session, fake_storage) -> TestClient:
     fastapi_app.dependency_overrides.clear()
 
 
-
 def _ids(user, org):
     return user.id, org.id
+
 
 def _ensure_inactive(db: Session) -> None:
     """Leave session inactive with no UOW so reconcile may own it."""
@@ -117,7 +120,9 @@ def _ensure_inactive(db: Session) -> None:
 
 def _seed(db: Session):
     org = OrganizationProfile(
-        legal_name="Org", organization_slug=f"o-{uuid.uuid4().hex[:6]}", status=OrganizationStatus.ACTIVE
+        legal_name="Org",
+        organization_slug=f"o-{uuid.uuid4().hex[:6]}",
+        status=OrganizationStatus.ACTIVE,
     )
     db.add(org)
     db.commit()
@@ -256,9 +261,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     db.add(line)
     db.commit()
     _ensure_inactive(db)
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     snap.update(
         {
             "prior_id": prior.id,
@@ -400,7 +403,9 @@ def test_g01_preserves_flushed_update(db_session: Session, fake_storage):
     line = db_session.get(ProjectAssetLine, line.id)
     line.asset_name = "Upd2"
     db_session.flush()
-    reconcile_source_artifacts(db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid)
+    reconcile_source_artifacts(
+        db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
+    )
     assert db_session.get(ProjectAssetLine, line.id).asset_name == "Upd2"
 
 
@@ -421,7 +426,9 @@ def test_g01_preserves_flushed_delete(db_session: Session, fake_storage):
     line = db_session.get(ProjectAssetLine, lid)
     db_session.delete(line)
     db_session.flush()
-    reconcile_source_artifacts(db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid)
+    reconcile_source_artifacts(
+        db_session, storage=fake_storage, max_items=5, actor_id=uid, org_id=oid
+    )
     assert db_session.get(ProjectAssetLine, lid) is None
 
 
@@ -534,9 +541,7 @@ def test_g02_finalize_commit_fail_marks_failed_and_reconcile_repairs(
         assert art.failure_code == "finalize_commit_failed"
 
 
-def test_g02_stale_recovery_cannot_overwrite_newer_available(
-    db_session: Session, fake_storage
-):
+def test_g02_stale_recovery_cannot_overwrite_newer_available(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
     now = datetime.now(timezone.utc)
@@ -664,7 +669,13 @@ def test_g03_xlsx_inspect_exact_n_and_n_plus_one(tmp_path, limit_field, n, error
         ("max_columns", 2, "column_limit", {"cols": 2}, {"cols": 3}),
         ("max_total_cells", 4, "total_cell_limit", {"rows": 2, "cols": 2}, {"rows": 2, "cols": 3}),
         ("max_cell_chars", 4, "cell_length_limit", {"cell": "abcd"}, {"cell": "abcde"}),
-        ("max_row_chars", 4, "row_char_limit", {"cols": 2, "cell": "ab"}, {"cols": 3, "cell": "ab"}),
+        (
+            "max_row_chars",
+            4,
+            "row_char_limit",
+            {"cols": 2, "cell": "ab"},
+            {"cols": 3, "cell": "ab"},
+        ),
         ("max_merged_regions", 1, "merged_region_limit", {"merges": 1}, {"merges": 2}),
         ("max_merged_regions_per_sheet", 1, "merged_region_limit", {"merges": 1}, {"merges": 2}),
     ],
@@ -690,9 +701,9 @@ def test_g03_xlsx_zip_entries_exact_and_max_plus_one(tmp_path):
         n = len(zf.infolist())
     XlsxWorkbookAdapter(limits=SourceArtifactLimits(max_zip_entries=n)).inspect(str(p))
     with pytest.raises(AdapterError) as ei:
-        XlsxWorkbookAdapter(limits=SourceArtifactLimits(max_zip_entries=n - 1 if n > 1 else 0)).inspect(
-            str(p)
-        )
+        XlsxWorkbookAdapter(
+            limits=SourceArtifactLimits(max_zip_entries=n - 1 if n > 1 else 0)
+        ).inspect(str(p))
     assert ei.value.error_code == "zip_entry_limit"
 
 
@@ -703,7 +714,9 @@ def test_g03_xlsx_zip_expansion_exact_and_max_plus_one(tmp_path):
 
     with zipfile.ZipFile(p) as zf:
         total = sum(i.file_size for i in zf.infolist())
-    XlsxWorkbookAdapter(limits=SourceArtifactLimits(max_uncompressed_zip_bytes=total)).inspect(str(p))
+    XlsxWorkbookAdapter(limits=SourceArtifactLimits(max_uncompressed_zip_bytes=total)).inspect(
+        str(p)
+    )
     with pytest.raises(AdapterError) as ei:
         XlsxWorkbookAdapter(
             limits=SourceArtifactLimits(max_uncompressed_zip_bytes=max(0, total - 1))
@@ -730,38 +743,32 @@ def test_g03_iter_rows_total_cells_exact(tmp_path, fmt):
 def test_g03_endpoint_cell_limit_stable_status(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="xlsx",
-            bound="max_cell_chars",
-            case_id="test_g03_endpoint_cell_limit_stable_status::max_cell_chars",
-        )
-    )
+    case = CaseInput(reachability="xlsx", bound="max_cell_chars")
+    n = case.default_limit_value()
     org, user, proj, batch = _seed(db_session)
     _uid, _oid = user.id, org.id
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    payload = _xlsx_bytes(cell="Z" * 10001)
-    res = client.post(
-        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-        files={
-            "file": (
-                "huge.xlsx",
-                io.BytesIO(payload),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        },
-        headers={"X-User-Id": str(user.id)},
-    )
-    assert_http_rejection_preserve(
-        res,
-        status=400,
-        error_code="cell_length_limit",
-        db=db_session,
-        fake_storage=fake_storage,
-        snap=snap,
-    )
+    payload = case.build_artifact(xlsx=lambda: _xlsx_bytes(cell="Z" * (n + 1)))
+    with source_case_limits(case, n):
+        res = client.post(
+            f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
+            files={
+                "file": (
+                    "huge.xlsx",
+                    io.BytesIO(payload),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers={"X-User-Id": str(user.id)},
+        )
+        assert_http_rejection_preserve(
+            res,
+            status=400,
+            error_code="cell_length_limit",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -875,7 +882,12 @@ def test_g04_max_items_oldest_identities(db_session: Session, fake_storage):
     ids = [a.id for a in arts]
     _ensure_inactive(db_session)
     stats = reconcile_source_artifacts(
-        db_session, storage=fake_storage, max_items=2, actor_id=uid, org_id=oid, now=base + timedelta(hours=5)
+        db_session,
+        storage=fake_storage,
+        max_items=2,
+        actor_id=uid,
+        org_id=oid,
+        now=base + timedelta(hours=5),
     )
     assert stats["scanned"] == 2
     db_session.expire_all()
@@ -1244,8 +1256,12 @@ def test_g05_pg_composite_tenant_fk_and_restrict():
                     text("DELETE FROM project_asset_import_batches WHERE organization_id = :oid"),
                     {"oid": oid},
                 )
-                conn.execute(text("DELETE FROM projects WHERE organization_id = :oid"), {"oid": oid})
-                conn.execute(text("DELETE FROM customers WHERE organization_id = :oid"), {"oid": oid})
+                conn.execute(
+                    text("DELETE FROM projects WHERE organization_id = :oid"), {"oid": oid}
+                )
+                conn.execute(
+                    text("DELETE FROM customers WHERE organization_id = :oid"), {"oid": oid}
+                )
                 conn.execute(text("DELETE FROM users WHERE organization_id = :oid"), {"oid": oid})
                 conn.execute(
                     text("DELETE FROM organization_profiles WHERE id = :oid"), {"oid": oid}

@@ -1,4 +1,5 @@
 """S13-PR-002 fifth corrective: E-01…E-08 proofs (F-01…F-08 re-audit)."""
+
 from __future__ import annotations
 
 import hashlib
@@ -22,7 +23,6 @@ from app.modules.excel_import.application.adapters.xlsx_adapter import XlsxWorkb
 from app.modules.excel_import.application.adapters.xls_adapter import XlsWorkbookAdapter
 from app.modules.excel_import.application.source_artifact_service import (
     reconcile_source_artifacts,
-    set_source_limits_override,
     _sha256_object,
     upload_source_artifact,
 )
@@ -34,9 +34,11 @@ from app.modules.excel_import.infrastructure.object_storage import (
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -106,7 +108,9 @@ def client(db_session: Session, fake_storage) -> TestClient:
 
 def _seed(db: Session):
     org = OrganizationProfile(
-        legal_name="Org", organization_slug=f"o-{uuid.uuid4().hex[:6]}", status=OrganizationStatus.ACTIVE
+        legal_name="Org",
+        organization_slug=f"o-{uuid.uuid4().hex[:6]}",
+        status=OrganizationStatus.ACTIVE,
     )
     db.add(org)
     db.commit()
@@ -207,9 +211,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     snap.update(
         {
             "prior_id": prior.id,
@@ -345,18 +347,15 @@ def test_e01_upload_short_read_not_checksum_mismatch(
     failed = [a for a in arts if a.state == "failed"]
     assert len(failed) == 1
     assert failed[0].failure_code != "checksum_mismatch"
-    assert failed[0].failure_code in {"short_read", "object_too_large", "size_mismatch"} or failed[
-        0
-    ].failure_code  # infrastructure code
+    assert (
+        failed[0].failure_code in {"short_read", "object_too_large", "size_mismatch"}
+        or failed[0].failure_code
+    )  # infrastructure code
     assert failed[0].failure_code == "short_read"
     # residual object may remain for reconciler
     assert failed[0].storage_object_key in fake_storage._objects
     # no false corruption audit name
-    audits = (
-        db_session.query(AuditEvent)
-        .filter(AuditEvent.entity_id == failed[0].id)
-        .all()
-    )
+    audits = db_session.query(AuditEvent).filter(AuditEvent.entity_id == failed[0].id).all()
     for a in audits:
         if a.event_name == "ImportSourceArtifactFailed":
             assert a.payload.get("failure_code") == "short_read"
@@ -368,9 +367,7 @@ def test_e01_upload_short_read_not_checksum_mismatch(
 # ---------------------------------------------------------------------------
 
 
-def test_e02_reconciler_preserves_dirty_caller_session(
-    db_session: Session, fake_storage
-):
+def test_e02_reconciler_preserves_dirty_caller_session(db_session: Session, fake_storage):
     """Dedicated reconciler session: caller unflushed UOW is preserved."""
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
@@ -392,9 +389,7 @@ def test_e02_reconciler_preserves_dirty_caller_session(
     assert pending.asset_name == "Caller Pending"
 
 
-def test_e02_reconciler_empty_and_skip_paths_owned_session(
-    db_session: Session, fake_storage
-):
+def test_e02_reconciler_empty_and_skip_paths_owned_session(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     if db_session.in_transaction():
         db_session.rollback()
@@ -482,7 +477,9 @@ def test_e03_xls_exact_cached_formula_value(tmp_path):
         ),
     ],
 )
-def test_e04_xlsx_inspect_exact_and_max_plus_one(tmp_path, fmt, limit_field, limit_val, error_code, builder):
+def test_e04_xlsx_inspect_exact_and_max_plus_one(
+    tmp_path, fmt, limit_field, limit_val, error_code, builder
+):
     data = builder(tmp_path)
     p = tmp_path / "b.xlsx"
     p.write_bytes(data)
@@ -493,7 +490,9 @@ def test_e04_xlsx_inspect_exact_and_max_plus_one(tmp_path, fmt, limit_field, lim
     assert ei.value.error_code == error_code
     # exact accept (limit_val + 1 as the limit when content is limit_val+1... for reject we used limit_val)
     # acceptance: set limit high enough for the fixture
-    XlsxWorkbookAdapter(limits=SourceArtifactLimits(**{limit_field: limit_val + 10})).inspect(str(p))
+    XlsxWorkbookAdapter(limits=SourceArtifactLimits(**{limit_field: limit_val + 10})).inspect(
+        str(p)
+    )
 
 
 @pytest.mark.parametrize(
@@ -507,7 +506,9 @@ def test_e04_xlsx_inspect_exact_and_max_plus_one(tmp_path, fmt, limit_field, lim
         ("max_row_chars", 3, "row_char_limit", {"cols": 2, "cell": "ab"}),
     ],
 )
-def test_e04_xls_inspect_exact_and_max_plus_one(tmp_path, limit_field, limit_val, error_code, kwargs):
+def test_e04_xls_inspect_exact_and_max_plus_one(
+    tmp_path, limit_field, limit_val, error_code, kwargs
+):
     p = _xls_bytes(tmp_path, **kwargs)
     lim = SourceArtifactLimits(**{limit_field: limit_val})
     with pytest.raises(AdapterError) as ei:
@@ -566,52 +567,36 @@ def test_e04_xlsx_merged_per_sheet_vs_total(tmp_path):
 def test_e04_endpoint_cell_limit_preserves_prior(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="xlsx",
-            bound="max_cell_chars",
-            case_id="test_e04_endpoint_cell_limit_preserves_prior::max_cell_chars",
-        )
-    )
+    case = CaseInput(reachability="xlsx", bound="max_cell_chars")
+    n = case.default_limit_value()
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    payload = _xlsx_bytes(cell="Z" * 10001)
-    res = client.post(
-        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-        files={
-            "file": (
-                "huge.xlsx",
-                io.BytesIO(payload),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        },
-        headers={"X-User-Id": str(user.id)},
-    )
-    assert_http_rejection_preserve(
-        res,
-        status=400,
-        error_code="cell_length_limit",
-        db=db_session,
-        fake_storage=fake_storage,
-        snap=snap,
-    )
+    payload = case.build_artifact(xlsx=lambda: _xlsx_bytes(cell="Z" * (n + 1)))
+    with source_case_limits(case, n):
+        res = client.post(
+            f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
+            files={
+                "file": (
+                    "huge.xlsx",
+                    io.BytesIO(payload),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers={"X-User-Id": str(user.id)},
+        )
+        assert_http_rejection_preserve(
+            res,
+            status=400,
+            error_code="cell_length_limit",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
 
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
-def test_e04_endpoint_upload_bytes_limit(
-    client: TestClient, db_session: Session, fake_storage
-):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_upload_bytes",
-            case_id="test_e04_endpoint_upload_bytes_limit::max_upload_bytes",
-        )
-    )
+def test_e04_endpoint_upload_bytes_limit(client: TestClient, db_session: Session, fake_storage):
+    case = CaseInput(reachability="intake", bound="max_upload_bytes")
     """Genuine upload-spool N / N+1 boundary (not request-size pre-check).
 
     M-01: max_upload_bytes=N, max_request_bytes high enough that multipart
@@ -619,19 +604,18 @@ def test_e04_endpoint_upload_bytes_limit(
     """
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    payload = _xlsx_bytes()
-    n = len(payload)
-    set_source_limits_override(
-        SourceArtifactLimits(max_upload_bytes=n, max_request_bytes=12 * 1024 * 1024)
-    )
+    base = _xlsx_bytes()
+    n = len(base)
+    bad_payload = case.build_artifact(intake=lambda: base + b"X")
+    ok_payload = case.build_artifact(intake=base)
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
-    try:
+    with source_case_limits(case, n, max_request_bytes=12 * 1024 * 1024):
         res_bad = client.post(
             url,
             files={
                 "file": (
                     "big.xlsx",
-                    io.BytesIO(payload + b"X"),
+                    io.BytesIO(bad_payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -650,15 +634,13 @@ def test_e04_endpoint_upload_bytes_limit(
             files={
                 "file": (
                     "ok.xlsx",
-                    io.BytesIO(payload),
+                    io.BytesIO(ok_payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
             headers={"X-User-Id": str(user.id)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 # ---------------------------------------------------------------------------
@@ -719,9 +701,7 @@ def test_e05_reservation_commit_fail_before_object_write(
     )
     assert durable == 1
     assert (
-        db_session.query(ImportSourceArtifact)
-        .filter(ImportSourceArtifact.generation > 1)
-        .count()
+        db_session.query(ImportSourceArtifact).filter(ImportSourceArtifact.generation > 1).count()
         == 0
     )
 
@@ -766,9 +746,7 @@ def test_e05_put_ok_final_commit_fails_marks_failed(
             )
 
 
-def test_e05_pending_missing_short_read_timeout_checksum(
-    db_session: Session, fake_storage
-):
+def test_e05_pending_missing_short_read_timeout_checksum(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     now = datetime.now(timezone.utc) - timedelta(hours=2)
     # missing
@@ -878,9 +856,7 @@ def test_e05_pending_missing_short_read_timeout_checksum(
     assert stats["errors"] >= 2
 
 
-def test_e05_failed_residual_to_orphaned_and_retention_boundary(
-    db_session: Session, fake_storage
-):
+def test_e05_failed_residual_to_orphaned_and_retention_boundary(db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     now = datetime.now(timezone.utc)
     retention = 3600
@@ -1308,7 +1284,9 @@ def test_e06_pg_constraint_identity_matrix():
     finally:
         with engine.begin() as conn:
             conn.execute(
-                text("UPDATE project_asset_import_batches SET current_source_artifact_id = NULL WHERE id IN (:b1, :b2)"),
+                text(
+                    "UPDATE project_asset_import_batches SET current_source_artifact_id = NULL WHERE id IN (:b1, :b2)"
+                ),
                 {"b1": b1, "b2": b2},
             )
             conn.execute(
@@ -1322,9 +1300,7 @@ def test_e06_pg_constraint_identity_matrix():
             conn.execute(text("DELETE FROM projects WHERE id = :id"), {"id": pid})
             conn.execute(text("DELETE FROM customers WHERE id = :id"), {"id": cid})
             conn.execute(text("DELETE FROM users WHERE id = :id"), {"id": uid})
-            conn.execute(
-                text("DELETE FROM organization_profiles WHERE id = :id"), {"id": oid}
-            )
+            conn.execute(text("DELETE FROM organization_profiles WHERE id = :id"), {"id": oid})
         engine.dispose()
 
 

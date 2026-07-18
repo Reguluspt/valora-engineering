@@ -1,4 +1,5 @@
 """S13-PR-002 eighth corrective: I-01…I-05 ownership, boundaries, schema, PG matrix."""
+
 from __future__ import annotations
 
 import hashlib
@@ -28,15 +29,16 @@ from app.modules.excel_import.application.source_artifact_service import (
     upload_source_artifact,
     _sha256_object,
 )
-from app.modules.excel_import.domain.source_artifact import SourceArtifactLimits
 from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    CaseInput,
     assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
+    source_case_limits,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
@@ -105,7 +107,9 @@ def client(db_session: Session, fake_storage) -> TestClient:
 
 def _seed(db: Session):
     org = OrganizationProfile(
-        legal_name="Org", organization_slug=f"o-{uuid.uuid4().hex[:6]}", status=OrganizationStatus.ACTIVE
+        legal_name="Org",
+        organization_slug=f"o-{uuid.uuid4().hex[:6]}",
+        status=OrganizationStatus.ACTIVE,
     )
     db.add(org)
     db.commit()
@@ -236,9 +240,7 @@ def _seed_prior_full(db, org, user, proj, batch, fake_storage):
     )
     db.add(line)
     db.commit()
-    snap = snapshot_source_intake_preserve(
-        db, fake_storage, project_id=proj.id, batch_id=batch.id
-    )
+    snap = snapshot_source_intake_preserve(db, fake_storage, project_id=proj.id, batch_id=batch.id)
     snap.update(
         {
             "prior_id": prior.id,
@@ -324,9 +326,7 @@ def _multipart_body(filename: str, payload: bytes, content_type: str, boundary: 
     crlf = b"\r\n"
     parts = []
     parts.append(f"--{boundary}".encode())
-    parts.append(
-        f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode()
-    )
+    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode())
     parts.append(f"Content-Type: {content_type}".encode())
     parts.append(b"")
     parts.append(payload)
@@ -355,14 +355,10 @@ def _cname(exc: IntegrityError) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_i01_upload_reconciler_overlap_single_available_audit(
-    db_session: Session, fake_storage
-):
+def test_i01_upload_reconciler_overlap_single_available_audit(db_session: Session, fake_storage):
     """Reproduce mid-put reconcile + uploader finalize; assert exactly one Available audit."""
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
     hooks = {"reconcile_calls": 0, "mid_put": 0}
     real_put = fake_storage.put_stream
@@ -465,9 +461,7 @@ def test_i02_finalize_commit_raises_before_durability(
     db_session: Session, fake_storage, monkeypatch, tmp_path
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
     p = tmp_path / "a.xlsx"
     p.write_bytes(payload)
@@ -530,9 +524,7 @@ def test_i02_durable_commit_then_raise_recovery_idempotent(
 ):
     """Commit becomes durable, then caller sees exception; recovery returns available once."""
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
     p = tmp_path / "d.xlsx"
     p.write_bytes(payload)
@@ -618,9 +610,7 @@ def test_i02_durable_commit_then_raise_recovery_idempotent(
     )
 
 
-def test_i02_newer_finalize_while_older_recovery_in_flight(
-    db_session: Session, fake_storage
-):
+def test_i02_newer_finalize_while_older_recovery_in_flight(db_session: Session, fake_storage):
     """Real interleaving: older pending recovery blocked mid-item; newer finalize wins."""
     org, user, proj, batch = _seed(db_session)
     uid, oid = user.id, org.id
@@ -688,6 +678,7 @@ def test_i02_newer_finalize_while_older_recovery_in_flight(
 
     # Newer generation finalizes while older recovery is in flight
     body2 = _xlsx_bytes(cell="newer")
+
     class R:
         headers = Headers({})
 
@@ -753,20 +744,10 @@ def test_i02_newer_finalize_while_older_recovery_in_flight(
 def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_request_bytes",
-            case_id="test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected::max_request_bytes",
-        )
-    )
+    case = CaseInput(reachability="intake", bound="max_request_bytes")
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
-    payload = _xlsx_bytes()
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
+    payload = case.build_artifact(intake=_xlsx_bytes())
     boundary = "----ValoraBoundaryI03Fixed"
     body = _multipart_body(
         "a.xlsx",
@@ -775,15 +756,12 @@ def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
         boundary,
     )
     n = len(body)
-    set_source_limits_override(
-        SourceArtifactLimits(max_request_bytes=n, max_upload_bytes=10 * 1024 * 1024)
-    )
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
     headers_base = {
         "X-User-Id": str(user.id),
         "Content-Type": f"multipart/form-data; boundary={boundary}",
     }
-    try:
+    with source_case_limits(case, n, max_upload_bytes=10 * 1024 * 1024):
         # N+1 rejected
         res_bad = client.post(
             url,
@@ -806,40 +784,27 @@ def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
             headers={**headers_base, "Content-Length": str(n)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
     client: TestClient, db_session: Session, fake_storage
 ):
-    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
-
-    register_case_input(
-        CaseInput(
-            reachability="intake",
-            bound="max_upload_bytes",
-            case_id="test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected::max_upload_bytes",
-        )
-    )
+    case = CaseInput(reachability="intake", bound="max_upload_bytes")
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
-    payload = _xlsx_bytes()
-    n = len(payload)
-    set_source_limits_override(
-        SourceArtifactLimits(max_upload_bytes=n, max_request_bytes=12 * 1024 * 1024)
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
+    base = _xlsx_bytes()
+    n = len(base)
+    bad_payload = case.build_artifact(intake=lambda: base + b"X")
+    payload = case.build_artifact(intake=base)
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
-    try:
+    with source_case_limits(case, n, max_request_bytes=12 * 1024 * 1024):
         res_bad = client.post(
             url,
             files={
                 "file": (
                     "big.xlsx",
-                    io.BytesIO(payload + b"X"),
+                    io.BytesIO(bad_payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -866,15 +831,13 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             headers={"X-User-Id": str(user.id)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.parametrize(
-    "limit_field,n_limit,build_ok,build_bad,error_code,bad_status",
+    "case,n_limit,build_ok,build_bad,error_code,bad_status",
     [
         (
-            "max_sheets",
+            CaseInput("xlsx", "max_sheets"),
             1,
             lambda: _xlsx_bytes(sheets=1),
             lambda: _xlsx_bytes(sheets=2),
@@ -882,7 +845,7 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             413,
         ),
         (
-            "max_physical_rows",
+            CaseInput("xlsx", "max_physical_rows"),
             1,
             lambda: _xlsx_bytes(rows=1),
             lambda: _xlsx_bytes(rows=2),
@@ -890,7 +853,7 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             413,
         ),
         (
-            "max_columns",
+            CaseInput("xlsx", "max_columns"),
             1,
             lambda: _xlsx_bytes(cols=1),
             lambda: _xlsx_bytes(cols=2),
@@ -898,7 +861,7 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             413,
         ),
         (
-            "max_cell_chars",
+            CaseInput("xlsx", "max_cell_chars"),
             3,
             lambda: _xlsx_bytes(cell="abc"),
             lambda: _xlsx_bytes(cell="abcd"),
@@ -913,7 +876,7 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
     client: TestClient,
     db_session: Session,
     fake_storage,
-    limit_field,
+    case,
     n_limit,
     build_ok,
     build_bad,
@@ -921,12 +884,11 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
     bad_status,
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n_limit}))
-    try:
+    bad_payload = case.build_artifact(xlsx=build_bad)
+    ok_payload = case.build_artifact(xlsx=build_ok)
+    with source_case_limits(case, n_limit):
         # N+1 reject
         objects_before = set(fake_storage._objects.keys())
         res_bad = client.post(
@@ -934,7 +896,7 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
             files={
                 "file": (
                     "lim.xlsx",
-                    io.BytesIO(build_bad()),
+                    io.BytesIO(bad_payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -956,24 +918,36 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
             files={
                 "file": (
                     "ok.xlsx",
-                    io.BytesIO(build_ok()),
+                    io.BytesIO(ok_payload),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
             headers={"X-User-Id": str(user.id)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 @pytest.mark.parametrize(
-    "limit_field,n_limit,ok_kwargs,bad_kwargs,error_code,bad_status",
+    "case,n_limit,ok_kwargs,bad_kwargs,error_code,bad_status",
     [
-        ("max_sheets", 1, {"sheets": 1}, {"sheets": 2}, "sheet_limit", 413),
-        ("max_physical_rows", 1, {"rows": 1}, {"rows": 2}, "physical_row_limit", 413),
-        ("max_columns", 1, {"cols": 1}, {"cols": 2}, "column_limit", 413),
-        ("max_cell_chars", 3, {"cell": "abc"}, {"cell": "abcd"}, "cell_length_limit", 400),
+        (CaseInput("xls", "max_sheets"), 1, {"sheets": 1}, {"sheets": 2}, "sheet_limit", 413),
+        (
+            CaseInput("xls", "max_physical_rows"),
+            1,
+            {"rows": 1},
+            {"rows": 2},
+            "physical_row_limit",
+            413,
+        ),
+        (CaseInput("xls", "max_columns"), 1, {"cols": 1}, {"cols": 2}, "column_limit", 413),
+        (
+            CaseInput("xls", "max_cell_chars"),
+            3,
+            {"cell": "abc"},
+            {"cell": "abcd"},
+            "cell_length_limit",
+            400,
+        ),
     ],
     ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
@@ -983,7 +957,7 @@ def test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one(
     db_session: Session,
     fake_storage,
     tmp_path,
-    limit_field,
+    case,
     n_limit,
     ok_kwargs,
     bad_kwargs,
@@ -991,19 +965,18 @@ def test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one(
     bad_status,
 ):
     org, user, proj, batch = _seed(db_session)
-    prior, staging, line, snap = _seed_prior_full(
-        db_session, org, user, proj, batch, fake_storage
-    )
+    prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
-    set_source_limits_override(SourceArtifactLimits(**{limit_field: n_limit}))
-    try:
+    bad_payload = case.build_artifact(xls=lambda: _xls_bytes(tmp_path, **bad_kwargs))
+    ok_payload = case.build_artifact(xls=lambda: _xls_bytes(tmp_path, **ok_kwargs))
+    with source_case_limits(case, n_limit):
         objects_before = set(fake_storage._objects.keys())
         res_bad = client.post(
             url,
             files={
                 "file": (
                     "lim.xls",
-                    io.BytesIO(_xls_bytes(tmp_path, **bad_kwargs)),
+                    io.BytesIO(bad_payload),
                     "application/vnd.ms-excel",
                 )
             },
@@ -1024,15 +997,13 @@ def test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one(
             files={
                 "file": (
                     "ok.xls",
-                    io.BytesIO(_xls_bytes(tmp_path, **ok_kwargs)),
+                    io.BytesIO(ok_payload),
                     "application/vnd.ms-excel",
                 )
             },
             headers={"X-User-Id": str(user.id)},
         )
         assert_accepted_source_upload(res_ok, status=201)
-    finally:
-        set_source_limits_override(None)
 
 
 # ---------------------------------------------------------------------------
@@ -1191,14 +1162,17 @@ def test_i04_throwaway_migration_schema_and_dml_matrix():
                 fk_by_cols[("organization_id", "project_id", "import_batch_id")]
                 == "fk_source_artifact_batch_tenant"
             )
-            assert fk_by_cols[("import_batch_id",)] == "import_source_artifacts_import_batch_id_fkey"
+            assert (
+                fk_by_cols[("import_batch_id",)] == "import_source_artifacts_import_batch_id_fkey"
+            )
             assert ("organization_id",) in fk_by_cols
             assert ("project_id",) in fk_by_cols
             assert ("created_by_user_id",) in fk_by_cols
             # Store exact scalar names for documentation assertions
-            assert fk_by_cols[("organization_id",)].endswith("_fkey") or "organization" in fk_by_cols[
-                ("organization_id",)
-            ]
+            assert (
+                fk_by_cols[("organization_id",)].endswith("_fkey")
+                or "organization" in fk_by_cols[("organization_id",)]
+            )
             # Require exact discovered names equal to themselves (no fragment matching in DML)
             for cols_key, cname in fk_by_cols.items():
                 assert fk_by_cols[cols_key] == cname
@@ -1481,7 +1455,10 @@ def test_i04_throwaway_migration_schema_and_dml_matrix():
                         "chk_source_artifact_checksum_lower",
                         "chk_source_artifact_checksum_hex",
                     }, cname
-                    if expected_name == "chk_source_artifact_checksum_hex" and params.get("chk") == "g" * 64:
+                    if (
+                        expected_name == "chk_source_artifact_checksum_hex"
+                        and params.get("chk") == "g" * 64
+                    ):
                         assert cname == "chk_source_artifact_checksum_hex"
                 else:
                     assert cname == expected_name, cname
