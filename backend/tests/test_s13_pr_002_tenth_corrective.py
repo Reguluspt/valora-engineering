@@ -722,6 +722,7 @@ def _post_source(client, proj, batch, user, filename, payload, content_type):
     )
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_k03_reject_preserves_objects_content_types_and_all_audits(
     client: TestClient, db_session: Session, fake_storage
 ):
@@ -762,6 +763,7 @@ def test_k03_reject_preserves_objects_content_types_and_all_audits(
         ("max_total_cells", 4, lambda: _xlsx_bytes(rows=2, cols=3), "total_cell_limit", 413),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_k03_xlsx_rejects_full_snapshot(
     client: TestClient,
     db_session: Session,
@@ -799,6 +801,7 @@ def test_k03_xlsx_rejects_full_snapshot(
         set_source_limits_override(None)
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_k03_upload_too_large_full_snapshot(client: TestClient, db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(

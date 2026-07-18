@@ -1213,6 +1213,7 @@ def _assert_reject_preserve(
         ),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_j03_endpoint_xlsx_extra_adapter_bounds(
     client: TestClient,
     db_session: Session,
@@ -1320,6 +1321,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
         ),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_j03_endpoint_xls_extra_adapter_bounds(
     client: TestClient,
     db_session: Session,

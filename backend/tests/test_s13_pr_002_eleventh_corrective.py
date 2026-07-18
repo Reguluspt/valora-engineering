@@ -886,6 +886,7 @@ def test_l04_ninth_xls_extra_params_still_four():
         ("max_total_cells", 4, lambda: _xlsx_bytes(rows=2, cols=3), "total_cell_limit", 413),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
     client: TestClient,
     db_session: Session,
@@ -931,6 +932,7 @@ def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
         set_source_limits_override(None)
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_l03_upload_too_large_full_preserve(client: TestClient, db_session: Session, fake_storage):
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(

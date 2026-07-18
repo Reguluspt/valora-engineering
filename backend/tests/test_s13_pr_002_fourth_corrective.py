@@ -682,6 +682,7 @@ def test_xlsx_cell_chars_exact_and_max_plus_one(tmp_path):
     assert ei.value.error_code == "cell_length_limit"
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_endpoint_cell_limit_no_reservation(
     client: TestClient, db_session: Session, fake_storage, tmp_path
 ):

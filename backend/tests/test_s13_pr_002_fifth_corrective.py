@@ -22,6 +22,7 @@ from app.modules.excel_import.application.adapters.xlsx_adapter import XlsxWorkb
 from app.modules.excel_import.application.adapters.xls_adapter import XlsWorkbookAdapter
 from app.modules.excel_import.application.source_artifact_service import (
     reconcile_source_artifacts,
+    set_source_limits_override,
     _sha256_object,
     upload_source_artifact,
 )
@@ -34,7 +35,6 @@ from app.modules.excel_import.infrastructure.object_storage import (
 )
 from tests.support.s13_pr_002_http_preserve import (
     assert_http_rejection_preserve,
-    assert_source_intake_preserve,
     snapshot_source_intake_preserve,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
@@ -561,6 +561,7 @@ def test_e04_xlsx_merged_per_sheet_vs_total(tmp_path):
     assert ei2.value.error_code == "merged_region_limit"
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_e04_endpoint_cell_limit_preserves_prior(
     client: TestClient, db_session: Session, fake_storage
 ):
@@ -588,22 +589,57 @@ def test_e04_endpoint_cell_limit_preserves_prior(
     )
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_e04_endpoint_upload_bytes_limit(
-    client: TestClient, db_session: Session, fake_storage, monkeypatch
+    client: TestClient, db_session: Session, fake_storage
 ):
+    """Genuine upload-spool N / N+1 boundary (not request-size pre-check).
+
+    M-01: max_upload_bytes=N, max_request_bytes high enough that multipart
+    overhead cannot fire request_too_large; N accepted, N+1 → upload_too_large.
+    """
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
-    # Shrink max_upload_bytes via DEFAULT_SOURCE_LIMITS is frozen dataclass —
-    # use oversized content-length style by patching limits in service path is hard;
-    # exercise request size via header when supported.
-    huge = b"PK" + b"x" * (12 * 1024 * 1024 + 10)
-    res = client.post(
-        f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-        files={"file": ("big.xlsx", io.BytesIO(huge), "application/octet-stream")},
-        headers={"X-User-Id": str(user.id), "Content-Length": str(len(huge) + 500)},
+    payload = _xlsx_bytes()
+    n = len(payload)
+    set_source_limits_override(
+        SourceArtifactLimits(max_upload_bytes=n, max_request_bytes=12 * 1024 * 1024)
     )
-    assert res.status_code in {400, 413, 500}
-    assert_source_intake_preserve(db_session, fake_storage, snap)
+    url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
+    try:
+        res_bad = client.post(
+            url,
+            files={
+                "file": (
+                    "big.xlsx",
+                    io.BytesIO(payload + b"X"),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers={"X-User-Id": str(user.id)},
+        )
+        assert_http_rejection_preserve(
+            res_bad,
+            status=413,
+            error_code="upload_too_large",
+            db=db_session,
+            fake_storage=fake_storage,
+            snap=snap,
+        )
+        res_ok = client.post(
+            url,
+            files={
+                "file": (
+                    "ok.xlsx",
+                    io.BytesIO(payload),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers={"X-User-Id": str(user.id)},
+        )
+        assert res_ok.status_code == 201, res_ok.text
+    finally:
+        set_source_limits_override(None)
 
 
 # ---------------------------------------------------------------------------

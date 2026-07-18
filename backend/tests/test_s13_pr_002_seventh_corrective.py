@@ -747,6 +747,7 @@ def test_h02_newer_finalize_wins_over_older_pending_recovery(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_request_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
@@ -801,6 +802,7 @@ def test_h03_request_bytes_exact_n_and_n_plus_one(
         set_source_limits_override(None)
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_upload_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
@@ -860,6 +862,7 @@ def test_h03_upload_bytes_exact_n_and_n_plus_one(
         ("max_cell_chars", 3, lambda: _xlsx_bytes(cell="abcd"), "cell_length_limit", 400),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_endpoint_xlsx_adapter_limits(
     client: TestClient, db_session: Session, fake_storage, limit_field, n, build, error_code, status
 ):
@@ -900,6 +903,7 @@ def test_h03_endpoint_xlsx_adapter_limits(
         ("max_cell_chars", 3, {"cell": "abcd"}, "cell_length_limit", 400),
     ],
 )
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_endpoint_xls_adapter_limits(
     client: TestClient,
     db_session: Session,

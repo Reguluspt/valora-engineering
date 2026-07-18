@@ -726,6 +726,7 @@ def test_g03_iter_rows_total_cells_exact(tmp_path, fmt):
     assert ei.value.error_code == "total_cell_limit"
 
 
+@pytest.mark.s13_pr_002_http_nplus1_reject
 def test_g03_endpoint_cell_limit_stable_status(
     client: TestClient, db_session: Session, fake_storage
 ):

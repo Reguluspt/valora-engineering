@@ -2,14 +2,22 @@
 
 Used by every retained endpoint N+1 rejection node so weaker “count-only /
 no-Reserved-audit / key-set-only” helpers cannot silently reappear.
+
+M-02: snapshot field sets equal SQLAlchemy persisted column keys.
+M-03: type-preserving canonicalization (no lossy default=str JSON).
+M-04: runtime instrumentation of completed strong-helper calls.
 """
 from __future__ import annotations
 
 import copy
-import json
+import threading
 import uuid
+from datetime import date, datetime, time
+from decimal import Decimal
+from enum import Enum
 from typing import Any
 
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
 from app.modules.excel_import.models import ImportSourceArtifact
@@ -20,204 +28,176 @@ from app.modules.project_master_data.models import (
     ProjectAssetLine,
 )
 
-# Stable field lists — exact equality required on reject.
-ARTIFACT_FIELDS = (
-    "id",
-    "organization_id",
-    "project_id",
-    "import_batch_id",
-    "generation",
-    "original_filename",
-    "detected_format",
-    "content_type",
-    "file_size_bytes",
-    "checksum_sha256",
-    "storage_object_key",
-    "storage_etag",
-    "state",
-    "adapter_name",
-    "adapter_version",
-    "adapter_metadata",
-    "created_by_user_id",
-    "available_at",
-    "failed_at",
-    "orphaned_at",
-    "failure_code",
-    "created_at",
-    "updated_at",
-)
 
-BATCH_FIELDS = (
-    "id",
-    "organization_id",
-    "project_id",
-    "source_filename",
-    "status",
-    "total_rows",
-    "valid_rows",
-    "invalid_rows",
-    "warning_rows",
-    "created_by_user_id",
-    "current_source_artifact_id",
-    "created_at",
-    "updated_at",
-)
+# ---------------------------------------------------------------------------
+# M-04 runtime instrumentation (completed strong-helper calls only)
+# ---------------------------------------------------------------------------
 
-STAGING_FIELDS = (
-    "id",
-    "organization_id",
-    "project_id",
-    "import_batch_id",
-    "source_row_number",
-    "raw_values",
-    "mapped_values",
-    "normalized_preview",
-    "validation_status",
-    "validation_errors",
-    "validation_warnings",
-    "proposed_asset_name",
-    "proposed_description",
-    "proposed_quantity",
-    "proposed_unit",
-)
-
-LINE_FIELDS = (
-    "id",
-    "project_id",
-    "asset_name",
-    "description",
-    "quantity",
-    "review_status",
-    "validation_status",
-)
-
-AUDIT_FIELDS = (
-    "id",
-    "organization_id",
-    "actor_user_id",
-    "command_name",
-    "event_name",
-    "entity_type",
-    "entity_id",
-    "created_at",
-    "correlation_id",
-    "payload",
-)
+_tls = threading.local()
 
 
-def _json_safe(value: Any) -> Any:
-    """Deep-copy JSON-compatible values without retaining mutable aliases."""
+def reset_strong_helper_calls() -> None:
+    _tls.completed = 0
+
+
+def get_strong_helper_completed_calls() -> int:
+    return int(getattr(_tls, "completed", 0))
+
+
+def _record_strong_helper_completed() -> None:
+    _tls.completed = get_strong_helper_completed_calls() + 1
+
+
+# ---------------------------------------------------------------------------
+# M-02: field sets = mapper column keys
+# ---------------------------------------------------------------------------
+
+
+def persisted_column_keys(model: type) -> tuple[str, ...]:
+    """Sorted persisted table column attribute keys (exclude relationships/hybrids)."""
+    return tuple(sorted(c.key for c in sa_inspect(model).mapper.column_attrs))
+
+
+ARTIFACT_FIELDS = persisted_column_keys(ImportSourceArtifact)
+BATCH_FIELDS = persisted_column_keys(ProjectAssetImportBatch)
+STAGING_FIELDS = persisted_column_keys(ProjectAssetImportStagingRow)
+LINE_FIELDS = persisted_column_keys(ProjectAssetLine)
+AUDIT_FIELDS = persisted_column_keys(AuditEvent)
+
+_MODEL_FIELDS: dict[type, tuple[str, ...]] = {
+    ImportSourceArtifact: ARTIFACT_FIELDS,
+    ProjectAssetImportBatch: BATCH_FIELDS,
+    ProjectAssetImportStagingRow: STAGING_FIELDS,
+    ProjectAssetLine: LINE_FIELDS,
+    AuditEvent: AUDIT_FIELDS,
+}
+
+
+def assert_field_sets_match_mappers() -> None:
+    """Executable guard: module field tuples == live mapper column keys."""
+    for model, fields in _MODEL_FIELDS.items():
+        live = set(persisted_column_keys(model))
+        guarded = set(fields)
+        assert guarded == live, (
+            f"{model.__name__}: guarded={sorted(guarded)} live={sorted(live)} "
+            f"missing={sorted(live - guarded)} extra={sorted(guarded - live)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# M-03: type-preserving deep canonicalization
+# ---------------------------------------------------------------------------
+
+
+def canonical(value: Any) -> Any:
+    """Deterministic, type-preserving deep form for snapshot equality.
+
+    Distinguishes int/float, UUID/str, Decimal/number, list/tuple, bytes/str,
+    timezone-aware/naive datetime, and Enum vs scalar value.
+    """
     if value is None:
-        return None
-    return json.loads(json.dumps(value, default=str, sort_keys=True))
+        return ("none", None)
+    if isinstance(value, bool):  # before int (bool is int subclass)
+        return ("bool", value)
+    if isinstance(value, int):
+        return ("int", value)
+    if isinstance(value, float):
+        return ("float", value)
+    if isinstance(value, Decimal):
+        # preserve exact decimal text (no float coercion)
+        return ("decimal", format(value, "f"))
+    if isinstance(value, uuid.UUID):
+        return ("uuid", str(value))
+    if isinstance(value, bytes):
+        return ("bytes", value.hex())
+    if isinstance(value, bytearray):
+        return ("bytearray", bytes(value).hex())
+    if isinstance(value, memoryview):
+        return ("bytes", value.tobytes().hex())
+    if isinstance(value, str):
+        return ("str", value)
+    if isinstance(value, datetime):
+        return (
+            "datetime",
+            value.isoformat(),
+            "aware" if value.tzinfo is not None else "naive",
+        )
+    if isinstance(value, date):
+        return ("date", value.isoformat())
+    if isinstance(value, time):
+        return (
+            "time",
+            value.isoformat(),
+            "aware" if value.tzinfo is not None else "naive",
+        )
+    if isinstance(value, Enum):
+        return ("enum", type(value).__name__, canonical(value.value))
+    if isinstance(value, dict):
+        items = sorted(((str(k), canonical(v)) for k, v in value.items()), key=lambda kv: kv[0])
+        return ("dict", tuple(items))
+    if isinstance(value, list):
+        return ("list", tuple(canonical(v) for v in value))
+    if isinstance(value, tuple):
+        return ("tuple", tuple(canonical(v) for v in value))
+    if isinstance(value, set):
+        return ("set", tuple(sorted((canonical(v) for v in value), key=repr)))
+    # Fail closed rather than str()-collapsing unknown types.
+    raise TypeError(f"unsupported snapshot value type: {type(value)!r}")
 
 
-def _dt(value: Any) -> Any:
-    if value is None:
-        return None
-    # Normalize timezone-aware/naive to ISO for stable equality across reloads.
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return str(value)
+def assert_canonical_distinguishes_collisions() -> None:
+    """Self-test: known type collisions are not collapsed."""
+    assert canonical(1) != canonical(1.0)
+    assert canonical(uuid.UUID(int=1)) != canonical(str(uuid.UUID(int=1)))
+    assert canonical(Decimal("1")) != canonical(1)
+    assert canonical(Decimal("1")) != canonical(1.0)
+    assert canonical(Decimal("1")) != canonical("1")
+    assert canonical([1]) != canonical((1,))
+    assert canonical(b"x") != canonical("x")
+    aware = datetime(2026, 7, 18, 12, 0, 0, tzinfo=__import__("datetime").timezone.utc)
+    naive = datetime(2026, 7, 18, 12, 0, 0)
+    assert canonical(aware) != canonical(naive)
+    # deep copy isolation
+    src = {"nested": [1, {"k": Decimal("2.5")}]}
+    c1 = canonical(src)
+    src["nested"].append(3)
+    src["nested"][1]["k"] = Decimal("9")
+    assert c1 == canonical({"nested": [1, {"k": Decimal("2.5")}]})
 
 
-def _uuid(value: Any) -> Any:
-    if value is None:
-        return None
-    return str(value)
+# ---------------------------------------------------------------------------
+# Row serializers — keys must equal field set exactly
+# ---------------------------------------------------------------------------
+
+
+def _row(model_obj: Any, fields: tuple[str, ...]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for name in fields:
+        out[name] = canonical(getattr(model_obj, name))
+    assert set(out.keys()) == set(fields), (
+        f"serializer keys {sorted(out)} != fields {sorted(fields)}"
+    )
+    return out
 
 
 def _row_artifact(a: ImportSourceArtifact) -> dict[str, Any]:
-    return {
-        "id": _uuid(a.id),
-        "organization_id": _uuid(a.organization_id),
-        "project_id": _uuid(a.project_id),
-        "import_batch_id": _uuid(a.import_batch_id),
-        "generation": a.generation,
-        "original_filename": a.original_filename,
-        "detected_format": a.detected_format,
-        "content_type": a.content_type,
-        "file_size_bytes": a.file_size_bytes,
-        "checksum_sha256": a.checksum_sha256,
-        "storage_object_key": a.storage_object_key,
-        "storage_etag": a.storage_etag,
-        "state": a.state,
-        "adapter_name": a.adapter_name,
-        "adapter_version": a.adapter_version,
-        "adapter_metadata": _json_safe(a.adapter_metadata or {}),
-        "created_by_user_id": _uuid(a.created_by_user_id),
-        "available_at": _dt(a.available_at),
-        "failed_at": _dt(a.failed_at),
-        "orphaned_at": _dt(a.orphaned_at),
-        "failure_code": a.failure_code,
-        "created_at": _dt(a.created_at),
-        "updated_at": _dt(a.updated_at),
-    }
+    return _row(a, ARTIFACT_FIELDS)
 
 
 def _row_batch(b: ProjectAssetImportBatch) -> dict[str, Any]:
-    return {
-        "id": _uuid(b.id),
-        "organization_id": _uuid(b.organization_id),
-        "project_id": _uuid(b.project_id),
-        "source_filename": b.source_filename,
-        "status": b.status,
-        "total_rows": b.total_rows,
-        "valid_rows": b.valid_rows,
-        "invalid_rows": b.invalid_rows,
-        "warning_rows": b.warning_rows,
-        "created_by_user_id": _uuid(b.created_by_user_id),
-        "current_source_artifact_id": _uuid(b.current_source_artifact_id),
-        "created_at": _dt(b.created_at),
-        "updated_at": _dt(b.updated_at),
-    }
+    return _row(b, BATCH_FIELDS)
 
 
 def _row_staging(s: ProjectAssetImportStagingRow) -> dict[str, Any]:
-    return {
-        "id": _uuid(s.id),
-        "organization_id": _uuid(s.organization_id),
-        "project_id": _uuid(s.project_id),
-        "import_batch_id": _uuid(s.import_batch_id),
-        "source_row_number": s.source_row_number,
-        "raw_values": _json_safe(s.raw_values),
-        "mapped_values": _json_safe(s.mapped_values),
-        "normalized_preview": _json_safe(s.normalized_preview),
-        "validation_status": s.validation_status,
-        "validation_errors": _json_safe(s.validation_errors),
-        "validation_warnings": _json_safe(s.validation_warnings),
-        "proposed_asset_name": s.proposed_asset_name,
-        "proposed_description": s.proposed_description,
-        "proposed_quantity": s.proposed_quantity,
-        "proposed_unit": s.proposed_unit,
-    }
+    return _row(s, STAGING_FIELDS)
 
 
 def _row_line(line: ProjectAssetLine) -> dict[str, Any]:
-    return {
-        "id": _uuid(line.id),
-        "project_id": _uuid(line.project_id),
-        "asset_name": line.asset_name,
-        "description": line.description,
-        "quantity": float(line.quantity) if line.quantity is not None else None,
-        "review_status": line.review_status,
-        "validation_status": line.validation_status,
-    }
+    return _row(line, LINE_FIELDS)
 
 
 def _row_audit(a: AuditEvent) -> dict[str, Any]:
-    return {
-        "id": _uuid(a.id),
-        "organization_id": _uuid(a.organization_id),
-        "actor_user_id": _uuid(a.actor_user_id),
-        "command_name": a.command_name,
-        "event_name": a.event_name,
-        "entity_type": a.entity_type,
-        "entity_id": _uuid(a.entity_id),
-        "created_at": _dt(a.created_at),
-        "correlation_id": a.correlation_id,
-        "payload": _json_safe(a.payload),
-    }
+    return _row(a, AUDIT_FIELDS)
 
 
 def _as_uuid(value: Any):
@@ -237,6 +217,7 @@ def snapshot_source_intake_preserve(
     batch_id,
 ) -> dict[str, Any]:
     """Immutable deep snapshot of all preserve-relevant state before an HTTP reject."""
+    assert_field_sets_match_mappers()
     db.expire_all()
     pid = _as_uuid(project_id)
     bid = _as_uuid(batch_id)
@@ -253,7 +234,10 @@ def snapshot_source_intake_preserve(
     staging = (
         db.query(ProjectAssetImportStagingRow)
         .filter(ProjectAssetImportStagingRow.import_batch_id == bid)
-        .order_by(ProjectAssetImportStagingRow.source_row_number.asc(), ProjectAssetImportStagingRow.id.asc())
+        .order_by(
+            ProjectAssetImportStagingRow.source_row_number.asc(),
+            ProjectAssetImportStagingRow.id.asc(),
+        )
         .all()
     )
     lines = (
@@ -263,16 +247,19 @@ def snapshot_source_intake_preserve(
         .all()
     )
     audits = db.query(AuditEvent).order_by(AuditEvent.id.asc()).all()
+    # Deep-copy object store so later mutations cannot alias snap contents.
+    objects = {k: bytes(v) for k, v in fake_storage._objects.items()}
+    content_types = dict(fake_storage._content_types)
     return {
-        "objects": {k: bytes(v) for k, v in fake_storage._objects.items()},
-        "content_types": dict(fake_storage._content_types),
+        "objects": objects,
+        "content_types": content_types,
         "artifacts": [_row_artifact(a) for a in arts],
         "batches": [_row_batch(b) for b in batches],
         "staging": [_row_staging(s) for s in staging],
         "lines": [_row_line(ln) for ln in lines],
         "audits": [_row_audit(a) for a in audits],
-        "project_id": _uuid(pid),
-        "batch_id": _uuid(bid),
+        "project_id": str(pid) if pid is not None else None,
+        "batch_id": str(bid) if bid is not None else None,
     }
 
 
@@ -303,53 +290,31 @@ def assert_http_rejection_preserve(
     fake_storage,
     snap: dict[str, Any],
 ) -> None:
-    """Unconditional status/error_code + full preservation contract."""
+    """Unconditional status/error_code + full preservation contract.
+
+    Records one *completed* strong-helper call only after status, error_code and
+    full equality all succeed (M-04).
+    """
     assert res.status_code == status, res.text
     body = res.json()
     detail = body.get("detail")
     assert isinstance(detail, dict), f"detail must be mapping, got {type(detail)!r}: {detail!r}"
     assert detail.get("error_code") == error_code, detail
     assert_source_intake_preserve(db, fake_storage, snap)
+    _record_strong_helper_completed()
 
 
+# Back-compat name used by older suites/eleventh self-test imports.
 def assert_audit_snapshot_detects_mutations() -> None:
-    """Self-test: snapshot comparison detects insert/delete/payload mutation."""
-    base = [
-        {
-            "id": "1",
-            "organization_id": "o",
-            "actor_user_id": "u",
-            "command_name": "C",
-            "event_name": "E",
-            "entity_type": "T",
-            "entity_id": "e",
-            "created_at": "t",
-            "correlation_id": None,
-            "payload": {"k": "v"},
-        }
-    ]
-    inserted = copy.deepcopy(base) + [
-        {
-            "id": "2",
-            "organization_id": "o",
-            "actor_user_id": "u",
-            "command_name": "C2",
-            "event_name": "E2",
-            "entity_type": "T",
-            "entity_id": "e2",
-            "created_at": "t2",
-            "correlation_id": None,
-            "payload": {},
-        }
-    ]
-    deleted: list = []
+    """Deprecated hand-built proof — prefer DB-backed twelfth probes.
+
+    Kept as a thin wrapper so import sites do not break; real proof is M-03 suite.
+    """
+    assert_canonical_distinguishes_collisions()
+    # Minimal list inequality still documented for supplementary lint.
+    base = [{"id": "1", "payload": {"k": "v"}}]
+    assert base != copy.deepcopy(base) + [{"id": "2"}]
+    assert base != []
     mutated = copy.deepcopy(base)
     mutated[0]["payload"] = {"k": "mutated"}
-    assert base != inserted
-    assert base != deleted
     assert base != mutated
-    # Deep-copy isolation: mutating after snapshot must not alter the original
-    src = {"payload": {"nested": [1, 2]}}
-    copied = _json_safe(src)
-    src["payload"]["nested"].append(3)
-    assert copied == {"payload": {"nested": [1, 2]}}
