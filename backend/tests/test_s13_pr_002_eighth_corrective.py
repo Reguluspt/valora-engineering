@@ -753,6 +753,15 @@ def test_i02_newer_finalize_while_older_recovery_in_flight(
 def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_request_bytes",
+            case_id="test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected::max_request_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage
@@ -805,6 +814,15 @@ def test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected(
 def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_upload_bytes",
+            case_id="test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected::max_upload_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage
@@ -888,6 +906,7 @@ def test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected(
             400,
         ),
     ],
+    ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
@@ -956,6 +975,7 @@ def test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one(
         ("max_columns", 1, {"cols": 1}, {"cols": 2}, "column_limit", 413),
         ("max_cell_chars", 3, {"cell": "abc"}, {"cell": "abcd"}, "cell_length_limit", 400),
     ],
+    ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one(

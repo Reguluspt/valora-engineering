@@ -1,20 +1,23 @@
-"""Executable HTTP N+1 matrix metadata + non-vacuous validation (N-02/N-03).
-
-Pure functions: no shared mutable suite state. Callers pass collected nodeids
-and runtime events explicitly.
-"""
+"""Static ledger load + pure validation for S13-PR-002 evidence gate (R-02/R-07)."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+import json
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Sequence
 
 from tests.support.s13_pr_002_http_preserve import (
-    StrongHelperEvent,
-    StrongHelperExpectation,
+    AcceptedEvent,
+    CaseInput,
+    RejectionEvent,
+    get_case_input,
 )
 
-EXPECTED_HTTP_NPLUS1_COUNT = 48
+LEDGER_PATH = Path(__file__).resolve().parents[1] / "data" / "s13_pr_002_http_nplus1_ledger.json"
 
+EXPECTED_HTTP_NPLUS1_COUNT = 48
+EXPECTED_SAME_NODE = 23
+EXPECTED_OTHER_NODE = 25
 EXPECTED_FORMAT_BOUND: frozenset[tuple[str, str]] = frozenset(
     {
         ("intake", "max_request_bytes"),
@@ -41,483 +44,252 @@ EXPECTED_FORMAT_BOUND: frozenset[tuple[str, str]] = frozenset(
 )
 
 
-@dataclass(frozen=True)
-class NodeMeta:
-    """Declared identity for one marked HTTP N+1 rejection parameter."""
-
-    reachability: str
-    bound: str
-    error_code: str
-    status: int
-    accepted_mode: str  # "same_node" | "none"
-    # Exact function name of accepted evidence (same function when same_node).
-    accepted_function: str
+def load_ledger(path: Path | None = None) -> dict[str, Any]:
+    p = path or LEDGER_PATH
+    data = json.loads(p.read_text(encoding="utf-8"))
+    assert data.get("expected_count") == EXPECTED_HTTP_NPLUS1_COUNT
+    return data
 
 
-# Non-parametrized function → fixed meta.
-_FUNCTION_META: dict[str, NodeMeta] = {
-    "test_e04_endpoint_upload_bytes_limit": NodeMeta(
-        "intake", "max_upload_bytes", "upload_too_large", 413, "same_node",
-        "test_e04_endpoint_upload_bytes_limit",
-    ),
-    "test_e04_endpoint_cell_limit_preserves_prior": NodeMeta(
-        "xlsx", "max_cell_chars", "cell_length_limit", 400, "none",
-        "test_e04_endpoint_cell_limit_preserves_prior",
-    ),
-    "test_endpoint_cell_limit_no_reservation": NodeMeta(
-        "xlsx", "max_cell_chars", "cell_length_limit", 400, "none",
-        "test_endpoint_cell_limit_no_reservation",
-    ),
-    "test_g03_endpoint_cell_limit_stable_status": NodeMeta(
-        "xlsx", "max_cell_chars", "cell_length_limit", 400, "none",
-        "test_g03_endpoint_cell_limit_stable_status",
-    ),
-    "test_h03_request_bytes_exact_n_and_n_plus_one": NodeMeta(
-        "intake", "max_request_bytes", "request_too_large", 413, "none",
-        "test_h03_request_bytes_exact_n_and_n_plus_one",
-    ),
-    "test_h03_upload_bytes_exact_n_and_n_plus_one": NodeMeta(
-        "intake", "max_upload_bytes", "upload_too_large", 413, "same_node",
-        "test_h03_upload_bytes_exact_n_and_n_plus_one",
-    ),
-    "test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected": NodeMeta(
-        "intake", "max_request_bytes", "request_too_large", 413, "same_node",
-        "test_i03_request_bytes_exact_n_accepted_n_plus_one_rejected",
-    ),
-    "test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected": NodeMeta(
-        "intake", "max_upload_bytes", "upload_too_large", 413, "same_node",
-        "test_i03_upload_bytes_exact_n_accepted_n_plus_one_rejected",
-    ),
-    "test_k03_reject_preserves_objects_content_types_and_all_audits": NodeMeta(
-        "xlsx", "max_sheets", "sheet_limit", 413, "none",
-        "test_k03_reject_preserves_objects_content_types_and_all_audits",
-    ),
-    "test_k03_upload_too_large_full_snapshot": NodeMeta(
-        "intake", "max_upload_bytes", "upload_too_large", 413, "none",
-        "test_k03_upload_too_large_full_snapshot",
-    ),
-    "test_l03_upload_too_large_full_preserve": NodeMeta(
-        "intake", "max_upload_bytes", "upload_too_large", 413, "none",
-        "test_l03_upload_too_large_full_preserve",
-    ),
-}
+def ledger_rows(path: Path | None = None) -> list[dict[str, Any]]:
+    return list(load_ledger(path)["rows"])
 
 
-def _function_name_from_nodeid(nodeid: str) -> str:
-    # nodeid: path::test_name[params] or path::test_name
-    tail = nodeid.split("::", 1)[-1]
-    return tail.split("[", 1)[0]
+def ledger_by_nodeid(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    return {r["nodeid"]: r for r in ledger_rows(path)}
 
 
-def _reachability_for_function(func: str) -> str:
-    if "request_bytes" in func or "upload_bytes" in func or "upload_too_large" in func:
-        return "intake"
-    # Check xlsx *before* xls — "xlsx_extra" contains the substring "xls_extra".
-    if (
-        "_xlsx_" in func
-        or "xlsx_adapter" in func
-        or "xlsx_extra" in func
-        or "endpoint_xlsx" in func
-        or func.endswith("_xlsx_adapter_limits")
-        or "xlsx_n_plus_one" in func
-        or "xlsx_rejects" in func
-    ):
-        return "xlsx"
-    if (
-        "_xls_" in func
-        or "xls_adapter" in func
-        or "xls_extra" in func
-        or "endpoint_xls" in func
-        or func.endswith("_xls_adapter_limits")
-    ):
-        return "xls"
-    return "xlsx"
+def ledger_by_row_id(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    return {r["row_id"]: r for r in ledger_rows(path)}
 
 
-def resolve_node_meta(
-    nodeid: str,
-    *,
-    callspec_params: Mapping[str, Any] | None = None,
-) -> NodeMeta:
-    """Resolve declared metadata for a marked node from function registry + callspec."""
-    func = _function_name_from_nodeid(nodeid)
-    params = dict(callspec_params or {})
+def validate_ledger_invariants(rows: Sequence[dict[str, Any]]) -> None:
+    if len(rows) != EXPECTED_HTTP_NPLUS1_COUNT:
+        raise AssertionError(f"ledger rows {len(rows)} != {EXPECTED_HTTP_NPLUS1_COUNT}")
+    row_ids = [r["row_id"] for r in rows]
+    nodeids = [r["nodeid"] for r in rows]
+    if len(set(row_ids)) != len(row_ids):
+        raise AssertionError("duplicate row_id")
+    if len(set(nodeids)) != len(nodeids):
+        raise AssertionError("duplicate nodeid")
+    same = [r for r in rows if r["accepted_execution"] == "same_node"]
+    other = [r for r in rows if r["accepted_execution"] == "other_node"]
+    none = [r for r in rows if r["accepted_execution"] not in {"same_node", "other_node"}]
+    if none:
+        raise AssertionError(f"forbidden accepted_execution values: {none}")
+    if len(same) != EXPECTED_SAME_NODE:
+        raise AssertionError(f"same_node count {len(same)} != {EXPECTED_SAME_NODE}")
+    if len(other) != EXPECTED_OTHER_NODE:
+        raise AssertionError(f"other_node count {len(other)} != {EXPECTED_OTHER_NODE}")
+    by_id = {r["row_id"]: r for r in rows}
+    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for r in rows:
+        groups[(r["reachability"], r["bound"])].append(r)
+        if r["accepted_status"] != 201:
+            raise AssertionError(f"accepted_status must be 201: {r['row_id']}")
+        if r["accepted_execution"] == "same_node":
+            if r["accepted_evidence_row_id"] != r["row_id"]:
+                raise AssertionError(f"same_node must self-ref: {r['row_id']}")
+        else:
+            ev = by_id.get(r["accepted_evidence_row_id"])
+            if ev is None:
+                raise AssertionError(f"missing evidence row {r['accepted_evidence_row_id']}")
+            if ev["accepted_execution"] != "same_node":
+                raise AssertionError(f"evidence not same_node: {ev['row_id']}")
+            if (ev["reachability"], ev["bound"]) != (r["reachability"], r["bound"]):
+                raise AssertionError(
+                    f"evidence group mismatch {r['row_id']} -> {ev['row_id']}"
+                )
+    if set(groups.keys()) != EXPECTED_FORMAT_BOUND:
+        raise AssertionError(
+            f"format/bound mismatch missing={EXPECTED_FORMAT_BOUND - set(groups)} "
+            f"extra={set(groups) - EXPECTED_FORMAT_BOUND}"
+        )
+    for key, items in groups.items():
+        if not any(i["accepted_execution"] == "same_node" for i in items):
+            raise AssertionError(f"group {key} has no same_node row")
 
-    if params:
-        bound = params.get("limit_field")
-        error_code = params.get("error_code")
-        status = params.get("status", params.get("bad_status"))
-        if bound is None or error_code is None or status is None:
-            raise KeyError(
-                f"parametrized node {nodeid!r} missing limit_field/error_code/status in {params!r}"
-            )
-        reachability = _reachability_for_function(func)
-        # Parametrized matrices that include N-accept companions
-        same = func in {
-            "test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one",
-            "test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one",
-            "test_j03_endpoint_xlsx_extra_adapter_bounds",
-            "test_j03_endpoint_xls_extra_adapter_bounds",
-        }
-        return NodeMeta(
-            reachability=reachability,
-            bound=str(bound),
-            error_code=str(error_code),
-            status=int(status),
-            accepted_mode="same_node" if same else "none",
-            accepted_function=func,
+
+def validate_collection_matches_ledger(
+    collected_nodeids: Sequence[str],
+    rows: Sequence[dict[str, Any]] | None = None,
+) -> None:
+    rows = list(rows if rows is not None else ledger_rows())
+    validate_ledger_invariants(rows)
+    ledger_ids = {r["nodeid"] for r in rows}
+    coll = set(collected_nodeids)
+    if len(collected_nodeids) != EXPECTED_HTTP_NPLUS1_COUNT:
+        raise AssertionError(f"collected {len(collected_nodeids)} != 48")
+    if coll != ledger_ids:
+        raise AssertionError(
+            f"nodeid set mismatch only_collected={sorted(coll - ledger_ids)[:5]} "
+            f"only_ledger={sorted(ledger_ids - coll)[:5]}"
         )
 
-    if func in _FUNCTION_META:
-        return _FUNCTION_META[func]
-    raise KeyError(f"no metadata registry entry for marked node {nodeid!r} ({func})")
 
-
-def expectation_for_request(request) -> StrongHelperExpectation:
-    """Build StrongHelperExpectation from a pytest request for a marked node."""
+def case_input_from_request(request) -> CaseInput:
+    """Build B from callspec when parametrized; non-param must register explicitly."""
+    nodeid = request.node.nodeid
     callspec = getattr(request.node, "callspec", None)
-    params = callspec.params if callspec is not None else None
-    meta = resolve_node_meta(request.node.nodeid, callspec_params=params)
-    return StrongHelperExpectation(
-        nodeid=request.node.nodeid,
-        reachability=meta.reachability,
-        bound=meta.bound,
-        error_code=meta.error_code,
-        status=meta.status,
-        accepted_mode=meta.accepted_mode,
-    )
+    if callspec is not None and "limit_field" in callspec.params:
+        bound = str(callspec.params["limit_field"])
+        # reachability from test module identity in nodeid path + function tokens
+        # NOT heuristic on xlsx_extra substring: use explicit path segments
+        func = nodeid.split("::")[-1].split("[", 1)[0]
+        if "request_bytes" in func or "upload_bytes" in func or "upload_too_large" in func:
+            reach = "intake"
+        elif "endpoint_xls_" in func or func.endswith("_xls_adapter_limits") or "xls_extra" in func:
+            # After xlsx check: function names use endpoint_xls_ or xls_extra (not xlsx)
+            if "xlsx" in func:
+                reach = "xlsx"
+            else:
+                reach = "xls"
+        elif "xlsx" in func or "cell_limit" in func or "endpoint_cell" in func:
+            reach = "xlsx"
+        else:
+            reach = "xlsx"
+        # Fix: j03/i03 use xlsx_extra / xls_extra carefully
+        if "xlsx" in func:
+            reach = "xlsx"
+        elif "_xls_" in func or "xls_adapter" in func or "xls_extra" in func or "endpoint_xls" in func:
+            reach = "xls"
+        case_id = f"{func}::{bound}"
+        return CaseInput(reachability=reach, bound=bound, case_id=case_id)
+    # non-param: must already be registered during test body before helper
+    existing = get_case_input()
+    if existing is None:
+        raise AssertionError(
+            f"{nodeid}: non-parametrized marked test must call register_case_input() "
+            "with the same bound used to configure limits/payload"
+        )
+    return existing
 
 
-def assert_event_matches_expectation(
-    events: Sequence[StrongHelperEvent],
-    exp: StrongHelperExpectation,
+def assert_runtime_guard(
     *,
-    accepted_companion: bool,
+    actual_nodeid: str,
+    ledger_row: dict[str, Any],
+    rejection_events: Sequence[RejectionEvent],
+    accepted_events: Sequence[AcceptedEvent],
+    case: CaseInput,
+    ledger_index: dict[str, dict[str, Any]] | None = None,
 ) -> None:
-    """Autouse post-condition: exactly one matching completed event."""
-    if len(events) != 1:
+    """Compare A (ledger) / B (case) / C (events) for one marked node."""
+    if len(rejection_events) != 1:
         raise AssertionError(
-            f"{exp.nodeid}: expected exactly 1 completed strong-helper event, got {len(events)}"
+            f"{actual_nodeid}: expected 1 rejection event, got {len(rejection_events)}"
         )
-    ev = events[0]
-    if ev.nodeid != exp.nodeid:
+    ev = rejection_events[0]
+    if ev.actual_nodeid != actual_nodeid:
+        raise AssertionError(f"actual_nodeid {ev.actual_nodeid!r} != {actual_nodeid!r}")
+    if ev.actual_nodeid != ledger_row["nodeid"]:
+        raise AssertionError("event nodeid != ledger nodeid")
+    if case.reachability != ledger_row["reachability"] or case.bound != ledger_row["bound"]:
         raise AssertionError(
-            f"event nodeid {ev.nodeid!r} != expected {exp.nodeid!r}"
+            f"case B {(case.reachability, case.bound)} != ledger "
+            f"{(ledger_row['reachability'], ledger_row['bound'])}"
         )
-    if ev.status != exp.status:
-        raise AssertionError(f"event status {ev.status} != expected {exp.status}")
-    if ev.error_code != exp.error_code:
+    if ev.actual_reachability != case.reachability or ev.actual_bound != case.bound:
+        raise AssertionError("event actual_* != registered case input B")
+    if ev.declared_reachability != ledger_row["reachability"] or ev.declared_bound != ledger_row["bound"]:
+        raise AssertionError("declared_* on event != ledger A")
+    if ev.observed_status != ledger_row["reject_status"]:
         raise AssertionError(
-            f"event error_code {ev.error_code!r} != expected {exp.error_code!r}"
+            f"observed status {ev.observed_status} != ledger {ledger_row['reject_status']}"
         )
-    if ev.reachability != exp.reachability:
+    if ev.observed_error_code != ledger_row["reject_error_code"]:
         raise AssertionError(
-            f"event reachability {ev.reachability!r} != expected {exp.reachability!r}"
+            f"observed error_code {ev.observed_error_code!r} != "
+            f"ledger {ledger_row['reject_error_code']!r}"
         )
-    if ev.bound != exp.bound:
-        raise AssertionError(f"event bound {ev.bound!r} != expected {exp.bound!r}")
-    if exp.accepted_mode == "same_node" and not accepted_companion:
-        raise AssertionError(
-            f"{exp.nodeid}: accepted_mode=same_node but accepted companion was not recorded"
-        )
+    if ev.row_id != ledger_row["row_id"]:
+        raise AssertionError("row_id mismatch")
 
-
-@dataclass(frozen=True)
-class ManifestRow:
-    reachability: str
-    bound: str
-    error_code: str
-    # Exact collected nodeid OR unique function name for non-param nodes.
-    # For multi-node coverage of the same bound, list all representative nodeids
-    # that must exist in the collected set and share this error_code.
-    rejected_nodeids: tuple[str, ...]
-    accepted_function: str
-    accepted_mode: str  # "same_node" | "none"
-
-
-def default_manifest_rows_from_collected(
-    collected_nodeids: Sequence[str],
-) -> list[ManifestRow]:
-    """Build canonical manifest rows from the live collected set.
-
-    Groups by (reachability, bound) using resolve_node_meta. Ensures every
-    collected node is represented and every format/bound tuple is covered.
-    """
-    by_key: dict[tuple[str, str], list[tuple[str, NodeMeta]]] = {}
-    for nid in collected_nodeids:
-        # callspec not available from nodeid alone for params — parse from nodeid
-        meta = _meta_from_nodeid_string(nid)
-        key = (meta.reachability, meta.bound)
-        by_key.setdefault(key, []).append((nid, meta))
-
-    rows: list[ManifestRow] = []
-    for key in sorted(by_key.keys()):
-        items = by_key[key]
-        # All nodes for a format/bound must share the same error_code
-        error_codes = {m.error_code for _, m in items}
-        if len(error_codes) != 1:
-            raise AssertionError(f"inconsistent error_codes for {key}: {error_codes}")
-        error_code = next(iter(error_codes))
-        # Prefer same_node if any node has it
-        accepted_mode = "same_node" if any(m.accepted_mode == "same_node" for _, m in items) else "none"
-        accepted_function = items[0][1].accepted_function
-        rows.append(
-            ManifestRow(
-                reachability=key[0],
-                bound=key[1],
-                error_code=error_code,
-                rejected_nodeids=tuple(sorted(n for n, _ in items)),
-                accepted_function=accepted_function,
-                accepted_mode=accepted_mode,
-            )
-        )
-    return rows
-
-
-def _meta_from_nodeid_string(nodeid: str) -> NodeMeta:
-    """Derive meta from collected nodeid text (no live callspec).
-
-    Parametrized ids embed limit_field as the first ``-``-separated token and
-    end with ``{error_code}-{status}``.
-    """
-    func = _function_name_from_nodeid(nodeid)
-    if "[" not in nodeid.split("::")[-1]:
-        return resolve_node_meta(nodeid, callspec_params=None)
-
-    br = nodeid.split("[", 1)[1].rstrip("]")
-    parts = br.split("-")
-    known_codes = {
-        "sheet_limit",
-        "physical_row_limit",
-        "column_limit",
-        "cell_length_limit",
-        "row_char_limit",
-        "total_cell_limit",
-        "merged_region_limit",
-        "zip_entry_limit",
-        "zip_expansion_limit",
-        "request_too_large",
-        "upload_too_large",
-    }
-    error_code = None
-    status = None
-    for p in parts:
-        if p in known_codes:
-            error_code = p
-        if p.isdigit():
-            status = int(p)
-    # First token is always the limit_field / bound name (underscores intact).
-    bound = parts[0] if parts else None
-    if bound is None or error_code is None or status is None:
-        raise KeyError(f"cannot parse meta from nodeid {nodeid!r} parts={parts!r}")
-
-    reachability = _reachability_for_function(func)
-    same = func in {
-        "test_i03_endpoint_xlsx_adapter_exact_n_and_n_plus_one",
-        "test_i03_endpoint_xls_adapter_exact_n_and_n_plus_one",
-        "test_j03_endpoint_xlsx_extra_adapter_bounds",
-        "test_j03_endpoint_xls_extra_adapter_bounds",
-    }
-    return NodeMeta(
-        reachability=reachability,
-        bound=bound,
-        error_code=error_code,
-        status=status,
-        accepted_mode="same_node" if same else "none",
-        accepted_function=func,
-    )
-
-
-def validate_matrix(
-    *,
-    collected_nodeids: Sequence[str],
-    manifest_rows: Sequence[ManifestRow],
-    expected_format_bound: frozenset[tuple[str, str]] = EXPECTED_FORMAT_BOUND,
-    expected_count: int = EXPECTED_HTTP_NPLUS1_COUNT,
-    runtime_events: Sequence[StrongHelperEvent] | None = None,
-    accepted_companion_nodeids: Sequence[str] | None = None,
-) -> None:
-    """Pure non-vacuous matrix validation.
-
-    Raises AssertionError on any inconsistency (wrong error_code, missing
-    accepted function, wrong bound, duplicate incompatible mapping, unmarked
-    omission, etc.).
-    """
-    collected = list(collected_nodeids)
-    if len(collected) != expected_count:
-        raise AssertionError(
-            f"collected count {len(collected)} != expected {expected_count}"
-        )
-    collected_set = set(collected)
-    if len(collected_set) != len(collected):
-        raise AssertionError("duplicate collected nodeids")
-
-    # Every collected node has resolvable meta
-    node_meta: dict[str, NodeMeta] = {}
-    for nid in collected:
-        node_meta[nid] = _meta_from_nodeid_string(nid)
-
-    # Manifest unique format/bound
-    keys = [(r.reachability, r.bound) for r in manifest_rows]
-    if len(keys) != len(set(keys)):
-        raise AssertionError(f"duplicate format/bound in manifest: {keys}")
-    if set(keys) != expected_format_bound:
-        raise AssertionError(
-            f"manifest format/bound mismatch missing={expected_format_bound - set(keys)} "
-            f"extra={set(keys) - expected_format_bound}"
-        )
-
-    accepted_funcs_seen: set[str] = set()
-    mapped_nodes: set[str] = set()
-    for row in manifest_rows:
-        if not row.rejected_nodeids:
-            raise AssertionError(f"empty rejected_nodeids for {row}")
-        for nid in row.rejected_nodeids:
-            if nid not in collected_set:
-                # allow exact match only — no prefix fallback
-                raise AssertionError(
-                    f"rejected nodeid not in collected set (exact match required): {nid!r}"
-                )
-            if nid in mapped_nodes:
-                raise AssertionError(f"nodeid mapped twice: {nid!r}")
-            mapped_nodes.add(nid)
-            meta = node_meta[nid]
-            if meta.reachability != row.reachability or meta.bound != row.bound:
-                raise AssertionError(
-                    f"node {nid!r} meta {(meta.reachability, meta.bound)} "
-                    f"!= manifest {(row.reachability, row.bound)}"
-                )
-            if meta.error_code != row.error_code:
-                raise AssertionError(
-                    f"node {nid!r} error_code {meta.error_code!r} "
-                    f"!= manifest {row.error_code!r}"
-                )
-        # accepted function must appear as a function name in collected set
-        if not any(_function_name_from_nodeid(n) == row.accepted_function for n in collected):
+    if ledger_row["accepted_execution"] == "same_node":
+        if len(accepted_events) != 1:
             raise AssertionError(
-                f"accepted_function {row.accepted_function!r} not present in collected nodes"
+                f"{actual_nodeid}: same_node requires 1 accepted event, got {len(accepted_events)}"
             )
-        accepted_funcs_seen.add(row.accepted_function)
-        if row.accepted_mode not in {"same_node", "none"}:
-            raise AssertionError(f"bad accepted_mode {row.accepted_mode!r}")
-
-    # Every collected marked node must be mapped
-    unmapped = collected_set - mapped_nodes
-    if unmapped:
-        raise AssertionError(f"collected marked nodes omitted from manifest: {sorted(unmapped)}")
-
-    # Runtime event binding (optional — when provided)
-    if runtime_events is not None:
-        by_node: dict[str, list[StrongHelperEvent]] = {}
-        for ev in runtime_events:
-            by_node.setdefault(ev.nodeid, []).append(ev)
-        for nid, meta in node_meta.items():
-            evs = by_node.get(nid, [])
-            if len(evs) != 1:
-                raise AssertionError(
-                    f"runtime: node {nid!r} expected 1 event, got {len(evs)}"
-                )
-            ev = evs[0]
-            if ev.error_code != meta.error_code or ev.bound != meta.bound:
-                raise AssertionError(
-                    f"runtime event mismatch for {nid}: {ev} vs {meta}"
-                )
-            if ev.reachability != meta.reachability or ev.status != meta.status:
-                raise AssertionError(
-                    f"runtime event mismatch for {nid}: {ev} vs {meta}"
-                )
-        if accepted_companion_nodeids is not None:
-            for row in manifest_rows:
-                if row.accepted_mode != "same_node":
-                    continue
-                for nid in row.rejected_nodeids:
-                    if nid not in set(accepted_companion_nodeids):
-                        # only required when that node actually ran
-                        if nid in by_node:
-                            raise AssertionError(
-                                f"same_node accepted companion missing for {nid!r}"
-                            )
+        ae = accepted_events[0]
+        if ae.observed_accepted_status != ledger_row["accepted_status"]:
+            raise AssertionError(
+                f"accepted status {ae.observed_accepted_status} != {ledger_row['accepted_status']}"
+            )
+        if ae.row_id != ledger_row["row_id"] or ae.actual_nodeid != actual_nodeid:
+            raise AssertionError("accepted event identity mismatch")
+    else:
+        # other_node: static reference only (no accepted event required in isolation)
+        idx = ledger_index or ledger_by_row_id()
+        ev_row = idx.get(ledger_row["accepted_evidence_row_id"])
+        if ev_row is None or ev_row["accepted_execution"] != "same_node":
+            raise AssertionError("other_node evidence row invalid")
+        if (ev_row["reachability"], ev_row["bound"]) != (
+            ledger_row["reachability"],
+            ledger_row["bound"],
+        ):
+            raise AssertionError("other_node evidence group mismatch")
+        # accepted_events may be empty for reject-only other_node
+        if accepted_events:
+            raise AssertionError("other_node should not record same-node accept on this test")
 
 
-def validate_manifest_adversarial_cases(collected_nodeids: Sequence[str]) -> list[str]:
-    """Run adversarial mutations on isolated copies; return list of case labels that failed as expected."""
-    base_rows = default_manifest_rows_from_collected(collected_nodeids)
+def validate_adversarial_mutations(base_rows: list[dict[str, Any]]) -> list[str]:
+    """Pure ledger topology adversarial checks (isolated copies)."""
     proved: list[str] = []
 
-    def expect_fail(label: str, rows: list[ManifestRow], **kwargs):
+    def fail(label: str, rows: list[dict]):
         try:
-            validate_matrix(
-                collected_nodeids=collected_nodeids,
-                manifest_rows=rows,
-                **kwargs,
-            )
+            validate_ledger_invariants(rows)
         except AssertionError:
             proved.append(label)
             return
-        raise AssertionError(f"adversarial case {label!r} unexpectedly passed")
+        raise AssertionError(f"{label} unexpectedly passed")
 
-    # wrong error_code
-    bad = list(base_rows)
-    r0 = bad[0]
-    bad[0] = ManifestRow(
-        r0.reachability, r0.bound, "deliberately_wrong_error_code",
-        r0.rejected_nodeids, r0.accepted_function, r0.accepted_mode,
-    )
-    expect_fail("wrong_error_code", bad)
+    # omit one row
+    fail("omit_row", base_rows[1:])
 
-    # nonexistent accepted function
-    bad = list(base_rows)
-    r0 = bad[0]
-    bad[0] = ManifestRow(
-        r0.reachability, r0.bound, r0.error_code,
-        r0.rejected_nodeids, "does_not_exist_anywhere", r0.accepted_mode,
-    )
-    expect_fail("nonexistent_accepted_function", bad)
+    # duplicate row
+    fail("duplicate_row", base_rows + [base_rows[0]])
 
-    # wrong reachability
-    bad = list(base_rows)
-    r0 = bad[0]
-    bad[0] = ManifestRow(
-        "wrong_reach", r0.bound, r0.error_code,
-        r0.rejected_nodeids, r0.accepted_function, r0.accepted_mode,
-    )
-    expect_fail("wrong_reachability", bad)
-
-    # wrong exact node id
-    bad = list(base_rows)
-    r0 = bad[0]
-    bad[0] = ManifestRow(
-        r0.reachability, r0.bound, r0.error_code,
-        ("tests/nope.py::test_does_not_exist",), r0.accepted_function, r0.accepted_mode,
-    )
-    expect_fail("wrong_exact_nodeid", bad)
-
-    # duplicate format/bound
-    bad = list(base_rows) + [base_rows[0]]
-    expect_fail("duplicate_format_bound", bad)
-
-    # omit a mapped node (drop one node from first multi-node row or shrink mapping)
+    # all non-same-node
     bad = []
     for r in base_rows:
-        if len(r.rejected_nodeids) > 1:
-            bad.append(
-                ManifestRow(
-                    r.reachability, r.bound, r.error_code,
-                    r.rejected_nodeids[1:], r.accepted_function, r.accepted_mode,
+        rr = dict(r)
+        if rr["accepted_execution"] == "same_node":
+            # point to another same if any, else break topology
+            rr["accepted_execution"] = "other_node"
+            rr["accepted_evidence_row_id"] = "DOES_NOT_EXIST"
+        bad.append(rr)
+    fail("all_non_same_node", bad)
+
+    # wrong-group accepted reference
+    same = [r for r in base_rows if r["accepted_execution"] == "same_node"]
+    other = [r for r in base_rows if r["accepted_execution"] == "other_node"]
+    if same and other:
+        bad = [dict(r) for r in base_rows]
+        for i, r in enumerate(bad):
+            if r["row_id"] == other[0]["row_id"]:
+                # point to same_node of different group
+                target = next(
+                    s
+                    for s in same
+                    if (s["reachability"], s["bound"])
+                    != (r["reachability"], r["bound"])
                 )
-            )
-        else:
-            bad.append(r)
-    # ensure we actually omitted something
-    if sum(len(r.rejected_nodeids) for r in bad) == len(collected_nodeids):
-        # force omit by emptying one singleton and leaving node unmapped
-        r0 = base_rows[0]
-        bad = [
-            ManifestRow(
-                r0.reachability, r0.bound, r0.error_code,
-                tuple(), r0.accepted_function, r0.accepted_mode,
-            )
-        ] + list(base_rows[1:])
-    expect_fail("omitted_marked_node", bad)
+                bad[i] = dict(r, accepted_evidence_row_id=target["row_id"])
+                break
+        fail("wrong_group_accepted_ref", bad)
+
+    # evidence points to other_node
+    if same and other:
+        bad = [dict(r) for r in base_rows]
+        for i, r in enumerate(bad):
+            if r["row_id"] == other[0]["row_id"]:
+                bad[i] = dict(r, accepted_evidence_row_id=other[1]["row_id"] if len(other) > 1 else other[0]["row_id"])
+                # force evidence to be an other_node row
+                if bad[i]["accepted_evidence_row_id"] == r["row_id"]:
+                    bad[i]["accepted_evidence_row_id"] = other[-1]["row_id"]
+                break
+        fail("accepted_ref_to_other_node", bad)
 
     return proved

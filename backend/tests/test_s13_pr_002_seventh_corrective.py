@@ -748,29 +748,58 @@ def test_h02_newer_finalize_wins_over_older_pending_recovery(
 # ---------------------------------------------------------------------------
 
 
+def _multipart_body(filename: str, payload: bytes, content_type: str, boundary: str) -> bytes:
+    """Deterministic multipart/form-data body (I-03 pattern) for exact request-byte N/N+1."""
+    crlf = b"\r\n"
+    parts = [
+        f"--{boundary}".encode(),
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode(),
+        f"Content-Type: {content_type}".encode(),
+        b"",
+        payload,
+        f"--{boundary}--".encode(),
+        b"",
+    ]
+    return crlf.join(parts)
+
+
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_request_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_request_bytes",
+            case_id="test_h03_request_bytes_exact_n_and_n_plus_one::max_request_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
-    n = len(payload) + 200  # content-length includes multipart overhead; set high enough for accept
+    boundary = "----ValoraBoundaryH03Fixed"
+    body = _multipart_body(
+        "a.xlsx",
+        payload,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        boundary,
+    )
+    n = len(body)
     set_source_limits_override(
         SourceArtifactLimits(max_request_bytes=n, max_upload_bytes=10 * 1024 * 1024)
     )
+    url = f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts"
+    headers_base = {
+        "X-User-Id": str(user.id),
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    }
     try:
-        # N+1 via Content-Length header
         res_bad = client.post(
-            f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-            files={
-                "file": (
-                    "a.xlsx",
-                    io.BytesIO(payload),
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-            },
-            headers={"X-User-Id": str(user.id), "Content-Length": str(n + 1)},
+            url,
+            content=body + b"X",
+            headers={**headers_base, "Content-Length": str(n + 1)},
         )
         assert_http_rejection_preserve(
             res_bad,
@@ -780,25 +809,12 @@ def test_h03_request_bytes_exact_n_and_n_plus_one(
             fake_storage=fake_storage,
             snap=snap,
         )
-
-        # exact N: header within limit
         res_ok = client.post(
-            f"/api/v1/projects/{proj.id}/asset-imports/{batch.id}/source-artifacts",
-            files={
-                "file": (
-                    "a.xlsx",
-                    io.BytesIO(payload),
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-            },
-            headers={"X-User-Id": str(user.id), "Content-Length": str(n)},
+            url,
+            content=body,
+            headers={**headers_base, "Content-Length": str(n)},
         )
-        # may 201 if body small enough, or 413 if multipart exceeds — stable: not 500
-        assert res_ok.status_code in {201, 413}
-        if res_ok.status_code == 413:
-            d = res_ok.json().get("detail")
-            if isinstance(d, dict):
-                assert d.get("error_code") == "request_too_large"
+        assert_accepted_source_upload(res_ok, status=201)
     finally:
         set_source_limits_override(None)
 
@@ -807,6 +823,15 @@ def test_h03_request_bytes_exact_n_and_n_plus_one(
 def test_h03_upload_bytes_exact_n_and_n_plus_one(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_upload_bytes",
+            case_id="test_h03_upload_bytes_exact_n_and_n_plus_one::max_upload_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes()
@@ -862,6 +887,7 @@ def test_h03_upload_bytes_exact_n_and_n_plus_one(
         ("max_columns", 1, lambda: _xlsx_bytes(cols=2), "column_limit", 413),
         ("max_cell_chars", 3, lambda: _xlsx_bytes(cell="abcd"), "cell_length_limit", 400),
     ],
+    ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_endpoint_xlsx_adapter_limits(
@@ -903,6 +929,7 @@ def test_h03_endpoint_xlsx_adapter_limits(
         ("max_columns", 1, {"cols": 2}, "column_limit", 413),
         ("max_cell_chars", 3, {"cell": "abcd"}, "cell_length_limit", 400),
     ],
+    ids=["max_sheets", "max_physical_rows", "max_columns", "max_cell_chars"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_h03_endpoint_xls_adapter_limits(

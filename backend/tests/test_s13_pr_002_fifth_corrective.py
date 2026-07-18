@@ -566,6 +566,15 @@ def test_e04_xlsx_merged_per_sheet_vs_total(tmp_path):
 def test_e04_endpoint_cell_limit_preserves_prior(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="xlsx",
+            bound="max_cell_chars",
+            case_id="test_e04_endpoint_cell_limit_preserves_prior::max_cell_chars",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     payload = _xlsx_bytes(cell="Z" * 10001)
@@ -594,6 +603,15 @@ def test_e04_endpoint_cell_limit_preserves_prior(
 def test_e04_endpoint_upload_bytes_limit(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_upload_bytes",
+            case_id="test_e04_endpoint_upload_bytes_limit::max_upload_bytes",
+        )
+    )
     """Genuine upload-spool N / N+1 boundary (not request-size pre-check).
 
     M-01: max_upload_bytes=N, max_request_bytes high enough that multipart

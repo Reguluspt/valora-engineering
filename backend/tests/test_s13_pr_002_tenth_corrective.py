@@ -726,6 +726,15 @@ def _post_source(client, proj, batch, user, filename, payload, content_type):
 def test_k03_reject_preserves_objects_content_types_and_all_audits(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="xlsx",
+            bound="max_sheets",
+            case_id="test_k03_reject_preserves_objects_content_types_and_all_audits::max_sheets",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage
@@ -762,6 +771,7 @@ def test_k03_reject_preserves_objects_content_types_and_all_audits(
         ("max_row_chars", 4, lambda: _xlsx_bytes(cols=3, cell="ab"), "row_char_limit", 413),
         ("max_total_cells", 4, lambda: _xlsx_bytes(rows=2, cols=3), "total_cell_limit", 413),
     ],
+    ids=["max_physical_rows", "max_columns", "max_cell_chars", "max_row_chars", "max_total_cells"],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_k03_xlsx_rejects_full_snapshot(
@@ -803,6 +813,15 @@ def test_k03_xlsx_rejects_full_snapshot(
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_k03_upload_too_large_full_snapshot(client: TestClient, db_session: Session, fake_storage):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_upload_bytes",
+            case_id="test_k03_upload_too_large_full_snapshot::max_upload_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage

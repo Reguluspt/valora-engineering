@@ -730,6 +730,15 @@ def test_g03_iter_rows_total_cells_exact(tmp_path, fmt):
 def test_g03_endpoint_cell_limit_stable_status(
     client: TestClient, db_session: Session, fake_storage
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="xlsx",
+            bound="max_cell_chars",
+            case_id="test_g03_endpoint_cell_limit_stable_status::max_cell_chars",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     _uid, _oid = user.id, org.id
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)

@@ -885,6 +885,14 @@ def test_l04_ninth_xls_extra_params_still_four():
         ("max_row_chars", 4, lambda: _xlsx_bytes(cols=3, cell="ab"), "row_char_limit", 413),
         ("max_total_cells", 4, lambda: _xlsx_bytes(rows=2, cols=3), "total_cell_limit", 413),
     ],
+    ids=[
+        "max_sheets",
+        "max_physical_rows",
+        "max_columns",
+        "max_cell_chars",
+        "max_row_chars",
+        "max_total_cells",
+    ],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
@@ -934,6 +942,15 @@ def test_l03_endpoint_xlsx_n_plus_one_full_preserve(
 
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_l03_upload_too_large_full_preserve(client: TestClient, db_session: Session, fake_storage):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="intake",
+            bound="max_upload_bytes",
+            case_id="test_l03_upload_too_large_full_preserve::max_upload_bytes",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage

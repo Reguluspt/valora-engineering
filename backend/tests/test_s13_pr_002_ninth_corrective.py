@@ -1213,6 +1213,14 @@ def _assert_reject_preserve(
             413,
         ),
     ],
+    ids=[
+        "max_zip_entries",
+        "max_uncompressed_zip_bytes",
+        "max_row_chars",
+        "max_total_cells",
+        "max_merged_regions",
+        "max_merged_regions_per_sheet",
+    ],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject
 def test_j03_endpoint_xlsx_extra_adapter_bounds(
@@ -1320,6 +1328,12 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             "merged_region_limit",
             413,
         ),
+    ],
+    ids=[
+        "max_row_chars",
+        "max_total_cells",
+        "max_merged_regions",
+        "max_merged_regions_per_sheet",
     ],
 )
 @pytest.mark.s13_pr_002_http_nplus1_reject

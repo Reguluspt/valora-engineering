@@ -686,6 +686,15 @@ def test_xlsx_cell_chars_exact_and_max_plus_one(tmp_path):
 def test_endpoint_cell_limit_no_reservation(
     client: TestClient, db_session: Session, fake_storage, tmp_path
 ):
+    from tests.support.s13_pr_002_http_preserve import CaseInput, register_case_input
+
+    register_case_input(
+        CaseInput(
+            reachability="xlsx",
+            bound="max_cell_chars",
+            case_id="test_endpoint_cell_limit_no_reservation::max_cell_chars",
+        )
+    )
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(db_session, org, user, proj, batch, fake_storage)
     # Cannot inject adapter limits via API — use default max 10000 with huge cell

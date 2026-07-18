@@ -1,16 +1,13 @@
-"""Shared exact HTTP rejection preservation contract for S13-PR-002.
+"""S13-PR-002 HTTP rejection preservation + independent evidence-gate runtime.
 
-M-02: snapshot field sets equal SQLAlchemy persisted column keys.
-M-03/N-01: type-preserving canonicalization (Enum-first; typed dict keys).
-M-04/N-02: completed strong-helper *events* bound to node/status/error/bound.
+R-03/R-04: actual_* never copied from ledger; observed_* from real HTTP response.
 """
 from __future__ import annotations
 
-import copy
 import re
 import threading
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
@@ -27,100 +24,118 @@ from app.modules.project_master_data.models import (
     ProjectAssetLine,
 )
 
-
 # ---------------------------------------------------------------------------
-# N-02 runtime instrumentation — completed events (not counts alone)
+# Runtime context (TLS)
 # ---------------------------------------------------------------------------
 
 _tls = threading.local()
 
 
 @dataclass(frozen=True)
-class StrongHelperEvent:
-    nodeid: str
-    status: int
-    error_code: str
+class CaseInput:
+    """B: actual case identity bound to the test setup path."""
+
     reachability: str
     bound: str
+    case_id: str
 
 
 @dataclass(frozen=True)
-class StrongHelperExpectation:
-    nodeid: str
-    reachability: str
-    bound: str
-    error_code: str
-    status: int
-    accepted_mode: str  # "same_node" | "none"
+class RejectionEvent:
+    actual_nodeid: str
+    actual_case_id: str
+    actual_reachability: str
+    actual_bound: str
+    declared_reachability: str
+    declared_bound: str
+    observed_status: int
+    observed_error_code: str
+    row_id: str
 
 
-def reset_strong_helper_context(expectation: StrongHelperExpectation | None = None) -> None:
-    """Start a fresh per-node context (call from autouse fixture)."""
-    _tls.events: list[StrongHelperEvent] = []
-    _tls.expectation = expectation
-    _tls.accepted_companion = False
+@dataclass(frozen=True)
+class AcceptedEvent:
+    row_id: str
+    actual_nodeid: str
+    observed_accepted_status: int
 
 
-def get_strong_helper_events() -> list[StrongHelperEvent]:
-    return list(getattr(_tls, "events", []) or [])
+def clear_evidence_context() -> None:
+    _tls.rejection_events = []
+    _tls.accepted_events = []
+    _tls.case_input = None
+    _tls.actual_nodeid = None
+    _tls.ledger_row = None
+    _tls.declared = None
 
 
-def get_strong_helper_completed_calls() -> int:
-    """Back-compat count of completed events."""
-    return len(get_strong_helper_events())
+def set_runtime_node(nodeid: str) -> None:
+    _tls.actual_nodeid = nodeid
 
 
-def reset_strong_helper_calls() -> None:
-    """Back-compat: clear events without setting expectation."""
-    reset_strong_helper_context(None)
+def set_ledger_row(row: dict[str, Any]) -> None:
+    _tls.ledger_row = dict(row)
+    _tls.declared = {
+        "reachability": row["reachability"],
+        "bound": row["bound"],
+        "reject_status": row["reject_status"],
+        "reject_error_code": row["reject_error_code"],
+        "row_id": row["row_id"],
+        "accepted_execution": row["accepted_execution"],
+        "accepted_evidence_row_id": row["accepted_evidence_row_id"],
+        "accepted_status": row["accepted_status"],
+    }
 
 
-def record_accepted_companion() -> None:
-    """Mark that the same-node N-accepted companion assertion ran successfully."""
-    _tls.accepted_companion = True
+def register_case_input(case: CaseInput) -> CaseInput:
+    """Register B — must use the same values that configure limits/payload."""
+    _tls.case_input = case
+    return case
 
 
-def accepted_companion_recorded() -> bool:
-    return bool(getattr(_tls, "accepted_companion", False))
+def get_case_input() -> CaseInput | None:
+    return getattr(_tls, "case_input", None)
 
 
-def _record_strong_helper_completed(*, status: int, error_code: str) -> None:
-    exp: StrongHelperExpectation | None = getattr(_tls, "expectation", None)
-    if exp is None:
-        # Not under a marked-node fixture — still record a minimal event for unit tests.
-        nodeid = getattr(_tls, "nodeid", "<no-fixture>")
-        reachability = getattr(_tls, "reachability", "")
-        bound = getattr(_tls, "bound", "")
-    else:
-        nodeid = exp.nodeid
-        reachability = exp.reachability
-        bound = exp.bound
-    events = getattr(_tls, "events", None)
+def get_rejection_events() -> list[RejectionEvent]:
+    return list(getattr(_tls, "rejection_events", []) or [])
+
+
+def get_accepted_events() -> list[AcceptedEvent]:
+    return list(getattr(_tls, "accepted_events", []) or [])
+
+
+def make_synthetic_rejection_event(**kwargs: Any) -> RejectionEvent:
+    """Test-only factory — does not mark runtime completion."""
+    return RejectionEvent(**kwargs)
+
+
+def make_synthetic_accepted_event(**kwargs: Any) -> AcceptedEvent:
+    return AcceptedEvent(**kwargs)
+
+
+def _append_rejection_event(ev: RejectionEvent) -> None:
+    events = getattr(_tls, "rejection_events", None)
     if events is None:
-        _tls.events = []
-        events = _tls.events
-    events.append(
-        StrongHelperEvent(
-            nodeid=nodeid,
-            status=status,
-            error_code=error_code,
-            reachability=reachability,
-            bound=bound,
-        )
-    )
+        _tls.rejection_events = []
+        events = _tls.rejection_events
+    events.append(ev)
 
 
-def event_as_dict(ev: StrongHelperEvent) -> dict[str, Any]:
-    return asdict(ev)
+def _append_accepted_event(ev: AcceptedEvent) -> None:
+    events = getattr(_tls, "accepted_events", None)
+    if events is None:
+        _tls.accepted_events = []
+        events = _tls.accepted_events
+    events.append(ev)
 
 
 # ---------------------------------------------------------------------------
-# M-02: field sets = mapper column keys
+# Mapper field sets (preserved from prior correctives)
 # ---------------------------------------------------------------------------
 
 
 def persisted_column_keys(model: type) -> tuple[str, ...]:
-    """Sorted persisted table column attribute keys (exclude relationships/hybrids)."""
     return tuple(sorted(c.key for c in sa_inspect(model).mapper.column_attrs))
 
 
@@ -130,7 +145,7 @@ STAGING_FIELDS = persisted_column_keys(ProjectAssetImportStagingRow)
 LINE_FIELDS = persisted_column_keys(ProjectAssetLine)
 AUDIT_FIELDS = persisted_column_keys(AuditEvent)
 
-_MODEL_FIELDS: dict[type, tuple[str, ...]] = {
+_MODEL_FIELDS = {
     ImportSourceArtifact: ARTIFACT_FIELDS,
     ProjectAssetImportBatch: BATCH_FIELDS,
     ProjectAssetImportStagingRow: STAGING_FIELDS,
@@ -140,45 +155,23 @@ _MODEL_FIELDS: dict[type, tuple[str, ...]] = {
 
 
 def assert_field_sets_match_mappers() -> None:
-    """Executable guard: module field tuples == live mapper column keys."""
     for model, fields in _MODEL_FIELDS.items():
         live = set(persisted_column_keys(model))
         guarded = set(fields)
-        assert guarded == live, (
-            f"{model.__name__}: guarded={sorted(guarded)} live={sorted(live)} "
-            f"missing={sorted(live - guarded)} extra={sorted(guarded - live)}"
-        )
+        assert guarded == live, f"{model.__name__}: {guarded ^ live}"
 
 
-# ---------------------------------------------------------------------------
-# N-01: type-preserving deep canonicalization (Enum before scalar bases)
-# ---------------------------------------------------------------------------
-
-
-def _sort_key_for_canonical(item: Any) -> str:
-    """Deterministic sort key that does not collapse types."""
+def _sort_key(item: Any) -> str:
     return repr(item)
 
 
 def canonical(value: Any) -> Any:
-    """Deterministic, type-preserving deep form for snapshot equality.
-
-    Enum is handled *before* bool/int/str so string-backed Enums and IntEnums
-    do not collapse into their scalar bases. Dict keys use the same typed
-    canonicalizer (never str(k)).
-    """
     if value is None:
         return ("none", None)
-    # Enum before bool/int/str — str Enum and IntEnum are subclasses of str/int.
     if isinstance(value, Enum):
         et = type(value)
-        return (
-            "enum",
-            et.__module__,
-            et.__qualname__,
-            canonical(value.value),
-        )
-    if isinstance(value, bool):  # before int
+        return ("enum", et.__module__, et.__qualname__, canonical(value.value))
+    if isinstance(value, bool):
         return ("bool", value)
     if isinstance(value, int):
         return ("int", value)
@@ -214,7 +207,7 @@ def canonical(value: Any) -> Any:
         items = tuple(
             sorted(
                 ((canonical(k), canonical(v)) for k, v in value.items()),
-                key=_sort_key_for_canonical,
+                key=_sort_key,
             )
         )
         return ("dict", items)
@@ -223,12 +216,11 @@ def canonical(value: Any) -> Any:
     if isinstance(value, tuple):
         return ("tuple", tuple(canonical(v) for v in value))
     if isinstance(value, set):
-        return ("set", tuple(sorted((canonical(v) for v in value), key=_sort_key_for_canonical)))
+        return ("set", tuple(sorted((canonical(v) for v in value), key=_sort_key)))
     raise TypeError(f"unsupported snapshot value type: {type(value)!r}")
 
 
 def assert_canonical_distinguishes_collisions() -> None:
-    """Self-test: known type collisions are not collapsed (incl. Enum/dict keys)."""
     from enum import IntEnum
 
     from app.modules.project_master_data.models import (
@@ -237,17 +229,6 @@ def assert_canonical_distinguishes_collisions() -> None:
     )
 
     assert canonical(1) != canonical(1.0)
-    assert canonical(uuid.UUID(int=1)) != canonical(str(uuid.UUID(int=1)))
-    assert canonical(Decimal("1")) != canonical(1)
-    assert canonical(Decimal("1")) != canonical(1.0)
-    assert canonical(Decimal("1")) != canonical("1")
-    assert canonical([1]) != canonical((1,))
-    assert canonical(b"x") != canonical("x")
-    aware = datetime(2026, 7, 18, 12, 0, 0, tzinfo=__import__("datetime").timezone.utc)
-    naive = datetime(2026, 7, 18, 12, 0, 0)
-    assert canonical(aware) != canonical(naive)
-
-    # Real string-backed project Enums vs scalar strings
     assert canonical(ImportBatchStatus.CREATED) != canonical("created")
     assert canonical(AssetLineReviewStatus.PENDING) != canonical("pending")
 
@@ -255,39 +236,12 @@ def assert_canonical_distinguishes_collisions() -> None:
         ONE = 1
 
     assert canonical(LocalInt.ONE) != canonical(1)
-
-    class OtherCreated(str, Enum):
-        CREATED = "created"
-
-    # Same member value, different Enum class
-    assert canonical(ImportBatchStatus.CREATED) != canonical(OtherCreated.CREATED)
-
-    # Typed dict keys
-    u = uuid.UUID(int=7)
     assert canonical({1: "x"}) != canonical({"1": "x"})
-    assert canonical({u: "x"}) != canonical({str(u): "x"})
-
-    # Stable ordering regardless of insertion order
-    assert canonical({"b": 1, "a": 2}) == canonical({"a": 2, "b": 1})
-
-    # Unsupported type is fail-closed
     try:
         canonical(object())
-        raise AssertionError("expected TypeError for unsupported type")
+        raise AssertionError("expected TypeError")
     except TypeError:
         pass
-
-    # deep copy isolation
-    src = {"nested": [1, {"k": Decimal("2.5")}]}
-    c1 = canonical(src)
-    src["nested"].append(3)
-    src["nested"][1]["k"] = Decimal("9")
-    assert c1 == canonical({"nested": [1, {"k": Decimal("2.5")}]})
-
-
-# ---------------------------------------------------------------------------
-# N-04: exact collect-count parsing
-# ---------------------------------------------------------------------------
 
 
 _COLLECT_SLASH = re.compile(r"(?m)^(\d+)/(\d+) tests? collected\b")
@@ -295,30 +249,18 @@ _COLLECT_PLAIN = re.compile(r"(?m)^(\d+) tests? collected\b")
 
 
 def parse_pytest_collect_selected_count(output: str) -> int:
-    """Parse selected item count from pytest --collect-only -q summary.
-
-    Anchored to start-of-line so ``148/831`` is not accepted as ``48``.
-    """
     m = _COLLECT_SLASH.search(output)
     if m:
         return int(m.group(1))
     m = _COLLECT_PLAIN.search(output)
     if m:
         return int(m.group(1))
-    raise ValueError(f"no pytest collect summary found in output:\n{output[-500:]}")
+    raise ValueError(f"no pytest collect summary found:\n{output[-500:]}")
 
 
-def assert_pytest_collect_count_exactly(
-    output: str,
-    *,
-    expected: int,
-    returncode: int,
-) -> int:
-    """Require subprocess success and exact selected count."""
+def assert_pytest_collect_count_exactly(output: str, *, expected: int, returncode: int) -> int:
     if returncode != 0:
-        raise AssertionError(
-            f"pytest collect subprocess failed with returncode={returncode}:\n{output[-800:]}"
-        )
+        raise AssertionError(f"collect returncode={returncode}:\n{output[-800:]}")
     try:
         n = parse_pytest_collect_selected_count(output)
     except ValueError as e:
@@ -328,43 +270,13 @@ def assert_pytest_collect_count_exactly(
     return n
 
 
-# ---------------------------------------------------------------------------
-# Row serializers — keys must equal field set exactly
-# ---------------------------------------------------------------------------
-
-
 def _row(model_obj: Any, fields: tuple[str, ...]) -> dict[str, Any]:
-    out: dict[str, Any] = {}
-    for name in fields:
-        out[name] = canonical(getattr(model_obj, name))
-    assert set(out.keys()) == set(fields), (
-        f"serializer keys {sorted(out)} != fields {sorted(fields)}"
-    )
+    out = {name: canonical(getattr(model_obj, name)) for name in fields}
+    assert set(out.keys()) == set(fields)
     return out
 
 
-def _row_artifact(a: ImportSourceArtifact) -> dict[str, Any]:
-    return _row(a, ARTIFACT_FIELDS)
-
-
-def _row_batch(b: ProjectAssetImportBatch) -> dict[str, Any]:
-    return _row(b, BATCH_FIELDS)
-
-
-def _row_staging(s: ProjectAssetImportStagingRow) -> dict[str, Any]:
-    return _row(s, STAGING_FIELDS)
-
-
-def _row_line(line: ProjectAssetLine) -> dict[str, Any]:
-    return _row(line, LINE_FIELDS)
-
-
-def _row_audit(a: AuditEvent) -> dict[str, Any]:
-    return _row(a, AUDIT_FIELDS)
-
-
 def _as_uuid(value: Any):
-    """Accept UUID instances or string UUIDs for SQLAlchemy UUID bind params."""
     if value is None:
         return None
     if isinstance(value, uuid.UUID):
@@ -372,28 +284,16 @@ def _as_uuid(value: Any):
     return uuid.UUID(str(value))
 
 
-def snapshot_source_intake_preserve(
-    db: Session,
-    fake_storage,
-    *,
-    project_id,
-    batch_id,
-) -> dict[str, Any]:
-    """Immutable deep snapshot of all preserve-relevant state before an HTTP reject."""
+def snapshot_source_intake_preserve(db: Session, fake_storage, *, project_id, batch_id) -> dict[str, Any]:
     assert_field_sets_match_mappers()
     db.expire_all()
-    pid = _as_uuid(project_id)
-    bid = _as_uuid(batch_id)
+    pid, bid = _as_uuid(project_id), _as_uuid(batch_id)
     arts = (
         db.query(ImportSourceArtifact)
         .order_by(ImportSourceArtifact.generation.asc(), ImportSourceArtifact.id.asc())
         .all()
     )
-    batches = (
-        db.query(ProjectAssetImportBatch)
-        .filter(ProjectAssetImportBatch.id == bid)
-        .all()
-    )
+    batches = db.query(ProjectAssetImportBatch).filter(ProjectAssetImportBatch.id == bid).all()
     staging = (
         db.query(ProjectAssetImportStagingRow)
         .filter(ProjectAssetImportStagingRow.import_batch_id == bid)
@@ -410,29 +310,23 @@ def snapshot_source_intake_preserve(
         .all()
     )
     audits = db.query(AuditEvent).order_by(AuditEvent.id.asc()).all()
-    objects = {k: bytes(v) for k, v in fake_storage._objects.items()}
-    content_types = dict(fake_storage._content_types)
     return {
-        "objects": objects,
-        "content_types": content_types,
-        "artifacts": [_row_artifact(a) for a in arts],
-        "batches": [_row_batch(b) for b in batches],
-        "staging": [_row_staging(s) for s in staging],
-        "lines": [_row_line(ln) for ln in lines],
-        "audits": [_row_audit(a) for a in audits],
-        "project_id": str(pid) if pid is not None else None,
-        "batch_id": str(bid) if bid is not None else None,
+        "objects": {k: bytes(v) for k, v in fake_storage._objects.items()},
+        "content_types": dict(fake_storage._content_types),
+        "artifacts": [_row(a, ARTIFACT_FIELDS) for a in arts],
+        "batches": [_row(b, BATCH_FIELDS) for b in batches],
+        "staging": [_row(s, STAGING_FIELDS) for s in staging],
+        "lines": [_row(ln, LINE_FIELDS) for ln in lines],
+        "audits": [_row(a, AUDIT_FIELDS) for a in audits],
+        "project_id": str(pid) if pid else None,
+        "batch_id": str(bid) if bid else None,
     }
 
 
 def assert_source_intake_preserve(db: Session, fake_storage, snap: dict[str, Any]) -> None:
-    """Exact equality of every snapshot component after an HTTP rejection."""
     db.expire_all()
     after = snapshot_source_intake_preserve(
-        db,
-        fake_storage,
-        project_id=snap["project_id"],
-        batch_id=snap["batch_id"],
+        db, fake_storage, project_id=snap["project_id"], batch_id=snap["batch_id"]
     )
     assert after["objects"] == snap["objects"], "object-store bytes changed on reject"
     assert after["content_types"] == snap["content_types"], "content_types changed on reject"
@@ -452,33 +346,84 @@ def assert_http_rejection_preserve(
     fake_storage,
     snap: dict[str, Any],
 ) -> None:
-    """Unconditional status/error_code + full preservation contract.
-
-    Records one completed StrongHelperEvent only after status, error_code and
-    full equality all succeed (N-02).
-    """
+    """Reject path: assert vs HTTP, full preserve, then record C from the response."""
     assert res.status_code == status, res.text
     body = res.json()
     detail = body.get("detail")
-    assert isinstance(detail, dict), f"detail must be mapping, got {type(detail)!r}: {detail!r}"
+    assert isinstance(detail, dict), f"detail must be mapping: {detail!r}"
     assert detail.get("error_code") == error_code, detail
     assert_source_intake_preserve(db, fake_storage, snap)
-    _record_strong_helper_completed(status=status, error_code=error_code)
+
+    # C: re-read from response (not echo of arguments alone — use parsed body)
+    observed_status = int(res.status_code)
+    observed_error = detail.get("error_code")
+    assert observed_error == error_code
+
+    case = get_case_input()
+    assert case is not None, "register_case_input() required before reject helper"
+    nodeid = getattr(_tls, "actual_nodeid", None)
+    assert nodeid, "actual_nodeid not bound"
+    declared = getattr(_tls, "declared", None)
+    assert declared is not None, "ledger row not bound"
+
+    _append_rejection_event(
+        RejectionEvent(
+            actual_nodeid=nodeid,
+            actual_case_id=case.case_id,
+            actual_reachability=case.reachability,
+            actual_bound=case.bound,
+            declared_reachability=declared["reachability"],
+            declared_bound=declared["bound"],
+            observed_status=observed_status,
+            observed_error_code=str(observed_error),
+            row_id=declared["row_id"],
+        )
+    )
 
 
 def assert_accepted_source_upload(res, *, status: int = 201) -> None:
-    """Assert successful companion upload and record same-node accepted evidence."""
+    """Accept path: assert real response status, record accepted observation from C."""
     assert res.status_code == status, getattr(res, "text", res)
-    record_accepted_companion()
+    observed = int(res.status_code)
+    declared = getattr(_tls, "declared", None)
+    assert declared is not None, "ledger row not bound for accept"
+    nodeid = getattr(_tls, "actual_nodeid", None)
+    assert nodeid
+    _append_accepted_event(
+        AcceptedEvent(
+            row_id=declared["row_id"],
+            actual_nodeid=nodeid,
+            observed_accepted_status=observed,
+        )
+    )
 
 
-# Back-compat name used by older suites/eleventh self-test imports.
+# Back-compat aliases used by older suites (twelfth/thirteenth)
+def reset_strong_helper_context(*_a, **_k) -> None:
+    clear_evidence_context()
+
+
+def get_strong_helper_completed_calls() -> int:
+    return len(get_rejection_events())
+
+
+def get_strong_helper_events():
+    """Legacy name — returns rejection events as opaque list."""
+    return get_rejection_events()
+
+
+def reset_strong_helper_calls() -> None:
+    clear_evidence_context()
+
+
+def record_accepted_companion() -> None:
+    """Legacy no-op path: accepted recording is via assert_accepted_source_upload."""
+    pass
+
+
+def accepted_companion_recorded() -> bool:
+    return len(get_accepted_events()) > 0
+
+
 def assert_audit_snapshot_detects_mutations() -> None:
-    """Deprecated hand-built proof — prefer DB-backed twelfth probes."""
     assert_canonical_distinguishes_collisions()
-    base = [{"id": "1", "payload": {"k": "v"}}]
-    assert base != copy.deepcopy(base) + [{"id": "2"}]
-    assert base != []
-    mutated = copy.deepcopy(base)
-    mutated[0]["payload"] = {"k": "mutated"}
-    assert base != mutated

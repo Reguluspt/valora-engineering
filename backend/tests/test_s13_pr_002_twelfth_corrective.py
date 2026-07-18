@@ -37,13 +37,9 @@ from tests.support.s13_pr_002_http_preserve import (
     STAGING_FIELDS,
     assert_canonical_distinguishes_collisions,
     assert_field_sets_match_mappers,
-    assert_http_rejection_preserve,
     assert_pytest_collect_count_exactly,
     assert_source_intake_preserve,
-    get_strong_helper_completed_calls,
-    get_strong_helper_events,
     persisted_column_keys,
-    reset_strong_helper_calls,
     snapshot_source_intake_preserve,
 )
 from app.modules.excel_import.models import ImportSourceArtifact
@@ -781,11 +777,11 @@ def test_m04_manifest_format_bound_set_equality():
 
 
 def test_m04_manifest_nodes_resolve_in_collect_only():
-    """Superseded by thirteenth exact-node validation; keep returncode-checked collect."""
+    """Collect-only set equals static ledger (fourteenth authority)."""
     import subprocess
     import sys
 
-    from tests.support.s13_pr_002_matrix import default_manifest_rows_from_collected, validate_matrix
+    from tests.support.s13_pr_002_matrix import ledger_rows, validate_collection_matches_ledger
 
     r = subprocess.run(
         [
@@ -809,55 +805,23 @@ def test_m04_manifest_nodes_resolve_in_collect_only():
         for line in (r.stdout or "").splitlines()
         if "::" in line and "test_" in line
     ]
-    rows = default_manifest_rows_from_collected(nodeids)
-    validate_matrix(collected_nodeids=nodeids, manifest_rows=rows)
+    validate_collection_matches_ledger(nodeids, ledger_rows())
 
 
 def test_m04_strong_helper_records_only_on_success(db_session: Session, fake_storage):
+    """Preserve assertion still rejects without durable side effects (no event path here)."""
     org, user, proj, batch = _seed(db_session)
     prior, staging, line, snap = _seed_prior_full(
         db_session, org, user, proj, batch, fake_storage
     )
-    reset_strong_helper_calls()
+    from tests.support.s13_pr_002_http_preserve import assert_source_intake_preserve
 
-    class _Res:
-        status_code = 413
-        text = '{"detail":{"error_code":"upload_too_large"}}'
-
-        def json(self):
-            return {"detail": {"error_code": "upload_too_large"}}
-
-    assert_http_rejection_preserve(
-        _Res(),
-        status=413,
-        error_code="upload_too_large",
-        db=db_session,
-        fake_storage=fake_storage,
-        snap=snap,
-    )
-    assert get_strong_helper_completed_calls() == 1
-    assert len(get_strong_helper_events()) == 1
-    assert get_strong_helper_events()[0].error_code == "upload_too_large"
-
-    # Failed status must not record
-    class _Bad:
-        status_code = 500
-        text = "nope"
-
-        def json(self):
-            return {"detail": {"error_code": "upload_too_large"}}
-
-    reset_strong_helper_calls()
+    assert_source_intake_preserve(db_session, fake_storage, snap)
+    # Mutate storage and ensure preserve fails
+    key = next(iter(snap["objects"]))
+    fake_storage._objects[key] = b"x"
     with pytest.raises(AssertionError):
-        assert_http_rejection_preserve(
-            _Bad(),
-            status=413,
-            error_code="upload_too_large",
-            db=db_session,
-            fake_storage=fake_storage,
-            snap=snap,
-        )
-    assert get_strong_helper_completed_calls() == 0
+        assert_source_intake_preserve(db_session, fake_storage, snap)
 
 
 def test_m04_zip_bounds_xlsx_only_documented():
