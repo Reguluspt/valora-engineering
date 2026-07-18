@@ -8,7 +8,8 @@ import json
 import re
 import unicodedata
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from datetime import date, datetime
 from enum import Enum
 from itertools import islice
 from typing import Callable, Iterable, Iterator, Sequence
@@ -19,7 +20,7 @@ from app.modules.excel_import.domain.workbook_adapter import (
     SheetSummary,
 )
 
-STRUCTURE_RULE_VERSION = "s13-pr-003-v1"
+STRUCTURE_RULE_VERSION = "s13-pr-003-v2"
 
 
 class RowClass(str, Enum):
@@ -42,6 +43,13 @@ class StructureRuleConfig:
     header_scan_rows: int = 200
     max_header_span: int = 3
     data_sample_rows: int = 24
+    column_evidence_sample: int = 24
+    empty_column_separator_run: int = 1
+    late_blank_header_edge_extension: int = 1
+    vertical_blank_boundary_run: int = 2
+    vertical_unresolved_boundary_run: int = 2
+    trailing_note_unresolved_run: int = 3
+    post_total_tail: int = 3
     candidate_limit: int = 25
     row_preview_limit: int = 200
     clear_threshold: float = 0.62
@@ -63,6 +71,8 @@ class TableRegionCandidate:
     confidence: float
     reasons: tuple[str, ...]
     header_labels: tuple[str | None, ...]
+    boundary_reason: str = "sheet_end"
+    boundary_flags: tuple[str, ...] = ()
 
     def to_payload(self) -> dict:
         return {
@@ -76,6 +86,8 @@ class TableRegionCandidate:
                 "min_column": self.min_column,
                 "max_column": self.max_column,
             },
+            "boundary_reason": self.boundary_reason,
+            "boundary_flags": list(self.boundary_flags),
             "confidence": self.confidence,
             "reasons": list(self.reasons),
             "header_labels": list(self.header_labels),
@@ -96,6 +108,29 @@ class RowClassification:
             "confidence": self.confidence,
             "reasons": list(self.reasons),
         }
+
+
+@dataclass
+class _ResolutionState:
+    candidate: TableRegionCandidate
+    counts: Counter[str]
+    preview: list[dict]
+    physical_count: int = 0
+    accepted_max_row: int = 0
+    pending_blank: RowClassification | None = None
+    unresolved_run: int = 0
+    trailing_run: int = 0
+    post_total: bool = False
+    post_total_count: int = 0
+    ended: bool = False
+    boundary_reason: str = "sheet_end"
+    boundary_flags: list[str] | None = None
+    extended_edge: str | None = None
+
+    def __post_init__(self) -> None:
+        self.accepted_max_row = self.candidate.header_end_row
+        if self.boundary_flags is None:
+            self.boundary_flags = list(self.candidate.boundary_flags)
 
 
 RowProvider = Callable[[str], Iterator[Sequence[CellValue]]]
@@ -119,11 +154,13 @@ _HEADER_TERMS = (
     "gia tham dinh",
     "ghi chu",
 )
+_TOTAL_EXACT = ("tong", "total")
 _TOTAL_PREFIXES = ("tong cong", "tong gia tri", "tong thanh tien")
 _SUBTOTAL_PREFIXES = ("cong phan", "cong muc", "tam tinh", "subtotal")
 _NOTE_PREFIXES = ("ghi chu", "chu thich", "note")
-_SECTION_PREFIXES = ("phan ", "chuong ", "muc ", "hang muc ")
+_SECTION_PREFIXES = ("phan", "chuong", "muc", "hang muc")
 _SERIAL_RE = re.compile(r"^\d+(?:[.\-/]\d+)*$")
+_OUTLINE_RE = re.compile(r"^(?:[ivxlcdm]+|[a-z])(?:[.\-/]\d+)*$", re.IGNORECASE)
 
 
 def _normalized(value: object) -> str:
@@ -140,8 +177,12 @@ def _display(value: object) -> str:
     return " ".join(str(value).strip().split())
 
 
+def _nonempty_cells(row: Sequence[CellValue]) -> list[CellValue]:
+    return [cell for cell in row if _display(cell.value)]
+
+
 def _nonempty_values(row: Sequence[CellValue]) -> list[object]:
-    return [cell.value for cell in row if _display(cell.value)]
+    return [cell.value for cell in _nonempty_cells(row)]
 
 
 def _is_numeric(value: object) -> bool:
@@ -154,26 +195,42 @@ def _is_serial(value: object) -> bool:
     return bool(_SERIAL_RE.fullmatch(_normalized(value)))
 
 
-def _first_nonempty(row: Sequence[CellValue]) -> object | None:
-    for cell in row:
-        if _display(cell.value):
-            return cell.value
-    return None
+def _strong_asset_signature(values: Sequence[object]) -> bool:
+    return len(values) >= 2 and _is_serial(values[0])
+
+
+def _is_outline(value: object) -> bool:
+    return _is_serial(value) or (
+        isinstance(value, str) and bool(_OUTLINE_RE.fullmatch(_normalized(value)))
+    )
+
+
+def _starts_anchored(text: str, prefix: str) -> bool:
+    return text == prefix or text.startswith(f"{prefix} ") or text.startswith(f"{prefix}:")
 
 
 def _marker_kind(values: Sequence[object]) -> RowClass | None:
+    """Recognize only the frozen anchored vocabulary, after an optional outline cell."""
     if not values:
         return None
-    first = _normalized(values[0])
-    joined = " ".join(_normalized(value) for value in values)
-    if first.startswith(_TOTAL_PREFIXES) or joined.startswith(_TOTAL_PREFIXES):
+    start_index = 1 if len(values) > 1 and _is_outline(values[0]) else 0
+    marker_value = next(
+        (value for value in values[start_index:] if isinstance(value, str) and _display(value)),
+        None,
+    )
+    if marker_value is None:
+        return None
+    first = _normalized(marker_value)
+    if first.startswith("tong cong ty"):
+        return None
+    if first in _TOTAL_EXACT or any(_starts_anchored(first, item) for item in _TOTAL_PREFIXES):
         return RowClass.TOTAL
-    if first.startswith(_SUBTOTAL_PREFIXES) or joined.startswith(_SUBTOTAL_PREFIXES):
+    if any(_starts_anchored(first, item) for item in _SUBTOTAL_PREFIXES):
         return RowClass.SUBTOTAL
-    if first.startswith(_NOTE_PREFIXES) or joined.startswith(_NOTE_PREFIXES):
+    if first.startswith("*") or any(_starts_anchored(first, item) for item in _NOTE_PREFIXES):
         return RowClass.NOTE
-    if first.startswith("*"):
-        return RowClass.NOTE
+    if any(_starts_anchored(first, item) for item in _SECTION_PREFIXES):
+        return RowClass.SECTION
     return None
 
 
@@ -186,46 +243,22 @@ def classify_row(row: Sequence[CellValue]) -> RowClassification:
 
     marker = _marker_kind(values)
     if marker is not None:
-        return RowClassification(
-            row_number,
-            marker,
-            0.98,
-            (f"{marker.value}_marker",),
-        )
-
-    numeric_count = sum(1 for value in values if _is_numeric(value))
-    text_values = [value for value in values if isinstance(value, str)]
-    first = _normalized(values[0])
-    first_display = _display(values[0])
-    uppercase_section = (
-        bool(first_display)
-        and first_display == first_display.upper()
-        and any(ch.isalpha() for ch in first_display)
-        and len(first_display) <= 120
-    )
-    if numeric_count == 0 and len(values) <= 2 and (
-        first.startswith(_SECTION_PREFIXES) or uppercase_section
-    ):
-        return RowClassification(
-            row_number,
-            RowClass.SECTION,
-            0.95,
-            ("section_heading_pattern",),
-        )
-
-    if _is_serial(values[0]) and len(values) >= 2:
+        return RowClassification(row_number, marker, 0.98, (f"{marker.value}_marker",))
+    if _strong_asset_signature(values):
         return RowClassification(
             row_number,
             RowClass.ASSET,
             0.94,
             ("serial_number_and_content",),
         )
-    if numeric_count >= 1 and text_values and len(values) >= 2:
+    has_text = any(isinstance(value, str) for value in values)
+    has_numeric = any(_is_numeric(value) for value in values)
+    if has_text and has_numeric:
         return RowClassification(
             row_number,
-            RowClass.ASSET,
-            0.78,
-            ("mixed_text_numeric_content",),
+            RowClass.UNRESOLVED,
+            0.40,
+            ("mixed_text_numeric_without_serial",),
         )
     return RowClassification(
         row_number,
@@ -253,37 +286,71 @@ def _bounded_rows(
         _close_iterator(rows)
 
 
+def _slice_row(row: Sequence[CellValue], min_column: int, max_column: int) -> tuple[CellValue, ...]:
+    return tuple(cell for cell in row if min_column <= cell.column <= max_column)
+
+
+def _header_row_eligible(row: Sequence[CellValue]) -> bool:
+    values = _nonempty_values(row)
+    if not values or _marker_kind(values) is not None or _strong_asset_signature(values):
+        return False
+    return not any(
+        cell.cell_type in {"number", "boolean", "datetime"}
+        or isinstance(cell.value, bool)
+        or _is_numeric(cell.value)
+        or isinstance(cell.value, (date, datetime))
+        for cell in _nonempty_cells(row)
+    )
+
+
+def _occupied_column_runs(
+    span: Sequence[Sequence[CellValue]],
+    following_rows: Sequence[Sequence[CellValue]],
+    separator_run: int,
+) -> list[tuple[int, int]]:
+    occupied = {
+        cell.column
+        for row in (*span, *following_rows)
+        for cell in row
+        if _display(cell.value)
+    }
+    if not occupied:
+        return []
+    runs: list[tuple[int, int]] = []
+    start = previous = min(occupied)
+    required_gap = max(1, separator_run)
+    for column in sorted(occupied)[1:]:
+        if column - previous - 1 >= required_gap:
+            runs.append((start, previous))
+            start = column
+        previous = column
+    runs.append((start, previous))
+    return runs
+
+
 def _span_labels(
     span: Sequence[Sequence[CellValue]],
-) -> tuple[tuple[str | None, ...], int, int]:
-    width = max((len(row) for row in span), default=0)
+    min_column: int,
+    max_column: int,
+) -> tuple[str | None, ...]:
     labels: list[str | None] = []
-    first_column = 0
-    last_column = 0
-    for column_index in range(width):
+    for column in range(min_column, max_column + 1):
         parts: list[str] = []
         for row in span:
-            if column_index >= len(row):
-                continue
-            value = _display(row[column_index].value)
+            value = next((_display(cell.value) for cell in row if cell.column == column), "")
             if value and value not in parts:
                 parts.append(value)
-        label = " / ".join(parts) if parts else None
-        labels.append(label)
-        if label:
-            if not first_column:
-                first_column = column_index + 1
-            last_column = column_index + 1
-    return tuple(labels), first_column, last_column
+        labels.append(" / ".join(parts) if parts else None)
+    return tuple(labels)
 
 
 def _header_vocabulary_hits(labels: Sequence[str | None]) -> int:
-    hits = 0
-    for label in labels:
-        normalized = _normalized(label)
-        if normalized and any(term in normalized for term in _HEADER_TERMS):
-            hits += 1
-    return hits
+    return sum(
+        1
+        for label in labels
+        if (normalized := _normalized(label))
+        and any(term in normalized for term in _HEADER_TERMS)
+    )
 
 
 def _has_merged_title(summary: SheetSummary, header_start_row: int) -> bool:
@@ -293,96 +360,98 @@ def _has_merged_title(summary: SheetSummary, header_start_row: int) -> bool:
     )
 
 
-def _candidate_for_span(
+def _candidates_for_span(
     *,
     summary: SheetSummary,
-    scanned_rows: Sequence[Sequence[CellValue]],
-    start_index: int,
-    span_size: int,
+    span: Sequence[Sequence[CellValue]],
+    following_rows: Sequence[Sequence[CellValue]],
     config: StructureRuleConfig,
-) -> TableRegionCandidate | None:
-    span = scanned_rows[start_index : start_index + span_size]
-    if len(span) != span_size:
-        return None
-    per_row_values = [_nonempty_values(row) for row in span]
-    if any(not values or _marker_kind(values) is not None for values in per_row_values):
-        return None
-    # A candidate header span may not absorb the first physical asset row. This
-    # also prevents ordinary serial-numbered data rows from competing as headers.
-    if any(_is_serial(values[0]) for values in per_row_values):
-        return None
+) -> list[TableRegionCandidate]:
+    if not span or len(span) > config.max_header_span or any(not _header_row_eligible(row) for row in span):
+        return []
+    header_start = span[0][0].row if span[0] else 0
+    header_end = span[-1][0].row if span[-1] else 0
+    if not header_start or not header_end:
+        return []
 
-    labels, first_column, last_column = _span_labels(span)
-    nonempty_headers = sum(1 for label in labels if label)
-    if nonempty_headers < 2 or not first_column or not last_column:
-        return None
-
-    width = max(1, last_column - first_column + 1)
-    header_density = nonempty_headers / width
-    vocabulary_hits = _header_vocabulary_hits(labels)
-    data_rows = [
-        row
-        for row in scanned_rows[start_index + span_size : start_index + span_size + config.data_sample_rows]
-        if _nonempty_values(row)
-    ]
-    usable_rows = sum(1 for row in data_rows if len(_nonempty_values(row)) >= 2)
-    consistent_ratio = usable_rows / len(data_rows) if data_rows else 0.0
-    serial_ratio = (
-        sum(1 for row in data_rows if _is_serial(_first_nonempty(row))) / len(data_rows)
-        if data_rows
-        else 0.0
-    )
-    type_mix_ratio = (
-        sum(
-            1
-            for row in data_rows
-            if any(isinstance(value, str) for value in _nonempty_values(row))
-            and any(_is_numeric(value) for value in _nonempty_values(row))
+    candidates: list[TableRegionCandidate] = []
+    for min_column, max_column in _occupied_column_runs(
+        span,
+        following_rows,
+        config.empty_column_separator_run,
+    ):
+        labels = _span_labels(span, min_column, max_column)
+        nonempty_headers = sum(label is not None for label in labels)
+        if nonempty_headers < 2:
+            continue
+        sliced_following = [
+            _slice_row(row, min_column, max_column)
+            for row in following_rows[: config.data_sample_rows]
+        ]
+        data_rows = [row for row in sliced_following if _nonempty_values(row)]
+        width = max_column - min_column + 1
+        header_density = nonempty_headers / width
+        vocabulary_hits = _header_vocabulary_hits(labels)
+        usable_rows = sum(len(_nonempty_values(row)) >= 2 for row in data_rows)
+        consistent_ratio = usable_rows / len(data_rows) if data_rows else 0.0
+        serial_ratio = (
+            sum(_strong_asset_signature(_nonempty_values(row)) for row in data_rows) / len(data_rows)
+            if data_rows
+            else 0.0
         )
-        / len(data_rows)
-        if data_rows
-        else 0.0
-    )
-    merged_title = _has_merged_title(summary, start_index + 1)
-    score = (
-        0.20 * min(header_density, 1.0)
-        + 0.32 * min(vocabulary_hits / 4.0, 1.0)
-        + 0.20 * consistent_ratio
-        + 0.12 * serial_ratio
-        + 0.11 * type_mix_ratio
-        + (0.05 if merged_title else 0.0)
-    )
-    if span_size > 1:
-        score = min(1.0, score + 0.02)
-
-    reasons: list[str] = ["header_density"]
-    if vocabulary_hits:
-        reasons.append("business_header_vocabulary")
-    if consistent_ratio >= 0.5:
-        reasons.append("consistent_subsequent_rows")
-    if serial_ratio > 0:
-        reasons.append("serial_number_pattern")
-    if type_mix_ratio > 0:
-        reasons.append("mixed_data_types")
-    if merged_title:
-        reasons.append("merged_title_above")
-    if span_size > 1:
-        reasons.append("multi_row_header")
-
-    header_start = start_index + 1
-    header_end = header_start + span_size - 1
-    return TableRegionCandidate(
-        sheet_name=summary.name,
-        header_start_row=header_start,
-        header_end_row=header_end,
-        data_start_row=header_end + 1,
-        min_column=first_column,
-        max_column=max(last_column, summary.max_column),
-        max_row=summary.max_row,
-        confidence=round(min(max(score, 0.0), 1.0), 6),
-        reasons=tuple(reasons),
-        header_labels=labels,
-    )
+        type_mix_ratio = (
+            sum(
+                any(isinstance(value, str) for value in _nonempty_values(row))
+                and any(_is_numeric(value) for value in _nonempty_values(row))
+                for row in data_rows
+            )
+            / len(data_rows)
+            if data_rows
+            else 0.0
+        )
+        merged_title = _has_merged_title(summary, header_start)
+        score = (
+            0.20 * min(header_density, 1.0)
+            + 0.32 * min(vocabulary_hits / 4.0, 1.0)
+            + 0.20 * consistent_ratio
+            + 0.12 * serial_ratio
+            + 0.11 * type_mix_ratio
+            + (0.05 if merged_title else 0.0)
+        )
+        if len(span) > 1:
+            score = min(1.0, score + 0.02)
+        reasons: list[str] = ["header_density"]
+        if vocabulary_hits:
+            reasons.append("business_header_vocabulary")
+        if consistent_ratio >= 0.5:
+            reasons.append("consistent_subsequent_rows")
+        if serial_ratio:
+            reasons.append("serial_number_pattern")
+        if type_mix_ratio:
+            reasons.append("mixed_data_types")
+        if merged_title:
+            reasons.append("merged_title_above")
+        if len(span) > 1:
+            reasons.append("multi_row_header")
+        normalized_labels = [_normalized(label) for label in labels if label]
+        serial_anchors = sum(label in {"stt", "so thu tu"} for label in normalized_labels)
+        flags = ("ambiguous_horizontal_table_boundary",) if serial_anchors > 1 else ()
+        candidates.append(
+            TableRegionCandidate(
+                sheet_name=summary.name,
+                header_start_row=header_start,
+                header_end_row=header_end,
+                data_start_row=header_end + 1,
+                min_column=min_column,
+                max_column=max_column,
+                max_row=header_end,
+                confidence=round(min(max(score, 0.0), 1.0), 6),
+                reasons=tuple(reasons),
+                header_labels=labels,
+                boundary_flags=flags,
+            )
+        )
+    return candidates
 
 
 def _rank_candidates(
@@ -395,55 +464,254 @@ def _rank_candidates(
         scanned = _bounded_rows(row_provider, summary.name, config.header_scan_rows)
         for start_index in range(len(scanned)):
             for span_size in range(1, config.max_header_span + 1):
-                candidate = _candidate_for_span(
-                    summary=summary,
-                    scanned_rows=scanned,
-                    start_index=start_index,
-                    span_size=span_size,
-                    config=config,
+                span = scanned[start_index : start_index + span_size]
+                following = scanned[
+                    start_index + span_size : start_index + span_size + config.column_evidence_sample
+                ]
+                candidates.extend(
+                    _candidates_for_span(
+                        summary=summary,
+                        span=span,
+                        following_rows=following,
+                        config=config,
+                    )
                 )
-                if candidate is not None:
-                    candidates.append(candidate)
     candidates.sort(
         key=lambda item: (
             -item.confidence,
             item.sheet_name.casefold(),
             item.header_start_row,
             item.header_end_row,
+            item.min_column,
+            item.max_column,
         )
     )
     return candidates[: config.candidate_limit]
 
 
-def _classify_candidate_rows(
+def _overlaps(left: TableRegionCandidate, right: TableRegionCandidate) -> bool:
+    return left.min_column <= right.max_column and right.min_column <= left.max_column
+
+
+def _append_classification(state: _ResolutionState, classified: RowClassification, config: StructureRuleConfig) -> None:
+    state.counts[classified.row_class.value] += 1
+    state.physical_count += 1
+    state.accepted_max_row = max(state.accepted_max_row, classified.row_number)
+    if len(state.preview) < config.row_preview_limit:
+        state.preview.append(classified.to_payload())
+
+
+def _end_state(state: _ResolutionState, reason: str, flag: str | None = None) -> None:
+    state.ended = True
+    state.boundary_reason = reason
+    if flag and flag not in state.boundary_flags:
+        state.boundary_flags.append(flag)
+
+
+def _maybe_extend_late_edge(
+    state: _ResolutionState,
+    row: Sequence[CellValue],
+    config: StructureRuleConfig,
+) -> None:
+    if (
+        config.late_blank_header_edge_extension < 1
+        or row[0].row <= state.candidate.header_end_row + config.column_evidence_sample
+    ):
+        return
+    left = state.candidate.min_column - 1
+    right = state.candidate.max_column + 1
+    cells = {cell.column: cell for cell in row if _display(cell.value)}
+    edges = [name for name, column in (("left", left), ("right", right)) if column > 0 and column in cells]
+    if not edges:
+        return
+    if state.extended_edge is not None or len(edges) > 1:
+        if "ambiguous_horizontal_table_boundary" not in state.boundary_flags:
+            state.boundary_flags.append("ambiguous_horizontal_table_boundary")
+        return
+    edge = edges[0]
+    if edge == "left":
+        state.candidate = replace(
+            state.candidate,
+            min_column=left,
+            header_labels=(None, *state.candidate.header_labels),
+        )
+    else:
+        state.candidate = replace(
+            state.candidate,
+            max_column=right,
+            header_labels=(*state.candidate.header_labels, None),
+        )
+    state.extended_edge = edge
+    if "late_blank_header_column_evidence" not in state.boundary_flags:
+        state.boundary_flags.append("late_blank_header_column_evidence")
+
+
+def _process_body_row(
+    state: _ResolutionState,
+    row: Sequence[CellValue],
+    config: StructureRuleConfig,
+) -> None:
+    _maybe_extend_late_edge(state, row, config)
+    sliced = _slice_row(row, state.candidate.min_column, state.candidate.max_column)
+    classified = (
+        classify_row(sliced)
+        if sliced
+        else RowClassification(row[0].row, RowClass.EMPTY, 1.0, ("no_nonempty_cells",))
+    )
+
+    if state.post_total:
+        if classified.row_class in {
+            RowClass.ASSET,
+            RowClass.SECTION,
+            RowClass.SUBTOTAL,
+            RowClass.TOTAL,
+        }:
+            _end_state(state, "terminal_total", "content_after_terminal_total")
+            return
+        if state.post_total_count >= config.post_total_tail:
+            _end_state(state, "terminal_total", "post_total_tail_exceeded")
+            return
+        _append_classification(state, classified, config)
+        state.post_total_count += 1
+        return
+
+    if classified.row_class is RowClass.EMPTY:
+        if state.pending_blank is None:
+            state.pending_blank = classified
+            return
+        _end_state(state, "blank_run")
+        state.pending_blank = None
+        return
+    if state.pending_blank is not None:
+        _append_classification(state, state.pending_blank, config)
+        state.pending_blank = None
+
+    if classified.row_class is RowClass.UNRESOLVED:
+        state.unresolved_run += 1
+    else:
+        state.unresolved_run = 0
+    if state.unresolved_run >= config.vertical_unresolved_boundary_run:
+        _append_classification(state, classified, config)
+        _end_state(state, "ambiguous", "ambiguous_vertical_table_boundary")
+        return
+
+    if classified.row_class in {RowClass.NOTE, RowClass.UNRESOLVED}:
+        state.trailing_run += 1
+        if state.trailing_run > config.trailing_note_unresolved_run:
+            _end_state(state, "ambiguous", "trailing_non_asset_boundary")
+            return
+    elif classified.row_class in {RowClass.ASSET, RowClass.SECTION, RowClass.SUBTOTAL}:
+        state.trailing_run = 0
+
+    _append_classification(state, classified, config)
+    if classified.row_class is RowClass.TOTAL:
+        state.post_total = True
+
+
+def _later_header(
+    summary: SheetSummary,
+    buffered: Sequence[Sequence[CellValue]],
     candidate: TableRegionCandidate,
+    config: StructureRuleConfig,
+) -> TableRegionCandidate | None:
+    for span_size in range(1, config.max_header_span + 1):
+        if len(buffered) < span_size:
+            continue
+        later = _candidates_for_span(
+            summary=summary,
+            span=buffered[:span_size],
+            following_rows=buffered[span_size : span_size + config.data_sample_rows],
+            config=config,
+        )
+        eligible = [item for item in later if item.confidence >= config.clear_threshold and _overlaps(item, candidate)]
+        if eligible:
+            return sorted(eligible, key=lambda item: (-item.confidence, item.min_column))[0]
+    return None
+
+
+def _resolve_candidates(
+    inspection: AdapterInspectionResult,
+    candidates: Sequence[TableRegionCandidate],
     row_provider: RowProvider,
     config: StructureRuleConfig,
-) -> dict:
-    counts: Counter[str] = Counter()
-    preview: list[dict] = []
-    physical_count = 0
-    rows = row_provider(candidate.sheet_name)
-    try:
-        for row in rows:
-            row_number = row[0].row if row else physical_count + 1
-            if row_number < candidate.data_start_row:
-                continue
-            physical_count += 1
-            classified = classify_row(row)
-            counts[classified.row_class.value] += 1
-            if len(preview) < config.row_preview_limit:
-                preview.append(classified.to_payload())
-    finally:
-        _close_iterator(rows)
-    return {
-        "sheet_name": candidate.sheet_name,
-        "data_start_row": candidate.data_start_row,
-        "physical_rows_classified": physical_count,
-        "counts": {row_class.value: counts[row_class.value] for row_class in RowClass},
-        "preview": preview,
-        "preview_truncated": physical_count > len(preview),
+) -> tuple[list[TableRegionCandidate], dict[int, dict]]:
+    states = {
+        index: _ResolutionState(candidate, Counter(), [])
+        for index, candidate in enumerate(candidates)
     }
+    for summary in inspection.sheets:
+        sheet_states = [(index, state) for index, state in states.items() if state.candidate.sheet_name == summary.name]
+        if not sheet_states:
+            continue
+        source = row_provider(summary.name)
+        buffer: list[Sequence[CellValue]] = []
+        try:
+            for row in source:
+                buffer.append(row)
+                if len(buffer) <= config.max_header_span + config.data_sample_rows:
+                    continue
+                current = buffer.pop(0)
+                window = [current, *buffer]
+                for _index, state in sheet_states:
+                    if state.ended or not current:
+                        continue
+                    row_number = current[0].row
+                    if row_number < state.candidate.data_start_row:
+                        continue
+                    later = _later_header(summary, window, state.candidate, config)
+                    if later is not None and later.header_start_row > state.candidate.header_end_row:
+                        flag = (
+                            "additional_table_beyond_header_scan"
+                            if later.header_start_row > config.header_scan_rows
+                            else None
+                        )
+                        _end_state(state, "next_header", flag)
+                        continue
+                    _process_body_row(state, current, config)
+            while buffer:
+                current = buffer.pop(0)
+                window = [current, *buffer]
+                for _index, state in sheet_states:
+                    if state.ended or not current:
+                        continue
+                    row_number = current[0].row
+                    if row_number < state.candidate.data_start_row:
+                        continue
+                    later = _later_header(summary, window, state.candidate, config)
+                    if later is not None and later.header_start_row > state.candidate.header_end_row:
+                        flag = (
+                            "additional_table_beyond_header_scan"
+                            if later.header_start_row > config.header_scan_rows
+                            else None
+                        )
+                        _end_state(state, "next_header", flag)
+                        continue
+                    _process_body_row(state, current, config)
+        finally:
+            _close_iterator(source)
+
+    resolved: list[TableRegionCandidate] = []
+    classifications: dict[int, dict] = {}
+    for index, state in states.items():
+        if state.post_total and not state.ended:
+            state.boundary_reason = "terminal_total"
+        candidate = replace(
+            state.candidate,
+            max_row=state.accepted_max_row,
+            boundary_reason=state.boundary_reason,
+            boundary_flags=tuple(state.boundary_flags),
+        )
+        resolved.append(candidate)
+        classifications[index] = {
+            "sheet_name": candidate.sheet_name,
+            "data_start_row": candidate.data_start_row,
+            "candidate_table_bounds": candidate.to_payload()["candidate_table_bounds"],
+            "physical_rows_classified": state.physical_count,
+            "counts": {row_class.value: state.counts[row_class.value] for row_class in RowClass},
+            "preview": state.preview,
+            "preview_truncated": state.physical_count > len(state.preview),
+        }
+    return resolved, classifications
 
 
 def analyze_workbook_structure(
@@ -453,7 +721,8 @@ def analyze_workbook_structure(
     config: StructureRuleConfig = DEFAULT_STRUCTURE_RULES,
 ) -> dict:
     """Return canonical analysis payload from actual adapter output."""
-    candidates = _rank_candidates(inspection, row_provider, config)
+    ranked = _rank_candidates(inspection, row_provider, config)
+    candidates, classifications = _resolve_candidates(inspection, ranked, row_provider, config)
     disposition = StructureDisposition.REVIEW_REQUIRED
     disposition_reasons: list[str] = []
     if not candidates:
@@ -464,20 +733,23 @@ def analyze_workbook_structure(
             disposition_reasons.append("confidence_below_threshold")
         if len(candidates) > 1 and top.confidence - candidates[1].confidence < config.ambiguity_margin:
             disposition_reasons.append("competing_candidates")
+        for flag in top.boundary_flags:
+            if flag not in disposition_reasons:
+                disposition_reasons.append(flag)
         if not disposition_reasons:
             disposition = StructureDisposition.PROPOSED
 
-    classification = (
-        _classify_candidate_rows(candidates[0], row_provider, config)
-        if candidates
-        else {
+    classification = classifications.get(
+        0,
+        {
             "sheet_name": None,
             "data_start_row": None,
+            "candidate_table_bounds": None,
             "physical_rows_classified": 0,
             "counts": {row_class.value: 0 for row_class in RowClass},
             "preview": [],
             "preview_truncated": False,
-        }
+        },
     )
     return {
         "rule_version": STRUCTURE_RULE_VERSION,
@@ -513,9 +785,7 @@ def require_review_for_drift(payload: dict, previous_payload: dict | None) -> di
     """Fail to review when the primary structural signature changes."""
     if previous_payload is None:
         return payload
-    current_signature = primary_candidate_signature(payload)
-    previous_signature = primary_candidate_signature(previous_payload)
-    if current_signature == previous_signature:
+    if primary_candidate_signature(payload) == primary_candidate_signature(previous_payload):
         return payload
     out = copy.deepcopy(payload)
     out["disposition"] = StructureDisposition.REVIEW_REQUIRED.value
