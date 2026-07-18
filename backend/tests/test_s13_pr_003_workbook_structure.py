@@ -2,25 +2,36 @@
 from __future__ import annotations
 
 import io
+import hashlib
 import json
+import os
 import tempfile
+import threading
+import time
 import uuid
 from pathlib import Path
 
 import openpyxl
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app as fastapi_app
 import app.modules.excel_import.models  # noqa: F401
+import app.modules.excel_import.application.workbook_structure_service as structure_service
+from app.modules.excel_import.application.adapters import detect_format_and_adapter
+from app.modules.excel_import.application.workbook_structure_service import (
+    analyze_source_artifact_structure,
+)
 from app.modules.excel_import.domain.workbook_structure import (
     STRUCTURE_RULE_VERSION,
     analyze_workbook_structure,
     canonical_payload_digest,
+    classify_row,
     require_review_for_drift,
 )
 from app.modules.excel_import.domain.workbook_adapter import (
@@ -715,3 +726,788 @@ def test_canonical_digest_is_order_independent_and_tamper_sensitive():
     right = {"a": {"x": 1, "y": "đ"}, "b": [2, 1]}
     assert canonical_payload_digest(left) == canonical_payload_digest(right)
     assert canonical_payload_digest(left) != canonical_payload_digest({**right, "b": [1, 2]})
+
+
+def _cells(row_number: int, values: list[object]) -> tuple[CellValue, ...]:
+    return tuple(
+        CellValue(
+            row=row_number,
+            column=index,
+            coordinate=f"R{row_number}C{index}",
+            value=value,
+            cell_type=(
+                "boolean"
+                if isinstance(value, bool)
+                else "number"
+                if isinstance(value, (int, float))
+                else "empty"
+                if value is None
+                else "string"
+            ),
+        )
+        for index, value in enumerate(values, 1)
+    )
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([99, "TỔNG CỘNG", 100], "total"),
+        ([99, 100, "TỔNG CỘNG"], "total"),
+        (["I", "Cộng phần điện", 100], "subtotal"),
+        ([2, "Ghi chú: kiểm tra", 100], "note"),
+        ([3, "PHẦN ĐIỆN", 100], "section"),
+        ([1, "Tổng công ty ABC", 100], "asset"),
+        (["X01", "MÁY BƠM"], "unresolved"),
+        (["Máy bơm", 100], "unresolved"),
+        ([1, "Máy bơm", 100], "asset"),
+    ],
+)
+def test_v2_marker_precedence_and_asset_fail_closed(values, expected):
+    assert classify_row(_cells(7, values)).row_class.value == expected
+
+
+def _analyze_rows(rows: list[list[object]], *, merged: bool = False) -> tuple[dict, list]:
+    cell_rows = [_cells(index, values) for index, values in enumerate(rows, 1)]
+    trackers = []
+
+    class TrackedIterator:
+        def __init__(self):
+            self._rows = iter(cell_rows)
+            self.closed = False
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self._rows)
+
+        def close(self):
+            self.closed = True
+
+    def provider(_sheet_name):
+        iterator = TrackedIterator()
+        trackers.append(iterator)
+        return iterator
+
+    max_column = max((len(row) for row in rows), default=0)
+    inspection = AdapterInspectionResult(
+        format=WorkbookFormat.XLSX,
+        adapter_name="adversarial",
+        adapter_version="1",
+        sheet_names=("PD-001",),
+        sheets=(SheetSummary(name="PD-001", max_row=len(rows), max_column=max_column),),
+    )
+    return analyze_workbook_structure(inspection, provider), trackers
+
+
+def test_v2_header_cannot_absorb_immediate_section_and_rectangle_excludes_remote_cells():
+    rows = [
+        ["BẢNG KÊ"],
+        [None],
+        [None],
+        [None],
+        ["STT", "Tên tài sản", "Số lượng"],
+        ["PHẦN ĐIỆN", None, None],
+        [1, "Máy bơm", 2],
+        [2, "Máy phát", 1],
+        ["TỔNG CỘNG", None, 3],
+    ]
+    rows[0].extend([None] * 24 + ["ghi chú xa Z1"])
+    payload, trackers = _analyze_rows(rows)
+    candidate = payload["candidates"][0]
+    assert candidate["header_start_row"] == 5
+    assert candidate["header_end_row"] == 5
+    assert candidate["candidate_table_bounds"]["max_column"] == 3
+    assert payload["row_classification"]["counts"]["section"] == 1
+    assert all(item["row_number"] >= 6 for item in payload["row_classification"]["preview"])
+    assert len(trackers) == 2
+    assert all(iterator.closed for iterator in trackers)
+
+
+def test_v2_horizontal_tables_are_separate_and_blank_trailing_header_is_positional():
+    rows = [
+        ["STT", "Tên tài sản", None, None, "STT", "Tên tài sản"],
+        [1, "Máy A", "cái", None, 1, "Máy B"],
+        [2, "Máy C", None, None, 2, "Máy D"],
+    ]
+    payload, _trackers = _analyze_rows(rows)
+    bounds = {
+        (
+            item["candidate_table_bounds"]["min_column"],
+            item["candidate_table_bounds"]["max_column"],
+        )
+        for item in payload["candidates"]
+        if item["header_start_row"] == 1
+    }
+    assert (1, 3) in bounds
+    assert (5, 6) in bounds
+    left = next(
+        item
+        for item in payload["candidates"]
+        if item["header_start_row"] == 1
+        and item["candidate_table_bounds"]["min_column"] == 1
+    )
+    assert left["header_labels"] == ["STT", "Tên tài sản", None]
+
+
+def test_v2_late_adjacent_blank_header_evidence_extends_once_and_forces_review():
+    rows = [["STT", "Tên tài sản"]]
+    rows.extend([[index, f"Máy {index}"] for index in range(1, 26)])
+    rows.append([26, "Máy 26", "cái"])
+    rows.extend([[index, f"Máy {index}"] for index in range(27, 30)])
+    payload, _trackers = _analyze_rows(rows)
+    candidate = payload["candidates"][0]
+    assert candidate["candidate_table_bounds"]["max_column"] == 3
+    assert candidate["header_labels"][-1] is None
+    assert "late_blank_header_column_evidence" in candidate["boundary_flags"]
+    assert payload["disposition"] == "review_required"
+
+
+@pytest.mark.parametrize(
+    ("tail", "reason", "max_row"),
+    [
+        ([[None, None], [2, "Máy B"]], "sheet_end", 4),
+        ([[None, None], [None, None], [2, "Máy B"]], "blank_run", 2),
+        ([["không rõ"], ["vẫn không rõ"]], "ambiguous", 4),
+        (
+            [["TỔNG CỘNG", 100], ["Ghi chú: một"], ["note: hai"], ["* ba"], ["note: bốn"]],
+            "terminal_total",
+            6,
+        ),
+        (
+            [["Ghi chú: một"], ["note: hai"], ["* ba"], ["note: bốn"]],
+            "ambiguous",
+            5,
+        ),
+    ],
+)
+def test_v2_vertical_boundary_state_machine(tail, reason, max_row):
+    rows = [["STT", "Tên tài sản"], [1, "Máy A"], *tail]
+    payload, _trackers = _analyze_rows(rows)
+    candidate = payload["candidates"][0]
+    assert candidate["boundary_reason"] == reason
+    assert candidate["candidate_table_bounds"]["max_row"] == max_row
+
+
+def test_repeated_header_ends_first_rectangle_before_second_table():
+    rows = [
+        ["STT", "Tên tài sản", "Số lượng"],
+        [1, "Máy A", 1],
+        [2, "Máy B", 1],
+        [None, None, None],
+        ["STT", "Tên tài sản", "Số lượng"],
+        [1, "Máy C", 1],
+    ]
+    payload, _trackers = _analyze_rows(rows)
+    first = next(item for item in payload["candidates"] if item["header_start_row"] == 1)
+    assert first["boundary_reason"] == "next_header"
+    assert first["candidate_table_bounds"]["max_row"] == 3
+    primary_bounds = payload["candidates"][0]["candidate_table_bounds"]
+    classification = payload["row_classification"]
+    assert classification["candidate_table_bounds"] == primary_bounds
+    assert all(
+        payload["candidates"][0]["data_start_row"]
+        <= item["row_number"]
+        <= primary_bounds["max_row"]
+        for item in classification["preview"]
+    )
+
+
+def test_post_total_accepts_exactly_three_empty_tail_rows():
+    rows = [
+        ["STT", "Tên tài sản"],
+        [1, "Máy A"],
+        ["TỔNG CỘNG", 100],
+        [None, None],
+        [None, None],
+        [None, None],
+        [None, None],
+    ]
+    payload, _trackers = _analyze_rows(rows)
+    candidate = payload["candidates"][0]
+    assert candidate["candidate_table_bounds"]["max_row"] == 6
+    assert candidate["boundary_reason"] == "terminal_total"
+    assert "post_total_tail_exceeded" in candidate["boundary_flags"]
+    assert payload["row_classification"]["counts"]["empty"] == 3
+
+
+def test_header_beyond_initial_scan_ends_region_and_forces_review():
+    rows = [["STT", "Tên tài sản", "Số lượng"]]
+    rows.extend([[index, f"Máy {index}", 1] for index in range(1, 200)])
+    rows.append(["STT", "Tên tài sản", "Số lượng"])
+    rows.append([1, "Máy bảng hai", 1])
+    payload, _trackers = _analyze_rows(rows)
+    first = next(item for item in payload["candidates"] if item["header_start_row"] == 1)
+    assert first["boundary_reason"] == "next_header"
+    assert first["candidate_table_bounds"]["max_row"] == 200
+    assert "additional_table_beyond_header_scan" in first["boundary_flags"]
+    assert payload["disposition"] == "review_required"
+
+
+class _CloseFailingStream(io.BytesIO):
+    def close(self):
+        raise OSError("forced close failure")
+
+
+class _CloseFailingStorage(FakeObjectStorage):
+    def open_stream(self, key: str):
+        data = self._objects[key]
+        if self.truncate_open_to is not None:
+            data = data[: self.truncate_open_to]
+        return _CloseFailingStream(data)
+
+
+@pytest.mark.parametrize(
+    ("short_read", "status", "error_code"),
+    [
+        (False, 503, "source_stream_close_failed"),
+        (True, 409, "source_size_mismatch"),
+    ],
+)
+def test_stream_close_failure_precedence_leaks_no_temp_or_evidence(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage: FakeObjectStorage,
+    short_read: bool,
+    status: int,
+    error_code: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact_body = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    artifact = structure_db.get(ImportSourceArtifact, uuid.UUID(artifact_body["id"]))
+    failing = _CloseFailingStorage()
+    failing._objects = dict(structure_storage._objects)
+    failing._content_types = dict(structure_storage._content_types)
+    if short_read:
+        failing.truncate_open_to = artifact.file_size_bytes - 1
+    set_object_storage_override(failing)
+    before = set(Path(tempfile.gettempdir()).glob("valora-structure-*"))
+    response = structure_client.post(
+        _snapshot_path(project, batch, artifact_body["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert response.status_code == status
+    assert response.json()["detail"]["error_code"] == error_code
+    assert set(Path(tempfile.gettempdir()).glob("valora-structure-*")) == before
+    assert structure_db.query(WorkbookStructureSnapshot).count() == 0
+    assert (
+        structure_db.query(AuditEvent)
+        .filter(AuditEvent.event_name == "WorkbookStructureAnalyzed")
+        .count()
+        == 0
+    )
+
+
+def test_adapter_close_failure_cannot_bypass_temp_cleanup(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage: FakeObjectStorage,
+    monkeypatch,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    real_detect = structure_service.detect_format_and_adapter
+
+    class CloseFailingAdapter:
+        def __init__(self, inner):
+            self.inner = inner
+
+        def inspect(self, path):
+            return self.inner.inspect(path)
+
+        def iter_rows(self, path, sheet_name):
+            return self.inner.iter_rows(path, sheet_name)
+
+        def close(self):
+            self.inner.close()
+            raise OSError("forced adapter close failure")
+
+    def failing_detect(path, filename, limits=None):
+        detected, adapter = real_detect(path, filename, limits=limits)
+        return detected, CloseFailingAdapter(adapter)
+
+    monkeypatch.setattr(structure_service, "detect_format_and_adapter", failing_detect)
+    before = set(Path(tempfile.gettempdir()).glob("valora-structure-*"))
+    with pytest.raises(OSError, match="forced adapter close failure"):
+        structure_client.post(
+            _snapshot_path(project, batch, artifact["id"]),
+            headers={"X-User-Id": str(user.id)},
+        )
+    assert set(Path(tempfile.gettempdir()).glob("valora-structure-*")) == before
+    assert structure_db.query(WorkbookStructureSnapshot).count() == 0
+    assert (
+        structure_db.query(AuditEvent)
+        .filter(AuditEvent.event_name == "WorkbookStructureAnalyzed")
+        .count()
+        == 0
+    )
+
+
+def test_immediate_predecessor_without_snapshot_is_bound_and_forces_review(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    first_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    response = structure_client.post(
+        _snapshot_path(project, batch, second_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert response.status_code == 201, response.text
+    payload = response.json()["structure_payload"]
+    assert payload["disposition"] == "review_required"
+    assert "prior_generation_snapshot_missing" in payload["disposition_reasons"]
+    assert payload["drift_reference"] == {
+        "source_artifact_id": first_artifact["id"],
+        "source_generation": 1,
+        "snapshot_id": None,
+        "snapshot_version": None,
+        "rule_version": None,
+        "analysis_digest_sha256": None,
+    }
+
+
+def test_drift_reference_is_digest_and_durable_snapshot_bound(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    first_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    first = structure_client.post(
+        _snapshot_path(project, batch, first_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert first.status_code == 201
+    second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    second_path = _snapshot_path(project, batch, second_artifact["id"])
+    second = structure_client.post(second_path, headers={"X-User-Id": str(user.id)})
+    assert second.status_code == 201, second.text
+    payload = second.json()["structure_payload"]
+    assert payload["drift_reference"]["snapshot_id"] == first.json()["id"]
+    assert payload["drift_reference"]["analysis_digest_sha256"] == first.json()[
+        "analysis_digest_sha256"
+    ]
+
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(second.json()["id"]))
+    altered = json.loads(json.dumps(snapshot.structure_payload))
+    altered["drift_reference"]["snapshot_version"] += 1
+    snapshot.structure_payload = altered
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(altered)
+    structure_db.commit()
+    replayed = structure_client.get(
+        f"{second_path}/{snapshot.id}",
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["missing_reference", "null_reference", "missing_predecessor_artifact"],
+)
+def test_v2_drift_reference_shape_and_predecessor_artifact_are_integrity_bound(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    tamper: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    first_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, second_artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    assert created.status_code == 201, created.text
+
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    altered = json.loads(json.dumps(snapshot.structure_payload))
+    if tamper == "missing_reference":
+        altered.pop("drift_reference")
+    elif tamper == "null_reference":
+        altered["drift_reference"] = None
+    else:
+        altered["drift_reference"]["source_artifact_id"] = str(uuid.uuid4())
+    snapshot.structure_payload = altered
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(altered)
+    structure_db.commit()
+
+    replayed = structure_client.get(
+        f"{path}/{snapshot.id}",
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+    assert first_artifact["id"] != second_artifact["id"]
+
+
+def _postgres_engine_or_skip(*, application_name: str | None = None):
+    url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if not url or not url.startswith("postgres"):
+        if os.getenv("CI") == "true":
+            pytest.fail(
+                "CI=true requires PostgreSQL TEST_DATABASE_URL for the S13-PR-003 "
+                "serialization gate."
+            )
+        pytest.skip("PostgreSQL is required for the S13-PR-003 serialization gate")
+    connect_args = {"connect_timeout": 5}
+    if application_name:
+        connect_args["application_name"] = application_name
+    engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+    try:
+        with engine.connect() as connection:
+            exists = connection.execute(
+                text("SELECT to_regclass('workbook_structure_snapshots')")
+            ).scalar_one()
+        if exists is None:
+            if os.getenv("CI") == "true":
+                pytest.fail("CI PostgreSQL has not been migrated to the S13-PR-003 head")
+            pytest.skip("PostgreSQL schema is not migrated to the S13-PR-003 head")
+    except Exception:
+        engine.dispose()
+        raise
+    return engine
+
+
+def _add_available_artifact(
+    db: Session,
+    storage: FakeObjectStorage,
+    *,
+    org,
+    user,
+    project,
+    batch,
+    generation: int,
+    data: bytes,
+) -> ImportSourceArtifact:
+    key = f"s13-pr-003/{uuid.uuid4().hex}.xlsx"
+    storage._objects[key] = data
+    storage._content_types[key] = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    artifact = ImportSourceArtifact(
+        organization_id=org.id,
+        project_id=project.id,
+        import_batch_id=batch.id,
+        generation=generation,
+        original_filename=f"generation-{generation}.xlsx",
+        detected_format="xlsx",
+        content_type=storage._content_types[key],
+        file_size_bytes=len(data),
+        checksum_sha256=hashlib.sha256(data).hexdigest(),
+        storage_object_key=key,
+        storage_etag=hashlib.md5(data).hexdigest(),
+        state="available",
+        adapter_metadata={},
+        created_by_user_id=user.id,
+    )
+    db.add(artifact)
+    db.commit()
+    db.refresh(artifact)
+    return artifact
+
+
+def _offline_payload(data: bytes, artifact: ImportSourceArtifact) -> tuple[dict, str, str]:
+    handle = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    path = handle.name
+    adapter = None
+    try:
+        handle.write(data)
+        handle.close()
+        _format, adapter = detect_format_and_adapter(
+            path,
+            artifact.original_filename,
+        )
+        inspection = adapter.inspect(path)
+        payload = analyze_workbook_structure(
+            inspection,
+            lambda sheet_name: adapter.iter_rows(path, sheet_name),
+        )
+        payload["source"] = {
+            "source_artifact_id": str(artifact.id),
+            "source_generation": artifact.generation,
+            "source_checksum_sha256": artifact.checksum_sha256,
+            "detected_format": artifact.detected_format,
+            "adapter_name": inspection.adapter_name,
+            "adapter_version": inspection.adapter_version,
+        }
+        payload["drift_reference"] = None
+        return payload, inspection.adapter_name, inspection.adapter_version
+    finally:
+        if not handle.closed:
+            handle.close()
+        if adapter is not None:
+            adapter.close()
+        Path(path).unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("changed_structure", [False, True])
+def test_postgres_serializes_predecessor_drift_and_snapshot_versions(changed_structure: bool):
+    """No-sleep proof: batch lock wait, exact predecessor binding, and unique versions."""
+    observer_engine = _postgres_engine_or_skip()
+    setup_session = sessionmaker(bind=observer_engine)()
+    storage = FakeObjectStorage()
+    try:
+        org, user, _other, project, batch = _seed(setup_session)
+        previous_bytes = _xlsx_bytes()
+        current_bytes = _xlsx_bytes(header_row=6) if changed_structure else previous_bytes
+        previous_artifact = _add_available_artifact(
+            setup_session,
+            storage,
+            org=org,
+            user=user,
+            project=project,
+            batch=batch,
+            generation=1,
+            data=previous_bytes,
+        )
+        current_artifact = _add_available_artifact(
+            setup_session,
+            storage,
+            org=org,
+            user=user,
+            project=project,
+            batch=batch,
+            generation=2,
+            data=current_bytes,
+        )
+        payload, adapter_name, adapter_version = _offline_payload(
+            previous_bytes,
+            previous_artifact,
+        )
+        previous_digest = canonical_payload_digest(payload)
+
+        lock_session = sessionmaker(bind=observer_engine)()
+        locked_batch = (
+            lock_session.query(ProjectAssetImportBatch)
+            .filter(ProjectAssetImportBatch.id == batch.id)
+            .with_for_update()
+            .one()
+        )
+        assert locked_batch.id == batch.id
+        previous_snapshot = WorkbookStructureSnapshot(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            project_id=project.id,
+            import_batch_id=batch.id,
+            source_artifact_id=previous_artifact.id,
+            snapshot_version=1,
+            source_checksum_sha256=previous_artifact.checksum_sha256,
+            rule_version=STRUCTURE_RULE_VERSION,
+            adapter_name=adapter_name,
+            adapter_version=adapter_version,
+            disposition=payload["disposition"],
+            candidate_count=payload["candidate_count"],
+            structure_payload=payload,
+            analysis_digest_sha256=previous_digest,
+            created_by_user_id=user.id,
+        )
+        lock_session.add(previous_snapshot)
+        lock_session.flush()
+
+        app_name = f"s13_pr_003_waiter_{uuid.uuid4().hex}"
+        worker_engine = _postgres_engine_or_skip(application_name=app_name)
+        worker_result: dict[str, object] = {}
+        worker_started = threading.Event()
+
+        def analyze_current():
+            session = sessionmaker(bind=worker_engine)()
+            worker_started.set()
+            try:
+                worker_result["snapshot"] = analyze_source_artifact_structure(
+                    session,
+                    org_id=org.id,
+                    project_id=project.id,
+                    batch_id=batch.id,
+                    artifact_id=current_artifact.id,
+                    current_user=user,
+                    storage=storage,
+                )
+            except BaseException as exc:
+                worker_result["error"] = exc
+                session.rollback()
+            finally:
+                session.close()
+
+        worker = threading.Thread(target=analyze_current, daemon=True)
+        worker.start()
+        assert worker_started.wait(timeout=5)
+        deadline = time.monotonic() + 15
+        lock_wait_observed = False
+        while time.monotonic() < deadline:
+            with observer_engine.connect() as connection:
+                lock_wait_observed = bool(
+                    connection.execute(
+                        text(
+                            "SELECT EXISTS (SELECT 1 FROM pg_stat_activity "
+                            "WHERE application_name = :name "
+                            "AND wait_event_type = 'Lock')"
+                        ),
+                        {"name": app_name},
+                    ).scalar_one()
+                )
+            if lock_wait_observed:
+                break
+        assert lock_wait_observed, "PostgreSQL did not expose the expected batch-lock wait"
+        lock_session.commit()
+        worker.join(timeout=20)
+        assert not worker.is_alive()
+        assert "error" not in worker_result, repr(worker_result.get("error"))
+        created = worker_result["snapshot"]
+        reference = created.structure_payload["drift_reference"]
+        assert reference["source_artifact_id"] == str(previous_artifact.id)
+        assert reference["snapshot_id"] == str(previous_snapshot.id)
+        assert reference["analysis_digest_sha256"] == previous_digest
+        if changed_structure:
+            assert created.disposition == "review_required"
+            assert (
+                "structure_drift_from_previous_generation"
+                in created.structure_payload["disposition_reasons"]
+            )
+        else:
+            assert created.disposition == "proposed"
+
+        if not changed_structure:
+            barrier = threading.Barrier(3)
+            versions: list[int] = []
+            errors: list[BaseException] = []
+
+            def replay_same_artifact():
+                session = sessionmaker(bind=observer_engine)()
+                try:
+                    barrier.wait(timeout=5)
+                    snapshot = analyze_source_artifact_structure(
+                        session,
+                        org_id=org.id,
+                        project_id=project.id,
+                        batch_id=batch.id,
+                        artifact_id=current_artifact.id,
+                        current_user=user,
+                        storage=storage,
+                    )
+                    versions.append(snapshot.snapshot_version)
+                except BaseException as exc:
+                    errors.append(exc)
+                    session.rollback()
+                finally:
+                    session.close()
+
+            threads = [threading.Thread(target=replay_same_artifact, daemon=True) for _ in range(2)]
+            for thread in threads:
+                thread.start()
+            barrier.wait(timeout=5)
+            for thread in threads:
+                thread.join(timeout=20)
+            assert not errors, repr(errors)
+            assert sorted(versions) == [2, 3]
+        worker_engine.dispose()
+        lock_session.close()
+    finally:
+        setup_session.close()
+        observer_engine.dispose()
+
+
+class _BlockingCloseStream(io.BytesIO):
+    def __init__(self, data: bytes, reached: threading.Event, release: threading.Event):
+        super().__init__(data)
+        self._reached = reached
+        self._release = release
+
+    def close(self):
+        self._reached.set()
+        if not self._release.wait(timeout=15):
+            raise TimeoutError("identity-map probe was not released")
+        super().close()
+
+
+class _BlockingCloseStorage(FakeObjectStorage):
+    def __init__(self, reached: threading.Event, release: threading.Event):
+        super().__init__()
+        self._reached = reached
+        self._release = release
+
+    def open_stream(self, key: str):
+        return _BlockingCloseStream(self._objects[key], self._reached, self._release)
+
+
+def test_postgres_populate_existing_detects_durable_authority_change():
+    engine = _postgres_engine_or_skip()
+    setup = sessionmaker(bind=engine)()
+    reached = threading.Event()
+    release = threading.Event()
+    storage = _BlockingCloseStorage(reached, release)
+    try:
+        org, user, _other, project, batch = _seed(setup)
+        artifact = _add_available_artifact(
+            setup,
+            storage,
+            org=org,
+            user=user,
+            project=project,
+            batch=batch,
+            generation=1,
+            data=_xlsx_bytes(),
+        )
+        outcome: dict[str, object] = {}
+
+        def analyze():
+            session = sessionmaker(bind=engine)()
+            try:
+                outcome["snapshot"] = analyze_source_artifact_structure(
+                    session,
+                    org_id=org.id,
+                    project_id=project.id,
+                    batch_id=batch.id,
+                    artifact_id=artifact.id,
+                    current_user=user,
+                    storage=storage,
+                )
+            except BaseException as exc:
+                outcome["error"] = exc
+                session.rollback()
+            finally:
+                session.close()
+
+        worker = threading.Thread(target=analyze, daemon=True)
+        worker.start()
+        assert reached.wait(timeout=10)
+        mutation = sessionmaker(bind=engine)()
+        try:
+            durable = mutation.get(ImportSourceArtifact, artifact.id)
+            durable.state = "orphaned"
+            mutation.commit()
+        finally:
+            mutation.close()
+        release.set()
+        worker.join(timeout=20)
+        assert not worker.is_alive()
+        error = outcome.get("error")
+        assert isinstance(error, HTTPException)
+        assert error.status_code == 409
+        assert error.detail["error_code"] == "source_artifact_changed"
+        verify = sessionmaker(bind=engine)()
+        try:
+            assert (
+                verify.query(WorkbookStructureSnapshot)
+                .filter(WorkbookStructureSnapshot.source_artifact_id == artifact.id)
+                .count()
+                == 0
+            )
+            assert (
+                verify.query(AuditEvent)
+                .filter(
+                    AuditEvent.entity_type == "WorkbookStructureSnapshot",
+                    AuditEvent.payload["source_artifact_id"].as_string() == str(artifact.id),
+                )
+                .count()
+                == 0
+            )
+        finally:
+            verify.close()
+    finally:
+        release.set()
+        setup.close()
+        engine.dispose()
