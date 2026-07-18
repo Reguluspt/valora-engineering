@@ -1,9 +1,9 @@
 # S13-PR-003 Corrective Evidence-Gate Addendum — Bounded Regions and Serializable Drift
 
-**Date:** 2026-07-18  
-**Status:** frozen before corrective runtime changes  
-**Audited remote head:** `420b04bdca54c61ff0343904e8a350619c1e09ed`  
-**Audited tree:** `60be27e53315dc27a5230961d055bdf844ef3936`  
+**Date:** 2026-07-18
+**Status:** frozen before corrective runtime changes
+**Audited remote head:** `420b04bdca54c61ff0343904e8a350619c1e09ed`
+**Audited tree:** `60be27e53315dc27a5230961d055bdf844ef3936`
 **Branch:** `s13-pr-003-workbook-structure-discovery`
 
 This addendum is binding for the corrective implementation after the independent Sol Max audit.
