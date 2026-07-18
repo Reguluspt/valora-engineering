@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass
 from typing import Iterator
 
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
@@ -48,6 +48,21 @@ _SUPPORTED_STRUCTURE_RULE_VERSIONS = frozenset(
 )
 _SNAPSHOT_PAGE_LIMIT_DEFAULT = 20
 _SNAPSHOT_PAGE_LIMIT_MAX = 50
+_FINALIZATION_EVENT_NAME = "WorkbookStructureAnalyzed"
+_FINALIZATION_ENTITY_TYPE = "WorkbookStructureSnapshot"
+_FINALIZATION_COMMAND_NAME = "AnalyzeWorkbookStructure"
+_FINALIZATION_PAYLOAD_KEYS = frozenset(
+    {
+        "import_batch_id",
+        "source_artifact_id",
+        "source_generation",
+        "snapshot_version",
+        "rule_version",
+        "disposition",
+        "candidate_count",
+        "analysis_digest_sha256",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -353,6 +368,80 @@ def _verify_snapshot_core(
     return reference
 
 
+def _verify_finalization_seals(
+    db: Session,
+    snapshots: list[WorkbookStructureSnapshot],
+    source_artifact: ImportSourceArtifact,
+) -> None:
+    """Require one exact, atomic finalization seal for every page target."""
+    if not snapshots:
+        return
+    snapshot_ids = {snapshot.id for snapshot in snapshots}
+    events = (
+        db.query(AuditEvent)
+        .filter(
+            AuditEvent.organization_id == source_artifact.organization_id,
+            AuditEvent.event_name == _FINALIZATION_EVENT_NAME,
+            AuditEvent.entity_type == _FINALIZATION_ENTITY_TYPE,
+            AuditEvent.entity_id.in_(snapshot_ids),
+            AuditEvent.command_name == _FINALIZATION_COMMAND_NAME,
+        )
+        .order_by(
+            AuditEvent.entity_id.asc(),
+            AuditEvent.created_at.asc(),
+            AuditEvent.id.asc(),
+        )
+        .populate_existing()
+        .limit(len(snapshots) + 1)
+        .all()
+    )
+    events_by_snapshot: dict[uuid.UUID, list[AuditEvent]] = {}
+    for audit_event in events:
+        if audit_event.entity_id is not None:
+            events_by_snapshot.setdefault(audit_event.entity_id, []).append(audit_event)
+
+    for snapshot in snapshots:
+        matching = events_by_snapshot.get(snapshot.id, [])
+        if len(matching) != 1:
+            raise _error(
+                500,
+                "structure_snapshot_integrity_failure",
+                "Dấu niêm phong hoàn tất snapshot không hợp lệ.",
+            )
+        audit_event = matching[0]
+        expected_payload = {
+            "import_batch_id": str(snapshot.import_batch_id),
+            "source_artifact_id": str(snapshot.source_artifact_id),
+            "source_generation": source_artifact.generation,
+            "snapshot_version": snapshot.snapshot_version,
+            "rule_version": snapshot.rule_version,
+            "disposition": snapshot.disposition,
+            "candidate_count": snapshot.candidate_count,
+            "analysis_digest_sha256": snapshot.analysis_digest_sha256,
+        }
+        payload = audit_event.payload
+        if (
+            audit_event.organization_id != snapshot.organization_id
+            or audit_event.actor_user_id != snapshot.created_by_user_id
+            or audit_event.event_name != _FINALIZATION_EVENT_NAME
+            or audit_event.entity_type != _FINALIZATION_ENTITY_TYPE
+            or audit_event.entity_id != snapshot.id
+            or audit_event.command_name != _FINALIZATION_COMMAND_NAME
+            or audit_event.created_at is None
+            or not isinstance(payload, dict)
+            or frozenset(payload) != _FINALIZATION_PAYLOAD_KEYS
+            or any(
+                type(payload[key]) is not type(expected) or payload[key] != expected
+                for key, expected in expected_payload.items()
+            )
+        ):
+            raise _error(
+                500,
+                "structure_snapshot_integrity_failure",
+                "Dấu niêm phong hoàn tất snapshot không khớp bằng chứng đã lưu.",
+            )
+
+
 def _verify_snapshot_page(
     db: Session,
     snapshots: list[WorkbookStructureSnapshot],
@@ -364,6 +453,7 @@ def _verify_snapshot_page(
     references = [
         _verify_snapshot_core(snapshot, source_artifact) for snapshot in snapshots
     ]
+    _verify_finalization_seals(db, snapshots, source_artifact)
     lineage_required = any(
         snapshot.rule_version in {"s13-pr-003-v2", "s13-pr-003-v3"}
         for snapshot in snapshots
@@ -405,39 +495,43 @@ def _verify_snapshot_page(
         for reference in references
         if reference is not None
     }
-    referenced_artifacts = (
-        db.query(ImportSourceArtifact)
+    snapshot_ids = {
+        uuid.UUID(reference["snapshot_id"])
+        for reference in references
+        if reference is not None and reference.get("snapshot_id") is not None
+    }
+    referenced_context = (
+        db.query(ImportSourceArtifact, WorkbookStructureSnapshot)
+        .outerjoin(
+            WorkbookStructureSnapshot,
+            and_(
+                WorkbookStructureSnapshot.id.in_(snapshot_ids),
+                WorkbookStructureSnapshot.organization_id
+                == source_artifact.organization_id,
+                WorkbookStructureSnapshot.project_id == source_artifact.project_id,
+                WorkbookStructureSnapshot.import_batch_id
+                == source_artifact.import_batch_id,
+                WorkbookStructureSnapshot.source_artifact_id == ImportSourceArtifact.id,
+            ),
+        )
         .filter(
             ImportSourceArtifact.id.in_(artifact_ids),
             ImportSourceArtifact.organization_id == source_artifact.organization_id,
             ImportSourceArtifact.project_id == source_artifact.project_id,
             ImportSourceArtifact.import_batch_id == source_artifact.import_batch_id,
         )
+        .order_by(ImportSourceArtifact.id.asc(), WorkbookStructureSnapshot.id.asc())
         .populate_existing()
         .all()
         if artifact_ids
         else []
     )
-    artifacts_by_id = {artifact.id: artifact for artifact in referenced_artifacts}
-    snapshot_ids = {
-        uuid.UUID(reference["snapshot_id"])
-        for reference in references
-        if reference is not None and reference.get("snapshot_id") is not None
+    artifacts_by_id = {artifact.id: artifact for artifact, _snapshot in referenced_context}
+    snapshots_by_id = {
+        snapshot.id: snapshot
+        for _artifact, snapshot in referenced_context
+        if snapshot is not None
     }
-    referenced_snapshots = (
-        db.query(WorkbookStructureSnapshot)
-        .filter(
-            WorkbookStructureSnapshot.id.in_(snapshot_ids),
-            WorkbookStructureSnapshot.organization_id == source_artifact.organization_id,
-            WorkbookStructureSnapshot.project_id == source_artifact.project_id,
-            WorkbookStructureSnapshot.import_batch_id == source_artifact.import_batch_id,
-        )
-        .populate_existing()
-        .all()
-        if snapshot_ids
-        else []
-    )
-    snapshots_by_id = {snapshot.id: snapshot for snapshot in referenced_snapshots}
     for reference in references:
         if reference is None:
             continue

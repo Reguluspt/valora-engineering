@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, text
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
@@ -318,6 +319,64 @@ def _snapshot_path(project: Project, batch: ProjectAssetImportBatch, artifact_id
     )
 
 
+def _seal_payload(
+    snapshot: WorkbookStructureSnapshot,
+    *,
+    source_generation: int | None = None,
+) -> dict:
+    if source_generation is None:
+        source_generation = snapshot.structure_payload["source"]["source_generation"]
+    return {
+        "import_batch_id": str(snapshot.import_batch_id),
+        "source_artifact_id": str(snapshot.source_artifact_id),
+        "source_generation": source_generation,
+        "snapshot_version": snapshot.snapshot_version,
+        "rule_version": snapshot.rule_version,
+        "disposition": snapshot.disposition,
+        "candidate_count": snapshot.candidate_count,
+        "analysis_digest_sha256": snapshot.analysis_digest_sha256,
+    }
+
+
+def _add_snapshot_seal(
+    db: Session,
+    snapshot: WorkbookStructureSnapshot,
+    *,
+    source_generation: int | None = None,
+) -> AuditEvent:
+    audit_event = AuditEvent(
+        organization_id=snapshot.organization_id,
+        actor_user_id=snapshot.created_by_user_id,
+        event_name="WorkbookStructureAnalyzed",
+        entity_type="WorkbookStructureSnapshot",
+        entity_id=snapshot.id,
+        command_name="AnalyzeWorkbookStructure",
+        payload=_seal_payload(snapshot, source_generation=source_generation),
+    )
+    db.add(audit_event)
+    return audit_event
+
+
+def _sync_snapshot_seal(
+    db: Session,
+    snapshot: WorkbookStructureSnapshot,
+) -> AuditEvent:
+    audit_event = (
+        db.query(AuditEvent)
+        .filter(
+            AuditEvent.event_name == "WorkbookStructureAnalyzed",
+            AuditEvent.entity_type == "WorkbookStructureSnapshot",
+            AuditEvent.entity_id == snapshot.id,
+        )
+        .one()
+    )
+    audit_event.organization_id = snapshot.organization_id
+    audit_event.actor_user_id = snapshot.created_by_user_id
+    audit_event.command_name = "AnalyzeWorkbookStructure"
+    audit_event.payload = _seal_payload(snapshot)
+    return audit_event
+
+
 @pytest.mark.parametrize(
     ("suffix", "factory"),
     [("xlsx", _xlsx_bytes), ("xls", _xls_bytes)],
@@ -609,6 +668,18 @@ def test_append_only_replay_digest_and_no_mutation(
         .all()
     )
     assert len(events) == 2
+    snapshots = {
+        snapshot.id: snapshot
+        for snapshot in structure_db.query(WorkbookStructureSnapshot).all()
+    }
+    for audit_event in events:
+        sealed = snapshots[audit_event.entity_id]
+        assert audit_event.organization_id == sealed.organization_id
+        assert audit_event.actor_user_id == sealed.created_by_user_id
+        assert audit_event.entity_type == "WorkbookStructureSnapshot"
+        assert audit_event.command_name == "AnalyzeWorkbookStructure"
+        assert audit_event.created_at is not None
+        assert audit_event.payload == _seal_payload(sealed)
     serialized_audit = json.dumps(events[0].payload, ensure_ascii=False)
     assert "Máy bơm" not in serialized_audit
     assert "header_labels" not in serialized_audit
@@ -1110,6 +1181,276 @@ def test_drift_reference_is_digest_and_durable_snapshot_bound(
     assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
 
 
+@pytest.mark.parametrize("tamper", ["older", "all_null", "later"])
+def test_finalization_seal_blocks_coherent_lineage_rebinding(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    tamper: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    predecessor_artifact = _upload(
+        structure_client, user, project, batch, _xlsx_bytes()
+    )
+    predecessor_path = _snapshot_path(project, batch, predecessor_artifact["id"])
+    predecessor_one = structure_client.post(
+        predecessor_path, headers={"X-User-Id": str(user.id)}
+    )
+    assert predecessor_one.status_code == 201
+    predecessor_two = None
+    if tamper == "older":
+        predecessor_two = structure_client.post(
+            predecessor_path, headers={"X-User-Id": str(user.id)}
+        )
+        assert predecessor_two.status_code == 201
+
+    target_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    target_path = _snapshot_path(project, batch, target_artifact["id"])
+    target_response = structure_client.post(
+        target_path, headers={"X-User-Id": str(user.id)}
+    )
+    assert target_response.status_code == 201, target_response.text
+    target = structure_db.get(
+        WorkbookStructureSnapshot, uuid.UUID(target_response.json()["id"])
+    )
+    altered = json.loads(json.dumps(target.structure_payload))
+
+    if tamper == "older":
+        assert altered["drift_reference"]["snapshot_version"] == 2
+        replacement = predecessor_one.json()
+        altered["drift_reference"].update(
+            {
+                "snapshot_id": replacement["id"],
+                "snapshot_version": replacement["snapshot_version"],
+                "rule_version": replacement["rule_version"],
+                "analysis_digest_sha256": replacement["analysis_digest_sha256"],
+            }
+        )
+    elif tamper == "all_null":
+        altered["drift_reference"].update(
+            {
+                "snapshot_id": None,
+                "snapshot_version": None,
+                "rule_version": None,
+                "analysis_digest_sha256": None,
+            }
+        )
+    else:
+        predecessor_two = structure_client.post(
+            predecessor_path, headers={"X-User-Id": str(user.id)}
+        )
+        assert predecessor_two.status_code == 201
+        replacement = predecessor_two.json()
+        altered["drift_reference"].update(
+            {
+                "snapshot_id": replacement["id"],
+                "snapshot_version": replacement["snapshot_version"],
+                "rule_version": replacement["rule_version"],
+                "analysis_digest_sha256": replacement["analysis_digest_sha256"],
+            }
+        )
+
+    target.structure_payload = altered
+    target.analysis_digest_sha256 = canonical_payload_digest(altered)
+    structure_db.commit()
+    replayed = structure_client.get(
+        f"{target_path}/{target.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_finalization_seal_blocks_coherent_payload_digest_and_scalar_tamper(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    altered = json.loads(json.dumps(snapshot.structure_payload))
+    altered["disposition"] = "review_required"
+    altered["candidate_count"] += 1
+    snapshot.disposition = altered["disposition"]
+    snapshot.candidate_count = altered["candidate_count"]
+    snapshot.structure_payload = altered
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(altered)
+    structure_db.commit()
+
+    replayed = structure_client.get(
+        f"{path}/{snapshot.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "missing",
+        "duplicate",
+        "organization_id",
+        "actor_user_id",
+        "event_name",
+        "entity_type",
+        "entity_id",
+        "command_name",
+        "payload_not_object",
+        "payload_missing_key",
+        "payload_extra_key",
+        "import_batch_id",
+        "source_artifact_id",
+        "source_generation",
+        "source_generation_bool",
+        "snapshot_version",
+        "snapshot_version_wrong_type",
+        "rule_version",
+        "disposition",
+        "candidate_count",
+        "candidate_count_bool",
+        "analysis_digest_sha256",
+    ],
+)
+def test_finalization_seal_requires_exact_metadata_shape_and_values(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    tamper: str,
+):
+    _org, user, other_user, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    audit_event = (
+        structure_db.query(AuditEvent)
+        .filter(
+            AuditEvent.event_name == "WorkbookStructureAnalyzed",
+            AuditEvent.entity_id == snapshot.id,
+        )
+        .one()
+    )
+
+    if tamper == "missing":
+        structure_db.delete(audit_event)
+    elif tamper == "duplicate":
+        _add_snapshot_seal(structure_db, snapshot)
+    elif tamper == "organization_id":
+        audit_event.organization_id = other_user.organization_id
+    elif tamper == "actor_user_id":
+        audit_event.actor_user_id = other_user.id
+    elif tamper == "event_name":
+        audit_event.event_name = "WorkbookStructureAlmostAnalyzed"
+    elif tamper == "entity_type":
+        audit_event.entity_type = "ImportSourceArtifact"
+    elif tamper == "entity_id":
+        audit_event.entity_id = uuid.uuid4()
+    elif tamper == "command_name":
+        audit_event.command_name = "AnalyzeAnotherWorkbookStructure"
+    elif tamper == "payload_not_object":
+        audit_event.payload = ["not", "an", "object"]
+    else:
+        payload = dict(audit_event.payload)
+        if tamper == "payload_missing_key":
+            payload.pop("analysis_digest_sha256")
+        elif tamper == "payload_extra_key":
+            payload["correlation_id"] = "must-not-be-in-canonical-payload"
+        elif tamper == "import_batch_id":
+            payload[tamper] = str(uuid.uuid4())
+        elif tamper == "source_artifact_id":
+            payload[tamper] = str(uuid.uuid4())
+        elif tamper == "source_generation":
+            payload[tamper] += 1
+        elif tamper == "source_generation_bool":
+            payload["source_generation"] = True
+        elif tamper == "snapshot_version":
+            payload[tamper] += 1
+        elif tamper == "snapshot_version_wrong_type":
+            payload["snapshot_version"] = "1"
+        elif tamper == "rule_version":
+            payload[tamper] = "s13-pr-003-v2"
+        elif tamper == "disposition":
+            payload[tamper] = "review_required"
+        elif tamper == "candidate_count":
+            payload[tamper] += 1
+        elif tamper == "candidate_count_bool":
+            payload["candidate_count"] = True
+        else:
+            payload[tamper] = "0" * 64
+        audit_event.payload = payload
+        if tamper in {"source_generation_bool", "candidate_count_bool"}:
+            # Python considers True equal to 1; force the JSON type exploit to persist.
+            flag_modified(audit_event, "payload")
+    structure_db.commit()
+
+    replayed = structure_client.get(
+        f"{path}/{snapshot.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_finalization_seal_requires_non_null_created_at(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot_id = uuid.UUID(created.json()["id"])
+    user_id = user.id
+    seal_id = (
+        structure_db.query(AuditEvent.id)
+        .filter(AuditEvent.entity_id == snapshot_id)
+        .scalar()
+    )
+    structure_db.expunge_all()
+
+    def null_loaded_timestamp(audit_event: AuditEvent, _context) -> None:
+        if audit_event.id == seal_id:
+            audit_event.created_at = None
+
+    event.listen(AuditEvent, "load", null_loaded_timestamp)
+    try:
+        replayed = structure_client.get(
+            f"{path}/{snapshot_id}", headers={"X-User-Id": str(user_id)}
+        )
+    finally:
+        event.remove(AuditEvent, "load", null_loaded_timestamp)
+        structure_db.rollback()
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_finalization_seal_allows_non_binding_correlation_id_change(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot_id = uuid.UUID(created.json()["id"])
+    audit_event = (
+        structure_db.query(AuditEvent)
+        .filter(AuditEvent.entity_id == snapshot_id)
+        .one()
+    )
+    audit_event.correlation_id = "operational-correlation-change"
+    structure_db.commit()
+
+    replayed = structure_client.get(
+        f"{path}/{snapshot_id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 200, replayed.text
+    assert replayed.json() == created.json()
+
+
 @pytest.mark.parametrize(
     "tamper",
     ["missing_reference", "null_reference", "missing_predecessor_artifact"],
@@ -1146,6 +1487,156 @@ def test_v2_drift_reference_shape_and_predecessor_artifact_are_integrity_bound(
     assert replayed.status_code == 500
     assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
     assert first_artifact["id"] != second_artifact["id"]
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["snapshot_id", "snapshot_version", "rule_version", "digest", "source", "tenant"],
+)
+def test_direct_referenced_snapshot_scope_and_fields_remain_integrity_bound(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    tamper: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    predecessor_artifact = _upload(
+        structure_client, user, project, batch, _xlsx_bytes()
+    )
+    predecessor = structure_client.post(
+        _snapshot_path(project, batch, predecessor_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert predecessor.status_code == 201
+    target_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    target_path = _snapshot_path(project, batch, target_artifact["id"])
+    created = structure_client.post(
+        target_path, headers={"X-User-Id": str(user.id)}
+    )
+    target = structure_db.get(
+        WorkbookStructureSnapshot, uuid.UUID(created.json()["id"])
+    )
+    altered = json.loads(json.dumps(target.structure_payload))
+    reference = altered["drift_reference"]
+
+    if tamper == "snapshot_id":
+        reference["snapshot_id"] = str(uuid.uuid4())
+    elif tamper == "snapshot_version":
+        reference["snapshot_version"] += 1
+    elif tamper == "rule_version":
+        reference["rule_version"] = "s13-pr-003-v2"
+    elif tamper == "digest":
+        reference["analysis_digest_sha256"] = "0" * 64
+    elif tamper == "source":
+        reference["snapshot_id"] = str(target.id)
+        reference["snapshot_version"] = target.snapshot_version
+        reference["rule_version"] = target.rule_version
+        reference["analysis_digest_sha256"] = target.analysis_digest_sha256
+    else:
+        other_org, other_user, _other, other_project, other_batch = _seed(structure_db)
+        assert other_org.id != target.organization_id
+        other_artifact = _upload(
+            structure_client, other_user, other_project, other_batch, _xlsx_bytes()
+        )
+        other_created = structure_client.post(
+            _snapshot_path(other_project, other_batch, other_artifact["id"]),
+            headers={"X-User-Id": str(other_user.id)},
+        )
+        assert other_created.status_code == 201
+        other_snapshot = other_created.json()
+        reference["snapshot_id"] = other_snapshot["id"]
+        reference["snapshot_version"] = other_snapshot["snapshot_version"]
+        reference["rule_version"] = other_snapshot["rule_version"]
+        reference["analysis_digest_sha256"] = other_snapshot["analysis_digest_sha256"]
+
+    target.structure_payload = altered
+    target.analysis_digest_sha256 = canonical_payload_digest(altered)
+    _sync_snapshot_seal(structure_db, target)
+    structure_db.commit()
+    replayed = structure_client.get(
+        f"{target_path}/{target.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 500
+    assert replayed.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_historical_reference_stays_valid_after_newer_predecessor_snapshots(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    predecessor_artifact = _upload(
+        structure_client, user, project, batch, _xlsx_bytes()
+    )
+    predecessor_path = _snapshot_path(project, batch, predecessor_artifact["id"])
+    predecessor_one = structure_client.post(
+        predecessor_path, headers={"X-User-Id": str(user.id)}
+    )
+    assert predecessor_one.status_code == 201
+    target_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    target_path = _snapshot_path(project, batch, target_artifact["id"])
+    created = structure_client.post(
+        target_path, headers={"X-User-Id": str(user.id)}
+    )
+    assert created.status_code == 201
+    assert created.json()["structure_payload"]["drift_reference"]["snapshot_version"] == 1
+    frozen_bytes = created.content
+
+    for expected_version in (2, 3):
+        appended = structure_client.post(
+            predecessor_path, headers={"X-User-Id": str(user.id)}
+        )
+        assert appended.status_code == 201
+        assert appended.json()["snapshot_version"] == expected_version
+
+    replayed = structure_client.get(
+        f"{target_path}/{created.json()['id']}",
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert replayed.status_code == 200, replayed.text
+    assert replayed.content == frozen_bytes
+
+
+def test_historical_all_null_reference_stays_valid_after_first_predecessor_analysis(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    predecessor_artifact = _upload(
+        structure_client, user, project, batch, _xlsx_bytes()
+    )
+    target_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    target_path = _snapshot_path(project, batch, target_artifact["id"])
+    created = structure_client.post(
+        target_path, headers={"X-User-Id": str(user.id)}
+    )
+    assert created.status_code == 201
+    reference = created.json()["structure_payload"]["drift_reference"]
+    assert reference["source_artifact_id"] == predecessor_artifact["id"]
+    assert all(
+        reference[key] is None
+        for key in (
+            "snapshot_id",
+            "snapshot_version",
+            "rule_version",
+            "analysis_digest_sha256",
+        )
+    )
+    frozen_bytes = created.content
+
+    first_analysis = structure_client.post(
+        _snapshot_path(project, batch, predecessor_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert first_analysis.status_code == 201
+    replayed = structure_client.get(
+        f"{target_path}/{created.json()['id']}",
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert replayed.status_code == 200, replayed.text
+    assert replayed.content == frozen_bytes
 
 
 def _postgres_engine_or_skip(*, application_name: str | None = None):
@@ -1310,6 +1801,7 @@ def test_postgres_serializes_predecessor_drift_and_snapshot_versions(changed_str
             created_by_user_id=user.id,
         )
         lock_session.add(previous_snapshot)
+        _add_snapshot_seal(lock_session, previous_snapshot, source_generation=1)
         lock_session.flush()
 
         app_name = f"s13_pr_003_waiter_{uuid.uuid4().hex}"
@@ -1682,25 +2174,25 @@ def _clone_snapshot_versions(
         .scalar()
     )
     for version in range(int(current_version or 0) + 1, through_version + 1):
-        db.add(
-            WorkbookStructureSnapshot(
-                id=uuid.uuid4(),
-                organization_id=snapshot.organization_id,
-                project_id=snapshot.project_id,
-                import_batch_id=snapshot.import_batch_id,
-                source_artifact_id=snapshot.source_artifact_id,
-                snapshot_version=version,
-                source_checksum_sha256=snapshot.source_checksum_sha256,
-                rule_version=snapshot.rule_version,
-                adapter_name=snapshot.adapter_name,
-                adapter_version=snapshot.adapter_version,
-                disposition=snapshot.disposition,
-                candidate_count=snapshot.candidate_count,
-                structure_payload=json.loads(json.dumps(snapshot.structure_payload)),
-                analysis_digest_sha256=snapshot.analysis_digest_sha256,
-                created_by_user_id=snapshot.created_by_user_id,
-            )
+        clone = WorkbookStructureSnapshot(
+            id=uuid.uuid4(),
+            organization_id=snapshot.organization_id,
+            project_id=snapshot.project_id,
+            import_batch_id=snapshot.import_batch_id,
+            source_artifact_id=snapshot.source_artifact_id,
+            snapshot_version=version,
+            source_checksum_sha256=snapshot.source_checksum_sha256,
+            rule_version=snapshot.rule_version,
+            adapter_name=snapshot.adapter_name,
+            adapter_version=snapshot.adapter_version,
+            disposition=snapshot.disposition,
+            candidate_count=snapshot.candidate_count,
+            structure_payload=json.loads(json.dumps(snapshot.structure_payload)),
+            analysis_digest_sha256=snapshot.analysis_digest_sha256,
+            created_by_user_id=snapshot.created_by_user_id,
         )
+        db.add(clone)
+        _add_snapshot_seal(db, clone)
     db.commit()
 
 
@@ -1848,12 +2340,22 @@ def test_v3_page_integrity_is_local_and_bulk_query_budget_is_constant(
     assert next_cursor is None
     assert len(statements) <= 5
 
-    corrupt = next(
+    outside_page = next(
         item
         for item in structure_db.query(WorkbookStructureSnapshot).all()
         if item.snapshot_version == 21
     )
-    corrupt.analysis_digest_sha256 = "0" * 64
+    outside_page_seal = (
+        structure_db.query(AuditEvent)
+        .filter(
+            AuditEvent.event_name == "WorkbookStructureAnalyzed",
+            AuditEvent.entity_id == outside_page.id,
+        )
+        .one()
+    )
+    corrupted_payload = dict(outside_page_seal.payload)
+    corrupted_payload["analysis_digest_sha256"] = "0" * 64
+    outside_page_seal.payload = corrupted_payload
     structure_db.commit()
     first_page = structure_client.get(path, headers={"X-User-Id": str(user.id)})
     assert first_page.status_code == 200
@@ -1927,6 +2429,61 @@ def test_v3_referenced_pages_and_get_one_stay_within_five_sql_statements(
     assert query_count <= 5
 
 
+def test_finalization_seal_query_is_stable_and_materializes_at_most_page_plus_one(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    org, user, _other, project, batch = _seed(structure_db)
+    artifact_body = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact_body["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=50)
+    targets = (
+        structure_db.query(WorkbookStructureSnapshot)
+        .order_by(WorkbookStructureSnapshot.snapshot_version.asc())
+        .all()
+    )
+    _add_snapshot_seal(structure_db, targets[0])
+    _add_snapshot_seal(structure_db, targets[1])
+    structure_db.commit()
+    scope = {
+        "org_id": org.id,
+        "project_id": project.id,
+        "batch_id": batch.id,
+        "artifact_id": uuid.UUID(artifact_body["id"]),
+    }
+    structure_db.expunge_all()
+    loaded_seals: list[uuid.UUID] = []
+    seal_statements: list[tuple[str, object]] = []
+
+    def count_loaded(audit_event: AuditEvent, _context) -> None:
+        loaded_seals.append(audit_event.id)
+
+    def capture_sql(_conn, _cursor, statement, parameters, _context, _executemany):
+        if "FROM audit_events" in statement:
+            seal_statements.append((statement, parameters))
+
+    event.listen(AuditEvent, "load", count_loaded)
+    event.listen(structure_db.bind, "before_cursor_execute", capture_sql)
+    try:
+        with pytest.raises(HTTPException) as caught:
+            list_structure_snapshots(structure_db, **scope, limit=50)
+    finally:
+        event.remove(AuditEvent, "load", count_loaded)
+        event.remove(structure_db.bind, "before_cursor_execute", capture_sql)
+    assert caught.value.detail["error_code"] == "structure_snapshot_integrity_failure"
+    assert len(loaded_seals) == 51
+    assert len(seal_statements) == 1
+    statement, parameters = seal_statements[0]
+    assert "ORDER BY audit_events.entity_id ASC" in statement
+    assert "audit_events.created_at ASC" in statement
+    assert "audit_events.id ASC" in statement
+    assert "LIMIT" in statement
+    assert 51 in parameters
+
+
 def test_v3_cursor_is_append_safe_between_pages(
     structure_client: TestClient,
     structure_db: Session,
@@ -1968,6 +2525,7 @@ def test_v3_read_allowlist_replays_legacy_without_rewrite(
     snapshot.rule_version = legacy_version
     snapshot.structure_payload = payload
     snapshot.analysis_digest_sha256 = canonical_payload_digest(payload)
+    _sync_snapshot_seal(structure_db, snapshot)
     structure_db.commit()
     before = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     digest = snapshot.analysis_digest_sha256
@@ -1980,6 +2538,58 @@ def test_v3_read_allowlist_replays_legacy_without_rewrite(
     durable = structure_db.get(WorkbookStructureSnapshot, snapshot.id)
     assert json.dumps(durable.structure_payload, ensure_ascii=False, sort_keys=True) == before
     assert durable.analysis_digest_sha256 == digest
+
+
+@pytest.mark.parametrize("reference_mode", ["absent", "null", "optional"])
+def test_v1_reference_shapes_replay_without_rewrite(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    reference_mode: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    predecessor_artifact = _upload(
+        structure_client, user, project, batch, _xlsx_bytes()
+    )
+    predecessor = structure_client.post(
+        _snapshot_path(project, batch, predecessor_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert predecessor.status_code == 201
+    target_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, target_artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    payload = json.loads(json.dumps(snapshot.structure_payload))
+    payload["rule_version"] = "s13-pr-003-v1"
+    if reference_mode == "absent":
+        payload.pop("drift_reference")
+    elif reference_mode == "null":
+        payload["drift_reference"] = None
+    snapshot.rule_version = "s13-pr-003-v1"
+    snapshot.structure_payload = payload
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(payload)
+    audit_event = _sync_snapshot_seal(structure_db, snapshot)
+    structure_db.commit()
+    frozen_snapshot = json.dumps(
+        snapshot.structure_payload, ensure_ascii=False, sort_keys=True
+    )
+    frozen_event = json.dumps(audit_event.payload, ensure_ascii=False, sort_keys=True)
+
+    replayed = structure_client.get(
+        f"{path}/{snapshot.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replayed.status_code == 200, replayed.text
+    structure_db.expire_all()
+    durable_snapshot = structure_db.get(WorkbookStructureSnapshot, snapshot.id)
+    durable_event = structure_db.get(AuditEvent, audit_event.id)
+    assert (
+        json.dumps(
+            durable_snapshot.structure_payload, ensure_ascii=False, sort_keys=True
+        )
+        == frozen_snapshot
+    )
+    assert json.dumps(durable_event.payload, ensure_ascii=False, sort_keys=True) == frozen_event
 
 
 def test_v3_read_allowlist_rejects_unknown_rule_version(
@@ -1997,6 +2607,7 @@ def test_v3_read_allowlist_rejects_unknown_rule_version(
     snapshot.rule_version = payload["rule_version"]
     snapshot.structure_payload = payload
     snapshot.analysis_digest_sha256 = canonical_payload_digest(payload)
+    _sync_snapshot_seal(structure_db, snapshot)
     structure_db.commit()
 
     replay = structure_client.get(
@@ -2026,6 +2637,7 @@ def test_v3_analysis_forces_review_when_predecessor_uses_v2_rules(
     predecessor.rule_version = "s13-pr-003-v2"
     predecessor.structure_payload = legacy_payload
     predecessor.analysis_digest_sha256 = canonical_payload_digest(legacy_payload)
+    _sync_snapshot_seal(structure_db, predecessor)
     structure_db.commit()
 
     second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
