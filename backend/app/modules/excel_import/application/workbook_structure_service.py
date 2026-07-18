@@ -43,6 +43,11 @@ from app.modules.project_master_data.models import (
 )
 
 _COPY_CHUNK_SIZE = 64 * 1024
+_SUPPORTED_STRUCTURE_RULE_VERSIONS = frozenset(
+    {"s13-pr-003-v1", "s13-pr-003-v2", "s13-pr-003-v3"}
+)
+_SNAPSHOT_PAGE_LIMIT_DEFAULT = 20
+_SNAPSHOT_PAGE_LIMIT_MAX = 50
 
 
 @dataclass(frozen=True)
@@ -78,6 +83,27 @@ class ArtifactFingerprint:
 
 def _error(status: int, code: str, detail: str) -> HTTPException:
     return HTTPException(status_code=status, detail={"error_code": code, "detail": detail})
+
+
+def _validate_snapshot_page(limit: int, cursor: int | None) -> None:
+    if (
+        isinstance(limit, bool)
+        or not isinstance(limit, int)
+        or not 1 <= limit <= _SNAPSHOT_PAGE_LIMIT_MAX
+    ):
+        raise _error(
+            422,
+            "invalid_snapshot_page_limit",
+            "Giới hạn trang snapshot phải từ 1 đến 50.",
+        )
+    if cursor is not None and (
+        isinstance(cursor, bool) or not isinstance(cursor, int) or cursor < 0
+    ):
+        raise _error(
+            422,
+            "invalid_snapshot_page_cursor",
+            "Con trỏ snapshot phải là số nguyên không âm.",
+        )
 
 
 def _query_artifact(
@@ -254,11 +280,17 @@ def _verify_drift_reference(payload: dict) -> dict | None:
     return reference
 
 
-def _verify_snapshot(
+def _verify_snapshot_core(
     snapshot: WorkbookStructureSnapshot,
     source_artifact: ImportSourceArtifact | None = None,
-    db: Session | None = None,
-) -> None:
+) -> dict | None:
+    """Verify one snapshot without issuing SQL or following lineage links."""
+    if snapshot.rule_version not in _SUPPORTED_STRUCTURE_RULE_VERSIONS:
+        raise _error(
+            500,
+            "structure_snapshot_integrity_failure",
+            "Phiên bản quy tắc phân tích cấu trúc không được hỗ trợ.",
+        )
     if not payload_digest_matches(snapshot.structure_payload, snapshot.analysis_digest_sha256):
         raise _error(
             500,
@@ -299,13 +331,14 @@ def _verify_snapshot(
             "structure_snapshot_integrity_failure",
             "Danh tính tệp nguồn không khớp bằng chứng phân tích đã lưu.",
         )
-    if "drift_reference" not in payload:
-        if snapshot.rule_version != STRUCTURE_RULE_VERSION:
-            return
+    if snapshot.rule_version == "s13-pr-003-v1":
+        if "drift_reference" not in payload:
+            return None
+    elif "drift_reference" not in payload:
         raise _error(
             500,
             "structure_snapshot_integrity_failure",
-            "Snapshot v2 thiếu tham chiếu biến động cấu trúc.",
+            "Snapshot thiếu tham chiếu biến động cấu trúc theo phiên bản quy tắc.",
         )
     reference = _verify_drift_reference(payload)
     if reference is not None and source_artifact is not None and (
@@ -317,13 +350,32 @@ def _verify_snapshot(
             "structure_snapshot_integrity_failure",
             "Tham chiếu tiền nhiệm không đi lùi theo thế hệ nguồn.",
         )
-    if db is not None and source_artifact is not None:
+    return reference
+
+
+def _verify_snapshot_page(
+    db: Session,
+    snapshots: list[WorkbookStructureSnapshot],
+    source_artifact: ImportSourceArtifact,
+) -> None:
+    """Bulk-load bounded lineage context, then verify all links in memory."""
+    if not snapshots:
+        return
+    references = [
+        _verify_snapshot_core(snapshot, source_artifact) for snapshot in snapshots
+    ]
+    lineage_required = any(
+        snapshot.rule_version in {"s13-pr-003-v2", "s13-pr-003-v3"}
+        for snapshot in snapshots
+    )
+    durable_predecessor = None
+    if lineage_required:
         durable_predecessor = (
             db.query(ImportSourceArtifact)
             .filter(
-                ImportSourceArtifact.organization_id == snapshot.organization_id,
-                ImportSourceArtifact.project_id == snapshot.project_id,
-                ImportSourceArtifact.import_batch_id == snapshot.import_batch_id,
+                ImportSourceArtifact.organization_id == source_artifact.organization_id,
+                ImportSourceArtifact.project_id == source_artifact.project_id,
+                ImportSourceArtifact.import_batch_id == source_artifact.import_batch_id,
                 ImportSourceArtifact.state == SourceArtifactState.AVAILABLE.value,
                 ImportSourceArtifact.generation < source_artifact.generation,
             )
@@ -331,6 +383,9 @@ def _verify_snapshot(
             .populate_existing()
             .first()
         )
+    for snapshot, reference in zip(snapshots, references, strict=True):
+        if snapshot.rule_version == "s13-pr-003-v1":
+            continue
         if (durable_predecessor is None) != (reference is None) or (
             durable_predecessor is not None
             and reference is not None
@@ -344,18 +399,50 @@ def _verify_snapshot(
                 "structure_snapshot_integrity_failure",
                 "Tham chiếu không khớp nguồn tiền nhiệm trực tiếp.",
             )
-    if db is not None and reference is not None:
-        referenced_artifact = (
-            db.query(ImportSourceArtifact)
-            .filter(
-                ImportSourceArtifact.id == uuid.UUID(reference["source_artifact_id"]),
-                ImportSourceArtifact.organization_id == snapshot.organization_id,
-                ImportSourceArtifact.project_id == snapshot.project_id,
-                ImportSourceArtifact.import_batch_id == snapshot.import_batch_id,
-            )
-            .populate_existing()
-            .first()
+
+    artifact_ids = {
+        uuid.UUID(reference["source_artifact_id"])
+        for reference in references
+        if reference is not None
+    }
+    referenced_artifacts = (
+        db.query(ImportSourceArtifact)
+        .filter(
+            ImportSourceArtifact.id.in_(artifact_ids),
+            ImportSourceArtifact.organization_id == source_artifact.organization_id,
+            ImportSourceArtifact.project_id == source_artifact.project_id,
+            ImportSourceArtifact.import_batch_id == source_artifact.import_batch_id,
         )
+        .populate_existing()
+        .all()
+        if artifact_ids
+        else []
+    )
+    artifacts_by_id = {artifact.id: artifact for artifact in referenced_artifacts}
+    snapshot_ids = {
+        uuid.UUID(reference["snapshot_id"])
+        for reference in references
+        if reference is not None and reference.get("snapshot_id") is not None
+    }
+    referenced_snapshots = (
+        db.query(WorkbookStructureSnapshot)
+        .filter(
+            WorkbookStructureSnapshot.id.in_(snapshot_ids),
+            WorkbookStructureSnapshot.organization_id == source_artifact.organization_id,
+            WorkbookStructureSnapshot.project_id == source_artifact.project_id,
+            WorkbookStructureSnapshot.import_batch_id == source_artifact.import_batch_id,
+        )
+        .populate_existing()
+        .all()
+        if snapshot_ids
+        else []
+    )
+    snapshots_by_id = {snapshot.id: snapshot for snapshot in referenced_snapshots}
+    for reference in references:
+        if reference is None:
+            continue
+        artifact_id = uuid.UUID(reference["source_artifact_id"])
+        referenced_artifact = artifacts_by_id.get(artifact_id)
         if referenced_artifact is None or (
             referenced_artifact.generation != reference["source_generation"]
             or referenced_artifact.state != SourceArtifactState.AVAILABLE.value
@@ -365,32 +452,22 @@ def _verify_snapshot(
                 "structure_snapshot_integrity_failure",
                 "Không tìm thấy nguồn của snapshot tiền nhiệm.",
             )
-        if reference.get("snapshot_id") is not None:
-            referenced = (
-                db.query(WorkbookStructureSnapshot)
-                .filter(
-                    WorkbookStructureSnapshot.id == uuid.UUID(reference["snapshot_id"]),
-                    WorkbookStructureSnapshot.source_artifact_id == referenced_artifact.id,
-                    WorkbookStructureSnapshot.organization_id == snapshot.organization_id,
-                    WorkbookStructureSnapshot.project_id == snapshot.project_id,
-                    WorkbookStructureSnapshot.import_batch_id == snapshot.import_batch_id,
-                )
-                .populate_existing()
-                .first()
+        if reference.get("snapshot_id") is None:
+            continue
+        referenced = snapshots_by_id.get(uuid.UUID(reference["snapshot_id"]))
+        if referenced is None or (
+            referenced.source_artifact_id != referenced_artifact.id
+            or referenced.snapshot_version != reference["snapshot_version"]
+            or referenced.rule_version != reference["rule_version"]
+            or referenced.analysis_digest_sha256 != reference["analysis_digest_sha256"]
+        ):
+            raise _error(
+                500,
+                "structure_snapshot_integrity_failure",
+                "Tham chiếu snapshot tiền nhiệm không khớp dữ liệu bền vững.",
             )
-            if referenced is None or (
-                referenced.snapshot_version != reference["snapshot_version"]
-                or referenced.rule_version != reference["rule_version"]
-                or referenced.analysis_digest_sha256 != reference["analysis_digest_sha256"]
-            ):
-                raise _error(
-                    500,
-                    "structure_snapshot_integrity_failure",
-                    "Tham chiếu snapshot tiền nhiệm không khớp dữ liệu bền vững.",
-                )
-            # Verify the directly referenced observation without recursively walking an
-            # unbounded generation chain on every list/get replay.
-            _verify_snapshot(referenced, referenced_artifact, None)
+        # Direct verification only: never walk the referenced generation's links.
+        _verify_snapshot_core(referenced, referenced_artifact)
 
 
 def _force_review(payload: dict, reason: str) -> dict:
@@ -449,7 +526,7 @@ def _resolve_predecessor(
         "analysis_digest_sha256": snapshot.analysis_digest_sha256 if snapshot is not None else None,
     }
     if snapshot is not None:
-        _verify_snapshot(snapshot, predecessor, db)
+        _verify_snapshot_page(db, [snapshot], predecessor)
     return reference, snapshot
 
 
@@ -612,7 +689,10 @@ def list_structure_snapshots(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     artifact_id: uuid.UUID,
-) -> list[WorkbookStructureSnapshot]:
+    limit: int = _SNAPSHOT_PAGE_LIMIT_DEFAULT,
+    cursor: int | None = None,
+) -> tuple[list[WorkbookStructureSnapshot], int | None]:
+    _validate_snapshot_page(limit, cursor)
     artifact = _query_artifact(
         db,
         org_id=org_id,
@@ -621,21 +701,26 @@ def list_structure_snapshots(
         artifact_id=artifact_id,
         populate_existing=True,
     )
-    snapshots = (
-        db.query(WorkbookStructureSnapshot)
-        .filter(
+    query = db.query(WorkbookStructureSnapshot).filter(
             WorkbookStructureSnapshot.organization_id == org_id,
             WorkbookStructureSnapshot.project_id == project_id,
             WorkbookStructureSnapshot.import_batch_id == batch_id,
             WorkbookStructureSnapshot.source_artifact_id == artifact_id,
         )
+    if cursor is not None:
+        query = query.filter(WorkbookStructureSnapshot.snapshot_version > cursor)
+    snapshots = (
+        query
         .order_by(WorkbookStructureSnapshot.snapshot_version.asc())
         .populate_existing()
+        .limit(limit + 1)
         .all()
     )
-    for snapshot in snapshots:
-        _verify_snapshot(snapshot, artifact, db)
-    return snapshots
+    has_more = len(snapshots) > limit
+    page = snapshots[:limit]
+    _verify_snapshot_page(db, page, artifact)
+    next_cursor = page[-1].snapshot_version if has_more and page else None
+    return page, next_cursor
 
 
 def get_structure_snapshot(
@@ -669,5 +754,5 @@ def get_structure_snapshot(
     )
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Structure snapshot not found")
-    _verify_snapshot(snapshot, artifact, db)
+    _verify_snapshot_page(db, [snapshot], artifact)
     return snapshot

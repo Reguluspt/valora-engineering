@@ -15,7 +15,7 @@ import openpyxl
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, func, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -26,7 +26,10 @@ import app.modules.excel_import.application.workbook_structure_service as struct
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
 from app.modules.excel_import.application.workbook_structure_service import (
     analyze_source_artifact_structure,
+    get_structure_snapshot,
+    list_structure_snapshots,
 )
+import app.modules.excel_import.domain.workbook_structure as structure_domain
 from app.modules.excel_import.domain.workbook_structure import (
     STRUCTURE_RULE_VERSION,
     analyze_workbook_structure,
@@ -37,6 +40,7 @@ from app.modules.excel_import.domain.workbook_structure import (
 from app.modules.excel_import.domain.workbook_adapter import (
     AdapterInspectionResult,
     CellValue,
+    MergedRegion,
     SheetSummary,
     WorkbookFormat,
 )
@@ -1511,3 +1515,547 @@ def test_postgres_populate_existing_detects_durable_authority_change():
         release.set()
         setup.close()
         engine.dispose()
+
+
+def test_v3_unicode_channels_and_header_roles_are_exact_and_accent_insensitive():
+    assert structure_domain._surface_normalized("  TỔNG   CỘNG TỶ LỆ ") == "tổng cộng tỷ lệ"
+    assert structure_domain._search_normalized("ĐVT") == "dvt"
+    assert structure_domain._search_normalized("Đặc điểm") == "dac diem"
+    assert structure_domain._search_normalized("Đơn giá") == "don gia"
+    assert structure_domain._search_normalized("Đơn vị tính") == "don vi tinh"
+    assert structure_domain._header_roles("ĐVT") == {"UNIT"}
+    assert structure_domain._header_roles("Đặc điểm") == {"DESCRIPTION"}
+    assert structure_domain._header_roles("Đơn giá") == {"VALUE"}
+    assert structure_domain._header_roles("Đơn vị tính") == {"UNIT"}
+    for separator in (":", "-", "–", "—", "/", ".", ",", ";", "(", "_"):
+        assert structure_domain._header_roles(f"Đơn{separator}giá") == {"VALUE"}
+    assert structure_domain._header_roles("x_Đơn giá") == {"VALUE"}
+    assert structure_domain._header_roles("Đơn giá_suffix") == {"VALUE"}
+    assert not structure_domain._header_roles("mã")
+    assert not structure_domain._header_roles("xđơn giá")
+
+
+@pytest.mark.parametrize(
+    ("values", "expected", "reason"),
+    [
+        ([99, "TỔNG CỘNG TỶ LỆ", 100], "total", "total_marker"),
+        ([99, "TỔNG CỘNG TỶ TRỌNG", 100], "total", "total_marker"),
+        ([1, "Tổng công ty ABC", 100], "asset", "serial_number_and_content"),
+        ([1, "TONG CONG TY ABC", 100], "unresolved", "ambiguous_folded_marker"),
+        (["TONG CONG"], "total", "total_marker"),
+        (["TỔNG-CỘNG: TỶ LỆ"], "total", "total_marker"),
+        (["TỔNG/CỘNG"], "total", "total_marker"),
+    ],
+)
+def test_v3_marker_collision_matrix(values, expected, reason):
+    classified = classify_row(_cells(3, values))
+    assert classified.row_class.value == expected
+    assert reason in classified.reasons
+
+
+@pytest.mark.parametrize("group_count", [2, 3])
+def test_v3_adjacent_complete_header_groups_partition_without_covering_candidate(group_count):
+    headers: list[object] = []
+    body: list[object] = []
+    for index in range(group_count):
+        headers.extend(
+            [
+                "STT" if index == 0 else "Mã tài sản",
+                "Tên tài sản",
+                "Số lượng",
+            ]
+        )
+        body.extend([1, f"Máy {index + 1}", index + 1])
+    payload, _trackers = _analyze_rows([headers, body])
+    row_one = [item for item in payload["candidates"] if item["header_start_row"] == 1]
+    bounds = [
+        (
+            item["candidate_table_bounds"]["min_column"],
+            item["candidate_table_bounds"]["max_column"],
+        )
+        for item in row_one
+    ]
+    assert bounds == [(1 + 3 * index, 3 + 3 * index) for index in range(group_count)]
+    assert all("multiple_horizontal_table_groups" in item["boundary_flags"] for item in row_one)
+    assert payload["disposition"] == "review_required"
+    assert "multiple_horizontal_table_groups" in payload["disposition_reasons"]
+
+
+def test_v3_single_table_with_two_known_starts_is_not_split():
+    payload, _trackers = _analyze_rows(
+        [["STT", "Mã tài sản", "Tên tài sản", "Số lượng"], [1, "TS-1", "Máy A", 2]]
+    )
+    row_one = [item for item in payload["candidates"] if item["header_start_row"] == 1]
+    assert [
+        (
+            item["candidate_table_bounds"]["min_column"],
+            item["candidate_table_bounds"]["max_column"],
+        )
+        for item in row_one
+    ] == [(1, 4)]
+    assert "multiple_horizontal_table_groups" not in row_one[0]["boundary_flags"]
+
+
+def test_v3_unknown_second_start_with_repeated_core_bundles_forces_review():
+    payload, _trackers = _analyze_rows(
+        [
+            ["STT", "Tên tài sản", "Số lượng", "Mã", "Tên tài sản", "Số lượng"],
+            [1, "Máy A", 1, "X-1", "Máy B", 2],
+        ]
+    )
+    candidate = next(item for item in payload["candidates"] if item["header_start_row"] == 1)
+    assert candidate["candidate_table_bounds"]["min_column"] == 1
+    assert candidate["candidate_table_bounds"]["max_column"] == 6
+    assert "ambiguous_horizontal_table_boundary" in candidate["boundary_flags"]
+    assert payload["disposition"] == "review_required"
+
+
+def test_v3_repeated_value_labels_without_repeated_name_bundle_do_not_split():
+    payload, _trackers = _analyze_rows(
+        [
+            ["STT", "Tên tài sản", "Số lượng", "Đơn giá", "Thành tiền"],
+            [1, "Máy A", 1, 100, 100],
+        ]
+    )
+    candidate = next(item for item in payload["candidates"] if item["header_start_row"] == 1)
+    assert "multiple_horizontal_table_groups" not in candidate["boundary_flags"]
+    assert "ambiguous_horizontal_table_boundary" not in candidate["boundary_flags"]
+
+
+def test_v3_lower_ranked_horizontal_attack_forces_workbook_review():
+    rows_by_sheet = {
+        "Primary": [
+            ["BẢNG TỔNG HỢP", None, None, None, None, None],
+            ["STT", "Tên tài sản", "Đặc điểm", "ĐVT", "Số lượng", "Đơn giá"],
+            [1, "Máy chính", "Model A", "cái", 1, 100],
+        ],
+        "Adjacent": [
+            ["STT", "Tên tài sản", "Số lượng", "Mã tài sản", "Tên tài sản", "Số lượng"],
+            [1, "Máy A", 1, "TS-2", "Máy B", 2],
+        ],
+    }
+    cell_rows = {
+        sheet: [_cells(index, values) for index, values in enumerate(rows, 1)]
+        for sheet, rows in rows_by_sheet.items()
+    }
+
+    def provider(sheet_name):
+        return iter(cell_rows[sheet_name])
+
+    inspection = AdapterInspectionResult(
+        format=WorkbookFormat.XLSX,
+        adapter_name="adversarial",
+        adapter_version="1",
+        sheet_names=("Primary", "Adjacent"),
+        sheets=(
+            SheetSummary(
+                name="Primary",
+                max_row=3,
+                max_column=6,
+                merged_regions=(MergedRegion(1, 1, 1, 6),),
+            ),
+            SheetSummary(name="Adjacent", max_row=2, max_column=6),
+        ),
+    )
+    payload = analyze_workbook_structure(inspection, provider)
+    assert payload["candidates"][0]["sheet_name"] == "Primary"
+    assert "multiple_horizontal_table_groups" not in payload["candidates"][0][
+        "boundary_flags"
+    ]
+    assert any(
+        "multiple_horizontal_table_groups" in candidate["boundary_flags"]
+        for candidate in payload["candidates"][1:]
+    )
+    assert payload["disposition"] == "review_required"
+    assert "multiple_horizontal_table_groups" in payload["disposition_reasons"]
+
+
+def _clone_snapshot_versions(
+    db: Session,
+    snapshot: WorkbookStructureSnapshot,
+    *,
+    through_version: int,
+) -> None:
+    current_version = (
+        db.query(func.max(WorkbookStructureSnapshot.snapshot_version))
+        .filter(WorkbookStructureSnapshot.source_artifact_id == snapshot.source_artifact_id)
+        .scalar()
+    )
+    for version in range(int(current_version or 0) + 1, through_version + 1):
+        db.add(
+            WorkbookStructureSnapshot(
+                id=uuid.uuid4(),
+                organization_id=snapshot.organization_id,
+                project_id=snapshot.project_id,
+                import_batch_id=snapshot.import_batch_id,
+                source_artifact_id=snapshot.source_artifact_id,
+                snapshot_version=version,
+                source_checksum_sha256=snapshot.source_checksum_sha256,
+                rule_version=snapshot.rule_version,
+                adapter_name=snapshot.adapter_name,
+                adapter_version=snapshot.adapter_version,
+                disposition=snapshot.disposition,
+                candidate_count=snapshot.candidate_count,
+                structure_payload=json.loads(json.dumps(snapshot.structure_payload)),
+                analysis_digest_sha256=snapshot.analysis_digest_sha256,
+                created_by_user_id=snapshot.created_by_user_id,
+            )
+        )
+    db.commit()
+
+
+def test_v3_snapshot_list_paginates_55_as_array_without_loss_and_documents_headers(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    assert created.status_code == 201
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=55)
+
+    versions: list[int] = []
+    cursor = None
+    page_sizes: list[int] = []
+    while True:
+        params = {} if cursor is None else {"cursor": cursor}
+        response = structure_client.get(path, params=params, headers={"X-User-Id": str(user.id)})
+        assert response.status_code == 200, response.text
+        assert isinstance(response.json(), list)
+        assert response.headers["X-Valora-Page-Limit"] == "20"
+        page_sizes.append(len(response.json()))
+        versions.extend(item["snapshot_version"] for item in response.json())
+        next_cursor = response.headers.get("X-Valora-Next-Cursor")
+        if next_cursor is None:
+            break
+        cursor = int(next_cursor)
+    assert page_sizes == [20, 20, 15]
+    assert versions == list(range(1, 56))
+
+    explicit = structure_client.get(
+        path,
+        params={"limit": 50},
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert len(explicit.json()) == 50
+    assert explicit.headers["X-Valora-Page-Limit"] == "50"
+    assert explicit.headers["X-Valora-Next-Cursor"] == "50"
+    past_end = structure_client.get(
+        path,
+        params={"cursor": 999},
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert past_end.json() == []
+    assert "X-Valora-Next-Cursor" not in past_end.headers
+    for params in ({"limit": 0}, {"limit": 51}, {"cursor": -1}):
+        invalid = structure_client.get(
+            path, params=params, headers={"X-User-Id": str(user.id)}
+        )
+        assert invalid.status_code == 422
+
+    route = (
+        "/api/v1/projects/{project_id}/asset-imports/{batch_id}/source-artifacts/"
+        "{artifact_id}/structure-snapshots"
+    )
+    response_headers = fastapi_app.openapi()["paths"][route]["get"]["responses"]["200"][
+        "headers"
+    ]
+    assert {"X-Valora-Page-Limit", "X-Valora-Next-Cursor"}.issubset(response_headers)
+
+    cors = structure_client.get(
+        path,
+        params={"limit": 1},
+        headers={
+            "Origin": "http://localhost:5173",
+            "X-User-Id": str(user.id),
+        },
+    )
+    exposed = {
+        value.strip().casefold()
+        for value in cors.headers["access-control-expose-headers"].split(",")
+    }
+    assert {"x-valora-page-limit", "x-valora-next-cursor"}.issubset(exposed)
+
+
+@pytest.mark.parametrize(
+    ("limit", "cursor", "error_code"),
+    [
+        (0, None, "invalid_snapshot_page_limit"),
+        (51, None, "invalid_snapshot_page_limit"),
+        (True, None, "invalid_snapshot_page_limit"),
+        (20, -1, "invalid_snapshot_page_cursor"),
+        (20, True, "invalid_snapshot_page_cursor"),
+    ],
+)
+def test_v3_snapshot_service_enforces_page_bounds(
+    structure_db: Session,
+    limit,
+    cursor,
+    error_code: str,
+):
+    with pytest.raises(HTTPException) as caught:
+        list_structure_snapshots(
+            structure_db,
+            org_id=uuid.uuid4(),
+            project_id=uuid.uuid4(),
+            batch_id=uuid.uuid4(),
+            artifact_id=uuid.uuid4(),
+            limit=limit,
+            cursor=cursor,
+        )
+    assert caught.value.status_code == 422
+    assert caught.value.detail["error_code"] == error_code
+
+
+def test_v3_page_integrity_is_local_and_bulk_query_budget_is_constant(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    org, user, _other, project, batch = _seed(structure_db)
+    artifact_body = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact_body["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=50)
+    org_id = org.id
+    project_id = project.id
+    batch_id = batch.id
+    artifact_id = uuid.UUID(artifact_body["id"])
+
+    statements: list[str] = []
+
+    def count_sql(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            statements.append(statement)
+
+    event.listen(structure_db.bind, "before_cursor_execute", count_sql)
+    try:
+        page, next_cursor = list_structure_snapshots(
+            structure_db,
+            org_id=org_id,
+            project_id=project_id,
+            batch_id=batch_id,
+            artifact_id=artifact_id,
+            limit=50,
+        )
+    finally:
+        event.remove(structure_db.bind, "before_cursor_execute", count_sql)
+    assert len(page) == 50
+    assert next_cursor is None
+    assert len(statements) <= 5
+
+    corrupt = next(
+        item
+        for item in structure_db.query(WorkbookStructureSnapshot).all()
+        if item.snapshot_version == 21
+    )
+    corrupt.analysis_digest_sha256 = "0" * 64
+    structure_db.commit()
+    first_page = structure_client.get(path, headers={"X-User-Id": str(user.id)})
+    assert first_page.status_code == 200
+    assert len(first_page.json()) == 20
+    corrupt_page = structure_client.get(
+        path,
+        params={"cursor": 20},
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert corrupt_page.status_code == 500
+    assert corrupt_page.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_v3_referenced_pages_and_get_one_stay_within_five_sql_statements(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    org, user, _other, project, batch = _seed(structure_db)
+    first_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    first_path = _snapshot_path(project, batch, first_artifact["id"])
+    assert (
+        structure_client.post(first_path, headers={"X-User-Id": str(user.id)}).status_code
+        == 201
+    )
+    second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    second_path = _snapshot_path(project, batch, second_artifact["id"])
+    created = structure_client.post(second_path, headers={"X-User-Id": str(user.id)})
+    assert created.status_code == 201, created.text
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=50)
+    scope = {
+        "org_id": org.id,
+        "project_id": project.id,
+        "batch_id": batch.id,
+        "artifact_id": uuid.UUID(second_artifact["id"]),
+    }
+
+    def select_count(callable_):
+        statements: list[str] = []
+
+        def count_sql(_conn, _cursor, statement, _parameters, _context, _executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(structure_db.bind, "before_cursor_execute", count_sql)
+        try:
+            result = callable_()
+        finally:
+            event.remove(structure_db.bind, "before_cursor_execute", count_sql)
+        return result, len(statements)
+
+    for limit in (1, 50):
+        (page, _cursor), query_count = select_count(
+            lambda limit=limit: list_structure_snapshots(
+                structure_db,
+                **scope,
+                limit=limit,
+            )
+        )
+        assert len(page) == limit
+        assert query_count <= 5
+    replayed, query_count = select_count(
+        lambda: get_structure_snapshot(
+            structure_db,
+            **scope,
+            snapshot_id=snapshot.id,
+        )
+    )
+    assert replayed.id == snapshot.id
+    assert query_count <= 5
+
+
+def test_v3_cursor_is_append_safe_between_pages(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=25)
+    first = structure_client.get(path, headers={"X-User-Id": str(user.id)})
+    assert [item["snapshot_version"] for item in first.json()] == list(range(1, 21))
+    _clone_snapshot_versions(structure_db, snapshot, through_version=26)
+    second = structure_client.get(
+        path,
+        params={"cursor": first.headers["X-Valora-Next-Cursor"]},
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert [item["snapshot_version"] for item in second.json()] == list(range(21, 27))
+
+
+@pytest.mark.parametrize("legacy_version", ["s13-pr-003-v1", "s13-pr-003-v2"])
+def test_v3_read_allowlist_replays_legacy_without_rewrite(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+    legacy_version: str,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    payload = json.loads(json.dumps(snapshot.structure_payload))
+    payload["rule_version"] = legacy_version
+    if legacy_version == "s13-pr-003-v1":
+        payload.pop("drift_reference")
+    snapshot.rule_version = legacy_version
+    snapshot.structure_payload = payload
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(payload)
+    structure_db.commit()
+    before = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    digest = snapshot.analysis_digest_sha256
+
+    replay = structure_client.get(
+        f"{path}/{snapshot.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replay.status_code == 200, replay.text
+    structure_db.expire_all()
+    durable = structure_db.get(WorkbookStructureSnapshot, snapshot.id)
+    assert json.dumps(durable.structure_payload, ensure_ascii=False, sort_keys=True) == before
+    assert durable.analysis_digest_sha256 == digest
+
+
+def test_v3_read_allowlist_rejects_unknown_rule_version(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    path = _snapshot_path(project, batch, artifact["id"])
+    created = structure_client.post(path, headers={"X-User-Id": str(user.id)})
+    snapshot = structure_db.get(WorkbookStructureSnapshot, uuid.UUID(created.json()["id"]))
+    payload = json.loads(json.dumps(snapshot.structure_payload))
+    payload["rule_version"] = "s13-pr-003-v999"
+    snapshot.rule_version = payload["rule_version"]
+    snapshot.structure_payload = payload
+    snapshot.analysis_digest_sha256 = canonical_payload_digest(payload)
+    structure_db.commit()
+
+    replay = structure_client.get(
+        f"{path}/{snapshot.id}", headers={"X-User-Id": str(user.id)}
+    )
+    assert replay.status_code == 500
+    assert replay.json()["detail"]["error_code"] == "structure_snapshot_integrity_failure"
+
+
+def test_v3_analysis_forces_review_when_predecessor_uses_v2_rules(
+    structure_client: TestClient,
+    structure_db: Session,
+    structure_storage,
+):
+    _org, user, _other, project, batch = _seed(structure_db)
+    first_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    first_path = _snapshot_path(project, batch, first_artifact["id"])
+    first = structure_client.post(first_path, headers={"X-User-Id": str(user.id)})
+    assert first.status_code == 201, first.text
+
+    predecessor = structure_db.get(
+        WorkbookStructureSnapshot,
+        uuid.UUID(first.json()["id"]),
+    )
+    legacy_payload = json.loads(json.dumps(predecessor.structure_payload))
+    legacy_payload["rule_version"] = "s13-pr-003-v2"
+    predecessor.rule_version = "s13-pr-003-v2"
+    predecessor.structure_payload = legacy_payload
+    predecessor.analysis_digest_sha256 = canonical_payload_digest(legacy_payload)
+    structure_db.commit()
+
+    second_artifact = _upload(structure_client, user, project, batch, _xlsx_bytes())
+    second = structure_client.post(
+        _snapshot_path(project, batch, second_artifact["id"]),
+        headers={"X-User-Id": str(user.id)},
+    )
+    assert second.status_code == 201, second.text
+    payload = second.json()["structure_payload"]
+    assert payload["disposition"] == "review_required"
+    assert "structure_rule_version_changed" in payload["disposition_reasons"]
+
+
+def test_v3_deterministic_payload_and_versioned_digest_change():
+    rows = [
+        ["STT", "Tên tài sản", "Số lượng"],
+        [1, "Máy A", 1],
+        ["TỔNG CỘNG", None, 1],
+    ]
+    first, _trackers = _analyze_rows(rows)
+    second, _trackers = _analyze_rows(rows)
+    assert first == second
+    assert canonical_payload_digest(first) == canonical_payload_digest(second)
+    legacy = json.loads(json.dumps(first))
+    legacy["rule_version"] = "s13-pr-003-v2"
+    for key in (
+        "header_group_min_families",
+        "header_group_min_columns",
+        "header_group_start_lookback",
+        "repeated_core_family_threshold",
+    ):
+        legacy["rule_config"].pop(key)
+    assert canonical_payload_digest(first) != canonical_payload_digest(legacy)

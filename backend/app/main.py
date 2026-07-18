@@ -38,6 +38,7 @@ app.add_middleware(
     allow_credentials=settings.cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Valora-Page-Limit", "X-Valora-Next-Cursor"],
 )
 
 app.include_router(health_router)
@@ -61,5 +62,4 @@ def root() -> dict[str, str]:
         "status": "ok",
         "phase": "engineering-sprint-0",
     }
-
 

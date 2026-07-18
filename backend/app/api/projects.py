@@ -1,7 +1,7 @@
 import uuid
 import re
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 
@@ -773,21 +773,46 @@ def analyze_project_asset_import_source_structure(
     "/{project_id}/asset-imports/{batch_id}/source-artifacts/"
     "{artifact_id}/structure-snapshots",
     response_model=list[WorkbookStructureSnapshotResponse],
+    responses={
+        200: {
+            "headers": {
+                "X-Valora-Page-Limit": {
+                    "description": "Effective snapshot page size (1-50).",
+                    "schema": {"type": "integer"},
+                },
+                "X-Valora-Next-Cursor": {
+                    "description": (
+                        "Last returned snapshot_version when another page exists."
+                    ),
+                    "schema": {"type": "integer"},
+                },
+            }
+        }
+    },
 )
 def list_project_asset_import_source_structure_snapshots(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     artifact_id: uuid.UUID,
+    response: Response,
+    limit: int = Query(20, ge=1, le=50),
+    cursor: int | None = Query(None, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("project:read")),
 ):
-    return list_structure_snapshots(
+    snapshots, next_cursor = list_structure_snapshots(
         db,
         org_id=current_user.organization_id,
         project_id=project_id,
         batch_id=batch_id,
         artifact_id=artifact_id,
+        limit=limit,
+        cursor=cursor,
     )
+    response.headers["X-Valora-Page-Limit"] = str(limit)
+    if next_cursor is not None:
+        response.headers["X-Valora-Next-Cursor"] = str(next_cursor)
+    return snapshots
 
 
 @router.get(

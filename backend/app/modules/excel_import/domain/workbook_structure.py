@@ -20,7 +20,7 @@ from app.modules.excel_import.domain.workbook_adapter import (
     SheetSummary,
 )
 
-STRUCTURE_RULE_VERSION = "s13-pr-003-v2"
+STRUCTURE_RULE_VERSION = "s13-pr-003-v3"
 
 
 class RowClass(str, Enum):
@@ -54,6 +54,10 @@ class StructureRuleConfig:
     row_preview_limit: int = 200
     clear_threshold: float = 0.62
     ambiguity_margin: float = 0.08
+    header_group_min_families: int = 3
+    header_group_min_columns: int = 3
+    header_group_start_lookback: int = 2
+    repeated_core_family_threshold: int = 2
 
 
 DEFAULT_STRUCTURE_RULES = StructureRuleConfig()
@@ -135,40 +139,53 @@ class _ResolutionState:
 
 RowProvider = Callable[[str], Iterator[Sequence[CellValue]]]
 
-_HEADER_TERMS = (
-    "stt",
-    "so thu tu",
-    "ten vat tu",
-    "ten tai san",
-    "ten hang hoa",
-    "mo ta",
-    "dac diem",
-    "quy cach",
-    "dvt",
-    "don vi tinh",
-    "khoi luong",
-    "so luong",
-    "don gia",
-    "thanh tien",
-    "gia td",
-    "gia tham dinh",
-    "ghi chu",
+_HEADER_ROLE_PHRASES = {
+    "START_INDEX": ("stt", "so thu tu"),
+    "START_ID": ("ma tai san", "ma vat tu", "ma hang hoa"),
+    "NAME": ("ten tai san", "ten vat tu", "ten hang hoa"),
+    "DESCRIPTION": ("dac diem", "quy cach", "mo ta"),
+    "UNIT": ("dvt", "don vi tinh"),
+    "MEASURE": ("so luong", "khoi luong"),
+    "VALUE": ("don gia", "thanh tien", "gia td", "gia tham dinh"),
+    "NOTE": ("ghi chu",),
+}
+_HEADER_TERMS = tuple(
+    phrase for phrases in _HEADER_ROLE_PHRASES.values() for phrase in phrases
 )
-_TOTAL_EXACT = ("tong", "total")
-_TOTAL_PREFIXES = ("tong cong", "tong gia tri", "tong thanh tien")
-_SUBTOTAL_PREFIXES = ("cong phan", "cong muc", "tam tinh", "subtotal")
-_NOTE_PREFIXES = ("ghi chu", "chu thich", "note")
-_SECTION_PREFIXES = ("phan", "chuong", "muc", "hang muc")
+_TOTAL_EXACT_SURFACE = ("tổng", "total")
+_TOTAL_PREFIXES_SURFACE = ("tổng cộng", "tổng giá trị", "tổng thành tiền")
+_SUBTOTAL_PREFIXES_SURFACE = ("cộng phần", "cộng mục", "tạm tính", "subtotal")
+_NOTE_PREFIXES_SURFACE = ("ghi chú", "chú thích", "note")
+_SECTION_PREFIXES_SURFACE = ("phần", "chương", "mục", "hạng mục")
+_TOTAL_EXACT_SEARCH = ("tong", "total")
+_TOTAL_PREFIXES_SEARCH = ("tong cong", "tong gia tri", "tong thanh tien")
+_SUBTOTAL_PREFIXES_SEARCH = ("cong phan", "cong muc", "tam tinh", "subtotal")
+_NOTE_PREFIXES_SEARCH = ("ghi chu", "chu thich", "note")
+_SECTION_PREFIXES_SEARCH = ("phan", "chuong", "muc", "hang muc")
 _SERIAL_RE = re.compile(r"^\d+(?:[.\-/]\d+)*$")
 _OUTLINE_RE = re.compile(r"^(?:[ivxlcdm]+|[a-z])(?:[.\-/]\d+)*$", re.IGNORECASE)
+_FAIL_CLOSED_HORIZONTAL_FLAGS = (
+    "multiple_horizontal_table_groups",
+    "ambiguous_horizontal_table_boundary",
+)
+
+
+def _surface_normalized(value: object) -> str:
+    if value is None:
+        return ""
+    return " ".join(unicodedata.normalize("NFKC", str(value)).strip().split()).casefold()
+
+
+def _search_normalized(value: object) -> str:
+    surface = _surface_normalized(value)
+    decomposed = unicodedata.normalize("NFD", surface)
+    folded = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    return " ".join(folded.replace("đ", "d").split())
 
 
 def _normalized(value: object) -> str:
-    if value is None:
-        return ""
-    text = " ".join(str(value).strip().split()).lower()
-    decomposed = unicodedata.normalize("NFD", text)
-    return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    """Compatibility alias for the v3 accent-insensitive search channel."""
+    return _search_normalized(value)
 
 
 def _display(value: object) -> str:
@@ -205,33 +222,78 @@ def _is_outline(value: object) -> bool:
     )
 
 
+def _phrase_pattern(phrase: str, *, anchored: bool) -> re.Pattern[str]:
+    token_separator = r"[\W_]+"
+    escaped = token_separator.join(re.escape(token) for token in phrase.split())
+    start = "^" if anchored else r"(?<![^\W_])"
+    end = r"(?![^\W_])"
+    return re.compile(f"{start}{escaped}{end}", re.UNICODE)
+
+
+def _has_phrase(text: str, phrase: str, *, anchored: bool = False) -> bool:
+    return bool(_phrase_pattern(phrase, anchored=anchored).search(text))
+
+
 def _starts_anchored(text: str, prefix: str) -> bool:
-    return text == prefix or text.startswith(f"{prefix} ") or text.startswith(f"{prefix}:")
+    return _has_phrase(text, prefix, anchored=True)
 
 
-def _marker_kind(values: Sequence[object]) -> RowClass | None:
-    """Recognize only the frozen anchored vocabulary, after an optional outline cell."""
+class _MarkerEvidence(str, Enum):
+    RECOGNIZED = "recognized"
+    NONE = "none"
+    AMBIGUOUS = "ambiguous"
+
+
+def _classify_marker_text(text: str, *, surface: bool) -> RowClass | None:
+    if surface:
+        total_exact = _TOTAL_EXACT_SURFACE
+        total_prefixes = _TOTAL_PREFIXES_SURFACE
+        subtotal_prefixes = _SUBTOTAL_PREFIXES_SURFACE
+        note_prefixes = _NOTE_PREFIXES_SURFACE
+        section_prefixes = _SECTION_PREFIXES_SURFACE
+    else:
+        total_exact = _TOTAL_EXACT_SEARCH
+        total_prefixes = _TOTAL_PREFIXES_SEARCH
+        subtotal_prefixes = _SUBTOTAL_PREFIXES_SEARCH
+        note_prefixes = _NOTE_PREFIXES_SEARCH
+        section_prefixes = _SECTION_PREFIXES_SEARCH
+    if text in total_exact or any(_starts_anchored(text, item) for item in total_prefixes):
+        return RowClass.TOTAL
+    if any(_starts_anchored(text, item) for item in subtotal_prefixes):
+        return RowClass.SUBTOTAL
+    if text.startswith("*") or any(_starts_anchored(text, item) for item in note_prefixes):
+        return RowClass.NOTE
+    if any(_starts_anchored(text, item) for item in section_prefixes):
+        return RowClass.SECTION
+    return None
+
+
+def _marker_kind(values: Sequence[object]) -> tuple[_MarkerEvidence, RowClass | None]:
+    """Return v3 tri-state marker evidence after an optional outline cell."""
     if not values:
-        return None
+        return _MarkerEvidence.NONE, None
     start_index = 1 if len(values) > 1 and _is_outline(values[0]) else 0
     marker_value = next(
         (value for value in values[start_index:] if isinstance(value, str) and _display(value)),
         None,
     )
     if marker_value is None:
-        return None
-    first = _normalized(marker_value)
-    if first.startswith("tong cong ty"):
-        return None
-    if first in _TOTAL_EXACT or any(_starts_anchored(first, item) for item in _TOTAL_PREFIXES):
-        return RowClass.TOTAL
-    if any(_starts_anchored(first, item) for item in _SUBTOTAL_PREFIXES):
-        return RowClass.SUBTOTAL
-    if first.startswith("*") or any(_starts_anchored(first, item) for item in _NOTE_PREFIXES):
-        return RowClass.NOTE
-    if any(_starts_anchored(first, item) for item in _SECTION_PREFIXES):
-        return RowClass.SECTION
-    return None
+        return _MarkerEvidence.NONE, None
+    surface = _surface_normalized(marker_value)
+    # The corporation exception is intentionally surface-only: ASCII folding cannot
+    # distinguish it from common total phrases such as "tổng cộng tỷ lệ".
+    if _starts_anchored(surface, "tổng công ty"):
+        return _MarkerEvidence.NONE, None
+    surface_kind = _classify_marker_text(surface, surface=True)
+    if surface_kind is not None:
+        return _MarkerEvidence.RECOGNIZED, surface_kind
+    search = _search_normalized(marker_value)
+    search_kind = _classify_marker_text(search, surface=False)
+    if search_kind is None:
+        return _MarkerEvidence.NONE, None
+    if _starts_anchored(search, "tong cong ty"):
+        return _MarkerEvidence.AMBIGUOUS, None
+    return _MarkerEvidence.RECOGNIZED, search_kind
 
 
 def classify_row(row: Sequence[CellValue]) -> RowClassification:
@@ -241,9 +303,16 @@ def classify_row(row: Sequence[CellValue]) -> RowClassification:
     if not values:
         return RowClassification(row_number, RowClass.EMPTY, 1.0, ("no_nonempty_cells",))
 
-    marker = _marker_kind(values)
-    if marker is not None:
+    marker_evidence, marker = _marker_kind(values)
+    if marker_evidence is _MarkerEvidence.RECOGNIZED and marker is not None:
         return RowClassification(row_number, marker, 0.98, (f"{marker.value}_marker",))
+    if marker_evidence is _MarkerEvidence.AMBIGUOUS:
+        return RowClassification(
+            row_number,
+            RowClass.UNRESOLVED,
+            0.35,
+            ("ambiguous_folded_marker",),
+        )
     if _strong_asset_signature(values):
         return RowClassification(
             row_number,
@@ -292,7 +361,12 @@ def _slice_row(row: Sequence[CellValue], min_column: int, max_column: int) -> tu
 
 def _header_row_eligible(row: Sequence[CellValue]) -> bool:
     values = _nonempty_values(row)
-    if not values or _marker_kind(values) is not None or _strong_asset_signature(values):
+    marker_evidence, _marker = _marker_kind(values)
+    if (
+        not values
+        or marker_evidence is not _MarkerEvidence.NONE
+        or _strong_asset_signature(values)
+    ):
         return False
     return not any(
         cell.cell_type in {"number", "boolean", "datetime"}
@@ -348,9 +422,94 @@ def _header_vocabulary_hits(labels: Sequence[str | None]) -> int:
     return sum(
         1
         for label in labels
-        if (normalized := _normalized(label))
-        and any(term in normalized for term in _HEADER_TERMS)
+        if (normalized := _search_normalized(label))
+        and any(_has_phrase(normalized, term) for term in _HEADER_TERMS)
     )
+
+
+def _header_roles(label: str | None) -> frozenset[str]:
+    normalized = _search_normalized(label)
+    if not normalized:
+        return frozenset()
+    return frozenset(
+        family
+        for family, phrases in _HEADER_ROLE_PHRASES.items()
+        if any(_has_phrase(normalized, phrase) for phrase in phrases)
+    )
+
+
+def _complete_header_group(
+    roles: Sequence[frozenset[str]],
+    start: int,
+    end: int,
+    config: StructureRuleConfig,
+) -> bool:
+    group_roles = set().union(*roles[start : end + 1])
+    evidence_columns = sum(bool(item) for item in roles[start : end + 1])
+    return (
+        bool(group_roles & {"START_INDEX", "START_ID"})
+        and "NAME" in group_roles
+        and bool(group_roles & {"MEASURE", "UNIT", "VALUE", "DESCRIPTION"})
+        and len(group_roles) >= config.header_group_min_families
+        and evidence_columns >= config.header_group_min_columns
+    )
+
+
+def _repeated_core_bundles(
+    labels: Sequence[str | None],
+    roles: Sequence[frozenset[str]],
+    config: StructureRuleConfig,
+) -> bool:
+    bundles: list[tuple[int, int]] = []
+    auxiliaries = {"MEASURE", "UNIT", "VALUE"}
+    for name_index, item in enumerate(roles):
+        if "NAME" not in item:
+            continue
+        auxiliary_index = next(
+            (
+                index
+                for index in range(name_index + 1, min(len(roles), name_index + 4))
+                if roles[index] & auxiliaries
+            ),
+            None,
+        )
+        if auxiliary_index is None:
+            continue
+        lookback_start = max(0, name_index - config.header_group_start_lookback)
+        if not any(labels[index] is not None for index in range(lookback_start, name_index)):
+            continue
+        if not bundles or name_index > bundles[-1][1]:
+            bundles.append((name_index, auxiliary_index))
+    return len(bundles) >= config.repeated_core_family_threshold
+
+
+def _partition_header_run(
+    labels: Sequence[str | None],
+    config: StructureRuleConfig,
+) -> list[tuple[int, int, tuple[str, ...]]]:
+    """Return inclusive offsets for deterministic adjacent header groups."""
+    roles = [_header_roles(label) for label in labels]
+    anchors = [
+        index
+        for index, item in enumerate(roles)
+        if item & {"START_INDEX", "START_ID"}
+    ]
+    complete: list[tuple[int, int]] = []
+    for position, start in enumerate(anchors):
+        end = anchors[position + 1] - 1 if position + 1 < len(anchors) else len(labels) - 1
+        if _complete_header_group(roles, start, end, config):
+            complete.append((start, end))
+    if len(complete) >= 2:
+        return [
+            (start, end, ("multiple_horizontal_table_groups",))
+            for start, end in complete
+        ]
+    flags = (
+        ("ambiguous_horizontal_table_boundary",)
+        if _repeated_core_bundles(labels, roles, config)
+        else ()
+    )
+    return [(0, len(labels) - 1, flags)]
 
 
 def _has_merged_title(summary: SheetSummary, header_start_row: int) -> bool:
@@ -375,82 +534,84 @@ def _candidates_for_span(
         return []
 
     candidates: list[TableRegionCandidate] = []
-    for min_column, max_column in _occupied_column_runs(
+    for run_min_column, run_max_column in _occupied_column_runs(
         span,
         following_rows,
         config.empty_column_separator_run,
     ):
-        labels = _span_labels(span, min_column, max_column)
-        nonempty_headers = sum(label is not None for label in labels)
-        if nonempty_headers < 2:
-            continue
-        sliced_following = [
-            _slice_row(row, min_column, max_column)
-            for row in following_rows[: config.data_sample_rows]
-        ]
-        data_rows = [row for row in sliced_following if _nonempty_values(row)]
-        width = max_column - min_column + 1
-        header_density = nonempty_headers / width
-        vocabulary_hits = _header_vocabulary_hits(labels)
-        usable_rows = sum(len(_nonempty_values(row)) >= 2 for row in data_rows)
-        consistent_ratio = usable_rows / len(data_rows) if data_rows else 0.0
-        serial_ratio = (
-            sum(_strong_asset_signature(_nonempty_values(row)) for row in data_rows) / len(data_rows)
-            if data_rows
-            else 0.0
-        )
-        type_mix_ratio = (
-            sum(
-                any(isinstance(value, str) for value in _nonempty_values(row))
-                and any(_is_numeric(value) for value in _nonempty_values(row))
-                for row in data_rows
+        run_labels = _span_labels(span, run_min_column, run_max_column)
+        for start_offset, end_offset, flags in _partition_header_run(run_labels, config):
+            min_column = run_min_column + start_offset
+            max_column = run_min_column + end_offset
+            labels = run_labels[start_offset : end_offset + 1]
+            nonempty_headers = sum(label is not None for label in labels)
+            if nonempty_headers < 2:
+                continue
+            sliced_following = [
+                _slice_row(row, min_column, max_column)
+                for row in following_rows[: config.data_sample_rows]
+            ]
+            data_rows = [row for row in sliced_following if _nonempty_values(row)]
+            width = max_column - min_column + 1
+            header_density = nonempty_headers / width
+            vocabulary_hits = _header_vocabulary_hits(labels)
+            usable_rows = sum(len(_nonempty_values(row)) >= 2 for row in data_rows)
+            consistent_ratio = usable_rows / len(data_rows) if data_rows else 0.0
+            serial_ratio = (
+                sum(_strong_asset_signature(_nonempty_values(row)) for row in data_rows)
+                / len(data_rows)
+                if data_rows
+                else 0.0
             )
-            / len(data_rows)
-            if data_rows
-            else 0.0
-        )
-        merged_title = _has_merged_title(summary, header_start)
-        score = (
-            0.20 * min(header_density, 1.0)
-            + 0.32 * min(vocabulary_hits / 4.0, 1.0)
-            + 0.20 * consistent_ratio
-            + 0.12 * serial_ratio
-            + 0.11 * type_mix_ratio
-            + (0.05 if merged_title else 0.0)
-        )
-        if len(span) > 1:
-            score = min(1.0, score + 0.02)
-        reasons: list[str] = ["header_density"]
-        if vocabulary_hits:
-            reasons.append("business_header_vocabulary")
-        if consistent_ratio >= 0.5:
-            reasons.append("consistent_subsequent_rows")
-        if serial_ratio:
-            reasons.append("serial_number_pattern")
-        if type_mix_ratio:
-            reasons.append("mixed_data_types")
-        if merged_title:
-            reasons.append("merged_title_above")
-        if len(span) > 1:
-            reasons.append("multi_row_header")
-        normalized_labels = [_normalized(label) for label in labels if label]
-        serial_anchors = sum(label in {"stt", "so thu tu"} for label in normalized_labels)
-        flags = ("ambiguous_horizontal_table_boundary",) if serial_anchors > 1 else ()
-        candidates.append(
-            TableRegionCandidate(
-                sheet_name=summary.name,
-                header_start_row=header_start,
-                header_end_row=header_end,
-                data_start_row=header_end + 1,
-                min_column=min_column,
-                max_column=max_column,
-                max_row=header_end,
-                confidence=round(min(max(score, 0.0), 1.0), 6),
-                reasons=tuple(reasons),
-                header_labels=labels,
-                boundary_flags=flags,
+            type_mix_ratio = (
+                sum(
+                    any(isinstance(value, str) for value in _nonempty_values(row))
+                    and any(_is_numeric(value) for value in _nonempty_values(row))
+                    for row in data_rows
+                )
+                / len(data_rows)
+                if data_rows
+                else 0.0
             )
-        )
+            merged_title = _has_merged_title(summary, header_start)
+            score = (
+                0.20 * min(header_density, 1.0)
+                + 0.32 * min(vocabulary_hits / 4.0, 1.0)
+                + 0.20 * consistent_ratio
+                + 0.12 * serial_ratio
+                + 0.11 * type_mix_ratio
+                + (0.05 if merged_title else 0.0)
+            )
+            if len(span) > 1:
+                score = min(1.0, score + 0.02)
+            reasons: list[str] = ["header_density"]
+            if vocabulary_hits:
+                reasons.append("business_header_vocabulary")
+            if consistent_ratio >= 0.5:
+                reasons.append("consistent_subsequent_rows")
+            if serial_ratio:
+                reasons.append("serial_number_pattern")
+            if type_mix_ratio:
+                reasons.append("mixed_data_types")
+            if merged_title:
+                reasons.append("merged_title_above")
+            if len(span) > 1:
+                reasons.append("multi_row_header")
+            candidates.append(
+                TableRegionCandidate(
+                    sheet_name=summary.name,
+                    header_start_row=header_start,
+                    header_end_row=header_end,
+                    data_start_row=header_end + 1,
+                    min_column=min_column,
+                    max_column=max_column,
+                    max_row=header_end,
+                    confidence=round(min(max(score, 0.0), 1.0), 6),
+                    reasons=tuple(reasons),
+                    header_labels=tuple(labels),
+                    boundary_flags=flags,
+                )
+            )
     return candidates
 
 
@@ -458,7 +619,7 @@ def _rank_candidates(
     inspection: AdapterInspectionResult,
     row_provider: RowProvider,
     config: StructureRuleConfig,
-) -> list[TableRegionCandidate]:
+) -> tuple[list[TableRegionCandidate], tuple[str, ...]]:
     candidates: list[TableRegionCandidate] = []
     for summary in inspection.sheets:
         scanned = _bounded_rows(row_provider, summary.name, config.header_scan_rows)
@@ -476,6 +637,32 @@ def _rank_candidates(
                         config=config,
                     )
                 )
+    deduplicated: dict[tuple[str, int, int, int, int], TableRegionCandidate] = {}
+    for candidate in candidates:
+        key = (
+            candidate.sheet_name,
+            candidate.header_start_row,
+            candidate.header_end_row,
+            candidate.min_column,
+            candidate.max_column,
+        )
+        retained = deduplicated.get(key)
+        if retained is None or candidate.confidence > retained.confidence:
+            union_flags = tuple(
+                dict.fromkeys((*candidate.boundary_flags, *(retained.boundary_flags if retained else ())))
+            )
+            deduplicated[key] = replace(candidate, boundary_flags=union_flags)
+        elif candidate.boundary_flags:
+            deduplicated[key] = replace(
+                retained,
+                boundary_flags=tuple(dict.fromkeys((*retained.boundary_flags, *candidate.boundary_flags))),
+            )
+    candidates = list(deduplicated.values())
+    fail_closed_flags = tuple(
+        flag
+        for flag in _FAIL_CLOSED_HORIZONTAL_FLAGS
+        if any(flag in candidate.boundary_flags for candidate in candidates)
+    )
     candidates.sort(
         key=lambda item: (
             -item.confidence,
@@ -486,7 +673,7 @@ def _rank_candidates(
             item.max_column,
         )
     )
-    return candidates[: config.candidate_limit]
+    return candidates[: config.candidate_limit], fail_closed_flags
 
 
 def _overlaps(left: TableRegionCandidate, right: TableRegionCandidate) -> bool:
@@ -721,7 +908,7 @@ def analyze_workbook_structure(
     config: StructureRuleConfig = DEFAULT_STRUCTURE_RULES,
 ) -> dict:
     """Return canonical analysis payload from actual adapter output."""
-    ranked = _rank_candidates(inspection, row_provider, config)
+    ranked, fail_closed_flags = _rank_candidates(inspection, row_provider, config)
     candidates, classifications = _resolve_candidates(inspection, ranked, row_provider, config)
     disposition = StructureDisposition.REVIEW_REQUIRED
     disposition_reasons: list[str] = []
@@ -734,6 +921,9 @@ def analyze_workbook_structure(
         if len(candidates) > 1 and top.confidence - candidates[1].confidence < config.ambiguity_margin:
             disposition_reasons.append("competing_candidates")
         for flag in top.boundary_flags:
+            if flag not in disposition_reasons:
+                disposition_reasons.append(flag)
+        for flag in fail_closed_flags:
             if flag not in disposition_reasons:
                 disposition_reasons.append(flag)
         if not disposition_reasons:
