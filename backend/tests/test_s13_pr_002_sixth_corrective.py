@@ -1420,7 +1420,7 @@ def test_g06_throwaway_migration_full_schema_and_dml():
         os.environ["POSTGRES_PASSWORD"] = u.password or "valora_local_password"
         get_settings.cache_clear()
         cfg = Config("alembic.ini")
-        assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+        assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
         command.upgrade(cfg, "e1f2a3b4c5d6")
         eng = create_engine(iso_url)
         try:
@@ -1439,7 +1439,7 @@ def test_g06_throwaway_migration_full_schema_and_dml():
                 )
             command.upgrade(cfg, "head")
             _assert_schema(eng)
-            assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+            assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
         finally:
             eng.dispose()
     finally:

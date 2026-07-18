@@ -1345,7 +1345,7 @@ def test_e07_throwaway_pg_migration_roundtrip():
         assert get_settings().postgres_db == db_name
 
         cfg = Config("alembic.ini")
-        assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+        assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
 
         command.upgrade(cfg, "e1f2a3b4c5d6")
         eng = create_engine(iso_url)
@@ -1440,7 +1440,7 @@ def test_e07_throwaway_pg_migration_roundtrip():
                     c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                     is not None
                 )
-            assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+            assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
         finally:
             eng.dispose()
     finally:
