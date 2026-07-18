@@ -36,6 +36,7 @@ from app.modules.excel_import.infrastructure.object_storage import (
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
 )
@@ -1279,7 +1280,7 @@ def test_j03_endpoint_xlsx_extra_adapter_bounds(
             ok_payload,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        assert res_ok.status_code == 201, res_ok.text
+        assert_accepted_source_upload(res_ok, status=201)
     finally:
         set_source_limits_override(None)
 
@@ -1371,7 +1372,7 @@ def test_j03_endpoint_xls_extra_adapter_bounds(
             _xls_bytes(tmp_path, **ok_kwargs),
             "application/vnd.ms-excel",
         )
-        assert res_ok.status_code == 201, res_ok.text
+        assert_accepted_source_upload(res_ok, status=201)
     finally:
         set_source_limits_override(None)
 

@@ -18,22 +18,28 @@ def pytest_configure(config):
 
 @pytest.fixture(autouse=True)
 def _s13_pr_002_strong_helper_runtime_guard(request):
-    """M-04: each marked N+1 rejection node must complete exactly one strong helper call."""
+    """N-02: each marked N+1 node must complete exactly one bound strong-helper event."""
     marker = request.node.get_closest_marker("s13_pr_002_http_nplus1_reject")
     if marker is None:
         yield
         return
     from tests.support.s13_pr_002_http_preserve import (
-        get_strong_helper_completed_calls,
-        reset_strong_helper_calls,
+        accepted_companion_recorded,
+        get_strong_helper_events,
+        reset_strong_helper_context,
+    )
+    from tests.support.s13_pr_002_matrix import (
+        assert_event_matches_expectation,
+        expectation_for_request,
     )
 
-    reset_strong_helper_calls()
+    exp = expectation_for_request(request)
+    reset_strong_helper_context(exp)
     yield
-    completed = get_strong_helper_completed_calls()
-    assert completed == 1, (
-        f"{request.node.nodeid}: expected exactly 1 completed "
-        f"assert_http_rejection_preserve call, got {completed}"
+    assert_event_matches_expectation(
+        get_strong_helper_events(),
+        exp,
+        accepted_companion=accepted_companion_recorded(),
     )
 
 

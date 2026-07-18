@@ -38,8 +38,10 @@ from tests.support.s13_pr_002_http_preserve import (
     assert_canonical_distinguishes_collisions,
     assert_field_sets_match_mappers,
     assert_http_rejection_preserve,
+    assert_pytest_collect_count_exactly,
     assert_source_intake_preserve,
     get_strong_helper_completed_calls,
+    get_strong_helper_events,
     persisted_column_keys,
     reset_strong_helper_calls,
     snapshot_source_intake_preserve,
@@ -739,7 +741,7 @@ def test_m03_persisted_mutation_probes(db_session: Session, fake_storage):
 
 
 def test_m04_collect_only_marked_count_is_48():
-    """Exact collect-only count for s13_pr_002_http_nplus1_reject."""
+    """Exact collect-only count for s13_pr_002_http_nplus1_reject (anchored parser)."""
     import subprocess
     import sys
 
@@ -758,11 +760,10 @@ def test_m04_collect_only_marked_count_is_48():
         text=True,
         check=False,
     )
-    # last line like "48/819 tests collected ..."
     out = (r.stdout or "") + (r.stderr or "")
-    assert f"{EXPECTED_HTTP_NPLUS1_COUNT}/" in out or f"{EXPECTED_HTTP_NPLUS1_COUNT} tests collected" in out, out[
-        -500:
-    ]
+    assert_pytest_collect_count_exactly(
+        out, expected=EXPECTED_HTTP_NPLUS1_COUNT, returncode=r.returncode
+    )
 
 
 def test_m04_manifest_format_bound_set_equality():
@@ -780,8 +781,11 @@ def test_m04_manifest_format_bound_set_equality():
 
 
 def test_m04_manifest_nodes_resolve_in_collect_only():
+    """Superseded by thirteenth exact-node validation; keep returncode-checked collect."""
     import subprocess
     import sys
+
+    from tests.support.s13_pr_002_matrix import default_manifest_rows_from_collected, validate_matrix
 
     r = subprocess.run(
         [
@@ -798,14 +802,15 @@ def test_m04_manifest_nodes_resolve_in_collect_only():
         text=True,
         check=False,
     )
-    collected = r.stdout or ""
-    missing = []
-    for row in FORMAT_BOUND_MANIFEST:
-        if row["rejected_node"] not in collected and row["rejected_node"].split("[")[0] not in collected:
-            # rejected_node may be a prefix of nodeid
-            if not any(row["rejected_node"] in line for line in collected.splitlines()):
-                missing.append(row["rejected_node"])
-    assert not missing, f"manifest rejected_node not in collect-only: {missing}"
+    out = (r.stdout or "") + (r.stderr or "")
+    assert_pytest_collect_count_exactly(out, expected=EXPECTED_HTTP_NPLUS1_COUNT, returncode=r.returncode)
+    nodeids = [
+        line.strip()
+        for line in (r.stdout or "").splitlines()
+        if "::" in line and "test_" in line
+    ]
+    rows = default_manifest_rows_from_collected(nodeids)
+    validate_matrix(collected_nodeids=nodeids, manifest_rows=rows)
 
 
 def test_m04_strong_helper_records_only_on_success(db_session: Session, fake_storage):
@@ -831,6 +836,8 @@ def test_m04_strong_helper_records_only_on_success(db_session: Session, fake_sto
         snap=snap,
     )
     assert get_strong_helper_completed_calls() == 1
+    assert len(get_strong_helper_events()) == 1
+    assert get_strong_helper_events()[0].error_code == "upload_too_large"
 
     # Failed status must not record
     class _Bad:
@@ -884,7 +891,8 @@ def test_m05_threat_not_in_marked_matrix():
         text=True,
         check=False,
     )
-    out = r.stdout or ""
+    out = (r.stdout or "") + (r.stderr or "")
+    assert r.returncode == 0, out[-500:]
     assert "test_threat_http_preserves_prior_official_and_staging" not in out
 
 

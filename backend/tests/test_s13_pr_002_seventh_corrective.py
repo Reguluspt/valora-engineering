@@ -32,6 +32,7 @@ from app.modules.excel_import.infrastructure.object_storage import (
     set_object_storage_override,
 )
 from tests.support.s13_pr_002_http_preserve import (
+    assert_accepted_source_upload,
     assert_http_rejection_preserve,
     snapshot_source_intake_preserve,
 )
@@ -848,7 +849,7 @@ def test_h03_upload_bytes_exact_n_and_n_plus_one(
             },
             headers={"X-User-Id": str(user.id)},
         )
-        assert res_ok.status_code == 201, res_ok.text
+        assert_accepted_source_upload(res_ok, status=201)
     finally:
         set_source_limits_override(None)
 

@@ -1,17 +1,16 @@
 """Shared exact HTTP rejection preservation contract for S13-PR-002.
 
-Used by every retained endpoint N+1 rejection node so weaker “count-only /
-no-Reserved-audit / key-set-only” helpers cannot silently reappear.
-
 M-02: snapshot field sets equal SQLAlchemy persisted column keys.
-M-03: type-preserving canonicalization (no lossy default=str JSON).
-M-04: runtime instrumentation of completed strong-helper calls.
+M-03/N-01: type-preserving canonicalization (Enum-first; typed dict keys).
+M-04/N-02: completed strong-helper *events* bound to node/status/error/bound.
 """
 from __future__ import annotations
 
 import copy
+import re
 import threading
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
@@ -30,22 +29,89 @@ from app.modules.project_master_data.models import (
 
 
 # ---------------------------------------------------------------------------
-# M-04 runtime instrumentation (completed strong-helper calls only)
+# N-02 runtime instrumentation — completed events (not counts alone)
 # ---------------------------------------------------------------------------
 
 _tls = threading.local()
 
 
-def reset_strong_helper_calls() -> None:
-    _tls.completed = 0
+@dataclass(frozen=True)
+class StrongHelperEvent:
+    nodeid: str
+    status: int
+    error_code: str
+    reachability: str
+    bound: str
+
+
+@dataclass(frozen=True)
+class StrongHelperExpectation:
+    nodeid: str
+    reachability: str
+    bound: str
+    error_code: str
+    status: int
+    accepted_mode: str  # "same_node" | "none"
+
+
+def reset_strong_helper_context(expectation: StrongHelperExpectation | None = None) -> None:
+    """Start a fresh per-node context (call from autouse fixture)."""
+    _tls.events: list[StrongHelperEvent] = []
+    _tls.expectation = expectation
+    _tls.accepted_companion = False
+
+
+def get_strong_helper_events() -> list[StrongHelperEvent]:
+    return list(getattr(_tls, "events", []) or [])
 
 
 def get_strong_helper_completed_calls() -> int:
-    return int(getattr(_tls, "completed", 0))
+    """Back-compat count of completed events."""
+    return len(get_strong_helper_events())
 
 
-def _record_strong_helper_completed() -> None:
-    _tls.completed = get_strong_helper_completed_calls() + 1
+def reset_strong_helper_calls() -> None:
+    """Back-compat: clear events without setting expectation."""
+    reset_strong_helper_context(None)
+
+
+def record_accepted_companion() -> None:
+    """Mark that the same-node N-accepted companion assertion ran successfully."""
+    _tls.accepted_companion = True
+
+
+def accepted_companion_recorded() -> bool:
+    return bool(getattr(_tls, "accepted_companion", False))
+
+
+def _record_strong_helper_completed(*, status: int, error_code: str) -> None:
+    exp: StrongHelperExpectation | None = getattr(_tls, "expectation", None)
+    if exp is None:
+        # Not under a marked-node fixture — still record a minimal event for unit tests.
+        nodeid = getattr(_tls, "nodeid", "<no-fixture>")
+        reachability = getattr(_tls, "reachability", "")
+        bound = getattr(_tls, "bound", "")
+    else:
+        nodeid = exp.nodeid
+        reachability = exp.reachability
+        bound = exp.bound
+    events = getattr(_tls, "events", None)
+    if events is None:
+        _tls.events = []
+        events = _tls.events
+    events.append(
+        StrongHelperEvent(
+            nodeid=nodeid,
+            status=status,
+            error_code=error_code,
+            reachability=reachability,
+            bound=bound,
+        )
+    )
+
+
+def event_as_dict(ev: StrongHelperEvent) -> dict[str, Any]:
+    return asdict(ev)
 
 
 # ---------------------------------------------------------------------------
@@ -85,26 +151,40 @@ def assert_field_sets_match_mappers() -> None:
 
 
 # ---------------------------------------------------------------------------
-# M-03: type-preserving deep canonicalization
+# N-01: type-preserving deep canonicalization (Enum before scalar bases)
 # ---------------------------------------------------------------------------
+
+
+def _sort_key_for_canonical(item: Any) -> str:
+    """Deterministic sort key that does not collapse types."""
+    return repr(item)
 
 
 def canonical(value: Any) -> Any:
     """Deterministic, type-preserving deep form for snapshot equality.
 
-    Distinguishes int/float, UUID/str, Decimal/number, list/tuple, bytes/str,
-    timezone-aware/naive datetime, and Enum vs scalar value.
+    Enum is handled *before* bool/int/str so string-backed Enums and IntEnums
+    do not collapse into their scalar bases. Dict keys use the same typed
+    canonicalizer (never str(k)).
     """
     if value is None:
         return ("none", None)
-    if isinstance(value, bool):  # before int (bool is int subclass)
+    # Enum before bool/int/str — str Enum and IntEnum are subclasses of str/int.
+    if isinstance(value, Enum):
+        et = type(value)
+        return (
+            "enum",
+            et.__module__,
+            et.__qualname__,
+            canonical(value.value),
+        )
+    if isinstance(value, bool):  # before int
         return ("bool", value)
     if isinstance(value, int):
         return ("int", value)
     if isinstance(value, float):
         return ("float", value)
     if isinstance(value, Decimal):
-        # preserve exact decimal text (no float coercion)
         return ("decimal", format(value, "f"))
     if isinstance(value, uuid.UUID):
         return ("uuid", str(value))
@@ -130,23 +210,32 @@ def canonical(value: Any) -> Any:
             value.isoformat(),
             "aware" if value.tzinfo is not None else "naive",
         )
-    if isinstance(value, Enum):
-        return ("enum", type(value).__name__, canonical(value.value))
     if isinstance(value, dict):
-        items = sorted(((str(k), canonical(v)) for k, v in value.items()), key=lambda kv: kv[0])
-        return ("dict", tuple(items))
+        items = tuple(
+            sorted(
+                ((canonical(k), canonical(v)) for k, v in value.items()),
+                key=_sort_key_for_canonical,
+            )
+        )
+        return ("dict", items)
     if isinstance(value, list):
         return ("list", tuple(canonical(v) for v in value))
     if isinstance(value, tuple):
         return ("tuple", tuple(canonical(v) for v in value))
     if isinstance(value, set):
-        return ("set", tuple(sorted((canonical(v) for v in value), key=repr)))
-    # Fail closed rather than str()-collapsing unknown types.
+        return ("set", tuple(sorted((canonical(v) for v in value), key=_sort_key_for_canonical)))
     raise TypeError(f"unsupported snapshot value type: {type(value)!r}")
 
 
 def assert_canonical_distinguishes_collisions() -> None:
-    """Self-test: known type collisions are not collapsed."""
+    """Self-test: known type collisions are not collapsed (incl. Enum/dict keys)."""
+    from enum import IntEnum
+
+    from app.modules.project_master_data.models import (
+        AssetLineReviewStatus,
+        ImportBatchStatus,
+    )
+
     assert canonical(1) != canonical(1.0)
     assert canonical(uuid.UUID(int=1)) != canonical(str(uuid.UUID(int=1)))
     assert canonical(Decimal("1")) != canonical(1)
@@ -157,12 +246,86 @@ def assert_canonical_distinguishes_collisions() -> None:
     aware = datetime(2026, 7, 18, 12, 0, 0, tzinfo=__import__("datetime").timezone.utc)
     naive = datetime(2026, 7, 18, 12, 0, 0)
     assert canonical(aware) != canonical(naive)
+
+    # Real string-backed project Enums vs scalar strings
+    assert canonical(ImportBatchStatus.CREATED) != canonical("created")
+    assert canonical(AssetLineReviewStatus.PENDING) != canonical("pending")
+
+    class LocalInt(IntEnum):
+        ONE = 1
+
+    assert canonical(LocalInt.ONE) != canonical(1)
+
+    class OtherCreated(str, Enum):
+        CREATED = "created"
+
+    # Same member value, different Enum class
+    assert canonical(ImportBatchStatus.CREATED) != canonical(OtherCreated.CREATED)
+
+    # Typed dict keys
+    u = uuid.UUID(int=7)
+    assert canonical({1: "x"}) != canonical({"1": "x"})
+    assert canonical({u: "x"}) != canonical({str(u): "x"})
+
+    # Stable ordering regardless of insertion order
+    assert canonical({"b": 1, "a": 2}) == canonical({"a": 2, "b": 1})
+
+    # Unsupported type is fail-closed
+    try:
+        canonical(object())
+        raise AssertionError("expected TypeError for unsupported type")
+    except TypeError:
+        pass
+
     # deep copy isolation
     src = {"nested": [1, {"k": Decimal("2.5")}]}
     c1 = canonical(src)
     src["nested"].append(3)
     src["nested"][1]["k"] = Decimal("9")
     assert c1 == canonical({"nested": [1, {"k": Decimal("2.5")}]})
+
+
+# ---------------------------------------------------------------------------
+# N-04: exact collect-count parsing
+# ---------------------------------------------------------------------------
+
+
+_COLLECT_SLASH = re.compile(r"(?m)^(\d+)/(\d+) tests? collected\b")
+_COLLECT_PLAIN = re.compile(r"(?m)^(\d+) tests? collected\b")
+
+
+def parse_pytest_collect_selected_count(output: str) -> int:
+    """Parse selected item count from pytest --collect-only -q summary.
+
+    Anchored to start-of-line so ``148/831`` is not accepted as ``48``.
+    """
+    m = _COLLECT_SLASH.search(output)
+    if m:
+        return int(m.group(1))
+    m = _COLLECT_PLAIN.search(output)
+    if m:
+        return int(m.group(1))
+    raise ValueError(f"no pytest collect summary found in output:\n{output[-500:]}")
+
+
+def assert_pytest_collect_count_exactly(
+    output: str,
+    *,
+    expected: int,
+    returncode: int,
+) -> int:
+    """Require subprocess success and exact selected count."""
+    if returncode != 0:
+        raise AssertionError(
+            f"pytest collect subprocess failed with returncode={returncode}:\n{output[-800:]}"
+        )
+    try:
+        n = parse_pytest_collect_selected_count(output)
+    except ValueError as e:
+        raise AssertionError(str(e)) from e
+    if n != expected:
+        raise AssertionError(f"expected collect count {expected}, got {n}")
+    return n
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +410,6 @@ def snapshot_source_intake_preserve(
         .all()
     )
     audits = db.query(AuditEvent).order_by(AuditEvent.id.asc()).all()
-    # Deep-copy object store so later mutations cannot alias snap contents.
     objects = {k: bytes(v) for k, v in fake_storage._objects.items()}
     content_types = dict(fake_storage._content_types)
     return {
@@ -292,8 +454,8 @@ def assert_http_rejection_preserve(
 ) -> None:
     """Unconditional status/error_code + full preservation contract.
 
-    Records one *completed* strong-helper call only after status, error_code and
-    full equality all succeed (M-04).
+    Records one completed StrongHelperEvent only after status, error_code and
+    full equality all succeed (N-02).
     """
     assert res.status_code == status, res.text
     body = res.json()
@@ -301,17 +463,19 @@ def assert_http_rejection_preserve(
     assert isinstance(detail, dict), f"detail must be mapping, got {type(detail)!r}: {detail!r}"
     assert detail.get("error_code") == error_code, detail
     assert_source_intake_preserve(db, fake_storage, snap)
-    _record_strong_helper_completed()
+    _record_strong_helper_completed(status=status, error_code=error_code)
+
+
+def assert_accepted_source_upload(res, *, status: int = 201) -> None:
+    """Assert successful companion upload and record same-node accepted evidence."""
+    assert res.status_code == status, getattr(res, "text", res)
+    record_accepted_companion()
 
 
 # Back-compat name used by older suites/eleventh self-test imports.
 def assert_audit_snapshot_detects_mutations() -> None:
-    """Deprecated hand-built proof — prefer DB-backed twelfth probes.
-
-    Kept as a thin wrapper so import sites do not break; real proof is M-03 suite.
-    """
+    """Deprecated hand-built proof — prefer DB-backed twelfth probes."""
     assert_canonical_distinguishes_collisions()
-    # Minimal list inequality still documented for supplementary lint.
     base = [{"id": "1", "payload": {"k": "v"}}]
     assert base != copy.deepcopy(base) + [{"id": "2"}]
     assert base != []
