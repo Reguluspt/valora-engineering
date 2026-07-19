@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Last reconciled:** 2026-07-19 (hybrid workflow / S13-PR-004 live gate)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -20,14 +20,17 @@ is CLOSED / SATISFIED.
 S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
 (PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
 `29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+S13-PR-003 runtime is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
 (PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
 `17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
 post-merge main CI `29676915010`, all PASS).
+S13-PR-003-CLOSEOUT is MERGED at current accepted main
+`d09662c95edfd3515d405e468d215159b46fbf1f` (PR #18).
 
 Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
 Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`. Freeze its design/evidence gate before runtime.
+`d09662c95edfd3515d405e468d215159b46fbf1f`. Draft PR #19 has frozen remote design head
+`91c6797176a0f33aefb9c88ab2543a5c9a2fec92` (last verified 2026-07-19).
 S13-PR-005 API/UX and later candidates still require separate owner assignment.
 ```
 
