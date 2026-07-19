@@ -866,8 +866,8 @@ class TestM4PreconditionSnapshots:
 LINEAGE_PARENT_REV = "db5977424e7b"
 # S12 Apply lineage revision (not necessarily the live Alembic graph tip).
 LINEAGE_HEAD_REV = "e1f2a3b4c5d6"
-# Live single graph head after S13-PR-002 source-artifact migration.
-CURRENT_ALEMBIC_HEAD = "f2a3b4c5d6e7"
+# Live single graph head after S13-PR-003 structure-snapshot migration.
+CURRENT_ALEMBIC_HEAD = "a3b4c5d6e7f8"
 LINEAGE_COL_BATCH = "source_import_batch_id"
 LINEAGE_COL_STAGING = "source_staging_row_id"
 

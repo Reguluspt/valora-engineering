@@ -927,7 +927,7 @@ def test_pg_migration_roundtrip_s13():
 
         cfg = Config("alembic.ini")
         script = ScriptDirectory.from_config(cfg)
-        assert script.get_heads() == ["f2a3b4c5d6e7"]
+        assert script.get_heads() == ["a3b4c5d6e7f8"]
 
         eng = create_engine(url)
         try:
@@ -966,7 +966,7 @@ def test_pg_migration_roundtrip_s13():
             with eng.connect() as c:
                 r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
-            assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+            assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
             # silence unused if settings_url only for debug
             assert "postgresql" in settings_url
         finally:

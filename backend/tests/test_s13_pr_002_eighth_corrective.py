@@ -1495,7 +1495,7 @@ def test_i04_throwaway_migration_schema_and_dml_matrix():
         os.environ["POSTGRES_PASSWORD"] = u.password or "valora_local_password"
         get_settings.cache_clear()
         cfg = Config("alembic.ini")
-        assert ScriptDirectory.from_config(cfg).get_heads() == ["f2a3b4c5d6e7"]
+        assert ScriptDirectory.from_config(cfg).get_heads() == ["a3b4c5d6e7f8"]
         command.upgrade(cfg, "e1f2a3b4c5d6")
         eng = create_engine(iso_url)
         try:
