@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -28,7 +28,7 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Post Gate 0c — Runtime Handoff Preparation
+Engineering Phase / Sprint 13 — Column Mapping Memory
 ```
 
 ### Live task gate (fetch origin/main before acting)
@@ -37,14 +37,19 @@ Engineering Phase / Post Gate 0c — Runtime Handoff Preparation
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
 Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
-Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a
-(Gate 0c PR #13; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076;
-parent a3672f41bc54f42420fb70639a27bf50d604376a);
-post-merge main CI run 29504915362 PASS.
+S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
+(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`;
+exact-head CI `29640226850`; post-merge main CI `29641452155`, all PASS).
+S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`,
+tree `17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
+post-merge main CI `29676915010`, all PASS).
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is owner-authorized runtime work on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
-Further Sprint 13+ runtime slices (S13-PR-003 onward) still require separate owner assignment after merge from the then-current accepted origin/main.
+Runtime assignment state: S13-PR-004 is owner-assigned from baseline
+`2af753520ab6b7885555adc5b7945a28d32ee311`; assigned branch name:
+`s13-pr-004-column-mapping-memory`. Its design/evidence gate must be frozen before runtime work.
+Scope is limited to Column Mapping Memory persistence and application services (G-03/G-06).
+S13-PR-005 mapping-confirmation API/UX and every later slice remain separately gated.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
@@ -58,7 +63,7 @@ Upload lock order: Project FOR UPDATE → batch FOR UPDATE → staging mutation.
 Apply lock order: Project FOR UPDATE → batch FOR UPDATE → ordered staging → inserts.
 ```
 
-Do **not** re-open S12-PR-003 or S12-PR-004 as blocked/not started.
+Do **not** re-open S12-PR-003, S12-PR-004, S13-PR-002 or S13-PR-003 as blocked/not started.
 
 ## 3. Permanent Hard Rules
 

@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,20 +11,24 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Post Gate 0c — Runtime Handoff Preparation
+Sprint 13 — Column Mapping Memory
 
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
 Gate 0c (Design Book v1.4 §20 + ADR 0033–0034 + canonical reconciliation)
 is CLOSED / SATISFIED.
-Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
-main CI 29504915362 PASS.
+S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
+(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
+`29640226850`; post-merge main CI `29641452155`, all PASS).
+S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
+`17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
+post-merge main CI `29676915010`, all PASS).
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is the first Adaptive Intake runtime slice (feature branch only; not merged). Mapping memory / later S13 slices remain unauthorized until separately assigned.
-
-Active runtime assignment: S13-PR-002 on branch s13-pr-002-legacy-workbook-source-artifact (not merged). Further candidates still require separate
-explicit owner assignment from the then-current accepted origin/main.
+Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
+Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
+`2af753520ab6b7885555adc5b7945a28d32ee311`. Freeze its design/evidence gate before runtime.
+S13-PR-005 API/UX and later candidates still require separate owner assignment.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
@@ -45,10 +49,12 @@ Sprint 12 — Excel import pipeline          [PR-001…PR-004 merged; Apply v1 f
 S12-R-001…008 — Remediation / recon        [merged to main]
 S12-PR-004 — Apply Command & Provenance    [MERGED; engineering gate closed]
 S13-PR-001 — Design authority reconciliation [merged / gate closed; main 7f7473e…]
+S13-PR-002 — Legacy workbook/source artifact [merged / closed; main 137f8c5…]
+S13-PR-003 — Structure discovery/row classification [merged / closed; main 2af7535…]
 ```
 
 Sprint 0 “foundation only” boundaries are **historical**. They must not be stated as the current repository status.
-S12-PR-003 and S12-PR-004 are **merged/complete** and must not be described as blocked or not started.
+S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and must not be described as blocked or not started.
 
 ## 2. Design Authority
 
@@ -93,8 +99,11 @@ Word and Excel are input/output only.
 They are not the source of truth.
 Excel upload/validate target import batch + staging only.
 Official promotion for S12 staging uses Apply (ADR 0029 / s12-pr-004-v1) — implemented.
-S12 parser v1 remains .xlsx + fixed aliases; Adaptive Intake v2 (.xls/.xlsx, mapping memory)
-is design authority only until S13 runtime PRs are authorized.
+S12 parser v1 remains `.xlsx` + fixed aliases for its historical upload path.
+S13-PR-002 adds bounded `.xls`/`.xlsx` source adapters and immutable source artifacts;
+S13-PR-003 adds deterministic structure discovery and row classification.
+S13-PR-004 mapping-memory persistence/application services are assigned; S13-PR-005 API/UX
+and any replacement of S12 Apply v1 are not authorized by that assignment.
 ```
 
 ### Price
@@ -128,10 +137,12 @@ Gemini/DeepSeek (or other providers) are future gateway candidates only after
 deterministic S13–S15 foundations and ADR-governed provider integration.
 ```
 
-### Adaptive Intake / Memory (v1.4 design authority)
+### Adaptive Intake / Memory (v1.4 design authority and phased runtime)
 
 ```text
 Column Mapping Memory and Asset Identity Memory are separate.
+Workbook source/adapter and structure-discovery foundations are implemented by S13-PR-002/003.
+Column Mapping Memory persistence/application services are the active S13-PR-004 assignment.
 RawAssetObservation is immutable; normalization never overwrites raw wording.
 Human confirmation is required before reusable feedback or active knowledge.
 No cross-organization learning. No per-click online training.

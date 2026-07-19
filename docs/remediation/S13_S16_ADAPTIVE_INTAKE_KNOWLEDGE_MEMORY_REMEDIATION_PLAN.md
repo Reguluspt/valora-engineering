@@ -2,12 +2,12 @@
 
 **Status:** Active implementation plan after S12-PR-004 engineering closure and S13-PR-001 design-authority merge; runtime tasks remain individually gated.
 **Design authority:** Design Book v1.4 adaptive-intake/bounded-automation addendum + ADR 0030–0034 + Design Authority Index.
-**Accepted main baseline evidence (not evergreen):** S13-PR-001 squash `7f7473e459f592deac1054be3935d7f911b760a2` (PR #11); post-merge main CI `29429680504` PASS. Prior S12-PR-004: `a9f2c1e…` / CI `29419008129`.
+**Accepted main baseline evidence (not evergreen):** S13-PR-003 squash `2af753520ab6b7885555adc5b7945a28d32ee311` (PR #17); post-merge main CI `29676915010` PASS. Prior S13-PR-002: `137f8c5…` / CI `29641452155`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
 **Gate 0c (bounded-AI automation readiness):** **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`; CI `29504915362` PASS).
-**Runtime assignment state:** **S13-PR-002** assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-**Rule:** S13-PR-002 is owner-authorized on its feature branch only. Do not start S13-PR-003+ until a separate explicit owner assignment authorizes that task ID. Branch runtime from the then-current accepted `origin/main` only.
+**Runtime assignment state:** **S13-PR-004** assigned with branch name `s13-pr-004-column-mapping-memory` from accepted main `2af753520ab6b7885555adc5b7945a28d32ee311`; freeze its design/evidence gate before runtime.
+**Rule:** S13-PR-002 and S13-PR-003 are merged / closed. S13-PR-004 alone is owner-authorized. Do not start S13-PR-005+ without a separate explicit owner assignment. Branch runtime from the assigned accepted `origin/main` only.
 
 ---
 
@@ -94,13 +94,15 @@ Evidence:
 - post-merge main CI `29504915362` PASS (backend/frontend/worker);
 - no Adaptive Intake runtime, provider calls, or R2 capability mixed into the design package.
 
-S13-PR-002 was subsequently owner-authorized as the first Adaptive Intake runtime task (feature branch only; not merged).
+S13-PR-002 was subsequently owner-authorized as the first Adaptive Intake runtime task and later
+merged / closed at main `137f8c527422b656974e569c924dafa8150b8b22`.
 
 ### Post-merge live-gate reconciliation provenance
 
 After Gate 0c merged and main CI passed, live operating documents were reconciled so they no longer
 describe Gate 0c as pending. That reconciliation is **provenance only** (not a durable live task).
-Durable state after closeout main: Gate 0c closed/satisfied. Current branch live state: S13-PR-002 assigned / in progress (not merged).
+Durable state after closeout main: Gate 0c closed/satisfied; S13-PR-002/003 merged / closed;
+S13-PR-004 owner-assigned design-first from accepted main `2af7535…`.
 
 ### Gate 1 — deterministic baseline before external AI
 
@@ -131,11 +133,11 @@ The durable outbox/job/attempt boundary must exist before production DOCX/PDF/OC
 After S13-PR-001 merged, live operating documents were reconciled so they no longer
 describe S13-PR-001 as an active docs gate. That reconciliation is **provenance only**
 (not a durable live task). Durable historical state after design gates: S13-PR-001 closed, Gate 0b/0c satisfied.
-Current branch live state: S13-PR-002 assigned / in progress (not merged).
+Current live state: S13-PR-002 and S13-PR-003 are merged / closed; S13-PR-004 is assigned design-first.
 
 ### S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
 
-**Status:** **assigned / in progress** on branch `s13-pr-002-legacy-workbook-source-artifact` from baseline `949903f3912aa65f8b990852756aeef7981bca08` (not merged).
+**Status:** **merged / closed** (PR #15 squash `137f8c527422b656974e569c924dafa8150b8b22`; post-merge CI `29641452155` PASS).
 **Closes:** G-01 and the source-replay prerequisite.
 
 Scope:
@@ -170,6 +172,7 @@ Non-goals:
 
 ### S13-PR-003 — Workbook Structure Discovery and Row Classification
 
+**Status:** **merged / closed** (PR #17 squash `2af753520ab6b7885555adc5b7945a28d32ee311`; post-merge CI `29676915010` PASS).
 **Closes:** G-02 and G-04.
 
 Scope:
@@ -192,6 +195,7 @@ Required tests:
 
 ### S13-PR-004 — Column Mapping Memory Persistence and Application Services
 
+**Status:** **owner-assigned, design-first** with assigned branch name `s13-pr-004-column-mapping-memory` from baseline `2af753520ab6b7885555adc5b7945a28d32ee311`.
 **Closes:** G-03 and G-06.
 
 Scope:

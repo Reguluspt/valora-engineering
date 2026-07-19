@@ -1,9 +1,9 @@
 # Valora Engineering
 
-**Phase:** Engineering — post Gate 0c; runtime handoff preparation
-**Main evidence (not evergreen):** `99dfccbc7bf2893fa5b0dce8d52a01068655e39a` (Gate 0c PR #13); main CI `29504915362` PASS
-**Runtime assignment state:** **NONE**
-**Next runtime candidate:** S13-PR-002 — not started; requires a separate explicit owner assignment from accepted `main`
+**Phase:** Engineering — Sprint 13 Column Mapping Memory
+**Main evidence (not evergreen):** `2af753520ab6b7885555adc5b7945a28d32ee311` (S13-PR-003 PR #17); main CI `29676915010` PASS
+**Runtime assignment state:** **S13-PR-004 assigned**
+**Assigned branch name/baseline:** `s13-pr-004-column-mapping-memory` from accepted main `2af753520ab6b7885555adc5b7945a28d32ee311`; design-first gate
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -21,8 +21,10 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | **S12-R-001 … S12-R-008** | **Merged to `main`** |
 | **S12-PR-003** Validation Engine | **Merged** (PR #8) |
 | **S12-PR-004** Apply Command & Provenance | **Merged** (PR #10); engineering gate **closed** |
-| S12 parser capability (today) | `.xlsx` only; fixed column aliases; staging + validate + Apply v1 |
-| Adaptive Intake / Column Mapping Memory | **Design only** (v1.4 / ADR 0030) — not implemented |
+| S12 parser capability | `.xlsx` fixed-alias staging + validate + Apply v1 remains frozen |
+| **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
+| **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
+| Adaptive Intake / Column Mapping Memory | Adapters + structure implemented; **S13-PR-004 persistence/application services assigned**; S13-PR-005 API/UX not started |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
@@ -34,8 +36,10 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 S12-PR-004 is merged and closed.
 S13-PR-001 design-authority gate is closed (merged to main).
 Gate 0c bounded-AI automation readiness is closed / satisfied.
-Runtime assignment state: NONE.
-S13-PR-002 is the next candidate only — not started; requires separate owner assignment.
+Runtime assignment state: S13-PR-004 assigned / design-first.
+S13-PR-002 and S13-PR-003 are merged / closed.
+S13-PR-004 is owner-assigned from main 2af7535…; freeze design before runtime.
+S13-PR-005 and later slices require separate owner assignment.
 ```
 
 ## Architecture (monorepo)
