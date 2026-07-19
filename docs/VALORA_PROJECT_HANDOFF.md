@@ -1,9 +1,9 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-16 — Gate 0c closeout / live-gate reconciliation
-**Main evidence (not evergreen):** `99dfccbc7bf2893fa5b0dce8d52a01068655e39a` (Gate 0c PR #13)
-**Main CI evidence:** run `29504915362` PASS
+**Reconciled:** 2026-07-19 — S13-PR-003 closeout / S13-PR-004 assignment
+**Main evidence (not evergreen):** `2af753520ab6b7885555adc5b7945a28d32ee311` (S13-PR-003 PR #17)
+**Main CI evidence:** run `29676915010` PASS
 
 ### Live task gate
 
@@ -11,12 +11,18 @@
 S12-PR-004 is MERGED and its engineering gate is CLOSED.
 S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
 Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
-Evidence (not evergreen): main squash 99dfccbc7bf2893fa5b0dce8d52a01068655e39a (PR #13);
-main CI 29504915362 PASS; audited head 656dc9ff70a453ee5b83f47d13b7040b3f062076.
+S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
+(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
+`29640226850`; post-merge main CI `29641452155`, all PASS).
+S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
+`17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
+post-merge main CI `29676915010`, all PASS).
 
-Runtime assignment state: S13-PR-002 assigned / in progress on branch s13-pr-002-legacy-workbook-source-artifact from baseline 949903f3912aa65f8b990852756aeef7981bca08 (not merged).
-S13-PR-002 is owner-authorized on its feature branch only; it is NOT merged and must not be treated as main PASS/closed.
-Further candidates (S13-PR-003 onward) still require separate explicit owner assignment from the then-current accepted origin/main.
+Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
+Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
+`2af753520ab6b7885555adc5b7945a28d32ee311`. Its design/evidence gate must be frozen first.
+S13-PR-005 API/UX and later slices remain separately gated.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -113,28 +119,30 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | S12-PR-003 | Validation Engine |
 | **S12-PR-004** | Apply Command & Provenance — **merged** PR #10 at `a9f2c1e…` |
 | **S13-PR-001** | Design Authority and Contract Reconciliation — **merged** PR #11 at `7f7473e…` |
+| **S13-PR-002** | Legacy Workbook Adapter and Immutable Source Artifact — **merged** PR #15 at `137f8c5…` |
+| **S13-PR-003** | Workbook Structure Discovery and Row Classification — **merged** PR #17 at `2af7535…` |
 
 ### Runtime assignment state
 
 ```text
-Active runtime assignment: S13-PR-002 — Legacy Workbook Adapter and Immutable Source Artifact
-Branch: s13-pr-002-legacy-workbook-source-artifact (not merged)
-Baseline: 949903f3912aa65f8b990852756aeef7981bca08
-Gate 0c: CLOSED / SATISFIED (main 99dfccb…; CI 29504915362)
+Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application Services
+Assigned branch name: s13-pr-004-column-mapping-memory
+Baseline: 2af753520ab6b7885555adc5b7945a28d32ee311
+Gate: freeze task-specific design/evidence contract before runtime implementation
 ```
 
-### Next candidate after S13-PR-002 merge (requires separate owner assignment)
+### Next candidate after S13-PR-004 merge (requires separate owner assignment)
 
 ```text
-S13-PR-003 — structure discovery / Column Mapping Memory (per remediation plan)
+S13-PR-005 — Mapping Confirmation API and Astryx Vietnamese UX
 ```
 
 Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier/job foundation → reliable audited AI suggestions and shadow evaluation.
 
 ## 9. Out of scope (still)
 
-- Adaptive `.xls`/`.xlsx` runtime and mapping-confirmation UX
-- Column Mapping Memory / Asset Identity Memory runtime
+- Mapping-confirmation API/Astryx UX (S13-PR-005)
+- Asset Identity Memory runtime
 - Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
 - AI provider runtime and end-to-end AI mapping/matching
 - `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
@@ -152,7 +160,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart closed S13-PR-001 or Gate 0c. S13-PR-002 is the active assigned runtime task on its feature branch only (not merged). Do not start S13-PR-003+ until a separate owner assignment names that task ID from accepted main.
+6. Do not restart closed S13-PR-001/002/003 or Gate 0c. S13-PR-004 is the active assigned runtime task from accepted main `2af7535…`; freeze its design before runtime. Do not start S13-PR-005+ without a separate owner assignment.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.

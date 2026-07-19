@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-16 (Gate 0c closeout / live-gate reconciliation)
+**Reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -46,6 +46,10 @@ Prior S13-PR-001 / closeout evidence (historical):
   7f7473e… / CI 29429680504; a3672f4… / CI 29474065397
 Prior S12-PR-004 evidence (historical):
   a9f2c1e… / CI 29419008129 PASS
+S13-PR-002 closed evidence:
+  main 137f8c527422b656974e569c924dafa8150b8b22 (PR #15); CI 29641452155 PASS
+S13-PR-003 closed evidence:
+  main 2af753520ab6b7885555adc5b7945a28d32ee311 (PR #17); CI 29676915010 PASS
 ```
 
 
@@ -57,9 +61,11 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 S12-PR-004 engineering gate: CLOSED (merged)
 S13-PR-001 design-authority gate: CLOSED (merged)
 Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
-Runtime assignment state: S13-PR-002 assigned / in progress (branch s13-pr-002-legacy-workbook-source-artifact; not merged)
-→ S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact (in progress on feature branch; not merged)
-→ S13-PR-003+ Column Mapping Memory / Adaptive Intake follow-ons (require separate owner assignment)
+S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact: MERGED / CLOSED
+S13-PR-003 Workbook Structure Discovery and Row Classification: MERGED / CLOSED
+Runtime assignment state: S13-PR-004 assigned from main 2af7535…
+→ S13-PR-004 Column Mapping Memory Persistence and Application Services (design-first)
+→ S13-PR-005 Mapping Confirmation API / UX (requires separate owner assignment)
 → S14 Asset Identity Memory
 → S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
 → S16 reliable audited AI suggestion runtime and shadow evaluation
@@ -108,7 +114,10 @@ Before any S13 runtime PR (still required for each task ID):
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 is **assigned / in progress** on branch `s13-pr-002-legacy-workbook-source-artifact` from baseline `949903f3912aa65f8b990852756aeef7981bca08`; it is **not merged**. S13-PR-003+ still require separate owner assignment.
+S13-PR-002 and S13-PR-003 are merged / closed. S13-PR-004 is separately owner-assigned with
+assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
+`2af753520ab6b7885555adc5b7945a28d32ee311`; its design/evidence gate must be frozen before
+runtime implementation. S13-PR-005+ still require separate owner assignment.
 
 ## 7. Module ownership (future runtime)
 
