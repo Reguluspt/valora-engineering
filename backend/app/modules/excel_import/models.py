@@ -1215,3 +1215,65 @@ class LearningFeedbackEvent(Base, TimestampMixin, UUIDMixin):
         Index("idx_feedback_org", "organization_id"),
         Index("idx_feedback_decision", "source_decision_id"),
     )
+
+
+class DossierBundleStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    ALIGNED = "aligned"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class DossierFileRole(str, enum.Enum):
+    EXCEL_WORKBOOK = "excel_workbook"
+    WORD_REPORT = "word_report"
+    PDF_REPORT = "pdf_report"
+    SUPPORTING_EVIDENCE = "supporting_evidence"
+
+
+class DossierBundle(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "dossier_bundles"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    )
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
+    )
+    bundle_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_dossier_bundle_org", "organization_id"),
+        Index("idx_dossier_bundle_customer", "customer_id"),
+        UniqueConstraint("organization_id", "bundle_code", name="uq_dossier_bundle_code"),
+    )
+
+
+class DossierSourceFile(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "dossier_source_files"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_bundles.id", ondelete="RESTRICT"), nullable=False
+    )
+    file_role: Mapped[str] = mapped_column(String(50), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_object_key: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        Index("idx_dossier_file_bundle", "dossier_bundle_id"),
+        UniqueConstraint("dossier_bundle_id", "file_role", name="uq_dossier_bundle_file_role"),
+    )
+
