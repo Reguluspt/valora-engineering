@@ -908,3 +908,83 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
         Index("idx_mapping_usage_decision", "confirmation_decision_id"),
         Index("idx_mapping_usage_profile", "profile_id"),
     )
+
+
+class RawAssetObservation(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "raw_asset_observations"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    )
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
+    )
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("project_asset_import_batches.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_artifact_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("import_source_artifacts.id", ondelete="RESTRICT"), nullable=False
+    )
+    structure_snapshot_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workbook_structure_snapshots.id", ondelete="RESTRICT"), nullable=False
+    )
+    staging_row_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("project_asset_import_staging_rows.id", ondelete="SET NULL"), nullable=True
+    )
+    row_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    sheet_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    raw_asset_name: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_unit: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    raw_quantity: Mapped[Optional[float]] = mapped_column(Numeric(18, 4), nullable=True)
+    raw_price: Mapped[Optional[float]] = mapped_column(Numeric(18, 4), nullable=True)
+    evidence_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    section_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    __table_args__ = (
+        Index("idx_raw_obs_org", "organization_id"),
+        Index("idx_raw_obs_customer", "customer_id"),
+        Index("idx_raw_obs_batch", "import_batch_id"),
+        Index("idx_raw_obs_artifact", "source_artifact_id"),
+    )
+
+
+class ContextualAssetAliasStatus(str, enum.Enum):
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
+    SUPERSEDED = "superseded"
+
+
+class ContextualAssetAlias(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "contextual_asset_aliases"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    )
+    alias_name: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_alias_name: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, nullable=True
+    )
+    asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
+    source_decision_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, nullable=True
+    )
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_ctx_alias_org", "organization_id"),
+        Index("idx_ctx_alias_customer", "customer_id"),
+        Index("idx_ctx_alias_normalized", "organization_id", "customer_id", "normalized_alias_name"),
+    )
+
