@@ -127,9 +127,10 @@ class TestC1PostCommitBoundary:
 
 class TestC2StagingForUpdate:
     def test_source_contains_staging_for_update(self):
-        src = Path("app/modules/excel_import/application/apply_staging.py").read_text(
-            encoding="utf-8"
-        )
+        p = Path("app/modules/excel_import/application/apply_staging.py")
+        if not p.exists():
+            p = Path(__file__).resolve().parents[1] / "app" / "modules" / "excel_import" / "application" / "apply_staging.py"
+        src = p.read_text(encoding="utf-8")
         assert "ProjectAssetImportStagingRow" in src
         assert ".with_for_update()" in src
         # ordered then locked
@@ -535,10 +536,13 @@ class TestC6LifecycleAndMigration:
         from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        cfg = Config("alembic.ini")
+        ini = Path("alembic.ini")
+        if not ini.exists():
+            ini = Path(__file__).resolve().parents[1] / "alembic.ini"
+        cfg = Config(str(ini))
         heads = ScriptDirectory.from_config(cfg).get_heads()
-        # Single graph head advances with S14-R-001 tenant/security hardening.
-        assert heads == ["e7f8a9b0c1d2"]
+        # Single graph head advances with S15-R-001 reliable-job remediation.
+        assert heads == ["a9b0c1d2e3f4"]
 
 
 def _pg_url():

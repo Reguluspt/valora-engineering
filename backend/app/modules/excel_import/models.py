@@ -1277,3 +1277,60 @@ class DossierSourceFile(Base, TimestampMixin, UUIDMixin):
         UniqueConstraint("dossier_bundle_id", "file_role", name="uq_dossier_bundle_file_role"),
     )
 
+
+class TaskJobStatus(str, enum.Enum):
+    PENDING = "pending"
+    CLAIMED = "claimed"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    DEAD_LETTER = "dead_letter"
+    CANCELLED = "cancelled"
+
+
+class TaskJob(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "task_jobs"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    job_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    result_payload: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    generation_token: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    lease_owner: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_task_job_org", "organization_id"),
+        Index("idx_task_job_status", "status"),
+        UniqueConstraint("organization_id", "idempotency_key", name="uq_task_job_idempotency"),
+    )
+
+
+class TaskJobAttempt(Base, UUIDMixin):
+    __tablename__ = "task_job_attempts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("task_jobs.id", ondelete="RESTRICT"), nullable=False
+    )
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)  # running, succeeded, failed, timed_out
+    worker_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("idx_job_attempt_job", "job_id"),
+    )
+
