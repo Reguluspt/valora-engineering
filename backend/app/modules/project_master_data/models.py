@@ -81,6 +81,9 @@ class User(Base, UUIDMixin, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
+        UniqueConstraint(
+            "organization_id", "id", name="uq_s13_pr004_user_tenant_id"
+        ),
     )
 
 
@@ -429,6 +432,9 @@ class Customer(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "tax_code", name="uq_customer_tax_org"),
+        UniqueConstraint(
+            "organization_id", "id", name="uq_s13_pr004_customer_tenant_id"
+        ),
     )
 
 
@@ -709,6 +715,12 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "code", name="uq_project_code_org"),
+        UniqueConstraint(
+            "organization_id",
+            "customer_id",
+            "id",
+            name="uq_s13_pr004_project_tenant_customer_id",
+        ),
         CheckConstraint("fee_amount >= 0", name="chk_project_fee_positive"),
     )
 
@@ -3678,7 +3690,6 @@ class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
         Index("idx_staging_row_batch", "import_batch_id"),
         Index("idx_staging_row_validation", "validation_status"),
     )
-
 
 
 
