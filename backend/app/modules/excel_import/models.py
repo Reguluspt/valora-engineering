@@ -1477,3 +1477,51 @@ class TaskJobAttempt(Base, UUIDMixin):
         ),
         Index("idx_job_attempt_job", "job_id"),
     )
+
+
+class TableRoleCandidate(str, enum.Enum):
+    TECHNICAL_SPECIFICATIONS = "technical_specifications"
+    MARKET_COMPARISON = "market_comparison"
+    FINAL_VALUATION_SUMMARY = "final_valuation_summary"
+    UNKNOWN = "unknown"
+
+
+class DocxExtractedTable(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "docx_extracted_tables"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_bundles.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_file_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_source_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    table_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    table_role_candidate: Mapped[str] = mapped_column(String(50), nullable=False)
+    raw_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    col_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (
+        Index("idx_docx_table_bundle", "dossier_bundle_id"),
+    )
+
+
+class DocxExtractedRow(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "docx_extracted_rows"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    extracted_table_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("docx_extracted_tables.id", ondelete="RESTRICT"), nullable=False
+    )
+    row_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    cells_json: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+
+    __table_args__ = (
+        Index("idx_docx_row_table", "extracted_table_id"),
+    )
+
