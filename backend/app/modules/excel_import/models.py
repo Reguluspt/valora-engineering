@@ -1525,3 +1525,30 @@ class DocxExtractedRow(Base, TimestampMixin, UUIDMixin):
         Index("idx_docx_row_table", "extracted_table_id"),
     )
 
+
+class AlignmentStatus(str, enum.Enum):
+    ALIGNED = "aligned"
+    UNALIGNED = "unaligned"
+    NEEDS_HUMAN_REVIEW = "needs_human_review"
+
+
+class DossierPairedAlignment(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "dossier_paired_alignments"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_bundles.id", ondelete="RESTRICT"), nullable=False
+    )
+    alignment_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    tech_rows_matched: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    quote_observations_matched: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    differences_summary: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index("idx_paired_align_bundle", "dossier_bundle_id"),
+        UniqueConstraint("organization_id", "dossier_bundle_id", name="uq_dossier_paired_alignment_bundle"),
+    )
+
