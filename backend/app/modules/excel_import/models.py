@@ -4,7 +4,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 from sqlalchemy import (
     Boolean,
@@ -987,4 +987,62 @@ class ContextualAssetAlias(Base, TimestampMixin, UUIDMixin):
         Index("idx_ctx_alias_customer", "customer_id"),
         Index("idx_ctx_alias_normalized", "organization_id", "customer_id", "normalized_alias_name"),
     )
+
+
+class AssetIdentityDecision(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "asset_identity_decisions"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
+    )
+    raw_observation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("raw_asset_observations.id", ondelete="RESTRICT"), nullable=False
+    )
+    decision_type: Mapped[str] = mapped_column(String(50), nullable=False)  # accepted, corrected, rejected, deferred
+    chosen_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    chosen_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    chosen_alias_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+
+    __table_args__ = (
+        Index("idx_identity_dec_org", "organization_id"),
+        Index("idx_identity_dec_obs", "raw_observation_id"),
+        Index("idx_identity_dec_project", "project_id"),
+        UniqueConstraint("organization_id", "command_id", name="uq_asset_identity_decision_command"),
+    )
+
+
+class LearningFeedbackEvent(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "learning_feedback_events"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_decision_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("asset_identity_decisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)  # positive_match, negative_match
+    raw_wording: Mapped[str] = mapped_column(Text, nullable=False)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)  # CanonicalAsset, AssetVariant, ContextualAlias
+    target_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    feedback_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index("idx_feedback_org", "organization_id"),
+        Index("idx_feedback_decision", "source_decision_id"),
+    )
+
 
