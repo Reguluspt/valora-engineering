@@ -77,8 +77,14 @@ def claim_job_lease(
     if job.status not in {"pending", "claimed"}:
         raise HTTPException(status_code=409, detail="Task job đã kết thúc hoặc không ở trạng thái chờ.")
 
-    if job.status == "claimed" and job.lease_expires_at and job.lease_expires_at > now and job.lease_owner != worker_id:
-        raise HTTPException(status_code=409, detail="Task job đang được xử lý bởi worker khác.")
+    if job.status == "claimed" and job.lease_expires_at:
+        lease_expires = (
+            job.lease_expires_at
+            if job.lease_expires_at.tzinfo
+            else job.lease_expires_at.replace(tzinfo=timezone.utc)
+        )
+        if lease_expires > now and job.lease_owner != worker_id:
+            raise HTTPException(status_code=409, detail="Task job đang được xử lý bởi worker khác.")
 
     if job.attempt_count >= job.max_attempts:
         job.status = "dead_letter"

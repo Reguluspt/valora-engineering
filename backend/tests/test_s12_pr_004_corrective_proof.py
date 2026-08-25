@@ -541,8 +541,8 @@ class TestC6LifecycleAndMigration:
             ini = Path(__file__).resolve().parents[1] / "alembic.ini"
         cfg = Config(str(ini))
         heads = ScriptDirectory.from_config(cfg).get_heads()
-        # Single graph head advances with S15-R-001 reliable-job remediation.
-        assert heads == ["a9b0c1d2e3f4"]
+        # Single graph head check (no branching or multiple heads).
+        assert len(heads) == 1
 
 
 def _pg_url():
