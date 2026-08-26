@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional, Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -1226,10 +1227,13 @@ class DossierBundleStatus(str, enum.Enum):
 
 
 class DossierFileRole(str, enum.Enum):
-    EXCEL_WORKBOOK = "excel_workbook"
-    WORD_REPORT = "word_report"
-    PDF_REPORT = "pdf_report"
-    SUPPORTING_EVIDENCE = "supporting_evidence"
+    CUSTOMER_ASSET_LIST = "customer_asset_list"
+    FINAL_APPRAISAL_REPORT = "final_appraisal_report"
+    COMPARISON_TABLE = "comparison_table"
+    SUPPLIER_QUOTE = "supplier_quote"
+    CATALOGUE = "catalogue"
+    APPROVAL_OR_QC = "approval_or_qc"
+    OTHER_EVIDENCE = "other_evidence"
 
 
 class DossierBundle(Base, TimestampMixin, UUIDMixin):
@@ -1238,8 +1242,8 @@ class DossierBundle(Base, TimestampMixin, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
     )
     project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
@@ -1251,6 +1255,31 @@ class DossierBundle(Base, TimestampMixin, UUIDMixin):
     )
 
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "id", name="uq_dossier_bundle_tenant_id"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_dossier_bundle_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_dossier_bundle_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_dossier_bundle_creator_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'aligned', 'completed', 'failed')",
+            name="chk_dossier_bundle_status",
+        ),
         Index("idx_dossier_bundle_org", "organization_id"),
         Index("idx_dossier_bundle_customer", "customer_id"),
         UniqueConstraint("organization_id", "bundle_code", name="uq_dossier_bundle_code"),
@@ -1268,13 +1297,49 @@ class DossierSourceFile(Base, TimestampMixin, UUIDMixin):
     )
     file_role: Mapped[str] = mapped_column(String(50), nullable=False)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     storage_object_key: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id"],
+            ["dossier_bundles.organization_id", "dossier_bundles.id"],
+            name="fk_dossier_file_bundle_tenant",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "dossier_bundle_id",
+            "storage_object_key",
+            name="uq_dossier_bundle_storage_object",
+        ),
+        CheckConstraint(
+            "file_role IN ('customer_asset_list', 'final_appraisal_report', "
+            "'comparison_table', 'supplier_quote', 'catalogue', 'approval_or_qc', "
+            "'other_evidence')",
+            name="chk_dossier_file_role",
+        ),
+        CheckConstraint("file_size_bytes > 0", name="chk_dossier_file_size_positive"),
+        CheckConstraint(
+            "length(checksum_sha256) = 64 AND checksum_sha256 = lower(checksum_sha256)",
+            name="chk_dossier_file_checksum",
+        ),
+        CheckConstraint(
+            "length(trim(storage_object_key)) > 0", name="chk_dossier_file_storage_key"
+        ),
+        Index(
+            "uq_dossier_primary_file_role",
+            "dossier_bundle_id",
+            "file_role",
+            unique=True,
+            sqlite_where=text(
+                "file_role IN ('customer_asset_list', 'final_appraisal_report')"
+            ),
+            postgresql_where=text(
+                "file_role IN ('customer_asset_list', 'final_appraisal_report')"
+            ),
+        ),
         Index("idx_dossier_file_bundle", "dossier_bundle_id"),
-        UniqueConstraint("dossier_bundle_id", "file_role", name="uq_dossier_bundle_file_role"),
     )
 
 
@@ -1287,6 +1352,14 @@ class TaskJobStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class TaskJobAttemptStatus(str, enum.Enum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    TIMED_OUT = "timed_out"
+    CANCELLED = "cancelled"
+
+
 class TaskJob(Base, TimestampMixin, UUIDMixin):
     __tablename__ = "task_jobs"
 
@@ -1296,20 +1369,69 @@ class TaskJob(Base, TimestampMixin, UUIDMixin):
     job_type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    result_payload: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
-    generation_token: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    result_payload: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
+    generation_token: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     max_attempts: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     lease_owner: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+    correlation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    causation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    last_error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    last_error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_task_job_tenant_id"),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_task_job_creator_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'claimed', 'completed', 'failed', 'dead_letter', 'cancelled')",
+            name="chk_task_job_status",
+        ),
+        CheckConstraint("length(trim(job_type)) > 0", name="chk_task_job_type_nonempty"),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0", name="chk_task_job_idempotency_nonempty"
+        ),
+        CheckConstraint("generation_token >= 0", name="chk_task_job_generation_nonnegative"),
+        CheckConstraint(
+            "attempt_count >= 0 AND max_attempts > 0 AND attempt_count <= max_attempts",
+            name="chk_task_job_attempt_bounds",
+        ),
+        CheckConstraint(
+            "(status = 'claimed' AND lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL) "
+            "OR (status <> 'claimed' AND lease_owner IS NULL AND lease_expires_at IS NULL)",
+            name="chk_task_job_lease_shape",
+        ),
+        CheckConstraint(
+            "(status = 'completed' AND completed_at IS NOT NULL) OR "
+            "(status <> 'completed' AND completed_at IS NULL)",
+            name="chk_task_job_completed_shape",
+        ),
+        CheckConstraint(
+            "(status = 'cancelled' AND cancelled_at IS NOT NULL) OR "
+            "(status <> 'cancelled' AND cancelled_at IS NULL)",
+            name="chk_task_job_cancelled_shape",
+        ),
         Index("idx_task_job_org", "organization_id"),
         Index("idx_task_job_status", "status"),
+        Index("idx_task_job_claimable", "status", "available_at", "created_at"),
         UniqueConstraint("organization_id", "idempotency_key", name="uq_task_job_idempotency"),
     )
 
@@ -1324,13 +1446,35 @@ class TaskJobAttempt(Base, UUIDMixin):
         Uuid, ForeignKey("task_jobs.id", ondelete="RESTRICT"), nullable=False
     )
     attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    generation_token: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)  # running, succeeded, failed, timed_out
     worker_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    lease_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "job_id"],
+            ["task_jobs.organization_id", "task_jobs.id"],
+            name="fk_task_job_attempt_job_tenant",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("job_id", "attempt_no", name="uq_task_job_attempt_no"),
+        UniqueConstraint("job_id", "generation_token", name="uq_task_job_attempt_generation"),
+        CheckConstraint("attempt_no > 0", name="chk_task_job_attempt_no_positive"),
+        CheckConstraint("generation_token > 0", name="chk_task_job_attempt_generation_positive"),
+        CheckConstraint(
+            "status IN ('running', 'succeeded', 'failed', 'timed_out', 'cancelled')",
+            name="chk_task_job_attempt_status",
+        ),
+        CheckConstraint(
+            "(status = 'running' AND finished_at IS NULL) OR "
+            "(status <> 'running' AND finished_at IS NOT NULL)",
+            name="chk_task_job_attempt_finished_shape",
+        ),
         Index("idx_job_attempt_job", "job_id"),
     )
 
