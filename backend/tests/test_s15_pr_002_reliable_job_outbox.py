@@ -177,14 +177,13 @@ def test_enqueue_is_transactional_and_exactly_idempotent(db_session: Session) ->
     db_session.rollback()
 
     with pytest.raises(HTTPException) as exc_info:
-        enqueue_durable_job(
+        _enqueue(
             db_session,
             actor=actor,
-            org_id=actor.organization_id,
-            job_type="dossier_alignment",
-            idempotency_key="job-outbox-001",
-            payload={"dossier_bundle_id": str(bundle.id)},
-            correlation_id="corr-job-outbox-001",
+            bundle=bundle,
+            source=source,
+            key="job-outbox-001",
+            max_attempts=4,
         )
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail["error_code"] == "job_idempotency_conflict"

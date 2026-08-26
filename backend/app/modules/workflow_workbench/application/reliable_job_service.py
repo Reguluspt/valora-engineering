@@ -19,7 +19,9 @@ from app.modules.ai_governance_security.application.security_audit_service impor
 )
 from app.modules.excel_import.models import (
     DossierBundle,
+    DossierExtractionSnapshot,
     DossierSourceFile,
+    DossierSourceKind,
     TaskJob,
     TaskJobAttempt,
     TaskJobAttemptStatus,
@@ -311,6 +313,43 @@ def _normalize_and_validate_target(
             passed=True,
         )
         normalized["source_file_id"] = str(source_file_id)
+    elif job_type == "dossier_alignment":
+        snapshot_specs = (
+            ("excel_snapshot_id", DossierSourceKind.EXCEL.value),
+            ("report_snapshot_id", DossierSourceKind.DOCX.value),
+        )
+        for field_name, expected_kind in snapshot_specs:
+            snapshot_id = _parse_uuid(payload.get(field_name), field_name=field_name)
+            snapshot = (
+                db.query(DossierExtractionSnapshot)
+                .filter(
+                    DossierExtractionSnapshot.organization_id == org_id,
+                    DossierExtractionSnapshot.dossier_bundle_id == bundle_id,
+                    DossierExtractionSnapshot.id == snapshot_id,
+                    DossierExtractionSnapshot.source_kind == expected_kind,
+                )
+                .populate_existing()
+                .first()
+            )
+            if snapshot is None:
+                _persist_boundary_denial(
+                    db,
+                    org_id=org_id,
+                    actor_id=actor.id,
+                    resource_type="DossierExtractionSnapshot",
+                    resource_id=snapshot_id,
+                    reason_code="extraction_snapshot_ownership_boundary_failed",
+                    detail="Không tìm thấy snapshot extraction.",
+                )
+            record_tenant_boundary_check(
+                db,
+                organization_id=org_id,
+                actor_id=actor.id,
+                resource_type="DossierExtractionSnapshot",
+                resource_id=snapshot_id,
+                passed=True,
+            )
+            normalized[field_name] = str(snapshot_id)
     return normalized
 
 
@@ -857,6 +896,7 @@ def fail_job(
     error_code: str,
     error_message: str,
     retry_base_seconds: int = 5,
+    retryable: bool = True,
 ) -> TaskJob:
     """Fail the current attempt and schedule bounded retry or dead-letter transition."""
     normalized_worker = _validate_worker(worker_id, 1)
@@ -929,8 +969,9 @@ def fail_job(
     job.lease_owner = None
     job.lease_expires_at = None
 
-    if job.attempt_count >= job.max_attempts:
-        _mark_dead_letter(db, job, reason_code="max_attempts_exhausted", now=now)
+    if not retryable or job.attempt_count >= job.max_attempts:
+        reason_code = "non_retryable_failure" if not retryable else "max_attempts_exhausted"
+        _mark_dead_letter(db, job, reason_code=reason_code, now=now)
         event_name = "TaskJobAttemptFailedAndDeadLettered"
         retry_at = None
     else:
@@ -956,6 +997,7 @@ def fail_job(
             "attempt_no": attempt.attempt_no,
             "generation_token": generation_token,
             "error_code": normalized_code,
+            "retryable": retryable,
             "retry_at": retry_at.isoformat() if retry_at else None,
         },
     )

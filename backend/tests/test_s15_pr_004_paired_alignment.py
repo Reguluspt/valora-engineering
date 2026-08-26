@@ -1,193 +1,198 @@
-"""S15-PR-004 unit tests for Paired Alignment Engine and Historical Bootstrap."""
-import uuid
+"""S15-R-002 content alignment tests over real Excel and DOCX extraction."""
+from __future__ import annotations
+
 import pytest
-from sqlalchemy import create_engine
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
 
-from app.db import Base
-import app.modules.excel_import.models  # noqa: F401
-from app.modules.excel_import.models import (
-    AlignmentStatus,
-    DocxExtractedTable,
-    DossierBundle,
-    DossierSourceFile,
-    TableRoleCandidate,
+from app.modules.document_engine_intelligence.application.paired_alignment_service import (
+    generate_dossier_row_alignments,
 )
-from app.modules.document_engine_intelligence.application.dossier_bundle_service import create_paired_dossier_bundle
-from app.modules.document_engine_intelligence.application.paired_alignment_service import align_paired_dossier_bundle
+from app.modules.excel_import.models import (
+    DossierAlignmentRun,
+    DossierExtractedRow,
+    DossierRowAlignment,
+)
+from app.modules.project_master_data.models import AuditEvent
+from app.modules.workflow_workbench.application.reliable_job_service import (
+    claim_job_lease,
+    complete_job,
+    enqueue_durable_job,
+)
+from tests.test_s15_pr_003_docx_extraction import (
+    SourceBackedSeed,
+    _extract_and_complete,
+    _seed_source_backed_dossier,
+    db_session,
+)
+
+__all__ = ["db_session"]
 
 
-@pytest.fixture
-def db_session() -> Session:
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+def _claim_alignment_job(
+    db: Session,
+    seed: SourceBackedSeed,
+    *,
+    excel_snapshot_id: object,
+    report_snapshot_id: object,
+    key: str,
+):
+    job = enqueue_durable_job(
+        db,
+        actor=seed.actor,
+        org_id=seed.actor.organization_id,
+        job_type="dossier_alignment",
+        idempotency_key=key,
+        payload={
+            "dossier_bundle_id": str(seed.bundle_id),
+            "excel_snapshot_id": str(excel_snapshot_id),
+            "report_snapshot_id": str(report_snapshot_id),
+        },
     )
-    Base.metadata.create_all(engine)
-    session = Session(engine)
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(engine)
+    db.commit()
+    return claim_job_lease(
+        db,
+        worker_id="alignment-worker",
+        job_id=job.id,
+        org_id=seed.actor.organization_id,
+        lease_duration_seconds=60,
+    )
 
 
-def test_paired_alignment_success(db_session: Session):
-    """Verify that complete paired dossier (Excel + Word) aligns successfully (ADR 0032)."""
-    org_id = uuid.uuid4()
-    actor_id = uuid.uuid4()
+def _generate_and_complete(
+    db: Session,
+    seed: SourceBackedSeed,
+    *,
+    excel_snapshot_id: object,
+    report_snapshot_id: object,
+    key: str,
+) -> DossierAlignmentRun:
+    job, attempt = _claim_alignment_job(
+        db,
+        seed,
+        excel_snapshot_id=excel_snapshot_id,
+        report_snapshot_id=report_snapshot_id,
+        key=key,
+    )
+    run = generate_dossier_row_alignments(
+        db,
+        org_id=seed.actor.organization_id,
+        dossier_bundle_id=seed.bundle_id,
+        excel_snapshot_id=excel_snapshot_id,
+        report_snapshot_id=report_snapshot_id,
+        job_id=job.id,
+        generation_token=job.generation_token,
+    )
+    complete_job(
+        db,
+        worker_id="alignment-worker",
+        job_id=job.id,
+        org_id=seed.actor.organization_id,
+        attempt_id=attempt.id,
+        generation_token=job.generation_token,
+        result_payload={"alignment_run_id": str(run.id)},
+    )
+    return run
 
-    files = [
-        {
-            "file_role": "excel_workbook",
-            "file_name": "Bang_Tinh.xlsx",
-            "file_size_bytes": 1000,
-            "checksum_sha256": "a" * 64,
-            "storage_object_key": "key1",
-        },
-        {
-            "file_role": "word_report",
-            "file_name": "Bao_Cao.docx",
-            "file_size_bytes": 2000,
-            "checksum_sha256": "b" * 64,
-            "storage_object_key": "key2",
-        },
-    ]
 
-    bundle, source_files = create_paired_dossier_bundle(
+def test_alignment_uses_content_not_row_order_and_never_auto_confirms(
+    db_session: Session,
+) -> None:
+    seed = _seed_source_backed_dossier(db_session, "alignment-content")
+    excel_snapshot = _extract_and_complete(
+        db_session, seed, seed.excel_source, key="align-extract-excel"
+    )
+    report_snapshot = _extract_and_complete(
+        db_session, seed, seed.report_source, key="align-extract-report"
+    )
+    run = _generate_and_complete(
         db_session,
-        actor_id=actor_id,
-        org_id=org_id,
-        bundle_code="HS-ALIGN-001",
-        files=files,
+        seed,
+        excel_snapshot_id=excel_snapshot.id,
+        report_snapshot_id=report_snapshot.id,
+        key="align-content",
     )
 
-    # Add extracted Word table
-    tbl = DocxExtractedTable(
-        id=uuid.uuid4(),
-        organization_id=org_id,
-        dossier_bundle_id=bundle.id,
-        source_file_id=source_files[1].id,
-        table_index=0,
-        table_role_candidate=TableRoleCandidate.TECHNICAL_SPECIFICATIONS.value,
-        raw_title="Bảng thông số kỹ thuật PD-001",
-        row_count=49,
-        col_count=5,
+    assert run.total_excel_rows == 2
+    assert run.candidate_count == 1
+    assert run.review_required_count == 1
+    assert run.unresolved_count == 0
+    alignments = db_session.query(DossierRowAlignment).filter_by(alignment_run_id=run.id).all()
+    assert len(alignments) == 2
+    assert {item.state for item in alignments} == {"candidate", "review_required"}
+    assert all(item.state not in {"confirmed", "rejected"} for item in alignments)
+
+    by_excel_name = {}
+    for alignment in alignments:
+        excel_row = db_session.get(DossierExtractedRow, alignment.excel_row_id)
+        technical_row = db_session.get(DossierExtractedRow, alignment.technical_row_id)
+        by_excel_name[excel_row.normalized_fields["name"]] = (alignment, technical_row)
+    generator_alignment, generator_technical = by_excel_name["Máy phát điện Cummins C500"]
+    assert generator_technical.normalized_fields["name"] == "Máy phát điện Cummins C500"
+    assert generator_alignment.match_basis["technical"]["stt_exact"] is True
+    assert generator_alignment.match_basis["technical"]["order_used_only_as_tiebreaker"] is True
+    assert generator_alignment.state == "review_required"
+    assert {item["code"] for item in generator_alignment.conflicts} >= {"unit_mismatch"}
+    assert (
+        db_session.query(AuditEvent)
+        .filter_by(event_name="DossierRowAlignmentCandidatesGenerated", entity_id=run.id)
+        .count()
+        == 1
     )
-    db_session.add(tbl)
-    db_session.commit()
-
-    alignment = align_paired_dossier_bundle(db_session, org_id=org_id, dossier_bundle_id=bundle.id)
-
-    assert alignment.alignment_status == AlignmentStatus.ALIGNED.value
-    assert float(alignment.confidence_score) >= 0.85
-    assert alignment.tech_rows_matched == 49
 
 
-def test_alignment_idempotency(db_session: Session):
-    """Verify that re-running paired alignment is idempotent and updates existing record."""
-    org_id = uuid.uuid4()
-    actor_id = uuid.uuid4()
-
-    files = [
-        {
-            "file_role": "excel_workbook",
-            "file_name": "Bang_Tinh.xlsx",
-            "file_size_bytes": 1000,
-            "checksum_sha256": "a" * 64,
-            "storage_object_key": "key1",
-        },
-        {
-            "file_role": "word_report",
-            "file_name": "Bao_Cao.docx",
-            "file_size_bytes": 2000,
-            "checksum_sha256": "b" * 64,
-            "storage_object_key": "key2",
-        },
-    ]
-
-    bundle, _ = create_paired_dossier_bundle(
+def test_alignment_rerun_is_idempotent_for_exact_snapshot_pair(db_session: Session) -> None:
+    seed = _seed_source_backed_dossier(db_session, "alignment-idempotent")
+    excel_snapshot = _extract_and_complete(
+        db_session, seed, seed.excel_source, key="idem-extract-excel"
+    )
+    report_snapshot = _extract_and_complete(
+        db_session, seed, seed.report_source, key="idem-extract-report"
+    )
+    first = _generate_and_complete(
         db_session,
-        actor_id=actor_id,
-        org_id=org_id,
-        bundle_code="HS-ALIGN-002",
-        files=files,
+        seed,
+        excel_snapshot_id=excel_snapshot.id,
+        report_snapshot_id=report_snapshot.id,
+        key="alignment-idempotent-1",
     )
-
-    align1 = align_paired_dossier_bundle(db_session, org_id=org_id, dossier_bundle_id=bundle.id)
-    align2 = align_paired_dossier_bundle(db_session, org_id=org_id, dossier_bundle_id=bundle.id)
-
-    assert align1.id == align2.id
-
-
-def test_paired_alignment_missing_file(db_session: Session):
-    """Verify that dossier missing required file role marks bundle unaligned (ADR 0032)."""
-    org_id = uuid.uuid4()
-    actor_id = uuid.uuid4()
-
-    bundle = DossierBundle(
-        id=uuid.uuid4(),
-        organization_id=org_id,
-        bundle_code="HS-ALIGN-003",
-        created_by_user_id=actor_id,
-    )
-    db_session.add(bundle)
-
-    source_file = DossierSourceFile(
-        id=uuid.uuid4(),
-        organization_id=org_id,
-        dossier_bundle_id=bundle.id,
-        file_role="excel_workbook",
-        file_name="Bang_Tinh.xlsx",
-        file_size_bytes=1000,
-        checksum_sha256="a" * 64,
-        storage_object_key="key1",
-    )
-    db_session.add(source_file)
-    db_session.commit()
-
-    alignment = align_paired_dossier_bundle(db_session, org_id=org_id, dossier_bundle_id=bundle.id)
-
-    assert alignment.alignment_status == AlignmentStatus.UNALIGNED.value
-    assert float(alignment.confidence_score) == 0.0
-
-
-
-def test_paired_alignment_low_confidence(db_session: Session):
-    """Verify that low confidence (<0.85) alignment transitions to needs_human_review (ADR 0032)."""
-    org_id = uuid.uuid4()
-    actor_id = uuid.uuid4()
-
-    files = [
-        {
-            "file_role": "excel_workbook",
-            "file_name": "Bang_Tinh.xlsx",
-            "file_size_bytes": 1000,
-            "checksum_sha256": "a" * 64,
-            "storage_object_key": "key1",
-        },
-        {
-            "file_role": "word_report",
-            "file_name": "Bao_Cao.docx",
-            "file_size_bytes": 2000,
-            "checksum_sha256": "b" * 64,
-            "storage_object_key": "key2",
-        },
-    ]
-
-    bundle, _ = create_paired_dossier_bundle(
+    second = _generate_and_complete(
         db_session,
-        actor_id=actor_id,
-        org_id=org_id,
-        bundle_code="HS-ALIGN-004",
-        files=files,
+        seed,
+        excel_snapshot_id=excel_snapshot.id,
+        report_snapshot_id=report_snapshot.id,
+        key="alignment-idempotent-2",
+    )
+    assert second.id == first.id
+    assert db_session.query(DossierAlignmentRun).count() == 1
+    assert db_session.query(DossierRowAlignment).count() == 2
+    assert (
+        db_session.query(AuditEvent)
+        .filter_by(event_name="DossierRowAlignmentCandidatesGenerated")
+        .count()
+        == 1
     )
 
-    # No extracted tables added -> tech_rows_count = 0 -> low confidence (0.6)
-    alignment = align_paired_dossier_bundle(db_session, org_id=org_id, dossier_bundle_id=bundle.id)
 
-    assert alignment.alignment_status == AlignmentStatus.NEEDS_HUMAN_REVIEW.value
-    assert float(alignment.confidence_score) < 0.85
-
+def test_alignment_job_rejects_snapshot_from_wrong_role(db_session: Session) -> None:
+    seed = _seed_source_backed_dossier(db_session, "alignment-role")
+    excel_snapshot = _extract_and_complete(
+        db_session, seed, seed.excel_source, key="role-extract-excel"
+    )
+    report_snapshot = _extract_and_complete(
+        db_session, seed, seed.report_source, key="role-extract-report"
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        enqueue_durable_job(
+            db_session,
+            actor=seed.actor,
+            org_id=seed.actor.organization_id,
+            job_type="dossier_alignment",
+            idempotency_key="alignment-swapped-snapshots",
+            payload={
+                "dossier_bundle_id": str(seed.bundle_id),
+                "excel_snapshot_id": str(report_snapshot.id),
+                "report_snapshot_id": str(excel_snapshot.id),
+            },
+        )
+    assert exc_info.value.status_code == 404
