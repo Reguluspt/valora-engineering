@@ -1,21 +1,26 @@
 import React, { useState, useMemo } from "react";
-import { ReviewQueueItem, MockRole } from "./ReviewQueueTypes";
-import { MOCK_REVIEW_QUEUE } from "./mockReviewQueue";
+import { ReviewQueueItem, ReviewRole } from "./ReviewQueueTypes";
 import { ReviewActionPanel } from "./ReviewActionPanel";
 import { StatusBadge } from "../../common/StatusBadge";
 import { EmptyState } from "../../common/EmptyState";
 
-export function ReviewQueueDashboard() {
-  const [items, setItems] = useState<ReviewQueueItem[]>(MOCK_REVIEW_QUEUE);
+interface ReviewQueueDashboardProps {
+  items?: ReviewQueueItem[];
+  currentRole?: ReviewRole | null;
+  currentUserId?: string | null;
+}
+
+export function ReviewQueueDashboard({
+  items = [],
+  currentRole = null,
+  currentUserId = null
+}: ReviewQueueDashboardProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Filters state
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-
-  // Mock User Role switcher state
-  const [mockRole, setMockRole] = useState<MockRole>("reviewer");
 
   const selectedItem = useMemo(() => {
     return items.find((i) => i.id === selectedItemId) || null;
@@ -37,60 +42,41 @@ export function ReviewQueueDashboard() {
       total: items.length,
       pending: items.filter((i) => i.status !== "completed").length,
       blocking: items.filter((i) => i.validation_status === "blocking").length,
-      assignedToMe: items.filter((i) => i.assigned_to === "reviewer_1").length
+      assignedToMe: currentUserId === null
+        ? 0
+        : items.filter((i) => i.assigned_to === currentUserId).length
     };
-  }, [items]);
+  }, [currentUserId, items]);
 
   return (
     <div style={{ padding: "var(--space-lg)", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Top statistics section */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-lg)" }}>
         <div>
-          <h2 style={{ color: "#fff", margin: 0 }}>Review Queue Dashboard</h2>
+          <h2 style={{ color: "#fff", margin: 0 }}>Hàng đợi rà soát</h2>
           <p style={{ color: "var(--text-muted)", margin: "var(--space-xs) 0 0 0", fontSize: "var(--font-size-sm)" }}>
-            Centralized hub for project appraisal verification tasks.
+            Theo dõi các nhiệm vụ cần chuyên viên kiểm tra và quyết định.
           </p>
         </div>
 
-        {/* Mock Role Switcher Dropdown */}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", backgroundColor: "var(--bg-secondary)", padding: "var(--space-sm) var(--space-md)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Mock Role Context:</span>
-          <select
-            value={mockRole}
-            onChange={(e) => setMockRole(e.target.value as MockRole)}
-            style={{
-              backgroundColor: "var(--bg-primary)",
-              border: "1px solid var(--border-color)",
-              color: "var(--accent-cyan)",
-              padding: "4px 8px",
-              borderRadius: "var(--radius-md)",
-              fontWeight: 600
-            }}
-          >
-            <option value="viewer">Viewer</option>
-            <option value="appraiser">Appraiser</option>
-            <option value="reviewer">Reviewer</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
       </div>
 
       {/* Grid stats counts summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-md)", marginBottom: "var(--space-lg)" }}>
         <div style={{ backgroundColor: "var(--bg-secondary)", padding: "var(--space-md)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Total Queue Items</div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Tổng nhiệm vụ</div>
           <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "bold", color: "#fff" }}>{stats.total}</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-secondary)", padding: "var(--space-md)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Pending Claims</div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Đang chờ xử lý</div>
           <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "bold", color: "var(--status-review)" }}>{stats.pending}</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-secondary)", padding: "var(--space-md)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Gate Blocked Tasks</div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Đang bị chặn</div>
           <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "bold", color: "var(--status-blocking)" }}>{stats.blocking}</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-secondary)", padding: "var(--space-md)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Assigned to Me (Mock)</div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Được giao cho tôi</div>
           <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "bold", color: "var(--accent-cyan)" }}>{stats.assignedToMe}</div>
         </div>
       </div>
@@ -108,10 +94,10 @@ export function ReviewQueueDashboard() {
             borderRadius: "var(--radius-md)"
           }}
         >
-          <option value="All">All Priorities</option>
-          <option value="high">High</option>
-          <option value="normal">Normal</option>
-          <option value="low">Low</option>
+          <option value="All">Tất cả mức ưu tiên</option>
+          <option value="high">Cao</option>
+          <option value="normal">Bình thường</option>
+          <option value="low">Thấp</option>
         </select>
 
         <select
@@ -125,11 +111,11 @@ export function ReviewQueueDashboard() {
             borderRadius: "var(--radius-md)"
           }}
         >
-          <option value="All">All Types</option>
-          <option value="identity">Identity</option>
-          <option value="appraised_price">Appraised Price</option>
-          <option value="taxonomy">Taxonomy</option>
-          <option value="qc">QC Review</option>
+          <option value="All">Tất cả loại rà soát</option>
+          <option value="identity">Nhận diện tài sản</option>
+          <option value="appraised_price">Giá thẩm định</option>
+          <option value="taxonomy">Phân loại</option>
+          <option value="qc">Kiểm soát chất lượng</option>
         </select>
 
         <select
@@ -143,10 +129,10 @@ export function ReviewQueueDashboard() {
             borderRadius: "var(--radius-md)"
           }}
         >
-          <option value="All">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="in_review">In Review</option>
-          <option value="completed">Completed</option>
+          <option value="All">Tất cả trạng thái</option>
+          <option value="open">Chưa xử lý</option>
+          <option value="in_review">Đang rà soát</option>
+          <option value="completed">Đã hoàn tất</option>
         </select>
       </div>
 
@@ -155,18 +141,21 @@ export function ReviewQueueDashboard() {
         {/* Table Panel */}
         <div style={{ flex: 1, overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-lg)" }}>
           {filteredItems.length === 0 ? (
-            <EmptyState title="No queue items match filter queries." />
+            <EmptyState
+              title="Chưa có nhiệm vụ cần duyệt"
+              message="Hệ thống chưa trả về nhiệm vụ phù hợp với bộ lọc hiện tại."
+            />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead style={{ backgroundColor: "var(--bg-secondary)", borderBottom: "2px solid var(--border-color)", position: "sticky", top: 0 }}>
                 <tr style={{ height: "45px" }}>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Project Code</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Asset Summary</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Review Type</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Priority</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Validation</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Assigned</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Status</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Mã hồ sơ</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tài sản</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Loại rà soát</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Ưu tiên</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Kiểm tra</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Người xử lý</th>
+                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,7 +178,7 @@ export function ReviewQueueDashboard() {
                         <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{item.project_name}</div>
                       </td>
                       <td style={{ padding: "var(--space-sm)", fontWeight: 600, color: "#fff" }}>
-                        Line #{item.line_no}: {item.asset_summary}
+                        Dòng {item.line_no}: {item.asset_summary}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <span style={{ fontSize: "var(--font-size-xs)", textTransform: "capitalize" }}>
@@ -217,7 +206,7 @@ export function ReviewQueueDashboard() {
                         />
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-                        {item.assigned_to || "Unassigned"}
+                        {item.assigned_to || "Chưa phân công"}
                       </td>
                       <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
                         <span style={{
@@ -238,7 +227,7 @@ export function ReviewQueueDashboard() {
 
         {/* Action Panel Side Draw */}
         <div style={{ width: "320px", display: "flex", flexDirection: "column" }}>
-          <ReviewActionPanel item={selectedItem} currentRole={mockRole} />
+          <ReviewActionPanel item={selectedItem} currentRole={currentRole} />
         </div>
       </div>
     </div>

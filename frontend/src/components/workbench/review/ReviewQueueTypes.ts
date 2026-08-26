@@ -12,4 +12,4 @@ export interface ReviewQueueItem {
   row_version: number;
 }
 
-export type MockRole = "owner" | "admin" | "appraiser" | "reviewer" | "knowledge_curator" | "viewer";
+export type ReviewRole = "owner" | "admin" | "appraiser" | "reviewer" | "knowledge_curator" | "viewer";
