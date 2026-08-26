@@ -537,8 +537,8 @@ class TestC6LifecycleAndMigration:
 
         cfg = Config("alembic.ini")
         heads = ScriptDirectory.from_config(cfg).get_heads()
-        # Single graph head advances with later migrations (S13-PR-004: b4c5d6e7f8a9).
-        assert heads == ["b4c5d6e7f8a9"]
+        # Single graph head advances with S14-R-001 tenant/security hardening.
+        assert heads == ["e7f8a9b0c1d2"]
 
 
 def _pg_url():

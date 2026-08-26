@@ -916,11 +916,11 @@ class RawAssetObservation(Base, TimestampMixin, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
     )
-    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
     )
     import_batch_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("project_asset_import_batches.id", ondelete="RESTRICT"), nullable=False
@@ -944,6 +944,74 @@ class RawAssetObservation(Base, TimestampMixin, UUIDMixin):
     section_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "id",
+            name="uq_raw_obs_tenant_project_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_raw_obs_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_raw_obs_project_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_raw_obs_batch_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id", "source_artifact_id"],
+            [
+                "import_source_artifacts.organization_id",
+                "import_source_artifacts.project_id",
+                "import_source_artifacts.import_batch_id",
+                "import_source_artifacts.id",
+            ],
+            name="fk_raw_obs_artifact_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+            ],
+            [
+                "workbook_structure_snapshots.organization_id",
+                "workbook_structure_snapshots.project_id",
+                "workbook_structure_snapshots.import_batch_id",
+                "workbook_structure_snapshots.source_artifact_id",
+                "workbook_structure_snapshots.id",
+            ],
+            name="fk_raw_obs_structure_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id", "staging_row_id"],
+            [
+                "project_asset_import_staging_rows.organization_id",
+                "project_asset_import_staging_rows.project_id",
+                "project_asset_import_staging_rows.import_batch_id",
+                "project_asset_import_staging_rows.id",
+            ],
+            name="fk_raw_obs_staging_tenant",
+            ondelete="RESTRICT",
+        ),
         Index("idx_raw_obs_org", "organization_id"),
         Index("idx_raw_obs_customer", "customer_id"),
         Index("idx_raw_obs_batch", "import_batch_id"),
@@ -969,20 +1037,47 @@ class ContextualAssetAlias(Base, TimestampMixin, UUIDMixin):
     alias_name: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_alias_name: Mapped[str] = mapped_column(Text, nullable=False)
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, nullable=True
+        Uuid, ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
     )
     asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, nullable=True
+        Uuid, ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
     source_decision_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, nullable=True
+        Uuid, ForeignKey("asset_identity_decisions.id", ondelete="RESTRICT"), nullable=True
     )
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_ctx_alias_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "source_decision_id"],
+            ["asset_identity_decisions.organization_id", "asset_identity_decisions.id"],
+            name="fk_ctx_alias_decision_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_ctx_alias_creator_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "(CASE WHEN canonical_asset_id IS NULL THEN 0 ELSE 1 END + "
+            "CASE WHEN asset_variant_id IS NULL THEN 0 ELSE 1 END) = 1",
+            name="chk_ctx_alias_exact_target",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'deprecated', 'superseded')",
+            name="chk_ctx_alias_status",
+        ),
         Index("idx_ctx_alias_org", "organization_id"),
         Index("idx_ctx_alias_customer", "customer_id"),
         Index("idx_ctx_alias_normalized", "organization_id", "customer_id", "normalized_alias_name"),
@@ -995,8 +1090,8 @@ class AssetIdentityDecision(Base, TimestampMixin, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
@@ -1005,9 +1100,15 @@ class AssetIdentityDecision(Base, TimestampMixin, UUIDMixin):
         Uuid, ForeignKey("raw_asset_observations.id", ondelete="RESTRICT"), nullable=False
     )
     decision_type: Mapped[str] = mapped_column(String(50), nullable=False)  # accepted, corrected, rejected, deferred
-    chosen_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
-    chosen_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
-    chosen_alias_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    chosen_canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("canonical_assets.id", ondelete="RESTRICT"), nullable=True
+    )
+    chosen_asset_variant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("asset_variants.id", ondelete="RESTRICT"), nullable=True
+    )
+    chosen_alias_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("asset_aliases.id", ondelete="RESTRICT"), nullable=True
+    )
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     actor_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
@@ -1015,6 +1116,55 @@ class AssetIdentityDecision(Base, TimestampMixin, UUIDMixin):
     command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "id", name="uq_identity_decision_tenant_id"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_identity_decision_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_identity_decision_project_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "raw_observation_id"],
+            [
+                "raw_asset_observations.organization_id",
+                "raw_asset_observations.project_id",
+                "raw_asset_observations.id",
+            ],
+            name="fk_identity_decision_observation_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "actor_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_identity_decision_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "decision_type IN ('accepted', 'corrected', 'rejected', 'deferred')",
+            name="chk_identity_decision_type",
+        ),
+        CheckConstraint(
+            "((decision_type IN ('accepted', 'corrected', 'rejected')) AND "
+            "(CASE WHEN chosen_canonical_asset_id IS NULL THEN 0 ELSE 1 END + "
+            "CASE WHEN chosen_asset_variant_id IS NULL THEN 0 ELSE 1 END + "
+            "CASE WHEN chosen_alias_id IS NULL THEN 0 ELSE 1 END) = 1) OR "
+            "(decision_type = 'deferred' AND chosen_canonical_asset_id IS NULL AND "
+            "chosen_asset_variant_id IS NULL AND chosen_alias_id IS NULL)",
+            name="chk_identity_decision_target_shape",
+        ),
+        CheckConstraint(
+            "decision_type <> 'rejected' OR "
+            "(rejection_reason IS NOT NULL AND length(trim(rejection_reason)) > 0)",
+            name="chk_identity_decision_rejection_reason",
+        ),
         Index("idx_identity_dec_org", "organization_id"),
         Index("idx_identity_dec_obs", "raw_observation_id"),
         Index("idx_identity_dec_project", "project_id"),
@@ -1028,8 +1178,8 @@ class LearningFeedbackEvent(Base, TimestampMixin, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
     )
     source_decision_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("asset_identity_decisions.id", ondelete="RESTRICT"), nullable=False
@@ -1041,6 +1191,27 @@ class LearningFeedbackEvent(Base, TimestampMixin, UUIDMixin):
     feedback_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_feedback_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "source_decision_id"],
+            ["asset_identity_decisions.organization_id", "asset_identity_decisions.id"],
+            name="fk_feedback_decision_tenant",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("source_decision_id", name="uq_feedback_source_decision"),
+        CheckConstraint(
+            "event_type IN ('positive_match', 'negative_match')",
+            name="chk_feedback_event_type",
+        ),
+        CheckConstraint(
+            "target_type IN ('CanonicalAsset', 'AssetVariant', 'AssetAlias')",
+            name="chk_feedback_target_type",
+        ),
         Index("idx_feedback_org", "organization_id"),
         Index("idx_feedback_decision", "source_decision_id"),
     )
