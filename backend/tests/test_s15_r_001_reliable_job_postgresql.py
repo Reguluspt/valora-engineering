@@ -34,11 +34,6 @@ from app.modules.workflow_workbench.application.reliable_job_service import (
 )
 from tests.test_s15_pr_002_reliable_job_outbox import _seed_dossier
 
-<<<<<<< HEAD
-=======
-_EXPECTED_HEAD = "d2e3f4a5b6c7"
-
->>>>>>> 62d34dc (fix(s15): replace fabricated alignment with source-backed processing)
 
 def _postgres_engine_or_skip():
     url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
