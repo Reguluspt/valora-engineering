@@ -16,8 +16,16 @@ const PROJ_C = "aaaaaaaa-bbbb-4ccc-8ddd-eeee33333333";
 const INVALID = "00000000-0000-0000-0000-000000000000";
 
 describe("useWorkbenchSession lifecycle", () => {
+  const activeRoots = new Set<ReturnType<typeof create>>();
+
   beforeEach(() => { vi.clearAllMocks(); });
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => {
+    for (const root of activeRoots) {
+      act(() => { root.unmount(); });
+    }
+    activeRoots.clear();
+    vi.useRealTimers();
+  });
 
   it("PROJ_A, PROJ_B, PROJ_C are valid UUIDs", () => {
     expect(isValidProjectUuid(PROJ_A)).toBe(true);
@@ -32,13 +40,19 @@ describe("useWorkbenchSession lifecycle", () => {
       return null;
     }
     let root: any;
-    act(() => { root = create(React.createElement(TestComponent, { pid: initialId })); });
+    act(() => {
+      root = create(React.createElement(TestComponent, { pid: initialId }));
+      activeRoots.add(root);
+    });
     return {
       result,
       switchTo: (newId: string) => {
         act(() => { root!.update(React.createElement(TestComponent, { pid: newId })); });
       },
-      unmount: () => { act(() => { root!.unmount(); }); },
+      unmount: () => {
+        act(() => { root!.unmount(); });
+        activeRoots.delete(root);
+      },
     };
   }
 

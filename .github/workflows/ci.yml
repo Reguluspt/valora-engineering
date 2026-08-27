@@ -182,7 +182,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install frontend dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
       - name: Lint frontend
         run: npm run lint
       - name: Build frontend

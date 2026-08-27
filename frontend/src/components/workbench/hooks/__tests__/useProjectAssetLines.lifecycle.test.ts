@@ -49,7 +49,7 @@ describe("useProjectAssetLines lifecycle", () => {
     const { result } = renderPages("uuid-aaa-bbbb-4ccc-8ddd-eeeeP1");
     await vi.waitFor(() => expect(result.current.loading).toBe(false));
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("a2")], total: 55, limit: 50, offset: 1 });
-    result.current.loadMore();
+    act(() => { result.current.loadMore(); });
     await vi.waitFor(() => {
       expect(api.fetchProjectAssetLines).toHaveBeenLastCalledWith(
         "uuid-aaa-bbbb-4ccc-8ddd-eeeeP1", { limit: 50, offset: 1 }
@@ -69,7 +69,7 @@ describe("useProjectAssetLines lifecycle", () => {
     const { result } = renderPages("uuid-aaa-bbbb-4ccc-8ddd-eeeeLDP1");
     await vi.waitFor(() => expect(result.current.loading).toBe(false));
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("c"), mk("c"), mk("d")], total: 5, limit: 3, offset: 2 });
-    result.current.loadMore();
+    act(() => { result.current.loadMore(); });
     await vi.waitFor(() => expect(result.current.loadingMore).toBe(false));
     expect(result.current.rows.length).toBe(4);
   });
@@ -79,7 +79,7 @@ describe("useProjectAssetLines lifecycle", () => {
     const { result } = renderPages("uuid-aaa-bbbb-4ccc-8ddd-eeeeXDP1");
     await vi.waitFor(() => expect(result.current.loading).toBe(false));
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("y"), mk("z")], total: 4, limit: 2, offset: 2 });
-    result.current.loadMore();
+    act(() => { result.current.loadMore(); });
     await vi.waitFor(() => expect(result.current.loadingMore).toBe(false));
     expect(result.current.rows.length).toBe(3);
   });
@@ -89,7 +89,7 @@ describe("useProjectAssetLines lifecycle", () => {
     const { result } = renderPages("uuid-aaa-bbbb-4ccc-8ddd-eeeeRAWOF");
     await vi.waitFor(() => expect(result.current.loading).toBe(false));
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("z")], total: 50, limit: 3, offset: 3 });
-    result.current.loadMore();
+    act(() => { result.current.loadMore(); });
     await vi.waitFor(() => {
       expect(api.fetchProjectAssetLines).toHaveBeenLastCalledWith(
         "uuid-aaa-bbbb-4ccc-8ddd-eeeeRAWOF", { limit: 50, offset: 3 }
@@ -104,7 +104,7 @@ describe("useProjectAssetLines lifecycle", () => {
     expect(result.current.rows[0].line_no).toBe(1);
     expect(result.current.rows[1].line_no).toBe(2);
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("c")], total: 4, limit: 2, offset: 2 });
-    result.current.loadMore();
+    act(() => { result.current.loadMore(); });
     await vi.waitFor(() => expect(result.current.loadingMore).toBe(false));
     expect(result.current.rows[2].line_no).toBe(3);
   });
@@ -141,10 +141,14 @@ describe("useProjectAssetLines lifecycle", () => {
     expect(result.current.totalCount).toBe(0);
     expect(result.current.hasMore).toBe(false);
     expect(result.current.loading).toBe(true);
-    rb!({ items: [mk("bbb")], total: 1, limit: 50, offset: 0 });
+    await act(async () => {
+      rb!({ items: [mk("bbb")], total: 1, limit: 50, offset: 0 });
+    });
     await vi.waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.rows[0].project_asset_line_id).toBe("bbb");
-    ra!({ items: [mk("stale")], total: 5, limit: 50, offset: 0 });
+    await act(async () => {
+      ra!({ items: [mk("stale")], total: 5, limit: 50, offset: 0 });
+    });
     await new Promise((r) => setTimeout(r, 50));
     expect(result.current.rows[0].project_asset_line_id).toBe("bbb");
   });
@@ -157,7 +161,7 @@ describe("useProjectAssetLines lifecycle", () => {
     });
     (api.fetchProjectAssetLines as any).mockClear();
     (api.fetchProjectAssetLines as any).mockResolvedValueOnce({ items: [mk("r1"), mk("r2")], total: 2, limit: 50, offset: 0 });
-    result.current.retry();
+    act(() => { result.current.retry(); });
     expect(result.current.loading).toBe(true);
     expect(result.current.rows).toEqual([]);
     expect(result.current.totalCount).toBe(0);
@@ -181,8 +185,9 @@ describe("useProjectAssetLines lifecycle", () => {
     act(() => { result.current.loadMore(); });
     act(() => { result.current.loadMore(); });
     expect(api.fetchProjectAssetLines).toHaveBeenCalledTimes(2);
-    resolveP2!({ items: [mk("a3")], total: 55, limit: 2, offset: 2 });
-    await act(async () => {});
+    await act(async () => {
+      resolveP2!({ items: [mk("a3")], total: 55, limit: 2, offset: 2 });
+    });
     expect(result.current.loadingMore).toBe(false);
     expect(result.current.rows.length).toBe(3);
   });

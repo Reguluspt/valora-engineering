@@ -1,19 +1,19 @@
 import React from "react";
-import { ReviewQueueItem, MockRole } from "./ReviewQueueTypes";
+import { ReviewQueueItem, ReviewRole } from "./ReviewQueueTypes";
 import { RoleGateNotice } from "./RoleGateNotice";
 
 interface ReviewActionPanelProps {
   item: ReviewQueueItem | null;
-  currentRole: MockRole;
+  currentRole: ReviewRole | null;
 }
 
 export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps) {
   if (!item) {
     return (
       <div className="panel-tab">
-        <h4 className="panel-tab-title">Review Actions</h4>
+        <h4 className="panel-tab-title">Thao tác rà soát</h4>
         <p style={{ color: "var(--text-muted)", fontSize: "var(--font-size-sm)" }}>
-          Select an item from the queue list to load review controls.
+          Chọn một nhiệm vụ để xem thông tin. Thao tác chính thức chỉ khả dụng sau khi hệ thống xác thực quyền.
         </p>
       </div>
     );
@@ -22,7 +22,7 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
   // Define role rules mapping visually
   // Viewers cannot do anything.
   // Appraisers cannot Approve/Reject (requires Reviewer/Admin).
-  const isViewer = currentRole === "viewer";
+  const isViewer = currentRole === null || currentRole === "viewer";
   const isAppraiser = currentRole === "appraiser";
 
   const claimAllowed = !isViewer;
@@ -30,7 +30,7 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
 
   return (
     <div className="panel-tab" style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-      <h4 className="panel-tab-title">Review Actions (ID: {item.id})</h4>
+      <h4 className="panel-tab-title">Thao tác rà soát (ID: {item.id})</h4>
       
       {/* Show authorization status banner */}
       <RoleGateNotice currentRole={currentRole} requiredRoles={["owner", "admin", "reviewer"]} />
@@ -41,7 +41,7 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
           disabled={!claimAllowed}
           title={!claimAllowed ? "Requires owner/admin/appraiser/reviewer/curator role privileges" : "Locally assign this review task"}
         >
-          Claim Task {!claimAllowed ? "[Lock]" : ""}
+          Nhận nhiệm vụ {!claimAllowed ? "[Khóa]" : ""}
         </button>
 
         <button
@@ -50,7 +50,7 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
           style={{ borderColor: "var(--status-approved)", color: decisionAllowed ? "var(--status-approved)" : "var(--text-muted)" }}
           title={!decisionAllowed ? "Requires owner/admin/reviewer role privileges" : "Approve this item's values"}
         >
-          Approve Item {!decisionAllowed ? "[Lock]" : ""}
+          Chấp nhận {!decisionAllowed ? "[Khóa]" : ""}
         </button>
 
         <button
@@ -59,7 +59,7 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
           style={{ borderColor: "var(--status-error)", color: decisionAllowed ? "var(--status-error)" : "var(--text-muted)" }}
           title={!decisionAllowed ? "Requires owner/admin/reviewer role privileges" : "Reject this item's values"}
         >
-          Reject Item {!decisionAllowed ? "[Lock]" : ""}
+          Từ chối {!decisionAllowed ? "[Khóa]" : ""}
         </button>
 
         <button
@@ -67,12 +67,12 @@ export function ReviewActionPanel({ item, currentRole }: ReviewActionPanelProps)
           disabled={!decisionAllowed}
           title={!decisionAllowed ? "Requires owner/admin/reviewer role privileges" : "Defer this item"}
         >
-          Defer Item {!decisionAllowed ? "[Lock]" : ""}
+          Để xử lý sau {!decisionAllowed ? "[Khóa]" : ""}
         </button>
       </div>
       
       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", marginTop: "var(--space-sm)", borderTop: "1px dashed var(--border-color)", paddingTop: "var(--space-sm)" }}>
-        * Note: All mutating action controls are local-only and do not execute server mutations.
+        Các nút hiện chỉ trình bày luồng rà soát và chưa thực hiện thay đổi trên máy chủ.
       </div>
     </div>
   );
