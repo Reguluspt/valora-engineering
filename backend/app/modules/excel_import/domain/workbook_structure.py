@@ -138,6 +138,7 @@ class _ResolutionState:
 
 
 RowProvider = Callable[[str], Iterator[Sequence[CellValue]]]
+FrozenRowReplay = Iterator[tuple[tuple[CellValue, ...], RowClassification]]
 
 _HEADER_ROLE_PHRASES = {
     "START_INDEX": ("stt", "so thu tu"),
@@ -335,6 +336,54 @@ def classify_row(row: Sequence[CellValue]) -> RowClassification:
         0.35,
         ("insufficient_asset_or_marker_evidence",),
     )
+
+
+def replay_frozen_candidate_rows(
+    rows: Iterable[Sequence[CellValue]],
+    *,
+    data_start_row: int,
+    max_row: int,
+    min_column: int,
+    max_column: int,
+) -> FrozenRowReplay:
+    """Classify every physical row inside one already-frozen v3 candidate rectangle.
+
+    Candidate discovery/boundary selection is deliberately not re-run here. The caller owns the
+    persisted bounds and receives the exact positional cells used by the v3 row classifier.
+    """
+    if (
+        isinstance(data_start_row, bool)
+        or isinstance(max_row, bool)
+        or isinstance(min_column, bool)
+        or isinstance(max_column, bool)
+        or not all(isinstance(value, int) for value in (data_start_row, max_row, min_column, max_column))
+        or data_start_row <= 0
+        or max_row < data_start_row
+        or min_column <= 0
+        or max_column < min_column
+    ):
+        raise ValueError("invalid frozen candidate bounds")
+
+    iterator = iter(rows)
+    try:
+        for row in iterator:
+            if not row:
+                continue
+            row_number = row[0].row
+            if row_number < data_start_row:
+                continue
+            if row_number > max_row:
+                break
+            sliced = _slice_row(row, min_column, max_column)
+            if not sliced:
+                classified = RowClassification(
+                    row_number, RowClass.EMPTY, 1.0, ("no_nonempty_cells",)
+                )
+            else:
+                classified = classify_row(sliced)
+            yield sliced, classified
+    finally:
+        _close_iterator(iterator)
 
 
 def _close_iterator(rows: Iterable[Sequence[CellValue]]) -> None:
