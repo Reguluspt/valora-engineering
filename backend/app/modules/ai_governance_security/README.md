@@ -1,5 +1,12 @@
 # ai_governance_security
 
-Sprint 0 creates this module boundary only.
+The module boundary was created in Sprint 0. S14-R-001 now implements only the
+Design Book v1.2 append-only primitives needed by protected tenant-scoped
+mutation paths:
 
-Do not implement business logic here until the corresponding sprint starts.
+- `TenantBoundaryCheck`
+- `SecurityEvent`
+- `SecurityAuditLog`
+
+This does not authorize provider execution, autonomous decisions, policy
+administration, or the wider AI-governance runtime.

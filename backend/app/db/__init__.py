@@ -12,6 +12,9 @@ from app.modules.project_master_data.models import (
     DuplicateCandidate, MergeDecision, IdentityReviewItem, IdentityDecisionLog,
     UserSession, RefreshTokenRecord
 )
+from app.modules.ai_governance_security.models import (
+    SecurityEvent, SecurityAuditLog, TenantBoundaryCheck
+)
 
 __all__ = [
     "Base",
@@ -58,4 +61,7 @@ __all__ = [
     "IdentityDecisionLog",
     "UserSession",
     "RefreshTokenRecord",
+    "SecurityEvent",
+    "SecurityAuditLog",
+    "TenantBoundaryCheck",
 ]

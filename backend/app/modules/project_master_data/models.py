@@ -3685,6 +3685,13 @@ class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
     import_batch: Mapped["ProjectAssetImportBatch"] = relationship("ProjectAssetImportBatch")
 
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "import_batch_id",
+            "id",
+            name="uq_staging_row_tenant_batch_id",
+        ),
         Index("idx_staging_row_org", "organization_id"),
         Index("idx_staging_row_project", "project_id"),
         Index("idx_staging_row_batch", "import_batch_id"),
