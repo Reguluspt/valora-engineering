@@ -406,14 +406,29 @@ def upgrade() -> None:
         "learning_feedback_events",
         "event_type IN ('positive_match', 'negative_match')",
     )
-    op.create_check_constraint(
-        "chk_feedback_target_type",
-        "learning_feedback_events",
-        "target_type IN ('CanonicalAsset', 'AssetVariant', 'AssetAlias')",
+    op.add_column(
+        "asset_identity_decisions",
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        "contextual_asset_aliases",
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
     )
 
 
 def downgrade() -> None:
+    op.drop_column("contextual_asset_aliases", "updated_at")
+    op.drop_column("asset_identity_decisions", "updated_at")
     op.drop_constraint("chk_feedback_target_type", "learning_feedback_events", type_="check")
     op.drop_constraint("chk_feedback_event_type", "learning_feedback_events", type_="check")
     op.drop_constraint("uq_feedback_source_decision", "learning_feedback_events", type_="unique")
