@@ -416,7 +416,7 @@ def upgrade() -> None:
         ),
     )
     op.add_column(
-        "contextual_asset_aliases",
+        "learning_feedback_events",
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
@@ -427,7 +427,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("contextual_asset_aliases", "updated_at")
+    op.drop_column("learning_feedback_events", "updated_at")
     op.drop_column("asset_identity_decisions", "updated_at")
     op.drop_constraint("chk_feedback_target_type", "learning_feedback_events", type_="check")
     op.drop_constraint("chk_feedback_event_type", "learning_feedback_events", type_="check")
