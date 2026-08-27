@@ -406,6 +406,11 @@ def upgrade() -> None:
         "learning_feedback_events",
         "event_type IN ('positive_match', 'negative_match')",
     )
+    op.create_check_constraint(
+        "chk_feedback_target_type",
+        "learning_feedback_events",
+        "target_type IN ('CanonicalAsset', 'AssetVariant', 'AssetAlias')",
+    )
     op.add_column(
         "asset_identity_decisions",
         sa.Column(
