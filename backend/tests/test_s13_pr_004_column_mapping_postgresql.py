@@ -453,6 +453,24 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
         "fk_source_artifact_creator_tenant",
         "fk_workbook_structure_creator_tenant",
     }
+    later_tables = (
+        "dossier_row_alignments",
+        "dossier_alignment_runs",
+        "dossier_extracted_rows",
+        "dossier_extracted_tables",
+        "dossier_extraction_snapshots",
+        "task_job_attempts",
+        "task_jobs",
+        "dossier_source_files",
+        "dossier_bundles",
+        "learning_feedback_events",
+        "contextual_asset_aliases",
+        "asset_identity_decisions",
+        "raw_asset_observations",
+        "tenant_boundary_checks",
+        "security_audit_logs",
+        "security_events",
+    )
     try:
         with engine.begin() as connection:
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
@@ -462,6 +480,10 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
                 table_name: _table_signature(connection, table_name)
                 for table_name in parity_tables
             }
+            for table_name in later_tables:
+                table = Base.metadata.tables.get(table_name)
+                if table is not None:
+                    table.drop(connection, checkfirst=True)
             operations = Operations(MigrationContext.configure(connection))
             migration.op = operations
             migration.downgrade()
