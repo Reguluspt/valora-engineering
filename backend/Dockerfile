@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --timeout 300 --retries 5 .
 
 EXPOSE 8000
 

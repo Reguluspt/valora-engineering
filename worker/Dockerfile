@@ -15,6 +15,6 @@ COPY backend/app backend/app
 COPY worker/pyproject.toml worker/pyproject.toml
 COPY worker/worker worker/worker
 
-RUN pip install --no-cache-dir ./backend ./worker
+RUN pip install --no-cache-dir --timeout 300 --retries 5 ./backend ./worker
 
 CMD ["python", "-m", "worker.main"]
