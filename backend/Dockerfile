@@ -6,13 +6,16 @@ LABEL org.opencontainers.image.revision="${VCS_REF}" \
 
 WORKDIR /app
 
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=5
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
-RUN pip install --no-cache-dir --timeout 300 --retries 5 .
+RUN pip install --no-cache-dir .
 
 EXPOSE 8000
 
