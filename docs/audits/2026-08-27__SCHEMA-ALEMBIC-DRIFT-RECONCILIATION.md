@@ -22,3 +22,14 @@
 - **Total Tables:** 117 tables.
 - **Alembic Check:** `No new upgrade operations detected.`
 - **Downgrade / Upgrade Cycle:** `downgrade -1` -> `c1d2e3f4a5b6` -> `upgrade head` -> `d2e3f4a5b6c7` executed cleanly.
+
+## 3. Exact-Revision Container Evidence Protocol
+
+- Backend, worker and frontend images carry the OCI label
+  `org.opencontainers.image.revision=<final PR #26 head SHA>`.
+- The images are built only after the final source/evidence commit exists.
+- Runtime verification uses a separate Compose project, new PostgreSQL/MinIO volumes and an
+  isolated network; it never reuses or deletes the existing `valora_postgres_data` volume.
+- Dynamic image IDs, the exact revision label, `alembic current`, `alembic check`, HTTP health and
+  production worker-handler outputs are recorded in PR #26. Keeping these dynamic values outside
+  this committed file prevents the evidence update itself from changing the verified SHA.

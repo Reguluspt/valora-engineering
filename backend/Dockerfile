@@ -1,5 +1,9 @@
 FROM python:3.12-slim
 
+ARG VCS_REF=unversioned
+LABEL org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/Reguluspt/valora-engineering"
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

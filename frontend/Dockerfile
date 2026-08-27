@@ -10,6 +10,10 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 
+ARG VCS_REF=unversioned
+LABEL org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/Reguluspt/valora-engineering"
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

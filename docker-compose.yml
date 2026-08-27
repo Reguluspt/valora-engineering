@@ -49,6 +49,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        VCS_REF: ${VALORA_IMAGE_REVISION:-unversioned}
     container_name: valora-backend
     depends_on:
       postgres:
@@ -84,6 +86,8 @@ services:
     build:
       context: .
       dockerfile: worker/Dockerfile
+      args:
+        VCS_REF: ${VALORA_IMAGE_REVISION:-unversioned}
     container_name: valora-worker
     depends_on:
       postgres:
@@ -114,6 +118,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VCS_REF: ${VALORA_IMAGE_REVISION:-unversioned}
     container_name: valora-frontend
     depends_on:
       backend:

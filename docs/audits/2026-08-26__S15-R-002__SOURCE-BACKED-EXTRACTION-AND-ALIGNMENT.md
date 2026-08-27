@@ -92,8 +92,8 @@ record; it does not substitute the test artifacts or any fabricated row set.
 | Frontend lint/tests/build | lint PASS; 86 passed; production build PASS; demo-marker assertion PASS |
 | PostgreSQL constraint/concurrency tests | PASS at head `d2e3f4a5b6c7`, including mapping, identity and SKIP LOCKED claim proofs |
 | MinIO integration | PASS; bucket `valora-local` verified and real XLSX/DOCX objects streamed and checksummed |
-| Docker image build | backend `b5feea6d...`, worker `0ab04993...`, frontend `0a30e0b1...` built successfully |
-| Docker runtime | backend healthy/HTTP 200, frontend HTTP 200, PostgreSQL/Redis/MinIO healthy, worker running with zero restarts |
+| Docker exact-revision build | Backend, worker and frontend images must carry `org.opencontainers.image.revision` equal to the final PR #26 head SHA; exact image IDs are recorded in PR #26 after the final commit is built |
+| Docker isolated runtime | Fresh project-scoped PostgreSQL/MinIO volumes and an isolated network; backend/frontend HTTP 200, zero schema drift and registered production worker handlers; the existing `valora_postgres_data` volume is not modified |
 | Container worker smoke | two extraction jobs plus one paired-alignment job completed; one attempt and generation per job; all attempts succeeded |
 | Container business output | Excel and DOCX snapshots created; one `paired-content-v1` candidate at confidence `1.0000`; no automatic review confirmation |
 | Container audit output | 3 each of `TaskJobQueued`, `TaskJobClaimed`, `TaskJobCompleted`; 2 `DossierSourceExtracted`; 1 alignment audit |
@@ -103,14 +103,14 @@ Python installation contains unrelated applications and reports unrelated packag
 GitPython and Pillow; a clean environment recreated from the backend and worker project metadata
 reported no known vulnerabilities for either job.
 
-`alembic check` is not a repository CI gate and still reports older baseline metadata differences
-(legacy `dummy_model`, extra database indexes, redundant model-level scalar FKs and one historical
-integer-width mismatch). They predate this bounded S15 corrective slice and are retained as a
-separate baseline-reconciliation item rather than being silently changed without a dedicated ADR.
+ADR 0035 (Proposed) records the separate baseline reconciliation. At the final PR #26 head, a
+fresh PostgreSQL database must upgrade to `d2e3f4a5b6c7` and `alembic check` must report no new
+upgrade operations. The exact image IDs, OCI revision labels and runtime outputs are recorded in
+PR #26 after the final commit is built so that adding dynamic evidence does not change the tested
+Git SHA.
 
 ## Exit decision
 
-S15-R-002 now satisfies the repository CI workflow and the PostgreSQL, MinIO and Docker service
-gates as a local implementation candidate. It is not a publication or deployment approval. The
-evidence commit is followed by a final same-SHA repeat before the local integration branch is
-advanced. No GitHub push or pull-request reconstruction is authorized by this evidence.
+S15-R-002 now satisfies the repository CI workflow and the PostgreSQL/MinIO application gates as a
+Draft implementation candidate. Exact-revision Docker acceptance is recorded on PR #26. This is
+not a merge or deployment approval; ADR 0035 remains Proposed until the owner accepts it.
