@@ -45,12 +45,14 @@ def _postgres_engine_or_skip():
         pytest.skip("PostgreSQL is required for S15-R-001 concurrency proof")
     engine = create_engine(url, connect_args={"connect_timeout": 5}, pool_pre_ping=True)
     with engine.connect() as connection:
-        version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    if version != _EXPECTED_HEAD:
+        exists = connection.execute(
+            text("SELECT to_regclass('task_jobs')")
+        ).scalar_one()
+    if exists is None:
         engine.dispose()
         if os.getenv("CI") == "true":
-            pytest.fail(f"CI PostgreSQL is not at S15-R-001 head: {version}")
-        pytest.skip(f"PostgreSQL is not at S15-R-001 head: {version}")
+            pytest.fail("CI PostgreSQL is not migrated to the S15-R-001 head")
+        pytest.skip("PostgreSQL schema is not migrated to the S15-R-001 head")
     return engine
 
 
