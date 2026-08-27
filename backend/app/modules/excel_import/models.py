@@ -1477,4 +1477,3 @@ class TaskJobAttempt(Base, UUIDMixin):
         ),
         Index("idx_job_attempt_job", "job_id"),
     )
-
