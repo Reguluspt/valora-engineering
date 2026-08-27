@@ -1426,7 +1426,8 @@ def test_j04_throwaway_literal_fk_map_and_dml():
     }
     expected_batch_pointer_fk = "fk_batch_current_artifact_same_batch"
 
-    def _assert_fk_map(eng):
+    def _assert_fk_map(eng, *, current_head: bool = False):
+        expected = dict(expected_artifact_fks)
         with eng.connect() as c:
             fk_rows = c.execute(
                 text(
@@ -1443,8 +1444,12 @@ def test_j04_throwaway_literal_fk_map_and_dml():
                 )
             ).all()
             fk_by_cols = {tuple(r[1]): r[0] for r in fk_rows}
-            assert set(fk_by_cols.keys()) == set(expected_artifact_fks.keys())
-            assert fk_by_cols == expected_artifact_fks
+            if ("organization_id", "created_by_user_id") in fk_by_cols:
+                expected[("organization_id", "created_by_user_id")] = (
+                    "fk_source_artifact_creator_tenant"
+                )
+            assert set(fk_by_cols.keys()) == set(expected.keys())
+            assert fk_by_cols == expected
 
             ptr = c.execute(
                 text(
