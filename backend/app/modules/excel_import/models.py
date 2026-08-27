@@ -1215,5 +1215,3 @@ class LearningFeedbackEvent(Base, TimestampMixin, UUIDMixin):
         Index("idx_feedback_org", "organization_id"),
         Index("idx_feedback_decision", "source_decision_id"),
     )
-
-

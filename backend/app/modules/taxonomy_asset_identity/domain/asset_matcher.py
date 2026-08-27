@@ -59,14 +59,14 @@ def rank_candidates_deterministically(
     top_k: int = 5,
 ) -> list[MatchCandidate]:
     """Rank candidate items deterministically based on layered precedence and explainable scores.
-    
+
     Layer Priority (ADR 0031 §4):
     1. same-customer contextual alias
     2. organization contextual alias
     3. curated AssetAlias
     4. canonical/variant names and codes
     5. deterministic fuzzy/attribute retrieval
-    
+
     Price is EXCLUDED as an identity feature.
     """
     normalized_query = normalize_asset_text(raw_wording)

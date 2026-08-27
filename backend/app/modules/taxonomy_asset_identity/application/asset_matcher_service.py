@@ -23,7 +23,7 @@ def match_asset_identity(
     top_k: int = 5,
 ) -> list[MatchCandidate]:
     """Retrieve and rank candidates for a raw asset observation.
-    
+
     Checks database contextual aliases for org_id and customer_id before fallback ranking.
     NO database writes are performed (read-only query).
     """
