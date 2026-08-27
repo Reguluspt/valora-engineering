@@ -60,10 +60,10 @@ record; it does not substitute the test artifacts or any fabricated row set.
   review state and reviewer/timestamp shape.
 - PostgreSQL JSONB is used for raw cells, normalized fields, locators, score basis and conflicts.
 - The migration chain is linear:
-  `b0c1d2e3f4a5 -> c1d2e3f4a5b6 -> d2e3f4a5b6c7 -> e3f4a5b6c7d8`.
-- Corrective revision `e3f4a5b6c7d8` adds the model-required `updated_at` columns to
-  `asset_identity_decisions`, `learning_feedback_events` and `dossier_source_files` with a
-  non-null server default, so existing rows can be upgraded safely.
+  `b0c1d2e3f4a5 -> c1d2e3f4a5b6 -> d2e3f4a5b6c7`.
+- The model-required `updated_at` columns and check constraints are reconciled directly in the
+  origin module migrations (`e7f8a9b0c1d2` and `f8a9b0c1d2e3`) with non-null server defaults,
+  preserving a clean single linear head at `d2e3f4a5b6c7`.
 
 ## Reliable consumer
 
@@ -87,10 +87,10 @@ record; it does not substitute the test artifacts or any fabricated row set.
 | Security policy/secret scan | PASS |
 | Backend project dependency audit | clean runner environment: no known vulnerabilities |
 | Worker project dependency audit | clean runner environment: no known vulnerabilities |
-| Migration graph and fresh upgrade | one head at `e3f4a5b6c7d8`; empty PostgreSQL upgraded through the full chain |
+| Migration graph and fresh upgrade | one head at `d2e3f4a5b6c7`; empty PostgreSQL upgraded through the full chain |
 | Frontend clean install | `npm ci` PASS; 177 packages audited; 0 vulnerabilities |
 | Frontend lint/tests/build | lint PASS; 86 passed; production build PASS; demo-marker assertion PASS |
-| PostgreSQL constraint/concurrency tests | PASS at head `e3f4a5b6c7d8`, including mapping, identity and SKIP LOCKED claim proofs |
+| PostgreSQL constraint/concurrency tests | PASS at head `d2e3f4a5b6c7`, including mapping, identity and SKIP LOCKED claim proofs |
 | MinIO integration | PASS; bucket `valora-local` verified and real XLSX/DOCX objects streamed and checksummed |
 | Docker image build | backend `b5feea6d...`, worker `0ab04993...`, frontend `0a30e0b1...` built successfully |
 | Docker runtime | backend healthy/HTTP 200, frontend HTTP 200, PostgreSQL/Redis/MinIO healthy, worker running with zero restarts |
