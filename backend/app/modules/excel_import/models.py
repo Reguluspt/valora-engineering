@@ -1922,4 +1922,3 @@ class DossierRowAlignment(Base, UUIDMixin):
         Index("idx_dossier_row_alignment_bundle", "organization_id", "dossier_bundle_id"),
         Index("idx_dossier_row_alignment_state", "state"),
     )
-
