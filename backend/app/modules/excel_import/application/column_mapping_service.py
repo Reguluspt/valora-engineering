@@ -1033,6 +1033,7 @@ def _new_profile(
         approved_at=None,
     )
     db.add(profile)
+    db.flush([profile])
     for field in fields:
         db.add(
             ColumnMappingField(
@@ -1223,10 +1224,43 @@ def confirm_column_mapping(
                 if supersedes is None or _status_value(supersedes.status) != "active":
                     raise _error(409, "mapping_profile_stale", "Hồ sơ cần thay thế không còn hiện hành.")
                 _verify_profile(db, supersedes)
-                supersedes.status = "superseded"
-            profile = _new_profile(
-                db, context=context, actor=actor, fields=fields, supersedes=supersedes
-            )
+            savepoint = db.begin_nested()
+            try:
+                if supersedes is not None:
+                    # Release the partial-unique active slot before inserting
+                    # the next immutable profile version.
+                    supersedes.status = "superseded"
+                    db.flush([supersedes])
+                profile = _new_profile(
+                    db, context=context, actor=actor, fields=fields, supersedes=supersedes
+                )
+                # Persist fields before the confirmation references the profile.
+                db.flush()
+                savepoint.commit()
+            except IntegrityError as exc:
+                savepoint.rollback()
+                raced_active = (
+                    db.query(ColumnMappingProfile)
+                    .filter(
+                        ColumnMappingProfile.organization_id == org_id,
+                        ColumnMappingProfile.customer_id == project.customer_id,
+                        ColumnMappingProfile.scope_type == "customer",
+                        ColumnMappingProfile.status == "active",
+                    )
+                    .first()
+                )
+                if (
+                    raced_active is not None
+                    and raced_active.template_fingerprint_sha256 == context.template_fingerprint_sha256
+                    and raced_active.mapping_digest_sha256 == semantic_digest
+                ):
+                    profile = raced_active
+                else:
+                    raise _error(
+                        409,
+                        "mapping_profile_conflict",
+                        "Hồ sơ ánh xạ đã thay đổi đồng thời.",
+                    ) from exc
 
     outcome = "accepted" if final_digest == proposal.mapping_digest_sha256 else "corrected"
     decision = ColumnMappingDecision(
