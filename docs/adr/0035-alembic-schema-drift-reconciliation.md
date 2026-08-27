@@ -1,9 +1,9 @@
 # ADR 0035 — Alembic and ORM Schema Drift Reconciliation
 
-**Status:** Accepted  
-**Date:** 2026-08-27  
-**Context:** Sprint 13–16 remediation closure and production release readiness  
-**Deciders:** Core Engineering Team  
+**Status:** Accepted (Approved by User on 2026-08-27)
+**Date:** 2026-08-27
+**Context:** Sprint 13–16 remediation closure and production release readiness
+**Deciders:** Core Engineering Team, Lead Reviewer
 
 ## Context
 

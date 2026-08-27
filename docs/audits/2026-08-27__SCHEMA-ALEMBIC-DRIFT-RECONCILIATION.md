@@ -1,9 +1,8 @@
 # Schema and Alembic Drift Reconciliation Evidence
 
-**Date:** 2026-08-27  
-**Authority:** ADR 0035  
-**Baseline SHA:** `f85b05025073f5299cf66ed8598ef2aaa1d72125`  
-**Status:** Resolved and Verified  
+**Date:** 2026-08-27
+**Authority:** ADR 0035 (Approved by User on 2026-08-27)
+**Status:** Resolved and Verified
 
 ## 1. Summary of Identified Drift & Resolutions
 
