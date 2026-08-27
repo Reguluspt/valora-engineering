@@ -1,10 +1,10 @@
 # S15-R-002 — Source-Backed Extraction and Alignment Evidence
 
-Date: 2026-08-26
+Date: 2026-08-26; PostgreSQL/MinIO/Docker closure: 2026-08-27
 
 Branch: `remediation/s15-r-002-source-backed-alignment`
 
-Implementation commit: `10d8dcc`
+Implementation commits: `10d8dcc`, `b9094d2`
 
 Publication state: local only; not pushed
 
@@ -60,7 +60,10 @@ record; it does not substitute the test artifacts or any fabricated row set.
   review state and reviewer/timestamp shape.
 - PostgreSQL JSONB is used for raw cells, normalized fields, locators, score basis and conflicts.
 - The migration chain is linear:
-  `b0c1d2e3f4a5 -> c1d2e3f4a5b6 -> d2e3f4a5b6c7`.
+  `b0c1d2e3f4a5 -> c1d2e3f4a5b6 -> d2e3f4a5b6c7 -> e3f4a5b6c7d8`.
+- Corrective revision `e3f4a5b6c7d8` adds the model-required `updated_at` columns to
+  `asset_identity_decisions`, `learning_feedback_events` and `dossier_source_files` with a
+  non-null server default, so existing rows can be upgraded safely.
 
 ## Reliable consumer
 
@@ -77,28 +80,37 @@ record; it does not substitute the test artifacts or any fabricated row set.
 
 | Gate | Result |
 | --- | --- |
-| Focused S15 dossier/job/extraction/alignment tests | 17 passed before final reliability refinement; final affected slice 12 passed |
+| Initial real-service failure set | 11 PostgreSQL failures reproduced; all 11 corrected and rerun successfully |
 | Worker lint and tests | Ruff PASS; 5 passed |
-| Full backend test suite | 1007 passed, 68 skipped, 0 failed |
+| Full backend test suite | 1075 passed, 0 failed on PostgreSQL/MinIO (`CI=true`) |
 | Backend Ruff | PASS |
 | Security policy/secret scan | PASS |
-| Backend project dependency audit | no known vulnerabilities |
-| Worker project dependency audit | no known vulnerabilities |
-| Migration graph | one head at `d2e3f4a5b6c7` |
-| S15 migration SQL slice | PostgreSQL offline SQL generation PASS |
+| Backend project dependency audit | clean runner environment: no known vulnerabilities |
+| Worker project dependency audit | clean runner environment: no known vulnerabilities |
+| Migration graph and fresh upgrade | one head at `e3f4a5b6c7d8`; empty PostgreSQL upgraded through the full chain |
 | Frontend clean install | `npm ci` PASS; 177 packages audited; 0 vulnerabilities |
 | Frontend lint/tests/build | lint PASS; 86 passed; production build PASS; demo-marker assertion PASS |
-| PostgreSQL constraint/concurrency tests | BLOCKED locally: no PostgreSQL service on port 5432; CI tests fail closed when `CI=true` lacks the expected head |
-| MinIO integration | BLOCKED locally: Docker Desktop Linux engine pipe is absent |
-| Docker image/build/runtime | BLOCKED locally: Docker Desktop Linux engine pipe is absent |
+| PostgreSQL constraint/concurrency tests | PASS at head `e3f4a5b6c7d8`, including mapping, identity and SKIP LOCKED claim proofs |
+| MinIO integration | PASS; bucket `valora-local` verified and real XLSX/DOCX objects streamed and checksummed |
+| Docker image build | backend `b5feea6d...`, worker `0ab04993...`, frontend `0a30e0b1...` built successfully |
+| Docker runtime | backend healthy/HTTP 200, frontend HTTP 200, PostgreSQL/Redis/MinIO healthy, worker running with zero restarts |
+| Container worker smoke | two extraction jobs plus one paired-alignment job completed; one attempt and generation per job; all attempts succeeded |
+| Container business output | Excel and DOCX snapshots created; one `paired-content-v1` candidate at confidence `1.0000`; no automatic review confirmation |
+| Container audit output | 3 each of `TaskJobQueued`, `TaskJobClaimed`, `TaskJobCompleted`; 2 `DossierSourceExtracted`; 1 alignment audit |
 
-The full backend count above was measured immediately before the final small permanent-failure
-routing refinement. The directly affected backend and worker slices were rerun after that change.
-The same-SHA full suite is repeated after the evidence commit before integration acceptance.
+The project-wide `pip-audit` command must be run from the clean CI environment. The shared host
+Python installation contains unrelated applications and reports unrelated packages such as Flask,
+GitPython and Pillow; a clean environment recreated from the backend and worker project metadata
+reported no known vulnerabilities for either job.
+
+`alembic check` is not a repository CI gate and still reports older baseline metadata differences
+(legacy `dummy_model`, extra database indexes, redundant model-level scalar FKs and one historical
+integer-width mismatch). They predate this bounded S15 corrective slice and are retained as a
+separate baseline-reconciliation item rather than being silently changed without a dedicated ADR.
 
 ## Exit decision
 
-S15-R-002 is an acceptable local implementation candidate, not a publication or deployment
-approval. Final acceptance still requires the exact integration SHA to pass PostgreSQL, MinIO and
-Docker gates. Only after those gates are green may the remediation history be reconstructed into
-reviewable, scope-correct pull requests.
+S15-R-002 now satisfies the repository CI workflow and the PostgreSQL, MinIO and Docker service
+gates as a local implementation candidate. It is not a publication or deployment approval. The
+evidence commit is followed by a final same-SHA repeat before the local integration branch is
+advanced. No GitHub push or pull-request reconstruction is authorized by this evidence.
