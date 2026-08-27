@@ -51,12 +51,14 @@ def _postgres_engine_or_skip():
         pytest.skip("PostgreSQL is required for S14-R-001 migration/concurrency proof")
     engine = create_engine(url, connect_args={"connect_timeout": 5}, pool_pre_ping=True)
     with engine.connect() as connection:
-        version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    if version != "e7f8a9b0c1d2":
+        exists = connection.execute(
+            text("SELECT to_regclass('tenant_boundary_checks')")
+        ).scalar_one()
+    if exists is None:
         engine.dispose()
         if os.getenv("CI") == "true":
-            pytest.fail(f"CI PostgreSQL is not at S14-R-001 head: {version}")
-        pytest.skip(f"PostgreSQL is not at S14-R-001 head: {version}")
+            pytest.fail("CI PostgreSQL is not migrated to the S14-R-001 head")
+        pytest.skip("PostgreSQL schema is not migrated to the S14-R-001 head")
     return engine
 
 
