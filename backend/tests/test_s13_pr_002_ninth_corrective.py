@@ -1428,6 +1428,13 @@ def test_j04_throwaway_literal_fk_map_and_dml():
 
     def _assert_fk_map(eng, *, current_head: bool = False):
         expected = dict(expected_artifact_fks)
+<<<<<<< HEAD
+=======
+        if current_head:
+            expected[("organization_id", "created_by_user_id")] = (
+                "fk_source_artifact_creator_tenant"
+            )
+>>>>>>> 572b0d2 (fix(ci): close PostgreSQL migration and concurrency gaps)
         with eng.connect() as c:
             fk_rows = c.execute(
                 text(
@@ -1444,10 +1451,13 @@ def test_j04_throwaway_literal_fk_map_and_dml():
                 )
             ).all()
             fk_by_cols = {tuple(r[1]): r[0] for r in fk_rows}
+<<<<<<< HEAD
             if ("organization_id", "created_by_user_id") in fk_by_cols:
                 expected[("organization_id", "created_by_user_id")] = (
                     "fk_source_artifact_creator_tenant"
                 )
+=======
+>>>>>>> 572b0d2 (fix(ci): close PostgreSQL migration and concurrency gaps)
             assert set(fk_by_cols.keys()) == set(expected.keys())
             assert fk_by_cols == expected
 
@@ -1633,7 +1643,7 @@ def test_j04_throwaway_literal_fk_map_and_dml():
             _seed_and_dml(eng)
             command.downgrade(cfg, "e1f2a3b4c5d6")
             command.upgrade(cfg, "head")
-            _assert_fk_map(eng)
+            _assert_fk_map(eng, current_head=True)
             _seed_and_dml(eng)
         finally:
             eng.dispose()
