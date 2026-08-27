@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid
+from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid, BigInteger, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -922,6 +922,12 @@ class AuditEvent(Base, UUIDMixin):
     # Relationships
     organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
     actor: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        Index("idx_audit_event_org", "organization_id"),
+        Index("idx_audit_event_actor", "actor_user_id"),
+        Index("idx_audit_event_entity", "entity_type", "entity_id"),
+    )
 
 
 # ==================================================
@@ -2677,6 +2683,17 @@ class WorkbenchSession(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     user: Mapped["User"] = relationship("User")
     project: Mapped["Project"] = relationship("Project")
 
+    __table_args__ = (
+        Index(
+            "uq_active_session_per_user_project",
+            "user_id",
+            "project_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+            sqlite_where=text("status = 'active'")
+        ),
+    )
+
 
 class WorkbenchLayout(Base, UUIDMixin, TimestampMixin):
     """User-specific customization details for panel configurations."""
@@ -3349,7 +3366,9 @@ class GeneratedDocument(Base, UUIDMixin):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
     checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    file_size_bytes: Mapped[int] = mapped_column(nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), nullable=False
+    )
     template_version_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("template_versions.id", ondelete="RESTRICT"),
         nullable=False
