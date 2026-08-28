@@ -50,6 +50,8 @@ target-version = "py312"
 "tests/test_workbench_api.py" = ["F841"]
 "tests/test_workflow_api.py" = ["F841"]
 
-[tool.setuptools]
-packages = ["app"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+namespaces = true
 
