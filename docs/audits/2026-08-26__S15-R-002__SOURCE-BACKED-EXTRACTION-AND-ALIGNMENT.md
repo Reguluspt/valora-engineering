@@ -1,12 +1,23 @@
 # S15-R-002 — Source-Backed Extraction and Alignment Evidence
 
-Date: 2026-08-26
+Date: 2026-08-26; PostgreSQL/MinIO/Docker closure: 2026-08-27; stack rebase verification: 2026-08-28
 
-Branch: `remediation/s15-r-002-source-backed-alignment`
+Branch: `release/r-gate-001-final-acceptance`
 
-Implementation commit: `10d8dcc`
+Audited implementation commits: `10d8dcc`, `b9094d2`
 
-Publication state: local only; not pushed
+Evidence baseline commit: `002d0626b0d40f34801640bcd58e42070793ac4f`
+PR #26 exact review head is recorded in the PR body. This document is deliberately
+self-reference-safe: changing it changes the Git head, so dynamic exact-head values are
+recorded in the PR body and audit comment for the resulting SHA.
+Review base: `main` at `b5b476d1ac8144d102214f0dc240c9c1bbda9c64`
+
+Publication state: PR #26 remains `OPEN / DRAFT` until the exact-head audit and CI gate pass;
+no merge or deployment approval
+
+Evidence-sync note: this document records the audited implementation head. A documentation-only
+successor may update the file, but cannot embed its own final SHA without changing that SHA;
+the current PR head and same-head CI run are recorded in the PR body.
 
 ## Authority and scope
 
@@ -61,6 +72,9 @@ record; it does not substitute the test artifacts or any fabricated row set.
 - PostgreSQL JSONB is used for raw cells, normalized fields, locators, score basis and conflicts.
 - The migration chain is linear:
   `b0c1d2e3f4a5 -> c1d2e3f4a5b6 -> d2e3f4a5b6c7`.
+- The model-required `updated_at` columns and check constraints are reconciled directly in the
+  origin module migrations (`e7f8a9b0c1d2` and `f8a9b0c1d2e3`) with non-null server defaults,
+  preserving a clean single linear head at `d2e3f4a5b6c7`.
 
 ## Reliable consumer
 
@@ -77,28 +91,39 @@ record; it does not substitute the test artifacts or any fabricated row set.
 
 | Gate | Result |
 | --- | --- |
-| Focused S15 dossier/job/extraction/alignment tests | 17 passed before final reliability refinement; final affected slice 12 passed |
+| Initial real-service failure set | 11 PostgreSQL failures reproduced; all 11 corrected and rerun successfully |
 | Worker lint and tests | Ruff PASS; 5 passed |
-| Full backend test suite | 1007 passed, 68 skipped, 0 failed |
+| Full backend test suite | 1075 passed, 0 failed on PostgreSQL/MinIO (`CI=true`) |
 | Backend Ruff | PASS |
 | Security policy/secret scan | PASS |
-| Backend project dependency audit | no known vulnerabilities |
-| Worker project dependency audit | no known vulnerabilities |
-| Migration graph | one head at `d2e3f4a5b6c7` |
-| S15 migration SQL slice | PostgreSQL offline SQL generation PASS |
+| Backend project dependency audit | clean runner environment: no known vulnerabilities |
+| Worker project dependency audit | clean runner environment: no known vulnerabilities |
+| Migration graph and fresh upgrade | one head at `d2e3f4a5b6c7`; empty PostgreSQL upgraded through the full chain |
 | Frontend clean install | `npm ci` PASS; 177 packages audited; 0 vulnerabilities |
 | Frontend lint/tests/build | lint PASS; 86 passed; production build PASS; demo-marker assertion PASS |
-| PostgreSQL constraint/concurrency tests | BLOCKED locally: no PostgreSQL service on port 5432; CI tests fail closed when `CI=true` lacks the expected head |
-| MinIO integration | BLOCKED locally: Docker Desktop Linux engine pipe is absent |
-| Docker image/build/runtime | BLOCKED locally: Docker Desktop Linux engine pipe is absent |
+| PostgreSQL constraint/concurrency tests | PASS at head `d2e3f4a5b6c7`, including mapping, identity and SKIP LOCKED claim proofs |
+| MinIO integration | PASS; bucket `valora-local` verified and real XLSX/DOCX objects streamed and checksummed |
+| Docker exact-revision build | Prior clean build artifact (source/Docker context unchanged by subsequent documentation-only commits): backend `sha256:9a4f88b29b2554e1c6b14af2d641da11727783ce1923a10a6832ce04147925d9`, worker `sha256:e9eff4a5b0657d1dd8a9299024fd40bb3d7ecc3bd8984b3ba74dbe58d58e7724`, frontend `sha256:773d4287e79830bfc47e861f044592c4298ede71e7a3fdb80e0ae5ea2748dbdb`; each carried `org.opencontainers.image.revision=a8972d12816b1f6ba4c7e35f8bdacce724c3562a` and was rebuilt from the identical Docker context |
+| Docker exact-head label protocol | The Dockerfiles and Compose args bind `org.opencontainers.image.revision` to `VALORA_IMAGE_REVISION`; exact-head rebuild is required when the daemon is available. The PR body records the exact reviewed Git SHA and the prior artifact provenance; no digest is relabeled or represented as a build of a different SHA |
+| Docker isolated runtime | Prior clean run used Compose project `valora-docker-audit`, fresh project-scoped PostgreSQL/MinIO volumes and an isolated network; backend/frontend HTTP 200, zero schema drift and registered production worker handlers; the existing `valora_postgres_data` volume was not modified |
+| Container worker smoke | two extraction jobs plus one paired-alignment job completed; one attempt and generation per job; all attempts succeeded |
+| Container business output | Excel and DOCX snapshots created; one `paired-content-v1` candidate at confidence `1.0000`; no automatic review confirmation |
+| Container audit output | 3 each of `TaskJobQueued`, `TaskJobClaimed`, `TaskJobCompleted`; 2 `DossierSourceExtracted`; 1 alignment audit |
 
-The full backend count above was measured immediately before the final small permanent-failure
-routing refinement. The directly affected backend and worker slices were rerun after that change.
-The same-SHA full suite is repeated after the evidence commit before integration acceptance.
+The project-wide `pip-audit` command must be run from the clean CI environment. The shared host
+Python installation contains unrelated applications and reports unrelated packages such as Flask,
+GitPython and Pillow; a clean environment recreated from the backend and worker project metadata
+reported no known vulnerabilities for either job.
+
+ADR 0035 (Proposed) records the separate baseline reconciliation. The prior clean run upgraded a
+fresh PostgreSQL database to `d2e3f4a5b6c7` and `alembic check` reported no new upgrade operations;
+the exact-head CI/audit decision remains authoritative for PR #26. The PR body carries the exact
+head, CI run, prior image IDs, labels, migration current/check output, health checks and worker
+smoke output without pretending that a documentation-only commit rebuilt those images.
 
 ## Exit decision
 
-S15-R-002 is an acceptable local implementation candidate, not a publication or deployment
-approval. Final acceptance still requires the exact integration SHA to pass PostgreSQL, MinIO and
-Docker gates. Only after those gates are green may the remediation history be reconstructed into
-reviewable, scope-correct pull requests.
+S15-R-002 satisfies the repository CI workflow and PostgreSQL/MinIO application gates as a Draft
+implementation candidate at the audited implementation head. Exact-revision Docker acceptance is
+recorded on PR #26. This is not a merge or deployment approval; ADR 0035 remains Proposed until
+the owner accepts it.

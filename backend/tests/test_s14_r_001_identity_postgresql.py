@@ -154,6 +154,14 @@ def test_postgresql_identity_constraints_are_installed() -> None:
             "chk_identity_decision_target_shape",
             "chk_identity_decision_rejection_reason",
         } <= identity_check_names
+        identity_columns = {
+            item["name"] for item in inspector.get_columns("asset_identity_decisions")
+        }
+        feedback_columns = {
+            item["name"] for item in inspector.get_columns("learning_feedback_events")
+        }
+        assert {"created_at", "updated_at"} <= identity_columns
+        assert {"created_at", "updated_at"} <= feedback_columns
         assert inspector.has_table("tenant_boundary_checks")
         assert inspector.has_table("security_events")
         assert inspector.has_table("security_audit_logs")

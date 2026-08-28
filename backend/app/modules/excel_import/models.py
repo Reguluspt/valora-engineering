@@ -146,6 +146,10 @@ class ImportSourceArtifact(Base, UUIDMixin, TimestampMixin):
             name="chk_source_artifact_checksum_lower",
         ),
         CheckConstraint(
+            "checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_source_artifact_checksum_hex",
+        ),
+        CheckConstraint(
             "state IN ('pending', 'available', 'failed', 'orphaned')",
             name="chk_source_artifact_state",
         ),
@@ -239,6 +243,10 @@ class WorkbookStructureSnapshot(Base, UUIDMixin):
             name="chk_workbook_structure_source_checksum_lower",
         ),
         CheckConstraint(
+            "source_checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_workbook_structure_source_checksum_hex",
+        ),
+        CheckConstraint(
             "disposition IN ('proposed', 'review_required')",
             name="chk_workbook_structure_disposition",
         ),
@@ -249,6 +257,10 @@ class WorkbookStructureSnapshot(Base, UUIDMixin):
         CheckConstraint(
             "analysis_digest_sha256 = lower(analysis_digest_sha256)",
             name="chk_workbook_structure_digest_lower",
+        ),
+        CheckConstraint(
+            "analysis_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_workbook_structure_digest_hex",
         ),
         ForeignKeyConstraint(
             [
@@ -1502,15 +1514,9 @@ class DossierTableRole(str, enum.Enum):
 class DossierExtractionSnapshot(Base, UUIDMixin):
     __tablename__ = "dossier_extraction_snapshots"
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
-    )
-    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("dossier_bundles.id", ondelete="RESTRICT"), nullable=False
-    )
-    source_file_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("dossier_source_files.id", ondelete="RESTRICT"), nullable=False
-    )
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_file_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_kind: Mapped[str] = mapped_column(String(16), nullable=False)
     parser_name: Mapped[str] = mapped_column(String(64), nullable=False)

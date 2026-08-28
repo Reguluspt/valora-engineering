@@ -193,6 +193,10 @@ def test_postgresql_source_backed_alignment_constraints_are_installed() -> None:
             "chk_dossier_row_alignment_target_shape",
             "chk_dossier_row_alignment_review_shape",
         } <= alignment_checks
+        source_columns = {
+            item["name"] for item in inspector.get_columns("dossier_source_files")
+        }
+        assert {"created_at", "updated_at"} <= source_columns
         for table_name, json_columns in {
             "dossier_extracted_tables": {"locator_json"},
             "dossier_extracted_rows": {

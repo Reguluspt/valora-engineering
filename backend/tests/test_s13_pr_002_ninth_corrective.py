@@ -1633,7 +1633,7 @@ def test_j04_throwaway_literal_fk_map_and_dml():
             _seed_and_dml(eng)
             command.downgrade(cfg, "e1f2a3b4c5d6")
             command.upgrade(cfg, "head")
-            _assert_fk_map(eng)
+            _assert_fk_map(eng, current_head=True)
             _seed_and_dml(eng)
         finally:
             eng.dispose()

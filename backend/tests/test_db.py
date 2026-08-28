@@ -1,10 +1,10 @@
 import uuid
 from datetime import timezone
 from sqlalchemy import String, create_engine
-from sqlalchemy.orm import Mapped, mapped_column, Session
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 
 from app.core.config import get_settings
-from app.db import Base, get_db
+from app.db import get_db
 from app.db.mixins import UUIDMixin, TimestampMixin, OptimisticLockingMixin
 
 
@@ -18,8 +18,12 @@ def test_settings_database_url() -> None:
     assert str(settings.postgres_port) in settings.database_url
 
 
-# Create a test model inheriting from Base and all mixins to verify column mappings
-class DummyModel(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
+class TestBase(DeclarativeBase):
+    pass
+
+
+# Create a test model inheriting from TestBase and all mixins to verify column mappings
+class DummyModel(TestBase, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __tablename__ = "dummy_model"
     name: Mapped[str] = mapped_column(String(50), nullable=False)
 
@@ -45,7 +49,7 @@ def test_mixins_structure() -> None:
 
     # 4. Use SQLite to check ID default and optimistic locking update behavior
     engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(bind=engine)
+    TestBase.metadata.create_all(bind=engine)
 
     try:
         with Session(bind=engine) as session:
@@ -62,7 +66,7 @@ def test_mixins_structure() -> None:
             assert dummy.name == "updated_record"
             assert dummy.row_version == 2
     finally:
-        Base.metadata.drop_all(bind=engine)
+        TestBase.metadata.drop_all(bind=engine)
 
 
 def test_get_db_yields_session() -> None:

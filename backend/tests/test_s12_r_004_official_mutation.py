@@ -1218,7 +1218,11 @@ def test_postgres_concurrent_official_commit(pg_db_session):
 
         audit_count = (
             fresh.query(AuditEvent)
-            .filter(AuditEvent.event_name == "project.asset_line.draft_committed")
+            .filter(
+                AuditEvent.organization_id == org.id,
+                AuditEvent.entity_id == line.id,
+                AuditEvent.event_name == "project.asset_line.draft_committed",
+            )
             .count()
         )
         assert audit_count == 1
