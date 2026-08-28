@@ -6,10 +6,14 @@ Branch: `release/r-gate-001-final-acceptance`
 
 Audited implementation commits: `10d8dcc`, `b9094d2`
 
-Current PR #26 head: `002d0626b0d40f34801640bcd58e42070793ac4f`
+Evidence baseline commit: `002d0626b0d40f34801640bcd58e42070793ac4f`
+PR #26 exact review head is recorded in the PR body. This document is deliberately
+self-reference-safe: changing it changes the Git head, so dynamic exact-head values are
+recorded in the PR body and audit comment for the resulting SHA.
 Review base: `main` at `b5b476d1ac8144d102214f0dc240c9c1bbda9c64`
 
-Publication state: PR #26 is `OPEN / DRAFT`; no merge or deployment approval
+Publication state: PR #26 remains `OPEN / DRAFT` until the exact-head audit and CI gate pass;
+no merge or deployment approval
 
 Evidence-sync note: this document records the audited implementation head. A documentation-only
 successor may update the file, but cannot embed its own final SHA without changing that SHA;
@@ -99,8 +103,9 @@ record; it does not substitute the test artifacts or any fabricated row set.
 | Frontend lint/tests/build | lint PASS; 86 passed; production build PASS; demo-marker assertion PASS |
 | PostgreSQL constraint/concurrency tests | PASS at head `d2e3f4a5b6c7`, including mapping, identity and SKIP LOCKED claim proofs |
 | MinIO integration | PASS; bucket `valora-local` verified and real XLSX/DOCX objects streamed and checksummed |
-| Docker exact-revision build | Backend, worker and frontend images must carry `org.opencontainers.image.revision` equal to the final PR #26 head SHA; exact image IDs are recorded in PR #26 after the final commit is built |
-| Docker isolated runtime | Fresh project-scoped PostgreSQL/MinIO volumes and an isolated network; backend/frontend HTTP 200, zero schema drift and registered production worker handlers; the existing `valora_postgres_data` volume is not modified |
+| Docker exact-revision build | Prior clean build artifact (source/Docker context unchanged by subsequent documentation-only commits): backend `sha256:9a4f88b29b2554e1c6b14af2d641da11727783ce1923a10a6832ce04147925d9`, worker `sha256:e9eff4a5b0657d1dd8a9299024fd40bb3d7ecc3bd8984b3ba74dbe58d58e7724`, frontend `sha256:773d4287e79830bfc47e861f044592c4298ede71e7a3fdb80e0ae5ea2748dbdb`; each carried `org.opencontainers.image.revision=a8972d12816b1f6ba4c7e35f8bdacce724c3562a` and was rebuilt from the identical Docker context |
+| Docker exact-head label protocol | The Dockerfiles and Compose args bind `org.opencontainers.image.revision` to `VALORA_IMAGE_REVISION`; exact-head rebuild is required when the daemon is available. The PR body records the exact reviewed Git SHA and the prior artifact provenance; no digest is relabeled or represented as a build of a different SHA |
+| Docker isolated runtime | Prior clean run used Compose project `valora-docker-audit`, fresh project-scoped PostgreSQL/MinIO volumes and an isolated network; backend/frontend HTTP 200, zero schema drift and registered production worker handlers; the existing `valora_postgres_data` volume was not modified |
 | Container worker smoke | two extraction jobs plus one paired-alignment job completed; one attempt and generation per job; all attempts succeeded |
 | Container business output | Excel and DOCX snapshots created; one `paired-content-v1` candidate at confidence `1.0000`; no automatic review confirmation |
 | Container audit output | 3 each of `TaskJobQueued`, `TaskJobClaimed`, `TaskJobCompleted`; 2 `DossierSourceExtracted`; 1 alignment audit |
@@ -110,11 +115,11 @@ Python installation contains unrelated applications and reports unrelated packag
 GitPython and Pillow; a clean environment recreated from the backend and worker project metadata
 reported no known vulnerabilities for either job.
 
-ADR 0035 (Proposed) records the separate baseline reconciliation. At the final PR #26 head, a
-fresh PostgreSQL database must upgrade to `d2e3f4a5b6c7` and `alembic check` must report no new
-upgrade operations. The exact image IDs, OCI revision labels and runtime outputs are recorded in
-PR #26 after the final commit is built so that adding dynamic evidence does not change the tested
-Git SHA.
+ADR 0035 (Proposed) records the separate baseline reconciliation. The prior clean run upgraded a
+fresh PostgreSQL database to `d2e3f4a5b6c7` and `alembic check` reported no new upgrade operations;
+the exact-head CI/audit decision remains authoritative for PR #26. The PR body carries the exact
+head, CI run, prior image IDs, labels, migration current/check output, health checks and worker
+smoke output without pretending that a documentation-only commit rebuilt those images.
 
 ## Exit decision
 
