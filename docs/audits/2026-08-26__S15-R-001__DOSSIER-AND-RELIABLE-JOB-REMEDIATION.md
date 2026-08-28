@@ -1,10 +1,14 @@
 # S15-R-001 — Dossier and Reliable Job Remediation Evidence
 
-Date: 2026-08-26; exact PR #24 rebase verification: 2026-08-28
+Date: 2026-08-26; PR #24 rebase verification: 2026-08-28
 
 Branch: `release/s15-r-001-reliable-jobs`
 
-Exact PR #24 head: `65e206a5d3f12192bd8cce0a6ccd422a223986a0`
+Audited implementation head: `65e206a5d3f12192bd8cce0a6ccd422a223986a0`
+
+Evidence-sync state: this document is maintained by a documentation-only successor commit;
+the current PR head and same-head CI run are recorded in the PR body because a commit cannot
+embed its own SHA without changing that SHA.
 
 Review base: `main` at `2f95920cb48bd260b4235f883361cc0e4b4fe9d3`
 
@@ -107,21 +111,23 @@ placeholder handler or fabricated result from entering the production path.
 | PostgreSQL concurrency/constraint evidence | BLOCKED locally: no PostgreSQL service; tests are committed for CI |
 | MinIO integration | BLOCKED locally with Docker daemon; remains a same-SHA CI gate |
 
-## Exact PR #24 rebase verification
+## PR #24 rebase verification
 
 - The branch was rebased onto the newly merged `main` commit shown above and force-pushed
   with `--force-with-lease`.
 - GitHub Actions run `33160232110` passed all four jobs (`committed-whitespace`, `backend`,
-  `worker`, `frontend`) at the exact PR #24 head.
+  `worker`, `frontend`) at the audited implementation head. The documentation-only successor
+  must also pass the same four gates before Ready review.
 - A focused rerun on the rebased stack tip (`release/r-gate-001-final-acceptance`) reports
   `10 passed, 3 skipped`; the three skips are PostgreSQL-only tests in the local environment.
-  The exact-head PR #24 CI run executed the PostgreSQL migration, constraint and concurrency
+  The implementation-head PR #24 CI run executed the PostgreSQL migration, constraint and concurrency
   gates successfully.
 - PR #24 remains intentionally Draft; source-backed extraction/alignment handlers are supplied
   by downstream PRs #25 and #26, not this branch.
 
 ## Exit decision
 
-At exact PR #24 head, S15-R-001 is a Draft implementation candidate with its rebase and CI
-evidence recorded above. It is not a merge or deployment approval. Source-backed document
-extraction and paired alignment remain explicitly bounded to downstream PRs #25 and #26.
+At the audited implementation head plus its documentation-only evidence successor, S15-R-001 is
+a Draft implementation candidate. The current PR head must retain green same-head CI before
+Ready review. This is not a merge or deployment approval. Source-backed document extraction and
+paired alignment remain explicitly bounded to downstream PRs #25 and #26.
