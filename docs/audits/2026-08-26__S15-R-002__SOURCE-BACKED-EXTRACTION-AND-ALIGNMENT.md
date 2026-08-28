@@ -1,12 +1,19 @@
 # S15-R-002 — Source-Backed Extraction and Alignment Evidence
 
-Date: 2026-08-26; PostgreSQL/MinIO/Docker closure: 2026-08-27
+Date: 2026-08-26; PostgreSQL/MinIO/Docker closure: 2026-08-27; stack rebase verification: 2026-08-28
 
-Branch: `remediation/s15-r-002-source-backed-alignment`
+Branch: `release/r-gate-001-final-acceptance`
 
-Implementation commits: `10d8dcc`, `b9094d2`
+Audited implementation commits: `10d8dcc`, `b9094d2`
 
-Publication state: local only; not pushed
+Current PR #26 head: `002d0626b0d40f34801640bcd58e42070793ac4f`
+Review base: `main` at `b5b476d1ac8144d102214f0dc240c9c1bbda9c64`
+
+Publication state: PR #26 is `OPEN / DRAFT`; no merge or deployment approval
+
+Evidence-sync note: this document records the audited implementation head. A documentation-only
+successor may update the file, but cannot embed its own final SHA without changing that SHA;
+the current PR head and same-head CI run are recorded in the PR body.
 
 ## Authority and scope
 
@@ -111,6 +118,7 @@ Git SHA.
 
 ## Exit decision
 
-S15-R-002 now satisfies the repository CI workflow and the PostgreSQL/MinIO application gates as a
-Draft implementation candidate. Exact-revision Docker acceptance is recorded on PR #26. This is
-not a merge or deployment approval; ADR 0035 remains Proposed until the owner accepts it.
+S15-R-002 satisfies the repository CI workflow and PostgreSQL/MinIO application gates as a Draft
+implementation candidate at the audited implementation head. Exact-revision Docker acceptance is
+recorded on PR #26. This is not a merge or deployment approval; ADR 0035 remains Proposed until
+the owner accepts it.
