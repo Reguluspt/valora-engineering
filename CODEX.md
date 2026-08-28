@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Last reconciled:** 2026-07-19 (hybrid AI delivery workflow / S13-PR-004 live gate)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -25,6 +25,8 @@ Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Desi
 
 Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historical S12-R remediation prose are **historical records**, not the live gate.
 
+Operational delivery mechanics are governed by `docs/VALORA_HYBRID_AI_DELIVERY_WORKFLOW.md`. That workflow controls session bootstrap, delegation, review and handoff, but it cannot override the authority order above or any permanent guardrail.
+
 ## 2. Current Engineering Phase
 
 ```text
@@ -40,14 +42,17 @@ Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
 S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
 (PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`;
 exact-head CI `29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+S13-PR-003 runtime is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
 (PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`,
 tree `17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
 post-merge main CI `29676915010`, all PASS).
+S13-PR-003-CLOSEOUT is MERGED at current accepted main
+`d09662c95edfd3515d405e468d215159b46fbf1f` (PR #18).
 
-Runtime assignment state: S13-PR-004 is owner-assigned from baseline
-`2af753520ab6b7885555adc5b7945a28d32ee311`; assigned branch name:
-`s13-pr-004-column-mapping-memory`. Its design/evidence gate must be frozen before runtime work.
+Runtime assignment state: S13-PR-004 is owner-assigned from accepted baseline
+`d09662c95edfd3515d405e468d215159b46fbf1f`; assigned branch name:
+`s13-pr-004-column-mapping-memory`; Draft PR #19. Its frozen remote design head is
+`91c6797176a0f33aefb9c88ab2543a5c9a2fec92` (last verified 2026-07-19).
 Scope is limited to Column Mapping Memory persistence and application services (G-03/G-06).
 S13-PR-005 mapping-confirmation API/UX and every later slice remain separately gated.
 ```
@@ -169,7 +174,19 @@ User/owner controls Draft PR creation, Ready, squash, and merge
 unless a task explicitly authorizes otherwise.
 ```
 
-## 9. Security Requirement
+## 9. Hybrid AI Delivery
+
+```text
+Use docs/VALORA_HYBRID_AI_DELIVERY_WORKFLOW.md for every new session.
+Read current canonical state + active Task Packet; do not bulk-read historical audits.
+Use one Task Packet per new task after S13-PR-004; do not duplicate design/coding/audit packets.
+Use only the roles required by the task risk class: Lead, optional Planner, Coder, optional Reviewer.
+Antigravity is not a required gate unless the owner explicitly reinstates it for a named task.
+AI Coder makes local implementation commits only; Codex Lead owns GitHub App remote writes.
+Do not use gh. Remote head and exact-head CI must be verified before Ready/merge.
+```
+
+## 10. Security Requirement
 
 ```text
 Fail closed on missing identity, inactive user/org, cross-tenant access.

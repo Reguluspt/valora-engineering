@@ -1,9 +1,9 @@
 # Valora Project Handoff (Canonical)
 
 **Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-19 — S13-PR-003 closeout / S13-PR-004 assignment
-**Main evidence (not evergreen):** `2af753520ab6b7885555adc5b7945a28d32ee311` (S13-PR-003 PR #17)
-**Main CI evidence:** run `29676915010` PASS
+**Reconciled:** 2026-07-19 — hybrid workflow / S13-PR-004 live gate
+**Accepted main (not evergreen):** `d09662c95edfd3515d405e468d215159b46fbf1f` (S13-PR-003-CLOSEOUT PR #18)
+**Last cited runtime main CI:** run `29676915010` PASS (S13-PR-003 runtime tree)
 
 ### Live task gate
 
@@ -14,14 +14,17 @@ Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
 S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
 (PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
 `29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
+S13-PR-003 runtime is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
 (PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
 `17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
 post-merge main CI `29676915010`, all PASS).
+S13-PR-003-CLOSEOUT is MERGED at accepted main
+`d09662c95edfd3515d405e468d215159b46fbf1f` (PR #18).
 
 Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
 Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`. Its design/evidence gate must be frozen first.
+`d09662c95edfd3515d405e468d215159b46fbf1f`. Draft PR #19 has frozen remote design head
+`91c6797176a0f33aefb9c88ab2543a5c9a2fec92` (last verified 2026-07-19).
 S13-PR-005 API/UX and later slices remain separately gated.
 ```
 
@@ -127,8 +130,13 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 ```text
 Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application Services
 Assigned branch name: s13-pr-004-column-mapping-memory
-Baseline: 2af753520ab6b7885555adc5b7945a28d32ee311
-Gate: freeze task-specific design/evidence contract before runtime implementation
+Baseline: d09662c95edfd3515d405e468d215159b46fbf1f
+Draft PR: #19
+Frozen remote design head: 91c6797176a0f33aefb9c88ab2543a5c9a2fec92
+Frozen documents on the PR #19 branch:
+  docs/audits/2026-07-19__S13-PR-004__EVIDENCE-GATE-DESIGN.md
+  docs/audits/2026-07-19__S13-PR-004__SOL-HIGH-CODING-PACKET.md
+Gate: implement frozen packet, focused review and exact-head CI before Ready/merge
 ```
 
 ### Next candidate after S13-PR-004 merge (requires separate owner assignment)
@@ -155,18 +163,20 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 
 ## 10. Safe onboarding for the next agent
 
-1. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `PR_RULES.md`, this handoff, and `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md`.
-2. Verify `git rev-parse origin/main` against the task baseline.
-3. Create a **new** branch from clean `main` for the assigned task ID.
-4. Prefer code + tests + CI over stale audit prose.
-5. Never treat local PG skips as PASS.
-6. Do not restart closed S13-PR-001/002/003 or Gate 0c. S13-PR-004 is the active assigned runtime task from accepted main `2af7535…`; freeze its design before runtime. Do not start S13-PR-005+ without a separate owner assignment.
-7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
-8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
-9. Do not claim uncommitted local docs are already merged authority.
-10. Treat `AITaskRun`/`DecisionEpisode` as provenance around authoritative domain decisions, not replacement business truth.
-11. AI/rules submit typed proposals only; future writes must pass deterministic ExecutionPolicy and an allowlisted idempotent domain command.
-12. Do not learn workflow patterns from UI clickstream or promote automation from raw confirmation count.
+1. Follow `docs/VALORA_HYBRID_AI_DELIVERY_WORKFLOW.md`; its five-minute bootstrap is the default session setup.
+2. Fetch and verify live `origin/main`, active PR state/head and clean worktree before trusting the SHAs here.
+3. Read `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, this handoff, the active Task Packet and only its cited authority sections.
+4. Do not bulk-read `docs/audits/`, old corrective reports or old prompts. Open historical evidence only for a specific unresolved question.
+5. Prefer code + tests + exact-head CI over stale audit prose. Never treat local PostgreSQL skips as PASS.
+6. Do not restart closed S13-PR-001/002/003 or Gate 0c. PR #19 / S13-PR-004 is active; do not start S13-PR-005+ without separate owner assignment.
+7. S13-PR-004 retains its frozen design/coding packet. From the next task, use one `docs/tasks/<TASK-ID>__TASK_PACKET.md`.
+8. Antigravity is not a required gate. Activate only the Planner/Coder/Reviewer roles required by the workflow risk class.
+9. The AI Coder makes local commits only. Codex Lead uses the GitHub App for remote writes; do not use `gh`.
+10. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
+11. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
+12. Treat `AITaskRun`/`DecisionEpisode` as provenance around authoritative domain decisions, not replacement business truth.
+13. AI/rules submit typed proposals only; future writes require deterministic ExecutionPolicy and an allowlisted idempotent domain command.
+14. Do not learn workflow patterns from UI clickstream or promote automation from raw confirmation count.
 
 ## 11. Key paths
 
@@ -178,6 +188,7 @@ backend/app/modules/project_master_data/commands/commit_asset_line_draft.py
 frontend/src/App.tsx
 frontend/src/components/workbench/
 docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
+docs/VALORA_HYBRID_AI_DELIVERY_WORKFLOW.md
 docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md
 docs/adr/0029-excel-staging-apply-command-and-lineage.md
 docs/adr/0030-versioned-column-mapping-memory-and-adaptive-workbook-intake.md
