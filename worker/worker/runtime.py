@@ -38,6 +38,14 @@ class JobExecutionContext:
 JobHandler = Callable[[JobExecutionContext], dict[str, Any]]
 
 
+class JobHandlerFailure(Exception):
+    def __init__(self, code: str, message: str, *, retryable: bool = False):
+        self.code = code
+        self.message = message
+        self.retryable = retryable
+        super().__init__(message)
+
+
 class _LeaseHeartbeat:
     def __init__(
         self,
@@ -167,6 +175,20 @@ class ReliableJobWorker:
                 result = handler(context)
             if not isinstance(result, dict):
                 raise TypeError("Job handler result must be a JSON object.")
+        except JobHandlerFailure as exc:
+            logger.warning(
+                "Job handler rejected source: job=%s type=%s code=%s",
+                context.job_id,
+                context.job_type,
+                exc.code,
+            )
+            self._record_failure(
+                context,
+                error_code=exc.code,
+                error_message=exc.message,
+                retryable=exc.retryable,
+            )
+            return True
         except Exception as exc:
             logger.exception(
                 "Job handler failed: job=%s type=%s generation=%s",
@@ -202,6 +224,7 @@ class ReliableJobWorker:
         *,
         error_code: str,
         error_message: str,
+        retryable: bool = True,
     ) -> None:
         failure_session = self._session_factory()
         try:
@@ -215,6 +238,7 @@ class ReliableJobWorker:
                 error_code=error_code,
                 error_message=error_message,
                 retry_base_seconds=self._retry_base_seconds,
+                retryable=retryable,
             )
         finally:
             failure_session.close()

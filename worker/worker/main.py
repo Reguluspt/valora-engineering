@@ -29,7 +29,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, _request_stop)
     consumer = ReliableJobWorker(
         session_factory=SessionLocal,
-        handlers=build_handler_registry(),
+        handlers=build_handler_registry(session_factory=SessionLocal),
         worker_id=settings.worker_id,
         lease_duration_seconds=settings.worker_lease_duration_seconds,
         heartbeat_interval_seconds=settings.worker_heartbeat_interval_seconds,

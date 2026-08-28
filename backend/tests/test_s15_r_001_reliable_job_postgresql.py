@@ -1,4 +1,4 @@
-"""PostgreSQL-only evidence for S15-R-001 constraints and SKIP LOCKED claims."""
+"""PostgreSQL evidence for S15 reliable jobs and source-backed alignment."""
 from __future__ import annotations
 
 import os
@@ -134,6 +134,76 @@ def test_postgresql_reliable_job_constraints_are_installed() -> None:
         columns = {item["name"]: item for item in inspector.get_columns("task_jobs")}
         assert str(columns["payload"]["type"]).upper() == "JSONB"
         assert str(columns["result_payload"]["type"]).upper() == "JSONB"
+    finally:
+        engine.dispose()
+
+
+def test_postgresql_source_backed_alignment_constraints_are_installed() -> None:
+    engine = _postgres_engine_or_skip()
+    try:
+        inspector = inspect(engine)
+        snapshot_fks = {
+            item["name"]
+            for item in inspector.get_foreign_keys("dossier_extraction_snapshots")
+        }
+        table_fks = {
+            item["name"] for item in inspector.get_foreign_keys("dossier_extracted_tables")
+        }
+        row_fks = {
+            item["name"] for item in inspector.get_foreign_keys("dossier_extracted_rows")
+        }
+        run_fks = {
+            item["name"] for item in inspector.get_foreign_keys("dossier_alignment_runs")
+        }
+        alignment_fks = {
+            item["name"] for item in inspector.get_foreign_keys("dossier_row_alignments")
+        }
+        alignment_checks = {
+            item["name"]
+            for item in inspector.get_check_constraints("dossier_row_alignments")
+        }
+        assert {
+            "fk_dossier_extraction_source_tenant",
+            "fk_dossier_extraction_job_tenant",
+        } <= snapshot_fks
+        assert {
+            "fk_dossier_extracted_table_snapshot_tenant",
+            "fk_dossier_extracted_table_source_tenant",
+        } <= table_fks
+        assert {
+            "fk_dossier_extracted_row_table_tenant",
+            "fk_dossier_extracted_row_source_tenant",
+        } <= row_fks
+        assert {
+            "fk_dossier_alignment_run_bundle_tenant",
+            "fk_dossier_alignment_run_excel_snapshot",
+            "fk_dossier_alignment_run_report_snapshot",
+            "fk_dossier_alignment_run_job_tenant",
+        } <= run_fks
+        assert {
+            "fk_dossier_row_alignment_run_tenant",
+            "fk_dossier_row_alignment_excel_row",
+            "fk_dossier_row_alignment_technical_row",
+            "fk_dossier_row_alignment_comparison_row",
+            "fk_dossier_row_alignment_final_row",
+            "fk_dossier_row_alignment_reviewer_tenant",
+        } <= alignment_fks
+        assert {
+            "chk_dossier_row_alignment_state",
+            "chk_dossier_row_alignment_target_shape",
+            "chk_dossier_row_alignment_review_shape",
+        } <= alignment_checks
+        for table_name, json_columns in {
+            "dossier_extracted_tables": {"locator_json"},
+            "dossier_extracted_rows": {
+                "cells_json",
+                "normalized_fields",
+                "locator_json",
+            },
+            "dossier_row_alignments": {"match_basis", "conflicts"},
+        }.items():
+            columns = {item["name"]: item for item in inspector.get_columns(table_name)}
+            assert all(str(columns[name]["type"]).upper() == "JSONB" for name in json_columns)
     finally:
         engine.dispose()
 

@@ -1302,6 +1302,12 @@ class DossierSourceFile(Base, TimestampMixin, UUIDMixin):
     storage_object_key: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "id",
+            name="uq_dossier_file_tenant_bundle_id",
+        ),
         ForeignKeyConstraint(
             ["organization_id", "dossier_bundle_id"],
             ["dossier_bundles.organization_id", "dossier_bundles.id"],
@@ -1476,4 +1482,443 @@ class TaskJobAttempt(Base, UUIDMixin):
             name="chk_task_job_attempt_finished_shape",
         ),
         Index("idx_job_attempt_job", "job_id"),
+    )
+
+
+class DossierSourceKind(str, enum.Enum):
+    EXCEL = "excel"
+    DOCX = "docx"
+    PDF = "pdf"
+
+
+class DossierTableRole(str, enum.Enum):
+    EXCEL_CUSTOMER_ASSET_TABLE = "excel_customer_asset_table"
+    WORD_TECHNICAL_ASSET_TABLE = "word_technical_asset_table"
+    WORD_QUOTE_COMPARISON_TABLE = "word_quote_comparison_table"
+    WORD_FINAL_RESULT_TABLE = "word_final_result_table"
+    UNKNOWN = "unknown"
+
+
+class DossierExtractionSnapshot(Base, UUIDMixin):
+    __tablename__ = "dossier_extraction_snapshots"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_bundles.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_file_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("dossier_source_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    parser_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    extraction_schema_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_by_job_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    generation_token: Mapped[int] = mapped_column(Integer, nullable=False)
+    table_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    extraction_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_file_id",
+            "source_checksum_sha256",
+            "parser_name",
+            "parser_version",
+            "extraction_schema_version",
+            name="uq_dossier_extraction_source_parser",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "id",
+            name="uq_dossier_extraction_tenant_bundle_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "source_file_id"],
+            [
+                "dossier_source_files.organization_id",
+                "dossier_source_files.dossier_bundle_id",
+                "dossier_source_files.id",
+            ],
+            name="fk_dossier_extraction_source_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_job_id"],
+            ["task_jobs.organization_id", "task_jobs.id"],
+            name="fk_dossier_extraction_job_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "source_kind IN ('excel', 'docx', 'pdf')",
+            name="chk_dossier_extraction_source_kind",
+        ),
+        CheckConstraint("generation_token > 0", name="chk_dossier_extraction_generation"),
+        CheckConstraint(
+            "table_count >= 0 AND row_count >= 0",
+            name="chk_dossier_extraction_counts",
+        ),
+        CheckConstraint(
+            "length(source_checksum_sha256) = 64 "
+            "AND source_checksum_sha256 = lower(source_checksum_sha256)",
+            name="chk_dossier_extraction_source_checksum",
+        ),
+        CheckConstraint(
+            "length(extraction_digest_sha256) = 64 "
+            "AND extraction_digest_sha256 = lower(extraction_digest_sha256)",
+            name="chk_dossier_extraction_digest",
+        ),
+        Index("idx_dossier_extraction_bundle", "organization_id", "dossier_bundle_id"),
+        Index("idx_dossier_extraction_source", "source_file_id"),
+    )
+
+
+class DossierExtractedTable(Base, TimestampMixin, UUIDMixin):
+    __tablename__ = "dossier_extracted_tables"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_file_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    extraction_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    table_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    table_role_candidate: Mapped[str] = mapped_column(String(64), nullable=False)
+    role_confidence: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    raw_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sheet_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    header_row_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    col_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    locator_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "extraction_snapshot_id", "table_index", name="uq_dossier_extracted_table_index"
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "id",
+            name="uq_dossier_extracted_table_tenant_bundle_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "extraction_snapshot_id"],
+            [
+                "dossier_extraction_snapshots.organization_id",
+                "dossier_extraction_snapshots.dossier_bundle_id",
+                "dossier_extraction_snapshots.id",
+            ],
+            name="fk_dossier_extracted_table_snapshot_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "source_file_id"],
+            [
+                "dossier_source_files.organization_id",
+                "dossier_source_files.dossier_bundle_id",
+                "dossier_source_files.id",
+            ],
+            name="fk_dossier_extracted_table_source_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("table_index >= 0", name="chk_dossier_extracted_table_index"),
+        CheckConstraint(
+            "source_kind IN ('excel', 'docx', 'pdf')",
+            name="chk_dossier_extracted_table_source_kind",
+        ),
+        CheckConstraint(
+            "table_role_candidate IN ('excel_customer_asset_table', "
+            "'word_technical_asset_table', 'word_quote_comparison_table', "
+            "'word_final_result_table', 'unknown')",
+            name="chk_dossier_extracted_table_role",
+        ),
+        CheckConstraint(
+            "role_confidence >= 0 AND role_confidence <= 1",
+            name="chk_dossier_extracted_table_confidence",
+        ),
+        CheckConstraint(
+            "row_count >= 0 AND col_count >= 0",
+            name="chk_dossier_extracted_table_counts",
+        ),
+        CheckConstraint(
+            "page_number IS NULL OR page_number > 0",
+            name="chk_dossier_extracted_table_page",
+        ),
+        Index("idx_dossier_extracted_table_bundle", "organization_id", "dossier_bundle_id"),
+    )
+
+
+class DossierExtractedRow(Base, UUIDMixin):
+    __tablename__ = "dossier_extracted_rows"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_file_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    extracted_table_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    row_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_header: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    cells_json: Mapped[list[Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    normalized_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    locator_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    content_fingerprint_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "extracted_table_id", "row_index", name="uq_dossier_extracted_row_index"
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "id",
+            name="uq_dossier_extracted_row_tenant_bundle_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "extracted_table_id"],
+            [
+                "dossier_extracted_tables.organization_id",
+                "dossier_extracted_tables.dossier_bundle_id",
+                "dossier_extracted_tables.id",
+            ],
+            name="fk_dossier_extracted_row_table_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "source_file_id"],
+            [
+                "dossier_source_files.organization_id",
+                "dossier_source_files.dossier_bundle_id",
+                "dossier_source_files.id",
+            ],
+            name="fk_dossier_extracted_row_source_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("row_index >= 0", name="chk_dossier_extracted_row_index"),
+        CheckConstraint(
+            "length(content_fingerprint_sha256) = 64 "
+            "AND content_fingerprint_sha256 = lower(content_fingerprint_sha256)",
+            name="chk_dossier_extracted_row_fingerprint",
+        ),
+        Index("idx_dossier_extracted_row_table", "extracted_table_id"),
+    )
+
+
+class DossierAlignmentState(str, enum.Enum):
+    CANDIDATE = "candidate"
+    REVIEW_REQUIRED = "review_required"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+    UNRESOLVED = "unresolved"
+
+
+class DossierAlignmentRun(Base, UUIDMixin):
+    __tablename__ = "dossier_alignment_runs"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    excel_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    report_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_pair_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_by_job_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    generation_token: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    total_excel_rows: Mapped[int] = mapped_column(Integer, nullable=False)
+    candidate_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    review_required_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    unresolved_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "source_pair_digest_sha256",
+            "algorithm_version",
+            name="uq_dossier_alignment_run_pair_algorithm",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "dossier_bundle_id",
+            "id",
+            name="uq_dossier_alignment_run_tenant_bundle_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id"],
+            ["dossier_bundles.organization_id", "dossier_bundles.id"],
+            name="fk_dossier_alignment_run_bundle_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "excel_snapshot_id"],
+            [
+                "dossier_extraction_snapshots.organization_id",
+                "dossier_extraction_snapshots.dossier_bundle_id",
+                "dossier_extraction_snapshots.id",
+            ],
+            name="fk_dossier_alignment_run_excel_snapshot",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "report_snapshot_id"],
+            [
+                "dossier_extraction_snapshots.organization_id",
+                "dossier_extraction_snapshots.dossier_bundle_id",
+                "dossier_extraction_snapshots.id",
+            ],
+            name="fk_dossier_alignment_run_report_snapshot",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_job_id"],
+            ["task_jobs.organization_id", "task_jobs.id"],
+            name="fk_dossier_alignment_run_job_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("generation_token > 0", name="chk_dossier_alignment_run_generation"),
+        CheckConstraint(
+            "status IN ('candidate', 'review_required')",
+            name="chk_dossier_alignment_run_status",
+        ),
+        CheckConstraint(
+            "total_excel_rows >= 0 AND candidate_count >= 0 "
+            "AND review_required_count >= 0 AND unresolved_count >= 0 "
+            "AND candidate_count + review_required_count + unresolved_count = total_excel_rows",
+            name="chk_dossier_alignment_run_counts",
+        ),
+        CheckConstraint(
+            "length(source_pair_digest_sha256) = 64 "
+            "AND source_pair_digest_sha256 = lower(source_pair_digest_sha256)",
+            name="chk_dossier_alignment_run_digest",
+        ),
+        Index("idx_dossier_alignment_run_bundle", "organization_id", "dossier_bundle_id"),
+    )
+
+
+class DossierRowAlignment(Base, UUIDMixin):
+    __tablename__ = "dossier_row_alignments"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    dossier_bundle_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    alignment_run_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    excel_row_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    technical_row_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    comparison_row_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    final_result_row_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    match_basis: Mapped[dict[str, Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    conflicts: Mapped[list[Any]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    reviewed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "alignment_run_id", "excel_row_id", name="uq_dossier_row_alignment_run_excel"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "alignment_run_id"],
+            [
+                "dossier_alignment_runs.organization_id",
+                "dossier_alignment_runs.dossier_bundle_id",
+                "dossier_alignment_runs.id",
+            ],
+            name="fk_dossier_row_alignment_run_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "excel_row_id"],
+            [
+                "dossier_extracted_rows.organization_id",
+                "dossier_extracted_rows.dossier_bundle_id",
+                "dossier_extracted_rows.id",
+            ],
+            name="fk_dossier_row_alignment_excel_row",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "technical_row_id"],
+            [
+                "dossier_extracted_rows.organization_id",
+                "dossier_extracted_rows.dossier_bundle_id",
+                "dossier_extracted_rows.id",
+            ],
+            name="fk_dossier_row_alignment_technical_row",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "comparison_row_id"],
+            [
+                "dossier_extracted_rows.organization_id",
+                "dossier_extracted_rows.dossier_bundle_id",
+                "dossier_extracted_rows.id",
+            ],
+            name="fk_dossier_row_alignment_comparison_row",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "dossier_bundle_id", "final_result_row_id"],
+            [
+                "dossier_extracted_rows.organization_id",
+                "dossier_extracted_rows.dossier_bundle_id",
+                "dossier_extracted_rows.id",
+            ],
+            name="fk_dossier_row_alignment_final_row",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "reviewed_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_dossier_row_alignment_reviewer_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "state IN ('candidate', 'review_required', 'confirmed', 'rejected', 'unresolved')",
+            name="chk_dossier_row_alignment_state",
+        ),
+        CheckConstraint(
+            "confidence_score >= 0 AND confidence_score <= 1",
+            name="chk_dossier_row_alignment_confidence",
+        ),
+        CheckConstraint(
+            "state = 'unresolved' OR technical_row_id IS NOT NULL "
+            "OR comparison_row_id IS NOT NULL OR final_result_row_id IS NOT NULL",
+            name="chk_dossier_row_alignment_target_shape",
+        ),
+        CheckConstraint(
+            "(state IN ('confirmed', 'rejected') AND reviewed_by_user_id IS NOT NULL "
+            "AND reviewed_at IS NOT NULL) OR "
+            "(state NOT IN ('confirmed', 'rejected') AND reviewed_by_user_id IS NULL "
+            "AND reviewed_at IS NULL)",
+            name="chk_dossier_row_alignment_review_shape",
+        ),
+        Index("idx_dossier_row_alignment_bundle", "organization_id", "dossier_bundle_id"),
+        Index("idx_dossier_row_alignment_state", "state"),
     )
