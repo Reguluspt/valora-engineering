@@ -6,7 +6,7 @@
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
-> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, đồng thời bổ sung business rule cho checkpoint mới `Tạo & quản lý báo giá nhà cung cấp` trước `Hoàn tất hồ sơ`.
+> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, đồng thời bổ sung business rule cho checkpoint mới `Tạo & quản lý báo giá nhà cung cấp` trước `Hoàn tất hồ sơ`. Phiên bản này cũng bổ sung IA/flow chi tiết cho module `Quản lý mẫu báo giá nhà cung cấp`; mockup của module template chưa được coi là baseline cuối cho tới khi người dùng duyệt.
 
 ## 0. Quyết định v2.3 đã duyệt / đã khóa
 
@@ -59,25 +59,28 @@
 - Sau khi nhận các báo giá đã xác nhận, có CTA **`Chọn nhà cung cấp đã xác nhận giá`** để người dùng chọn các NCC/báo giá dùng trong hồ sơ.
 - Việc chọn được lưu theo `NCC → báo giá cụ thể → các dòng thiết bị → đơn giá NCC đã xác nhận → file ký/đóng dấu`, không chỉ lưu tên NCC.
 
-### 0.4 Mẫu báo giá nhà cung cấp — capability đã thống nhất, UI chưa chốt baseline
+### 0.4 Mẫu báo giá nhà cung cấp — capability và IA/flow đã thống nhất, mockup chưa chốt baseline
 
 - Người dùng sẽ đưa mẫu báo giá riêng của từng NCC vào hệ thống.
 - Phần mềm phải có khả năng tự fill dữ liệu hồ sơ/danh mục vào đúng template của NCC.
-- Hướng thiết kế đã thống nhất ở mức capability:
+- Luồng thiết kế đã thống nhất ở mức IA/UX:
 
 ```text
 Cấu hình → Mẫu báo giá nhà cung cấp
-→ Upload mẫu
+→ Tạo mẫu mới
+→ Upload file
 → Mapping field / vùng lặp
 → Preview / Test fill
 → Lưu template
+→ Sẵn sàng sử dụng
 ```
 
 - Mỗi NCC có thể có template riêng và nhiều version.
 - Word/Excel là định dạng template ưu tiên; PDF phù hợp hơn cho output/preview.
 - Mapping phải hỗ trợ bảng danh mục lặp: STT, thiết bị, mô tả/thông số, ĐVT, SL, đơn giá, thành tiền, ghi chú.
 - Template gốc và version cũ phải giữ để truy vết.
-- **UI/mockup của module này chưa được duyệt baseline trong v2.3**; sẽ thiết kế tiếp sau khi hoàn thiện màn hình `Tạo & quản lý báo giá nhà cung cấp`.
+- Module template gồm tối thiểu TM01–TM05: danh sách mẫu, metadata mẫu, Upload & Mapping, Preview/Test fill, lịch sử phiên bản.
+- **IA/flow của module template đã được cập nhật trong v2.3; mockup trực quan của TM01/TM03/TM04 chưa được duyệt baseline cuối.**
 
 ## 1. Product baseline
 
@@ -132,6 +135,19 @@ Trang chủ
 → S18 Báo cáo & Chứng thư
 → S19 Phát hành
 → S20 Lưu trữ & hình thành tri thức
+```
+
+Luồng quản trị template dùng chung:
+
+```text
+Cấu hình
+→ Mẫu báo giá nhà cung cấp
+→ Tạo / chỉnh template
+→ Upload
+→ Mapping
+→ Preview / Test fill
+→ Lưu version
+→ Sẵn sàng sử dụng
 ```
 
 Không có checkpoint riêng `Khai báo thông tin thực hiện`, `Xác nhận giá thẩm định chính thức`, `Kiểm tra hồ sơ`, `KSCL`.
@@ -494,7 +510,7 @@ Không dùng checkpoint này để tự thay `Đơn giá hiện hành`.
 
 ### 10.2 Bố cục ưu tiên
 
-Người dùng đã chọn hướng **table-first**: phần lõi là bảng so sánh danh mục tương tự cấu trúc nghiệp vụ `STT / Tên tài sản / ĐVT / SL / các cột giá NCC / đơn giá hiện hành / thành tiền / trạng thái`.
+Người dùng đã chọn hướng **table-first**: phần lõi là bảng so sánh danh mục tương tự cấu trúc nghiệp vụ `STT / Tên tài sản / ĐVT / SL / các cột giá NCC / đơn giá thẩm định / thành tiền / đơn giá hiện hành / trạng thái`.
 
 Mockup trước đó chưa được chốt baseline cuối cùng; tiếp tục tinh chỉnh từ hướng table-first.
 
@@ -561,7 +577,7 @@ Checkbox
 | Thao tác
 ```
 
-Có thể đổi cách grouping cột trong mockup để tiết kiệm chiều rộng nhưng không làm mất lineage/cảnh báo.
+Ở mode so sánh một bộ 03 báo giá, UI có thể group thành `Đơn giá nhà cung cấp` với 03 cột NCC đặt cạnh nhau, tiếp theo là nhóm `Đơn giá thẩm định` (`Đơn giá chọn`, `Thành tiền`) và `Đơn giá hiện hành`, tương tự cấu trúc bảng nghiệp vụ thực tế. Có thể đổi grouping để tiết kiệm chiều rộng nhưng không làm mất lineage/cảnh báo.
 
 ### 10.8 Cảnh báo chênh lệch
 
@@ -653,49 +669,315 @@ Checkpoint không được:
 - xóa lineage nguồn lịch sử khi người dùng gộp báo giá;
 - tự chọn NCC thay người dùng.
 
-## 11. Quản lý mẫu báo giá nhà cung cấp — capability / thiết kế tiếp theo
+## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế, mockup chưa chốt baseline
 
 ### 11.1 Mục tiêu
 
-Mỗi NCC có thể có mẫu báo giá khác nhau. Hệ thống lưu template + mapping để tự fill dữ liệu ở checkpoint báo giá.
+Mỗi NCC có thể có bố cục báo giá khác nhau. Hệ thống lưu **template + mapping + version** để khi tạo báo giá trong hồ sơ, VALORA có thể tự fill dữ liệu vào đúng mẫu của từng NCC.
 
-### 11.2 Luồng đã thống nhất ở mức định hướng
+Module nằm ở:
 
 ```text
 Cấu hình → Mẫu báo giá nhà cung cấp
+```
+
+Từ checkpoint `Tạo & quản lý báo giá nhà cung cấp` có thể có shortcut `Chọn mẫu NCC`, `Tạo mẫu mới`, `Quản lý mẫu báo giá`.
+
+### 11.2 Screen inventory module template
+
+#### TM01 — Danh sách mẫu báo giá nhà cung cấp
+
+Mục tiêu: quản lý toàn bộ template theo NCC.
+
+Header/toolbar:
+
+- search theo tên NCC / mã NCC / tên mẫu;
+- filter trạng thái;
+- filter loại file;
+- filter mẫu đang dùng/mặc định;
+- CTA chính `Tạo mẫu mới`.
+
+Bảng danh sách ưu tiên:
+
+```text
+Nhà cung cấp
+| Tên mẫu
+| Mã mẫu
+| Loại file
+| Phiên bản hiện hành
+| Trạng thái
+| Ngày cập nhật
+| Người cập nhật
+| Mẫu mặc định
+| Thao tác
+```
+
+Thao tác mỗi dòng: `Xem`, `Chỉnh sửa`, `Tạo phiên bản mới`, `Test fill`, `Ngưng sử dụng`.
+
+#### TM02 — Tạo / chỉnh sửa thông tin mẫu
+
+Metadata tối thiểu:
+
+- Nhà cung cấp;
+- Mã NCC;
+- Tên mẫu báo giá;
+- Loại template: `Excel` hoặc `Word`;
+- Mô tả;
+- Ngày hiệu lực;
+- trạng thái;
+- tùy chọn `Đặt làm mẫu mặc định của NCC`.
+
+Khu vực file hiển thị file mẫu gốc, tên file, dung lượng, định dạng, ngày upload.
+
+CTA: `Tiếp tục sang Mapping`, `Lưu nháp`, `Hủy`.
+
+#### TM03 — Upload & Mapping template
+
+Đây là màn hình làm việc chính của module template.
+
+Bố cục desktop 3 vùng:
+
+1. **Cột trái — Danh sách field dữ liệu**;
+2. **Trung tâm — Preview file mẫu**;
+3. **Cột phải — Panel cấu hình mapping của vùng đang chọn**.
+
+#### TM04 — Preview / Test fill dữ liệu
+
+Cho phép test bằng:
+
+- `Dữ liệu mẫu mặc định`;
+- hoặc một hồ sơ phù hợp được người dùng chọn để kiểm thử.
+
+Hiển thị preview file đã fill + panel kết quả kiểm tra.
+
+#### TM05 — Lịch sử phiên bản template
+
+Quản lý version, hiệu lực và template mặc định; cho phép xem/nhân bản/đặt mặc định hoặc khôi phục theo lifecycle được triển khai sau.
+
+### 11.3 Luồng chuẩn
+
+```text
+TM01 Danh sách mẫu
 → Tạo mẫu mới
-→ Upload file
-→ Mapping
-→ Preview / Test fill
+→ TM02 Nhập metadata + Upload file
+→ TM03 Mapping
+→ Chạy kiểm tra
+→ TM04 Preview / Test fill
 → Lưu template
 → Sẵn sàng sử dụng
 ```
 
-### 11.3 Field mapping tối thiểu
+Luồng khi NCC đổi mẫu:
 
-Nhóm thông tin báo giá/NCC/hồ sơ và bảng lặp gồm:
+```text
+Mẫu hiện hành
+→ Tạo phiên bản mới
+→ Upload mẫu mới hoặc chỉnh mapping
+→ Preview / Test fill
+→ Lưu version mới
+→ Đặt làm mặc định nếu người dùng chọn
+```
 
-- số/ngày báo giá;
-- thông tin NCC;
-- đơn vị nhận báo giá;
-- mã/tên hồ sơ khi cần;
+Không silent overwrite version đang được dùng trong hồ sơ cũ.
+
+### 11.4 Danh sách field mapping
+
+Cột trái TM03 chia field theo nhóm để người dùng dễ tìm.
+
+**A. Thông tin báo giá**
+
+- Số báo giá;
+- Ngày báo giá;
+- Hiệu lực báo giá;
+- Người nhận báo giá;
+- Tên khách hàng / đơn vị nhận;
+- Địa chỉ;
+- Liên hệ.
+
+**B. Thông tin nhà cung cấp**
+
+- Tên NCC;
+- Địa chỉ NCC;
+- Mã số thuế;
+- Điện thoại;
+- Email;
+- Người đại diện.
+
+**C. Thông tin hồ sơ**
+
+- Mã hồ sơ;
+- Tên hồ sơ;
+- Mục đích thẩm định;
+- Tài sản thẩm định khi template cần.
+
+**D. Bảng danh mục lặp**
+
 - STT;
-- tên thiết bị;
-- mô tả/thông số;
+- Tên thiết bị;
+- Mô tả / thông số;
 - ĐVT;
-- số lượng;
-- đơn giá;
-- thành tiền;
-- tổng cộng;
-- ghi chú.
+- Số lượng;
+- Đơn giá;
+- Thành tiền;
+- Ghi chú dòng.
 
-### 11.4 Versioning / preview
+**E. Tổng hợp**
 
-- Không ghi đè template gốc.
-- NCC đổi mẫu → tạo version mới.
-- Có preview/test fill trước khi `Sẵn sàng sử dụng`.
-- UI phải kiểm tra bảng lặp, tràn nội dung, format tiền/ngày và vùng tổng cộng.
-- **Mockup TM01/TM03/TM04 chưa được duyệt baseline trong v2.3.**
+- Tổng cộng;
+- Thuế VAT nếu template có;
+- Tổng thanh toán;
+- Bằng chữ;
+- Ghi chú chung.
+
+Field cụ thể có thể mở rộng theo template thực tế nhưng không được hard-code một layout NCC duy nhất.
+
+### 11.5 Preview file mẫu trong TM03
+
+- Với Excel: hiển thị theo sheet và cell/range có thể chọn.
+- Với Word: hiển thị page/table và vùng có thể map.
+- Người dùng click vào ô/vùng để gán field.
+- Vùng đã map có affordance rõ và cho phép xem field đang liên kết.
+- Nếu file có nhiều sheet/table, cho phép chọn đúng sheet/table trước khi mapping.
+
+### 11.6 Panel Mapping bên phải
+
+Khi chọn một vùng, panel hiển thị tối thiểu:
+
+- field đang map;
+- loại field: text, số, ngày, bảng lặp, derived/formula;
+- vị trí sheet/table/cell/range tương ứng;
+- format tiền;
+- số thập phân;
+- format ngày;
+- wrap text / xuống dòng nếu phù hợp;
+- sample value;
+- required/optional.
+
+Không phơi bày thuật ngữ kỹ thuật không cần thiết cho người dùng cuối nếu có thể biểu diễn bằng ngôn ngữ nghiệp vụ.
+
+### 11.7 Mapping bảng danh mục lặp — first-class feature
+
+Vì báo giá có số dòng thiết bị thay đổi theo hồ sơ, mapping vùng lặp là requirement cốt lõi.
+
+Với Excel, phải xác định được ít nhất:
+
+- sheet;
+- dòng bắt đầu;
+- dòng mẫu / vùng lặp;
+- cột STT;
+- cột tên hàng;
+- cột mô tả nếu có;
+- cột ĐVT;
+- cột số lượng;
+- cột đơn giá;
+- cột thành tiền;
+- cột ghi chú nếu có;
+- vùng tổng cộng/footer để tránh bị ghi đè khi danh mục dài.
+
+Với Word, phải xác định được table/row template tương ứng để hệ thống nhân dòng đúng layout.
+
+### 11.8 Mapping nhanh và Mapping thủ công
+
+Module nên hỗ trợ hai chế độ:
+
+**Mapping nhanh**
+
+- hệ thống nhận diện/gợi ý các vùng có thể map;
+- người dùng xác nhận hoặc sửa;
+- gợi ý không được tự trở thành cấu hình chính thức nếu chưa có thao tác người dùng.
+
+**Mapping thủ công**
+
+- người dùng chọn vùng;
+- chọn field;
+- cấu hình format/rule;
+- lưu mapping.
+
+### 11.9 TM04 — Preview / Test fill
+
+Mục tiêu là kiểm tra kết quả trước khi template được dùng thật.
+
+Panel kết quả kiểm tra nên cho biết:
+
+- số field đã map;
+- số field bắt buộc chưa map;
+- lỗi format;
+- text quá dài / tràn ô;
+- bảng lặp có nguy cơ đè footer;
+- vùng tổng cộng chưa được map;
+- dữ liệu tiền/ngày hiển thị không phù hợp;
+- công thức/tổng hợp không hợp lệ nếu hệ thống có thể kiểm tra.
+
+CTA:
+
+- `Quay lại chỉnh mapping`;
+- `Lưu template`;
+- `Lưu và đặt sẵn sàng sử dụng`.
+
+### 11.10 Trạng thái template
+
+Đề xuất lifecycle:
+
+```text
+Nháp
+→ Đã upload file
+→ Đang mapping
+→ Đã mapping
+→ Preview lỗi
+→ Sẵn sàng sử dụng
+→ Ngưng sử dụng
+```
+
+Tên trạng thái có thể tinh chỉnh i18n nhưng semantic phải rõ.
+
+### 11.11 Điều kiện Sẵn sàng sử dụng
+
+Tối thiểu:
+
+- có metadata bắt buộc;
+- có file mẫu hợp lệ;
+- các field bắt buộc đã mapping;
+- vùng danh mục lặp đã cấu hình nếu template có danh mục;
+- Preview/Test fill không còn lỗi blocking.
+
+Template chưa đạt điều kiện vẫn có thể `Lưu nháp` nhưng không được coi là template sẵn sàng dùng để tạo output chính thức.
+
+### 11.12 Versioning / lineage
+
+- Không ghi đè file template gốc.
+- Mỗi lần NCC đổi mẫu tạo version mới.
+- Mapping thuộc version cụ thể.
+- Hồ sơ/báo giá đã tạo phải truy vết được template version đã dùng.
+- Có thể đặt một version làm mẫu mặc định của NCC.
+- Việc đổi mẫu mặc định không làm thay đổi các file báo giá đã tạo trước đó.
+
+### 11.13 Guardrail module template
+
+Module được phép:
+
+- upload template;
+- mapping field/vùng lặp;
+- test fill;
+- lưu nhiều version;
+- đặt template mặc định;
+- dùng template để sinh báo giá.
+
+Module không được:
+
+- silent overwrite template/version đã dùng;
+- tự xác nhận mapping gợi ý thành mapping chính thức mà không có thao tác người dùng;
+- làm mất file template gốc;
+- hard-code toàn bộ hệ thống theo một mẫu NCC duy nhất;
+- coi PDF là template chỉnh động ưu tiên khi Word/Excel phù hợp hơn.
+
+### 11.14 Trạng thái thiết kế
+
+- IA/flow TM01–TM05 và nguyên tắc mapping/versioning đã được đưa vào v2.3.
+- Mockup trực quan cần ưu tiên dựng theo thứ tự:
+  1. `TM01 — Danh sách mẫu báo giá nhà cung cấp`;
+  2. `TM03 — Upload & Mapping template`;
+  3. `TM04 — Preview / Test fill dữ liệu`.
+- Chỉ sau khi người dùng duyệt mockup mới nâng phần tương ứng thành **mockup baseline**.
 
 ## 12. Validation phân tán — không có bước Kiểm tra riêng
 
@@ -731,10 +1013,11 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 - Hồ sơ cũ/Giá lịch sử truy vết về hồ sơ/tài liệu nguồn cụ thể.
 - Giá đề nghị hệ thống sinh cho báo giá NCC phải phân biệt rõ với `Đơn giá NCC đã xác nhận`.
 - File báo giá gửi/nhận, template và version phải có lineage phù hợp.
+- Template báo giá gốc và mapping/version đã dùng không được silent overwrite.
 - Vietnamese-first; không hiển thị HTTP/SQL/stack trace/row_version cho người dùng cuối.
 - Mỗi màn hình/context có một primary CTA nổi bật.
 - Hành động rủi ro cao phải confirm rõ thay đổi và khả năng hoàn tác.
-- S09–S13, Nguồn giá & Chứng cứ và Báo giá NCC dùng cùng Valora shell theo Fluent 2, desktop-first.
+- S09–S13, Nguồn giá & Chứng cứ, Báo giá NCC và module Template dùng cùng Valora shell theo Fluent 2, desktop-first.
 - Hoàn tất, phát hành và các quyết định chính thức đều human-confirmed và có lineage.
 - Quyền sửa giá sau khi hồ sơ đã khóa/phát hành phải tuân theo lifecycle/version guardrail của bước phát hành.
 - Không đưa dữ liệu nhận diện khách hàng/NCC thật hoặc file hồ sơ thật vào public repository.
@@ -757,7 +1040,11 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 | S13 | Asset Context Drawer | **P0 — baseline đã duyệt; drawer trong S12** |
 | NGC | Nguồn giá & Chứng cứ | **P0 — baseline đã duyệt** |
 | NCCQ | Tạo & quản lý báo giá nhà cung cấp | **P0 — business rule đã khóa; mockup table-first đang tiếp tục thiết kế, chưa chốt baseline cuối** |
-| TM | Quản lý mẫu báo giá NCC | **P0 capability đã thống nhất; UI/mockup chưa duyệt baseline** |
+| TM01 | Danh sách mẫu báo giá NCC | **P0 — IA/flow đã thiết kế; mockup chưa duyệt baseline** |
+| TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế; mockup chưa duyệt baseline** |
+| TM03 | Upload & Mapping template | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
+| TM04 | Preview / Test fill dữ liệu | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
+| TM05 | Lịch sử phiên bản template | **P0 — capability/versioning đã thiết kế; mockup chưa duyệt baseline** |
 | S14 | So sánh & Xác nhận giá | **Không dùng trong giai đoạn hiện tại** |
 | S15 | Kiểm tra hồ sơ | **Không dùng; validation phân tán** |
 | S16 | KSCL Checklist | **Không dùng trong workflow single-user v2.3** |
@@ -766,7 +1053,7 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 | S19 | Phát hành | P1 — confirm, lock version, export |
 | S20 | Lịch sử & Lưu trữ | P1 — timeline, files, sources, prices, provenance, knowledge promotion |
 
-> `NGC`, `NCCQ`, `TM` là ký hiệu tài liệu, không nhất thiết là route/ID implementation.
+> `NGC`, `NCCQ`, `TM01–TM05` là ký hiệu tài liệu, không nhất thiết là route/ID implementation.
 
 ## 15. Mockup baseline v2.3
 
@@ -786,6 +1073,12 @@ Baseline đã duyệt:
 - các mockup thử nghiệm trước chưa được coi là baseline cuối;
 - phiên thiết kế tiếp theo phải dựng lại table-first theo rule mới về giá lịch sử, thiết bị Internet-only, gộp/tách báo giá và NCC xác nhận.
 
+Đối với `Quản lý mẫu báo giá nhà cung cấp`:
+
+- IA/UX chi tiết đã được ghi tại §11;
+- ưu tiên mockup TM01 → TM03 → TM04;
+- chưa có mockup nào của module template được coi là baseline cuối cho tới khi người dùng duyệt.
+
 Mockup S14 đã thử nghiệm trước quyết định nghiệp vụ mới **không phải baseline**.
 
 ## 16. Trạng thái triển khai và nhiệm vụ UI/UX tiếp theo
@@ -797,8 +1090,8 @@ Các guardrail kỹ thuật hiện có trong repository vẫn có hiệu lực: 
 ### Nhiệm vụ thiết kế tiếp theo
 
 1. **Quay lại và hoàn thiện mockup `Tạo & quản lý báo giá nhà cung cấp`** theo bố cục table-first và business rule §10.
-2. Sau khi màn hình NCCQ được người dùng duyệt, thiết kế chi tiết `Quản lý mẫu báo giá nhà cung cấp` theo luồng Upload → Mapping → Preview → Lưu template.
-3. Sau đó thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
+2. Sau khi NCCQ được duyệt baseline, dựng mockup module template theo §11, ưu tiên `TM01 — Danh sách mẫu`, `TM03 — Upload & Mapping`, `TM04 — Preview / Test fill`.
+3. Sau khi checkpoint báo giá NCC và luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
 4. Tiếp theo là S18 — `Báo cáo & Chứng thư`, S19 — `Phát hành`, S20 — `Lịch sử & Lưu trữ`.
 
 Không nhảy sang S17 trước khi checkpoint báo giá NCC được người dùng duyệt baseline.
