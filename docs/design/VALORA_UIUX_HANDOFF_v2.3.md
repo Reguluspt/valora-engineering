@@ -6,7 +6,7 @@
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
-> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, đồng thời **chốt baseline authority cho checkpoint `Tạo & quản lý báo giá nhà cung cấp` (NCCQ) theo mockup Iteration 6**. Phiên bản này cũng bổ sung IA/flow chi tiết cho module `Quản lý mẫu báo giá nhà cung cấp`; mockup của module template chưa được coi là baseline cuối cho tới khi người dùng duyệt.
+> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, **chốt baseline authority cho checkpoint `Tạo & quản lý báo giá nhà cung cấp` (NCCQ) theo Iteration 6 và cho `TM01 — Danh sách mẫu báo giá NCC` theo Iteration 1**. IA/flow TM01–TM05 tiếp tục giữ nguyên; TM03/TM04 chưa được coi là baseline cuối cho tới khi người dùng duyệt.
 
 ## 0. Quyết định v2.3 đã duyệt / đã khóa
 
@@ -64,7 +64,7 @@
 - Các thao tác báo giá chỉ thay quan hệ `Tài sản → Báo giá`; chúng không thay lineage/order của danh mục ban đầu. UI có thể thay thứ tự hiển thị khi sort/filter, nhưng số `STT` hiển thị cho từng tài sản vẫn giữ nguyên giá trị gốc.
 - **Mockup NCCQ Iteration 6 đã được người dùng duyệt và nâng thành baseline authority.** Các iteration NCCQ trước đó chỉ còn giá trị lịch sử/tham khảo và không được dùng để override baseline này.
 
-### 0.4 Mẫu báo giá nhà cung cấp — capability và IA/flow đã thống nhất, mockup chưa chốt baseline
+### 0.4 Mẫu báo giá nhà cung cấp — capability/IA đã khóa; TM01 visual baseline đã duyệt
 
 - Người dùng sẽ đưa mẫu báo giá riêng của từng NCC vào hệ thống.
 - Phần mềm phải có khả năng tự fill dữ liệu hồ sơ/danh mục vào đúng template của NCC.
@@ -85,7 +85,8 @@ Cấu hình → Mẫu báo giá nhà cung cấp
 - Mapping phải hỗ trợ bảng danh mục lặp: STT, thiết bị, mô tả/thông số, ĐVT, SL, đơn giá, thành tiền, ghi chú.
 - Template gốc và version cũ phải giữ để truy vết.
 - Module template gồm tối thiểu TM01–TM05: danh sách mẫu, metadata mẫu, Upload & Mapping, Preview/Test fill, lịch sử phiên bản.
-- **IA/flow của module template đã được cập nhật trong v2.3; mockup trực quan của TM01/TM03/TM04 chưa được duyệt baseline cuối.**
+- **TM01 — Danh sách mẫu báo giá NCC — Iteration 1 đã được người dùng duyệt và nâng thành baseline authority.**
+- TM03/TM04 vẫn ở trạng thái IA/UX đã thiết kế nhưng mockup chưa duyệt baseline cuối.
 
 ## 1. Product baseline
 
@@ -740,7 +741,7 @@ Baseline trực quan chính thức của NCCQ là mockup Iteration 6, dùng cùn
 
 Các iteration NCCQ trước Iteration 6 trong phụ lục/lịch sử thiết kế **không còn là authority**. Khi có mâu thuẫn visual, Iteration 6 + business rule §10 là nguồn quyết định.
 
-## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế, mockup chưa chốt baseline
+## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế; TM01 baseline authority đã duyệt
 
 ### 11.1 Mục tiêu
 
@@ -756,34 +757,52 @@ Từ checkpoint `Tạo & quản lý báo giá nhà cung cấp` có thể có sho
 
 ### 11.2 Screen inventory module template
 
-#### TM01 — Danh sách mẫu báo giá nhà cung cấp
+#### TM01 — Danh sách mẫu báo giá nhà cung cấp — baseline authority đã duyệt
 
 Mục tiêu: quản lý toàn bộ template theo NCC.
 
-Header/toolbar:
+**Visual baseline — Iteration 1:**
 
-- search theo tên NCC / mã NCC / tên mẫu;
-- filter trạng thái;
-- filter loại file;
-- filter mẫu đang dùng/mặc định;
-- CTA chính `Tạo mẫu mới`.
+- dùng cùng Valora shell + Fluent 2 với NCCQ/S11–S13;
+- breadcrumb `Cấu hình → Mẫu báo giá nhà cung cấp → Danh sách mẫu`;
+- header `Danh sách mẫu báo giá nhà cung cấp`;
+- primary CTA `Tạo mẫu mới` ở góc phải header;
+- toolbar gồm filter theo NCC/loại template/định dạng/trạng thái, search tên/mã mẫu, `Bộ lọc`, `Đặt lại`;
+- summary compact `Tổng số mẫu / Đang sử dụng / Bản nháp / Ngừng sử dụng` đặt trên bảng;
+- bảng là bề mặt làm việc chính, không dùng card-heavy dashboard;
+- panel phải `Hướng dẫn / Thao tác nhanh / Gợi ý` là vùng hỗ trợ và không được lấn át bảng chính.
 
-Bảng danh sách ưu tiên:
+Bảng baseline:
 
 ```text
-Nhà cung cấp
-| Tên mẫu
+STT
 | Mã mẫu
-| Loại file
-| Phiên bản hiện hành
+| Tên mẫu
+| Nhà cung cấp
+| Loại template
+| Định dạng
+| Phiên bản
+| Cập nhật gần nhất
 | Trạng thái
-| Ngày cập nhật
-| Người cập nhật
-| Mẫu mặc định
 | Thao tác
 ```
 
-Thao tác mỗi dòng: `Xem`, `Chỉnh sửa`, `Tạo phiên bản mới`, `Test fill`, `Ngưng sử dụng`.
+Quy tắc hiển thị:
+
+- XLSX/DOCX hiển thị icon + định dạng trực tiếp;
+- version hiển thị compact như `v1.0`, `v2.1`;
+- trạng thái dùng badge semantic `Đang sử dụng`, `Bản nháp`, `Ngừng sử dụng`;
+- mỗi dòng có `Xem chi tiết` + overflow menu cho thao tác phụ;
+- có pagination và lựa chọn số dòng/trang;
+- `Thao tác nhanh` có thể deep-link `Tạo mẫu mới`, `Upload & Mapping`, `Preview / Test fill`, `Lịch sử phiên bản`.
+
+Guardrail TM01:
+
+- không silent overwrite version/template cũ;
+- không coi template là `Đang sử dụng` nếu chưa đạt điều kiện readiness;
+- TM01 chỉ quản lý danh sách/metadata; mapping chi tiết thuộc TM03, test fill thuộc TM04, lịch sử phiên bản chi tiết thuộc TM05.
+
+Visual authority companion: [`VALORA_TM01_BASELINE_v2.3.md`](./assets/VALORA_TM01_BASELINE_v2.3.md).
 
 #### TM02 — Tạo / chỉnh sửa thông tin mẫu
 
@@ -1044,11 +1063,11 @@ Module không được:
 ### 11.14 Trạng thái thiết kế
 
 - IA/flow TM01–TM05 và nguyên tắc mapping/versioning đã được đưa vào v2.3.
-- Mockup trực quan cần ưu tiên dựng theo thứ tự:
-  1. `TM01 — Danh sách mẫu báo giá nhà cung cấp`;
-  2. `TM03 — Upload & Mapping template`;
-  3. `TM04 — Preview / Test fill dữ liệu`.
-- Chỉ sau khi người dùng duyệt mockup mới nâng phần tương ứng thành **mockup baseline**.
+- **TM01 — Danh sách mẫu báo giá NCC — Iteration 1 là baseline authority đã duyệt.**
+- Mockup trực quan tiếp theo ưu tiên:
+  1. `TM03 — Upload & Mapping template`;
+  2. `TM04 — Preview / Test fill dữ liệu`.
+- TM03/TM04 chỉ được nâng thành baseline khi người dùng duyệt rõ.
 
 ## 12. Validation phân tán — không có bước Kiểm tra riêng
 
@@ -1113,11 +1132,11 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 | S13 | Asset Context Drawer | **P0 — baseline đã duyệt; drawer trong S12** |
 | NGC | Nguồn giá & Chứng cứ | **P0 — baseline đã duyệt** |
 | NCCQ | Tạo & quản lý báo giá nhà cung cấp | **P0 — baseline authority đã duyệt; Fluent 2 table-first + drawer Lineage & tổng hợp; Iteration 6** |
-| TM01 | Danh sách mẫu báo giá NCC | **P0 — IA/flow đã thiết kế; mockup chưa duyệt baseline** |
-| TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế; mockup chưa duyệt baseline** |
+| TM01 | Danh sách mẫu báo giá NCC | **P0 — baseline authority đã duyệt; Fluent 2 list/table-first; Iteration 1** |
+| TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế** |
 | TM03 | Upload & Mapping template | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
 | TM04 | Preview / Test fill dữ liệu | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
-| TM05 | Lịch sử phiên bản template | **P0 — capability/versioning đã thiết kế; mockup chưa duyệt baseline** |
+| TM05 | Lịch sử phiên bản template | **P0 — capability/versioning đã thiết kế** |
 | S14 | So sánh & Xác nhận giá | **Không dùng trong giai đoạn hiện tại** |
 | S15 | Kiểm tra hồ sơ | **Không dùng; validation phân tán** |
 | S16 | KSCL Checklist | **Không dùng trong workflow single-user v2.3** |
@@ -1139,6 +1158,7 @@ Baseline đã duyệt:
 - S13 — Asset Context Drawer mở từ S12; drawer phải + S12 giữ context.
 - Nguồn giá & Chứng cứ — full-screen theo asset context, ba nhóm căn cứ ngang hàng và panel Hồ sơ cũ/Giá lịch sử.
 - **NCCQ — Tạo & quản lý báo giá nhà cung cấp — Iteration 6: baseline authority đã duyệt.**
+- **TM01 — Danh sách mẫu báo giá NCC — Iteration 1: baseline authority đã duyệt.**
 
 ### 15.1 NCCQ — authority visual đã chốt
 
@@ -1158,11 +1178,30 @@ Mockup NCCQ Iteration 6 là authority trực quan cho checkpoint báo giá nhà 
 
 Các mockup NCCQ iteration 1–5 và các iteration trung gian trước đó được giữ **chỉ để truy vết lịch sử thiết kế**. Chúng không được dùng làm authority nếu mâu thuẫn với Iteration 6 hoặc business rule §10.
 
-Đối với `Quản lý mẫu báo giá nhà cung cấp`:
+### 15.2 TM01 — authority visual đã chốt
 
-- IA/UX chi tiết đã được ghi tại §11;
-- ưu tiên mockup TM01 → TM03 → TM04;
-- chưa có mockup nào của module template được coi là baseline cuối cho tới khi người dùng duyệt.
+Mockup TM01 Iteration 1 là authority trực quan cho màn hình danh sách mẫu báo giá NCC:
+
+- Valora shell + Fluent 2, desktop-first;
+- header gọn với primary CTA `Tạo mẫu mới`;
+- filter/search phía trên;
+- summary compact 4 trạng thái;
+- bảng danh sách template là bề mặt chính;
+- trạng thái/version/định dạng file hiển thị trực tiếp trong bảng;
+- `Xem chi tiết` + overflow menu ở mỗi dòng;
+- panel phải `Hướng dẫn / Thao tác nhanh / Gợi ý` là vùng hỗ trợ;
+- pagination ở cuối bảng;
+- TM03/TM04/TM05 chỉ được deep-link từ TM01, không nhồi toàn bộ mapping/test/version detail vào bảng chính.
+
+Visual authority companion: [`VALORA_TM01_BASELINE_v2.3.md`](./assets/VALORA_TM01_BASELINE_v2.3.md).
+
+Khi có mâu thuẫn visual giữa các iteration TM01 khác và baseline này, **TM01 Iteration 1 + §11.2 là nguồn quyết định**.
+
+Đối với phần còn lại của `Quản lý mẫu báo giá nhà cung cấp`:
+
+- TM01 đã chốt baseline authority;
+- TM03 và TM04 là hai mockup tiếp theo cần thiết kế/duyệt;
+- TM02/TM05 giữ IA/capability đã mô tả trong §11 cho tới khi cần mockup chi tiết.
 
 Mockup S14 đã thử nghiệm trước quyết định nghiệp vụ mới **không phải baseline**.
 
@@ -1174,9 +1213,9 @@ Các guardrail kỹ thuật hiện có trong repository vẫn có hiệu lực: 
 
 ### Nhiệm vụ thiết kế tiếp theo
 
-1. **NCCQ đã chốt baseline authority. Chuyển sang module `Quản lý mẫu báo giá nhà cung cấp` theo §11**, ưu tiên `TM01 — Danh sách mẫu báo giá NCC`.
-2. Sau TM01, tiếp tục `TM03 — Upload & Mapping template`, sau đó `TM04 — Preview / Test fill dữ liệu`; chỉ nâng từng mockup thành baseline khi người dùng duyệt rõ.
-3. Sau khi checkpoint báo giá NCC và luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
+1. **NCCQ và TM01 đã chốt baseline authority. Tiếp tục `TM03 — Upload & Mapping template`.**
+2. Sau TM03, dựng `TM04 — Preview / Test fill dữ liệu`; chỉ nâng từng mockup thành baseline khi người dùng duyệt rõ.
+3. Sau khi luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
 4. Tiếp theo là S18 — `Báo cáo & Chứng thư`, S19 — `Phát hành`, S20 — `Lịch sử & Lưu trữ`.
 
-Không nhảy sang S17 trước khi module template đủ rõ để xác định chính xác dependency tạo/nhận/chọn báo giá ở bước hoàn tất hồ sơ.
+Không nhảy sang S17 trước khi TM03/TM04 đủ rõ để xác định chính xác dependency template → tạo file → nhận/chọn báo giá ở bước hoàn tất hồ sơ.
