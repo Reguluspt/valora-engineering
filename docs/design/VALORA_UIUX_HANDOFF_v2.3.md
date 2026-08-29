@@ -43,7 +43,9 @@
 - Hệ thống không tự quyết định cấu trúc báo giá cuối cùng.
 - Lineage phải giữ ở **cấp dòng báo giá**, vì một báo giá mới có thể chứa thiết bị đến từ nhiều hồ sơ lịch sử khác nhau.
 - Với thiết bị đã từng được thẩm định và có dữ liệu báo giá lịch sử phù hợp, hệ thống lấy **đủ đơn giá của 03 nhà cung cấp cũ** gắn với tài sản/hồ sơ lịch sử đó.
-- Nếu thiết bị xuất hiện trong các hồ sơ lịch sử khác nhau với các bộ NCC khác nhau, hệ thống có thể sinh thêm nhiều báo giá nháp; người dùng tổ chức lại sau khi hệ thống sinh.
+- **Nếu nhiều thiết bị cùng dẫn về một nhà cung cấp, hệ thống phải tổng hợp chúng vào báo giá nháp/hiện tại phù hợp của chính NCC đó; không tạo thêm báo giá trùng NCC nếu đã tồn tại một báo giá phù hợp của NCC đó.**
+- Khi thiết bị từ nhiều hồ sơ cũ khác nhau cùng dẫn về một NCC, chúng có thể được tổng hợp vào cùng báo giá NCC hiện tại, nhưng lineage từng dòng bắt buộc giữ theo chuỗi `Tài sản hiện tại → Hồ sơ cũ → Báo giá cũ → NCC → Giá lịch sử → Báo giá hiện tại`.
+- Một hồ sơ chỉ phát sinh thêm báo giá nháp khi thực sự cần một quan hệ NCC/báo giá khác; số báo giá nháp không được tăng chỉ vì các dòng đến từ hồ sơ lịch sử khác nhau nhưng cùng một NCC.
 - Mỗi đơn giá NCC lịch sử được so sánh với **Giá sơ bộ từ Pre-case**. Chỉ cần khác giá sơ bộ là UI phải có cảnh báo; không cần ngưỡng % tối thiểu.
 - Cảnh báo nêu rõ ít nhất: giá sơ bộ, giá NCC lịch sử, chênh lệch tiền và % chênh lệch. Cảnh báo không tự sửa giá và không tự loại nguồn.
 - Với thiết bị chỉ có căn cứ Internet và **không có lịch sử báo giá**, người dùng chọn một báo giá để điền `Đơn giá hiện hành` làm **giá đề nghị để NCC xác nhận**.
@@ -58,6 +60,8 @@
 - Cơ sở xác định `Đơn giá hiện hành` của tài sản vẫn có thể là Nguồn Internet; workflow báo giá NCC là lớp chứng từ/bằng chứng bổ trợ và không tự thay `Đơn giá hiện hành`.
 - Sau khi nhận các báo giá đã xác nhận, có CTA **`Chọn nhà cung cấp đã xác nhận giá`** để người dùng chọn các NCC/báo giá dùng trong hồ sơ.
 - Việc chọn được lưu theo `NCC → báo giá cụ thể → các dòng thiết bị → đơn giá NCC đã xác nhận → file ký/đóng dấu`, không chỉ lưu tên NCC.
+- **`STT` của thiết bị là thứ tự/lineage bất biến của danh mục gốc.** Gộp thiết bị, tách báo giá, chuyển báo giá, nhóm theo NCC, nhóm theo hồ sơ cũ hoặc sort theo giá không được đánh lại hay thay đổi STT gốc.
+- Các thao tác báo giá chỉ thay quan hệ `Tài sản → Báo giá`; chúng không thay lineage/order của danh mục ban đầu. UI có thể thay thứ tự hiển thị khi sort/filter, nhưng số `STT` hiển thị cho từng tài sản vẫn giữ nguyên giá trị gốc.
 
 ### 0.4 Mẫu báo giá nhà cung cấp — capability và IA/flow đã thống nhất, mockup chưa chốt baseline
 
@@ -124,8 +128,8 @@ Trang chủ
     → Tổng hợp căn cứ
     → Người dùng có thể sửa Đơn giá hiện hành
 → Tạo & quản lý báo giá nhà cung cấp
-    → Hệ thống sinh báo giá nháp
-    → Người dùng gộp/tách/chuyển thiết bị giữa các báo giá
+    → Hệ thống sinh báo giá nháp theo NCC, tránh trùng NCC
+    → Người dùng gộp/tách/chuyển thiết bị giữa các báo giá nhưng giữ nguyên STT gốc
     → Rà soát cảnh báo chênh lệch giá
     → Tạo file theo template NCC
     → Gửi NCC xác nhận / ký đóng dấu
@@ -510,15 +514,38 @@ Không dùng checkpoint này để tự thay `Đơn giá hiện hành`.
 
 ### 10.2 Bố cục ưu tiên
 
-Người dùng đã chọn hướng **table-first**: phần lõi là bảng so sánh danh mục tương tự cấu trúc nghiệp vụ `STT / Tên tài sản / ĐVT / SL / các cột giá NCC / đơn giá thẩm định / thành tiền / đơn giá hiện hành / trạng thái`.
+Người dùng đã chọn hướng **table-first**: phần lõi là bảng so sánh danh mục bám gần cấu trúc Excel nghiệp vụ, ưu tiên tối đa diện tích viewport cho bảng và hạn chế card giải thích chiếm chỗ.
 
-Mockup trước đó chưa được chốt baseline cuối cùng; tiếp tục tinh chỉnh từ hướng table-first.
+Cấu trúc tham chiếu chính:
+
+```text
+STT
+| Tên tài sản
+| ĐVT
+| Số lượng
+| Đơn giá nhà cung cấp
+    | NCC 1
+    | NCC 2
+    | NCC 3
+| Đơn giá thẩm định
+    | Đơn giá chọn
+    | Thành tiền
+| Đơn giá hiện hành
+```
+
+- Các cột NCC phải hiển thị **số tiền trực tiếp**, không chỉ badge trạng thái.
+- Semantic giá hiển thị ngay dưới/đi kèm số tiền bằng badge nhỏ: `Giá lịch sử`, `Giá đề nghị — chờ NCC xác nhận`, `Giá NCC đã xác nhận`.
+- Các nhóm/hạng mục như `HỆ THỐNG ...`, `I. ...`, `II. ...` phải có thể hiển thị dạng dòng section/header tương tự Excel thực tế.
+- Lineage, hồ sơ cũ nguồn, báo giá cũ và cảnh báo chi tiết ưu tiên đưa vào tooltip/drawer/context panel thay vì mở rộng bảng chính quá mức.
+- Mockup trước đó chưa được chốt baseline cuối cùng; tiếp tục tinh chỉnh từ hướng table-first.
 
 ### 10.3 Hệ thống sinh báo giá nháp trước
 
 - Hệ thống tạo cấu trúc báo giá nháp từ dữ liệu lịch sử/Internet hiện có.
 - Sau khi sinh, người dùng mới gộp/tách/chuyển thiết bị giữa các báo giá.
-- Một hồ sơ có thể phát sinh nhiều hơn 03 báo giá nháp nếu tài sản lấy dữ liệu từ nhiều hồ sơ lịch sử/bộ NCC khác nhau.
+- **Báo giá nháp được dedupe theo NCC phù hợp:** nếu đã có một báo giá nháp/hiện tại của NCC đó trong context tương thích, thiết bị mới cùng NCC phải được đưa vào báo giá hiện có thay vì sinh thêm báo giá trùng NCC.
+- Thiết bị từ nhiều hồ sơ lịch sử khác nhau có thể cùng nằm trong một báo giá hiện tại của cùng NCC; provenance được giữ ở cấp dòng.
+- Một hồ sơ có thể phát sinh nhiều hơn 03 báo giá nháp nếu thực sự có nhiều NCC/báo giá khác nhau sau khi áp dụng rule dedupe theo NCC; không tăng số báo giá chỉ vì khác hồ sơ cũ.
 - Hệ thống không ép người dùng giữ nguyên cấu trúc nháp.
 
 ### 10.4 Thiết bị có 03 giá NCC lịch sử
@@ -527,8 +554,9 @@ Với tài sản có hồ sơ lịch sử phù hợp:
 
 - lấy đủ 03 đơn giá NCC cũ;
 - giữ nguồn theo từng dòng: hồ sơ cũ → báo giá cũ → NCC → đơn giá lịch sử;
+- nếu nhiều dòng cùng NCC thì đưa vào cùng báo giá hiện tại phù hợp của NCC đó;
 - so sánh từng giá NCC cũ với `Giá sơ bộ từ Pre-case`;
-- nếu khác, hiển thị warning ngay dòng;
+- nếu khác, hiển thị warning ngay dòng/cell;
 - warning hiển thị giá sơ bộ, giá lịch sử, chênh lệch tiền và %;
 - không tự sửa `Đơn giá hiện hành`.
 
@@ -553,31 +581,43 @@ Người dùng được phép:
 - `Bỏ khỏi báo giá` khi phù hợp;
 - tạo báo giá mới.
 
-Một báo giá mới có thể chứa thiết bị đến từ nhiều hồ sơ lịch sử; provenance của từng dòng không được mất.
+Rule thao tác:
+
+- một báo giá mới có thể chứa thiết bị đến từ nhiều hồ sơ lịch sử; provenance của từng dòng không được mất;
+- nếu thao tác chuyển/gộp làm các dòng cùng về một NCC đã có báo giá phù hợp, hệ thống phải **hợp nhất vào báo giá NCC hiện có**, không tạo duplicate quote chỉ vì khác nguồn lịch sử;
+- tách báo giá là thay đổi quan hệ `Tài sản → Báo giá`, không phải tái tạo tài sản hay đánh lại thứ tự;
+- **mọi thao tác gộp/tách/chuyển/nhóm không được thay `STT` gốc.**
 
 ### 10.7 Bảng làm việc đề xuất
 
-Các cột ưu tiên:
+Bảng chính của iteration tiếp theo ưu tiên gần Excel nghiệp vụ:
 
 ```text
 Checkbox
 | STT
 | Tên tài sản
 | ĐVT
-| SL
-| Hồ sơ cũ nguồn
-| NCC / Báo giá nguồn
-| Giá NCC lịch sử hoặc Giá đề nghị
-| Giá sơ bộ
+| Số lượng
+| Đơn giá nhà cung cấp
+    | NCC 1
+    | NCC 2
+    | NCC 3
+| Đơn giá thẩm định
+    | Đơn giá chọn
+    | Thành tiền
 | Đơn giá hiện hành
-| Chênh lệch
-| Báo giá đang thuộc
-| Trạng thái
-| Thành tiền
 | Thao tác
 ```
 
-Ở mode so sánh một bộ 03 báo giá, UI có thể group thành `Đơn giá nhà cung cấp` với 03 cột NCC đặt cạnh nhau, tiếp theo là nhóm `Đơn giá thẩm định` (`Đơn giá chọn`, `Thành tiền`) và `Đơn giá hiện hành`, tương tự cấu trúc bảng nghiệp vụ thực tế. Có thể đổi grouping để tiết kiệm chiều rộng nhưng không làm mất lineage/cảnh báo.
+Quy tắc hiển thị:
+
+- `STT` là giá trị immutable từ danh mục gốc; nên pin/freeze gần mép trái cùng `Tên tài sản` để người dùng đối chiếu nhanh.
+- Sort theo giá/NCC/trạng thái chỉ thay thứ tự hàng trên màn hình, **không renumber STT**.
+- Mỗi cột NCC hiển thị số tiền trực tiếp; dưới số tiền có badge semantic nhỏ khi cần.
+- Warning chênh lệch có icon/badge ngay cell giá NCC; hover/click mở chi tiết `Giá sơ bộ → Giá NCC lịch sử → Chênh lệch tiền → %`.
+- Dòng tài sản có thể mở context để xem `Hồ sơ cũ nguồn → Báo giá cũ → NCC → Giá lịch sử → Báo giá hiện tại`.
+- Dòng section/header không có giá, không bị đánh STT mới và giữ đúng cấu trúc hạng mục từ danh mục gốc.
+- Toolbar phía trên bảng chứa thao tác batch `Đưa vào báo giá`, `Chuyển báo giá`, `Tách báo giá`; thông tin hướng dẫn dài không đặt thành card cố định dưới bảng.
 
 ### 10.8 Cảnh báo chênh lệch
 
@@ -597,6 +637,7 @@ Khi cấu trúc báo giá đã sẵn sàng:
 - người dùng bấm `Tạo file báo giá`;
 - hệ thống dùng template của NCC nếu đã cấu hình;
 - preview tối thiểu: NCC, danh sách thiết bị, SL/ĐVT, đơn giá, thành tiền, tổng cộng;
+- thứ tự/STT trong file output phải giữ STT gốc của danh mục, kể cả khi báo giá chỉ chứa một subset tài sản;
 - nếu còn warning chênh lệch, hệ thống hiển thị rõ trước khi tạo file nhưng không mặc định biến warning thành blocking;
 - file tạo ra có version/lineage.
 
@@ -641,21 +682,27 @@ Mỗi dòng báo giá phải truy vết được:
 
 ```text
 Tài sản hiện tại
-→ Hồ sơ cũ / Nguồn Internet
-→ Báo giá cũ + NCC + giá lịch sử (nếu có)
-   hoặc Giá đề nghị hệ thống/người dùng chuẩn bị
-→ Báo giá mới
+→ Hồ sơ cũ
+→ Báo giá cũ
+→ NCC
+→ Giá lịch sử
+→ Báo giá hiện tại
 → File gửi NCC
 → Giá NCC đã xác nhận
 → File ký/đóng dấu
 → NCC/báo giá được chọn dùng trong hồ sơ
 ```
 
+Với dòng Internet-only, đoạn `Hồ sơ cũ → Báo giá cũ → NCC → Giá lịch sử` được thay bằng `Nguồn Internet → Giá đề nghị hệ thống/người dùng chuẩn bị → NCC/báo giá hiện tại`.
+
+Nếu nhiều dòng từ nhiều hồ sơ cũ cùng về một NCC, chúng có thể dùng chung `Báo giá hiện tại`, nhưng phần lineage trước nút này vẫn độc lập theo từng dòng.
+
 ### 10.14 Guardrail
 
 Checkpoint được phép:
 
 - sinh báo giá nháp;
+- tái sử dụng/hợp nhất vào báo giá hiện tại của cùng NCC khi phù hợp;
 - sinh giá đề nghị trong biên đã khóa cho thiết bị không có lịch sử;
 - cho người dùng gộp/tách/chuyển dòng;
 - tạo file theo template;
@@ -666,7 +713,9 @@ Checkpoint không được:
 
 - tự thay Đơn giá hiện hành;
 - coi giá đề nghị hệ thống sinh là giá NCC đã xác nhận trước phản hồi/xác nhận;
+- tạo báo giá trùng NCC khi đã có báo giá phù hợp của NCC đó chỉ vì dòng đến từ hồ sơ cũ khác;
 - xóa lineage nguồn lịch sử khi người dùng gộp báo giá;
+- đánh lại/đổi `STT` gốc khi gộp, tách, chuyển, group hoặc sort;
 - tự chọn NCC thay người dùng.
 
 ## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế, mockup chưa chốt baseline
@@ -1012,6 +1061,8 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 - Nguồn Internet mất truy cập vẫn giữ URL/snapshot lịch sử và đánh dấu cần kiểm tra.
 - Hồ sơ cũ/Giá lịch sử truy vết về hồ sơ/tài liệu nguồn cụ thể.
 - Giá đề nghị hệ thống sinh cho báo giá NCC phải phân biệt rõ với `Đơn giá NCC đã xác nhận`.
+- Báo giá NCC phải dedupe/hợp nhất theo NCC phù hợp; không tạo thêm báo giá trùng NCC chỉ vì các dòng đến từ hồ sơ cũ khác nhau.
+- `STT` tài sản là immutable lineage/order từ danh mục gốc; sort/group/gộp/tách/chuyển báo giá không được renumber.
 - File báo giá gửi/nhận, template và version phải có lineage phù hợp.
 - Template báo giá gốc và mapping/version đã dùng không được silent overwrite.
 - Vietnamese-first; không hiển thị HTTP/SQL/stack trace/row_version cho người dùng cuối.
@@ -1071,7 +1122,11 @@ Baseline đã duyệt:
 - người dùng đã yêu cầu **bố cục dạng bảng/table-first**;
 - business rule đã khóa ở §10;
 - các mockup thử nghiệm trước chưa được coi là baseline cuối;
-- phiên thiết kế tiếp theo phải dựng lại table-first theo rule mới về giá lịch sử, thiết bị Internet-only, gộp/tách báo giá và NCC xác nhận.
+- iteration tiếp theo phải bám bảng giống Excel nghiệp vụ, 03 cột NCC hiển thị số tiền trực tiếp, section/header row, semantic giá rõ ràng;
+- cùng NCC phải được tổng hợp vào cùng báo giá hiện tại phù hợp, không sinh duplicate quote chỉ vì khác hồ sơ nguồn;
+- `STT` phải giữ bất biến theo danh mục gốc trong mọi thao tác gộp/tách/chuyển/group/sort;
+- lineage/cảnh báo chi tiết ưu tiên bằng drawer/tooltip/context panel để không làm bảng chính quá rộng;
+- chỉ khi người dùng nói **`chốt baseline`** mới nâng mockup NCCQ thành baseline authority.
 
 Đối với `Quản lý mẫu báo giá nhà cung cấp`:
 
@@ -1089,7 +1144,7 @@ Các guardrail kỹ thuật hiện có trong repository vẫn có hiệu lực: 
 
 ### Nhiệm vụ thiết kế tiếp theo
 
-1. **Quay lại và hoàn thiện mockup `Tạo & quản lý báo giá nhà cung cấp`** theo bố cục table-first và business rule §10.
+1. **Quay lại và hoàn thiện mockup `Tạo & quản lý báo giá nhà cung cấp`** theo bố cục table-first và business rule §10, đặc biệt hai rule mới: dedupe/tổng hợp theo cùng NCC và `STT` bất biến.
 2. Sau khi NCCQ được duyệt baseline, dựng mockup module template theo §11, ưu tiên `TM01 — Danh sách mẫu`, `TM03 — Upload & Mapping`, `TM04 — Preview / Test fill`.
 3. Sau khi checkpoint báo giá NCC và luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
 4. Tiếp theo là S18 — `Báo cáo & Chứng thư`, S19 — `Phát hành`, S20 — `Lịch sử & Lưu trữ`.
