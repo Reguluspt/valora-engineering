@@ -6,7 +6,7 @@
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
-> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, **chốt baseline authority cho checkpoint `Tạo & quản lý báo giá nhà cung cấp` (NCCQ) theo Iteration 6 và cho `TM01 — Danh sách mẫu báo giá NCC` theo Iteration 1**. IA/flow TM01–TM05 tiếp tục giữ nguyên; TM03/TM04 chưa được coi là baseline cuối cho tới khi người dùng duyệt.
+> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, **chốt baseline authority cho checkpoint `Tạo & quản lý báo giá nhà cung cấp` (NCCQ) theo Iteration 6, cho `TM01 — Danh sách mẫu báo giá NCC` theo Iteration 1 và cho `TM03 — Upload & Mapping template` theo Iteration 1 Word-only**. IA/flow TM01–TM05 tiếp tục giữ nguyên; TM04 chưa được coi là baseline cuối cho tới khi người dùng duyệt.
 
 ## 0. Quyết định v2.3 đã duyệt / đã khóa
 
@@ -64,29 +64,30 @@
 - Các thao tác báo giá chỉ thay quan hệ `Tài sản → Báo giá`; chúng không thay lineage/order của danh mục ban đầu. UI có thể thay thứ tự hiển thị khi sort/filter, nhưng số `STT` hiển thị cho từng tài sản vẫn giữ nguyên giá trị gốc.
 - **Mockup NCCQ Iteration 6 đã được người dùng duyệt và nâng thành baseline authority.** Các iteration NCCQ trước đó chỉ còn giá trị lịch sử/tham khảo và không được dùng để override baseline này.
 
-### 0.4 Mẫu báo giá nhà cung cấp — capability/IA đã khóa; TM01 visual baseline đã duyệt
+### 0.4 Mẫu báo giá nhà cung cấp — Word-only; TM01 và TM03 visual baseline đã duyệt
 
 - Người dùng sẽ đưa mẫu báo giá riêng của từng NCC vào hệ thống.
-- Phần mềm phải có khả năng tự fill dữ liệu hồ sơ/danh mục vào đúng template của NCC.
+- **Template báo giá NCC chỉ dùng Microsoft Word `.docx`. Không dùng Excel/PDF làm template báo giá NCC.**
+- Phần mềm phải có khả năng tự fill dữ liệu hồ sơ/danh mục vào đúng template Word của NCC.
 - Luồng thiết kế đã thống nhất ở mức IA/UX:
 
 ```text
 Cấu hình → Mẫu báo giá nhà cung cấp
 → Tạo mẫu mới
-→ Upload file
+→ Upload file Word (.docx)
 → Mapping field / vùng lặp
 → Preview / Test fill
 → Lưu template
 → Sẵn sàng sử dụng
 ```
 
-- Mỗi NCC có thể có template riêng và nhiều version.
-- Word/Excel là định dạng template ưu tiên; PDF phù hợp hơn cho output/preview.
-- Mapping phải hỗ trợ bảng danh mục lặp: STT, thiết bị, mô tả/thông số, ĐVT, SL, đơn giá, thành tiền, ghi chú.
+- Mỗi NCC có thể có template Word riêng và nhiều version.
+- Mapping phải hỗ trợ vùng text/placeholder và bảng danh mục lặp: STT, thiết bị, mô tả/thông số, ĐVT, SL, đơn giá, thành tiền, ghi chú.
 - Template gốc và version cũ phải giữ để truy vết.
 - Module template gồm tối thiểu TM01–TM05: danh sách mẫu, metadata mẫu, Upload & Mapping, Preview/Test fill, lịch sử phiên bản.
 - **TM01 — Danh sách mẫu báo giá NCC — Iteration 1 đã được người dùng duyệt và nâng thành baseline authority.**
-- TM03/TM04 vẫn ở trạng thái IA/UX đã thiết kế nhưng mockup chưa duyệt baseline cuối.
+- **TM03 — Upload & Mapping template — Iteration 1 Word-only đã được người dùng duyệt và nâng thành baseline authority. Bản mockup TM03 dùng Excel trước đó bị superseded và không còn authority.**
+- TM04 vẫn ở trạng thái IA/UX đã thiết kế nhưng mockup chưa duyệt baseline cuối.
 
 ## 1. Product baseline
 
@@ -96,7 +97,8 @@ Cấu hình → Mẫu báo giá nhà cung cấp
 - Công việc chính: Kho tri thức + Nguồn Internet + Hồ sơ cũ/Giá lịch sử + Thuyết minh đơn giá + báo giá NCC.
 - Không thiết kế khảo sát hiện trạng.
 - AI/Kho tri thức chỉ gợi ý; mọi quyết định chính thức do người dùng xác nhận.
-- Excel/Word/PDF là input/output; Workbench + database là nguồn dữ liệu làm việc chính thức.
+- Excel/Word/PDF là input/output của toàn hệ thống; riêng **template báo giá NCC chỉ dùng Word `.docx`**.
+- Workbench + database là nguồn dữ liệu làm việc chính thức.
 - Không thiết kế workflow giao việc/chờ xác nhận giữa nhiều tài khoản ở giai đoạn này.
 - Giá dùng trong kết quả thẩm định luôn là mức giá do người dùng nghiệp vụ ấn định hoặc sửa; hệ thống không tự sinh quyết định giá.
 - Giá hệ thống sinh để chuẩn bị báo giá NCC chỉ là **giá đề nghị**, không phải quyết định thẩm định và không phải giá NCC xác nhận cho tới khi có phản hồi/xác nhận phù hợp.
@@ -133,7 +135,7 @@ Trang chủ
     → Hệ thống sinh báo giá nháp theo NCC, tránh trùng NCC
     → Người dùng gộp/tách/chuyển thiết bị giữa các báo giá nhưng giữ nguyên STT gốc
     → Rà soát cảnh báo chênh lệch giá
-    → Tạo file theo template NCC
+    → Tạo file theo template Word NCC
     → Gửi NCC xác nhận / ký đóng dấu
     → Nhận file đã xác nhận
     → Chọn nhà cung cấp đã xác nhận giá
@@ -148,8 +150,8 @@ Luồng quản trị template dùng chung:
 ```text
 Cấu hình
 → Mẫu báo giá nhà cung cấp
-→ Tạo / chỉnh template
-→ Upload
+→ Tạo / chỉnh template Word
+→ Upload .docx
 → Mapping
 → Preview / Test fill
 → Lưu version
@@ -640,7 +642,7 @@ Không tự đặt ngưỡng %. Warning là thông tin để người dùng bi�
 Khi cấu trúc báo giá đã sẵn sàng:
 
 - người dùng bấm `Tạo file báo giá` / `Tạo file theo template`;
-- hệ thống dùng template của NCC nếu đã cấu hình;
+- hệ thống dùng **template Word `.docx` của NCC** nếu đã cấu hình;
 - preview tối thiểu: NCC, danh sách thiết bị, SL/ĐVT, đơn giá, thành tiền, tổng cộng;
 - thứ tự/STT trong file output phải giữ STT gốc của danh mục, kể cả khi báo giá chỉ chứa một subset tài sản;
 - nếu còn warning chênh lệch, hệ thống hiển thị rõ trước khi tạo file nhưng không mặc định biến warning thành blocking;
@@ -741,11 +743,11 @@ Baseline trực quan chính thức của NCCQ là mockup Iteration 6, dùng cùn
 
 Các iteration NCCQ trước Iteration 6 trong phụ lục/lịch sử thiết kế **không còn là authority**. Khi có mâu thuẫn visual, Iteration 6 + business rule §10 là nguồn quyết định.
 
-## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế; TM01 baseline authority đã duyệt
+## 11. Quản lý mẫu báo giá nhà cung cấp — Word-only; TM01 và TM03 baseline authority đã duyệt
 
 ### 11.1 Mục tiêu
 
-Mỗi NCC có thể có bố cục báo giá khác nhau. Hệ thống lưu **template + mapping + version** để khi tạo báo giá trong hồ sơ, VALORA có thể tự fill dữ liệu vào đúng mẫu của từng NCC.
+Mỗi NCC có thể có bố cục báo giá khác nhau. Hệ thống lưu **template Word `.docx` + mapping + version** để khi tạo báo giá trong hồ sơ, VALORA có thể tự fill dữ liệu vào đúng mẫu của từng NCC.
 
 Module nằm ở:
 
@@ -767,7 +769,7 @@ Mục tiêu: quản lý toàn bộ template theo NCC.
 - breadcrumb `Cấu hình → Mẫu báo giá nhà cung cấp → Danh sách mẫu`;
 - header `Danh sách mẫu báo giá nhà cung cấp`;
 - primary CTA `Tạo mẫu mới` ở góc phải header;
-- toolbar gồm filter theo NCC/loại template/định dạng/trạng thái, search tên/mã mẫu, `Bộ lọc`, `Đặt lại`;
+- toolbar gồm filter theo NCC/trạng thái, search tên/mã mẫu, `Bộ lọc`, `Đặt lại`;
 - summary compact `Tổng số mẫu / Đang sử dụng / Bản nháp / Ngừng sử dụng` đặt trên bảng;
 - bảng là bề mặt làm việc chính, không dùng card-heavy dashboard;
 - panel phải `Hướng dẫn / Thao tác nhanh / Gợi ý` là vùng hỗ trợ và không được lấn át bảng chính.
@@ -779,7 +781,6 @@ STT
 | Mã mẫu
 | Tên mẫu
 | Nhà cung cấp
-| Loại template
 | Định dạng
 | Phiên bản
 | Cập nhật gần nhất
@@ -789,7 +790,7 @@ STT
 
 Quy tắc hiển thị:
 
-- XLSX/DOCX hiển thị icon + định dạng trực tiếp;
+- định dạng template luôn là `DOCX`, hiển thị icon Word + định dạng trực tiếp;
 - version hiển thị compact như `v1.0`, `v2.1`;
 - trạng thái dùng badge semantic `Đang sử dụng`, `Bản nháp`, `Ngừng sử dụng`;
 - mỗi dòng có `Xem chi tiết` + overflow menu cho thao tác phụ;
@@ -800,6 +801,7 @@ Guardrail TM01:
 
 - không silent overwrite version/template cũ;
 - không coi template là `Đang sử dụng` nếu chưa đạt điều kiện readiness;
+- không cho upload/khởi tạo template báo giá NCC bằng XLSX/PDF;
 - TM01 chỉ quản lý danh sách/metadata; mapping chi tiết thuộc TM03, test fill thuộc TM04, lịch sử phiên bản chi tiết thuộc TM05.
 
 Visual authority companion: [`VALORA_TM01_BASELINE_v2.3.md`](./assets/VALORA_TM01_BASELINE_v2.3.md).
@@ -811,25 +813,56 @@ Metadata tối thiểu:
 - Nhà cung cấp;
 - Mã NCC;
 - Tên mẫu báo giá;
-- Loại template: `Excel` hoặc `Word`;
+- Loại file: **Word `.docx` duy nhất**;
 - Mô tả;
 - Ngày hiệu lực;
 - trạng thái;
 - tùy chọn `Đặt làm mẫu mặc định của NCC`.
 
-Khu vực file hiển thị file mẫu gốc, tên file, dung lượng, định dạng, ngày upload.
+Khu vực file hiển thị file mẫu gốc, tên file, dung lượng, định dạng DOCX, ngày upload.
 
 CTA: `Tiếp tục sang Mapping`, `Lưu nháp`, `Hủy`.
 
-#### TM03 — Upload & Mapping template
+#### TM03 — Upload & Mapping template — baseline authority đã duyệt
 
 Đây là màn hình làm việc chính của module template.
 
-Bố cục desktop 3 vùng:
+**Visual baseline — Iteration 1 Word-only:**
 
-1. **Cột trái — Danh sách field dữ liệu**;
-2. **Trung tâm — Preview file mẫu**;
-3. **Cột phải — Panel cấu hình mapping của vùng đang chọn**.
+- cùng Valora shell + Fluent 2 với TM01/NCCQ;
+- header `Upload & Mapping template` với secondary actions `Xem hướng dẫn`, `Lưu nháp` và primary CTA `Tiếp theo: Preview / Test fill`;
+- step rail compact ở vùng trái: `Upload file → Mapping bảng danh mục → Mapping thông tin chung → Kiểm tra mapping`;
+- chỉ nhận file Word `.docx`; file hiện hành hiển thị icon Word, tên file, dung lượng và `Thay đổi file`;
+- vùng trái hiển thị metadata file và các thiết lập mapping cơ bản;
+- vùng giữa là bảng mapping field của VALORA ↔ vị trí trong template Word;
+- vùng phải là **preview trực tiếp tài liệu Word**, highlight các vùng dữ liệu sẽ được điền;
+- footer hiển thị tiến độ mapping, validation status và CTA đi tiếp.
+
+Bảng mapping baseline có thể gồm:
+
+```text
+Trường dữ liệu VALORA
+| Kiểu dữ liệu
+| Vị trí trong template Word
+| Nội dung mẫu / gợi ý
+| Trạng thái
+```
+
+Mapping Word sử dụng các đối tượng nghiệp vụ:
+
+```text
+Trang / vùng văn bản
+→ Placeholder / đoạn text
+→ Bảng
+→ Dòng mẫu lặp
+→ Ô / cột trong bảng
+```
+
+Không sử dụng các khái niệm Excel như `Sheet`, `Cell`, `Range`, `A8:J100`, `Cột A/B/C` theo nghĩa tọa độ spreadsheet.
+
+Bản mockup TM03 dùng Excel trước khi rule Word-only được khóa **bị superseded** và không được dùng làm authority.
+
+![TM03 — Baseline Authority Word-only v2.3](./assets/VALORA_TM03_BASELINE_v2.3.jpg)
 
 #### TM04 — Preview / Test fill dữ liệu
 
@@ -838,7 +871,7 @@ Cho phép test bằng:
 - `Dữ liệu mẫu mặc định`;
 - hoặc một hồ sơ phù hợp được người dùng chọn để kiểm thử.
 
-Hiển thị preview file đã fill + panel kết quả kiểm tra.
+Hiển thị preview file Word đã fill + panel kết quả kiểm tra.
 
 #### TM05 — Lịch sử phiên bản template
 
@@ -849,8 +882,8 @@ Quản lý version, hiệu lực và template mặc định; cho phép xem/nhân
 ```text
 TM01 Danh sách mẫu
 → Tạo mẫu mới
-→ TM02 Nhập metadata + Upload file
-→ TM03 Mapping
+→ TM02 Nhập metadata + Upload Word (.docx)
+→ TM03 Mapping Word
 → Chạy kiểm tra
 → TM04 Preview / Test fill
 → Lưu template
@@ -862,7 +895,7 @@ Luồng khi NCC đổi mẫu:
 ```text
 Mẫu hiện hành
 → Tạo phiên bản mới
-→ Upload mẫu mới hoặc chỉnh mapping
+→ Upload file Word mới hoặc chỉnh mapping
 → Preview / Test fill
 → Lưu version mới
 → Đặt làm mặc định nếu người dùng chọn
@@ -872,7 +905,7 @@ Không silent overwrite version đang được dùng trong hồ sơ cũ.
 
 ### 11.4 Danh sách field mapping
 
-Cột trái TM03 chia field theo nhóm để người dùng dễ tìm.
+Cột mapping TM03 chia field theo nhóm để người dùng dễ tìm.
 
 **A. Thông tin báo giá**
 
@@ -921,21 +954,21 @@ Cột trái TM03 chia field theo nhóm để người dùng dễ tìm.
 
 Field cụ thể có thể mở rộng theo template thực tế nhưng không được hard-code một layout NCC duy nhất.
 
-### 11.5 Preview file mẫu trong TM03
+### 11.5 Preview file Word trong TM03
 
-- Với Excel: hiển thị theo sheet và cell/range có thể chọn.
-- Với Word: hiển thị page/table và vùng có thể map.
-- Người dùng click vào ô/vùng để gán field.
-- Vùng đã map có affordance rõ và cho phép xem field đang liên kết.
-- Nếu file có nhiều sheet/table, cho phép chọn đúng sheet/table trước khi mapping.
+- Preview theo trang Word và table/paragraph/placeholder có thể map.
+- Người dùng click vào vùng/ô trong preview để liên kết field hoặc xem mapping hiện tại.
+- Vùng đã map có affordance/highlight rõ và cho phép xem field đang liên kết.
+- Nếu file có nhiều bảng/trang, cho phép chọn đúng bảng/vùng trước khi mapping.
+- Preview không giả lập spreadsheet grid khi file nguồn là Word.
 
-### 11.6 Panel Mapping bên phải
+### 11.6 Panel / cấu hình Mapping
 
-Khi chọn một vùng, panel hiển thị tối thiểu:
+Khi chọn một vùng Word, UI hiển thị tối thiểu:
 
 - field đang map;
 - loại field: text, số, ngày, bảng lặp, derived/formula;
-- vị trí sheet/table/cell/range tương ứng;
+- vị trí theo `trang / paragraph / table / row / cell` hoặc identifier tương đương do hệ thống quản lý;
 - format tiền;
 - số thập phân;
 - format ngày;
@@ -949,36 +982,35 @@ Không phơi bày thuật ngữ kỹ thuật không cần thiết cho người d
 
 Vì báo giá có số dòng thiết bị thay đổi theo hồ sơ, mapping vùng lặp là requirement cốt lõi.
 
-Với Excel, phải xác định được ít nhất:
+Với Word phải xác định được ít nhất:
 
-- sheet;
-- dòng bắt đầu;
-- dòng mẫu / vùng lặp;
-- cột STT;
-- cột tên hàng;
-- cột mô tả nếu có;
-- cột ĐVT;
-- cột số lượng;
-- cột đơn giá;
-- cột thành tiền;
-- cột ghi chú nếu có;
+- table chứa danh mục;
+- row template dùng để nhân dòng;
+- ô/cột STT;
+- ô/cột tên hàng;
+- ô/cột mô tả nếu có;
+- ô/cột ĐVT;
+- ô/cột số lượng;
+- ô/cột đơn giá;
+- ô/cột thành tiền;
+- ô/cột ghi chú nếu có;
 - vùng tổng cộng/footer để tránh bị ghi đè khi danh mục dài.
 
-Với Word, phải xác định được table/row template tương ứng để hệ thống nhân dòng đúng layout.
+Hệ thống nhân dòng theo **row template của bảng Word**, không dùng cơ chế row/cell range của Excel.
 
 ### 11.8 Mapping nhanh và Mapping thủ công
 
-Module nên hỗ trợ hai chế độ:
+Module hỗ trợ hai chế độ:
 
 **Mapping nhanh**
 
-- hệ thống nhận diện/gợi ý các vùng có thể map;
+- hệ thống nhận diện/gợi ý các vùng Word có thể map;
 - người dùng xác nhận hoặc sửa;
 - gợi ý không được tự trở thành cấu hình chính thức nếu chưa có thao tác người dùng.
 
 **Mapping thủ công**
 
-- người dùng chọn vùng;
+- người dùng chọn vùng/placeholder/ô bảng Word;
 - chọn field;
 - cấu hình format/rule;
 - lưu mapping.
@@ -996,6 +1028,7 @@ Panel kết quả kiểm tra nên cho biết:
 - bảng lặp có nguy cơ đè footer;
 - vùng tổng cộng chưa được map;
 - dữ liệu tiền/ngày hiển thị không phù hợp;
+- bảng/dòng lặp bị vỡ layout hoặc ngắt trang không phù hợp;
 - công thức/tổng hợp không hợp lệ nếu hệ thống có thể kiểm tra.
 
 CTA:
@@ -1025,7 +1058,7 @@ Tên trạng thái có thể tinh chỉnh i18n nhưng semantic phải rõ.
 Tối thiểu:
 
 - có metadata bắt buộc;
-- có file mẫu hợp lệ;
+- có file Word `.docx` hợp lệ;
 - các field bắt buộc đã mapping;
 - vùng danh mục lặp đã cấu hình nếu template có danh mục;
 - Preview/Test fill không còn lỗi blocking.
@@ -1045,7 +1078,7 @@ Template chưa đạt điều kiện vẫn có thể `Lưu nháp` nhưng không 
 
 Module được phép:
 
-- upload template;
+- upload template Word `.docx`;
 - mapping field/vùng lặp;
 - test fill;
 - lưu nhiều version;
@@ -1054,20 +1087,21 @@ Module được phép:
 
 Module không được:
 
+- nhận XLSX/PDF làm template báo giá NCC;
 - silent overwrite template/version đã dùng;
 - tự xác nhận mapping gợi ý thành mapping chính thức mà không có thao tác người dùng;
 - làm mất file template gốc;
 - hard-code toàn bộ hệ thống theo một mẫu NCC duy nhất;
-- coi PDF là template chỉnh động ưu tiên khi Word/Excel phù hợp hơn.
+- hiển thị hoặc lưu mapping Word dưới semantics sheet/cell/range của Excel.
 
 ### 11.14 Trạng thái thiết kế
 
 - IA/flow TM01–TM05 và nguyên tắc mapping/versioning đã được đưa vào v2.3.
 - **TM01 — Danh sách mẫu báo giá NCC — Iteration 1 là baseline authority đã duyệt.**
-- Mockup trực quan tiếp theo ưu tiên:
-  1. `TM03 — Upload & Mapping template`;
-  2. `TM04 — Preview / Test fill dữ liệu`.
-- TM03/TM04 chỉ được nâng thành baseline khi người dùng duyệt rõ.
+- **TM03 — Upload & Mapping template — Iteration 1 Word-only là baseline authority đã duyệt.**
+- Bản TM03 Excel trước đó là iteration lịch sử và không còn authority.
+- Mockup trực quan tiếp theo ưu tiên `TM04 — Preview / Test fill dữ liệu`.
+- TM04 chỉ được nâng thành baseline khi người dùng duyệt rõ.
 
 ## 12. Validation phân tán — không có bước Kiểm tra riêng
 
@@ -1105,6 +1139,7 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 - Báo giá NCC phải dedupe/hợp nhất theo NCC phù hợp; không tạo thêm báo giá trùng NCC chỉ vì các dòng đến từ hồ sơ cũ khác nhau.
 - `STT` tài sản là immutable lineage/order từ danh mục gốc; sort/group/gộp/tách/chuyển báo giá không được renumber.
 - File báo giá gửi/nhận, template và version phải có lineage phù hợp.
+- **Template báo giá NCC chỉ dùng Word `.docx`; XLSX/PDF không phải template báo giá NCC.**
 - Template báo giá gốc và mapping/version đã dùng không được silent overwrite.
 - Vietnamese-first; không hiển thị HTTP/SQL/stack trace/row_version cho người dùng cuối.
 - Mỗi màn hình/context có một primary CTA nổi bật.
@@ -1132,9 +1167,9 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 | S13 | Asset Context Drawer | **P0 — baseline đã duyệt; drawer trong S12** |
 | NGC | Nguồn giá & Chứng cứ | **P0 — baseline đã duyệt** |
 | NCCQ | Tạo & quản lý báo giá nhà cung cấp | **P0 — baseline authority đã duyệt; Fluent 2 table-first + drawer Lineage & tổng hợp; Iteration 6** |
-| TM01 | Danh sách mẫu báo giá NCC | **P0 — baseline authority đã duyệt; Fluent 2 list/table-first; Iteration 1** |
-| TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế** |
-| TM03 | Upload & Mapping template | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
+| TM01 | Danh sách mẫu báo giá NCC | **P0 — baseline authority đã duyệt; Fluent 2 list/table-first; Word-only; Iteration 1** |
+| TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế; Word `.docx` only** |
+| TM03 | Upload & Mapping template | **P0 — baseline authority đã duyệt; Word-only mapping + Word preview; Iteration 1** |
 | TM04 | Preview / Test fill dữ liệu | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
 | TM05 | Lịch sử phiên bản template | **P0 — capability/versioning đã thiết kế** |
 | S14 | So sánh & Xác nhận giá | **Không dùng trong giai đoạn hiện tại** |
@@ -1159,6 +1194,7 @@ Baseline đã duyệt:
 - Nguồn giá & Chứng cứ — full-screen theo asset context, ba nhóm căn cứ ngang hàng và panel Hồ sơ cũ/Giá lịch sử.
 - **NCCQ — Tạo & quản lý báo giá nhà cung cấp — Iteration 6: baseline authority đã duyệt.**
 - **TM01 — Danh sách mẫu báo giá NCC — Iteration 1: baseline authority đã duyệt.**
+- **TM03 — Upload & Mapping template — Iteration 1 Word-only: baseline authority đã duyệt.**
 
 ### 15.1 NCCQ — authority visual đã chốt
 
@@ -1187,7 +1223,7 @@ Mockup TM01 Iteration 1 là authority trực quan cho màn hình danh sách mẫ
 - filter/search phía trên;
 - summary compact 4 trạng thái;
 - bảng danh sách template là bề mặt chính;
-- trạng thái/version/định dạng file hiển thị trực tiếp trong bảng;
+- trạng thái/version/định dạng DOCX hiển thị trực tiếp trong bảng;
 - `Xem chi tiết` + overflow menu ở mỗi dòng;
 - panel phải `Hướng dẫn / Thao tác nhanh / Gợi ý` là vùng hỗ trợ;
 - pagination ở cuối bảng;
@@ -1197,10 +1233,28 @@ Visual authority companion: [`VALORA_TM01_BASELINE_v2.3.md`](./assets/VALORA_TM0
 
 Khi có mâu thuẫn visual giữa các iteration TM01 khác và baseline này, **TM01 Iteration 1 + §11.2 là nguồn quyết định**.
 
+### 15.3 TM03 — authority visual đã chốt
+
+Mockup TM03 Iteration 1 Word-only là authority trực quan cho Upload & Mapping template:
+
+- chỉ nhận template `.docx`;
+- left rail thể hiện tiến trình Upload/Mapping/Kiểm tra;
+- vùng giữa dùng bảng mapping field VALORA ↔ vị trí trong Word;
+- vùng phải preview trực tiếp tài liệu Word và highlight vùng dữ liệu;
+- mapping bảng danh mục dựa trên `table → row template → cell/column`;
+- có `Tự động dò tìm` nhưng mọi mapping chính thức vẫn human-confirmed;
+- validation/progress nằm ngay trong màn hình;
+- primary CTA cuối bước là `Tiếp theo: Preview / Test fill`;
+- các semantics Excel `sheet/cell/range/A8:J100` bị loại khỏi TM03.
+
+![TM03 — Baseline Authority Word-only v2.3](./assets/VALORA_TM03_BASELINE_v2.3.jpg)
+
+Bản mockup TM03 Excel trước rule Word-only chỉ còn giá trị lịch sử và **không được dùng làm authority**. Khi có mâu thuẫn, **TM03 Iteration 1 Word-only + §11.2/§11.5–§11.8 là nguồn quyết định**.
+
 Đối với phần còn lại của `Quản lý mẫu báo giá nhà cung cấp`:
 
-- TM01 đã chốt baseline authority;
-- TM03 và TM04 là hai mockup tiếp theo cần thiết kế/duyệt;
+- TM01 và TM03 đã chốt baseline authority;
+- TM04 là mockup tiếp theo cần thiết kế/duyệt;
 - TM02/TM05 giữ IA/capability đã mô tả trong §11 cho tới khi cần mockup chi tiết.
 
 Mockup S14 đã thử nghiệm trước quyết định nghiệp vụ mới **không phải baseline**.
@@ -1213,9 +1267,9 @@ Các guardrail kỹ thuật hiện có trong repository vẫn có hiệu lực: 
 
 ### Nhiệm vụ thiết kế tiếp theo
 
-1. **NCCQ và TM01 đã chốt baseline authority. Tiếp tục `TM03 — Upload & Mapping template`.**
-2. Sau TM03, dựng `TM04 — Preview / Test fill dữ liệu`; chỉ nâng từng mockup thành baseline khi người dùng duyệt rõ.
-3. Sau khi luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
+1. **NCCQ, TM01 và TM03 đã chốt baseline authority. Tiếp tục `TM04 — Preview / Test fill dữ liệu` theo template Word.**
+2. TM04 phải kiểm thử layout Word thực tế: placeholder, text dài, bảng lặp, tổng cộng/footer, ngắt trang và format tiền/ngày; chỉ nâng thành baseline khi người dùng duyệt rõ.
+3. Sau khi TM04 đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
 4. Tiếp theo là S18 — `Báo cáo & Chứng thư`, S19 — `Phát hành`, S20 — `Lịch sử & Lưu trữ`.
 
-Không nhảy sang S17 trước khi TM03/TM04 đủ rõ để xác định chính xác dependency template → tạo file → nhận/chọn báo giá ở bước hoàn tất hồ sơ.
+Không nhảy sang S17 trước khi TM04 đủ rõ để xác định chính xác dependency template Word → tạo file → nhận/chọn báo giá ở bước hoàn tất hồ sơ.
