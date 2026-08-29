@@ -6,19 +6,22 @@
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
-> v2.3 kế thừa toàn bộ baseline v2.2 và bổ sung/chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`. S13 không phải màn hình độc lập trong navigation; đây là drawer mở trực tiếp từ một dòng đang chọn trong S12 Workbench để xử lý sâu một tài sản mà không làm mất context bảng.
+> v2.3 kế thừa baseline v2.2, bổ sung/chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, đồng thời cập nhật quyết định nghiệp vụ mới: **đơn giá đề xuất/giá sơ bộ đã được người dùng ấn định ở Pre-case được kế thừa làm kết quả thẩm định của hồ sơ chính thức trong giai đoạn hiện tại. Không có bước S14 riêng để xác nhận giá lần thứ hai.**
 
 ## 0. Quyết định v2.3 đã duyệt
 
-- Toàn bộ quyết định S09–S12 của v2.2 tiếp tục giữ nguyên.
+- Toàn bộ quyết định S09–S12 của v2.2 tiếp tục giữ nguyên, ngoại trừ các nội dung về việc phải xác nhận lại một `Giá thẩm định chính thức` ở màn hình riêng; các nội dung đó được quyết định mới trong v2.3 này supersede.
 - S13 — `Asset Context Drawer / Ngữ cảnh tài sản` đã được người dùng duyệt làm baseline tiếp theo.
 - S13 luôn mở trong context của S12; không tạo menu riêng và không biến thành một full-screen độc lập.
 - Khi mở S13, S12 vẫn được giữ ở nền với nguyên filter, sort, search, pagination, selection và vị trí scroll hiện tại.
 - S13 phục vụ hoàn thiện sâu một tài sản: đối chiếu dữ liệu gốc với dữ liệu chuẩn hóa, xử lý nhận diện/thông số, xem candidate Kho tri thức và context nguồn giá kế thừa.
 - `Dữ liệu gốc (Excel)` phải luôn truy vết được và không bị ghi đè bởi dữ liệu chuẩn hóa.
-- Kho tri thức/AI chỉ gợi ý; không auto-accept candidate, không tự xác nhận identity, không tự xác nhận giá.
-- S13 chỉ hiển thị summary nguồn giá/Thuyết minh/giá sơ bộ và CTA chuyển tiếp đúng tài sản; không nhân bản toàn bộ màn hình Nguồn giá.
-- S13 không phải màn hình `So sánh & Xác nhận giá thẩm định chính thức`; việc chốt giá chính thức vẫn ở bước riêng sau Nguồn giá & chứng cứ.
+- Kho tri thức/AI chỉ gợi ý; không auto-accept candidate, không tự xác nhận identity, không tự ấn định giá.
+- S13 chỉ hiển thị summary nguồn giá/Thuyết minh/giá đã kế thừa và CTA chuyển tiếp đúng tài sản; không nhân bản toàn bộ màn hình Nguồn giá.
+- **Không dùng S14 — So sánh & Xác nhận giá thẩm định chính thức trong workflow hiện tại.**
+- **Giá sơ bộ/Đơn giá đề xuất đã được người dùng ấn định ở Pre-case chính là giá dùng làm kết quả thẩm định khi chuyển sang hồ sơ chính thức, giữ đầy đủ lineage từ nguồn và quyết định người dùng.**
+- Không yêu cầu người dùng xác nhận lại cùng một mức giá ở một checkpoint riêng nếu asset identity và căn cứ giá không thay đổi đáng kể.
+- Nếu tài sản mới được bổ sung, hoặc `Tên thiết bị/Hãng/Model/Xuất xứ/thông số identity quan trọng` thay đổi làm mức giá kế thừa không còn phù hợp, tài sản phải trở về trạng thái `Cần phân tích giá`; người dùng phải xử lý/ấn định lại giá trước khi hoàn tất hồ sơ.
 - Validation tiếp tục chạy tại field/dòng đang phát sinh, theo `Blocking`, `Warning`, `Info`; không có màn hình Kiểm tra riêng.
 - Các thay đổi identity quan trọng hoặc thao tác có thể làm mất dữ liệu đã xác nhận phải có confirm rõ ảnh hưởng.
 - S13 phải duy trì lineage: `raw source → normalized asset → candidate KB/source/price → human decision`.
@@ -33,6 +36,7 @@
 - AI/Kho tri thức chỉ gợi ý; mọi quyết định chính thức do người dùng xác nhận.
 - Excel/Word/PDF là input/output; Workbench + database là nguồn dữ liệu làm việc chính thức.
 - Không thiết kế workflow giao việc/chờ xác nhận giữa nhiều tài khoản ở giai đoạn này.
+- Giá dùng trong kết quả thẩm định là mức giá do người dùng nghiệp vụ ấn định; hệ thống không tự sinh hoặc tự xác nhận giá.
 
 ## 2. North-star user flow v2.3
 
@@ -47,6 +51,7 @@ Trang chủ
     → Giá thị trường tham khảo
     → Vận chuyển (%)
     → Đơn giá đề xuất
+    → Người dùng ấn định giá
 → Quay lại Quản lý yêu cầu sơ bộ
     → Rà soát tích hợp
     → Tạo file kết quả sơ bộ
@@ -56,16 +61,15 @@ Trang chủ
 → S12 Workbench tài sản
     → S13 Asset Context Drawer / Ngữ cảnh tài sản
 → Nguồn giá & chứng cứ
-→ S14 So sánh & Xác nhận giá thẩm định chính thức
 → S17 Hoàn tất hồ sơ
 → S18 Báo cáo & Chứng thư
 → S19 Phát hành
 → S20 Lưu trữ & hình thành tri thức
 ```
 
-Không có checkpoint riêng `Khai báo thông tin thực hiện`, `Kiểm tra hồ sơ`, `KSCL`.
+Không có checkpoint riêng `Khai báo thông tin thực hiện`, `Xác nhận giá thẩm định chính thức`, `Kiểm tra hồ sơ`, `KSCL`.
 
-## 3. Pre-case baseline giữ nguyên từ v2.2
+## 3. Pre-case baseline
 
 Trạng thái cấp danh sách: `Mới tạo`, `Mới nhận danh mục`, `Đang phân tích`, `Sẵn sàng tạo kết quả sơ bộ`, `Đã tạo kết quả sơ bộ`, `Không tiếp tục`, `Đã chuyển thành hồ sơ`.
 
@@ -73,37 +77,129 @@ Không dùng `Ghi nhận đã gửi`, `Chờ khách hàng phản hồi`, `Ghi nh
 
 S08 vẫn là checkpoint tích hợp trong S02. File kết quả sơ bộ là bản sao file Excel khách hàng và bổ sung đúng 02 cột `Đơn giá đề xuất`, `Thành tiền`; file gốc không bị ghi đè; output có version/lineage.
 
+### 3.1 Quy tắc giá đã khóa
+
+Cụm giá Pre-case:
+
+```text
+Đơn giá KH dự kiến
+→ Giá tham chiếu Kho tri thức
+→ Giá thị trường tham khảo
+→ Vận chuyển (%)
+→ Đơn giá đề xuất
+→ Người dùng ấn định
+```
+
+```text
+Đơn giá đề xuất = Giá thị trường × (1 + Vận chuyển % / 100)
+```
+
+- Không hiển thị `Chênh lệch`, `Chi phí vận chuyển`, `Giá sau vận chuyển`.
+- `Thuyết minh đơn giá` có thể là căn cứ duy nhất của một dòng nếu người dùng chấp nhận căn cứ đó.
+- Không cho tạo file kết quả sơ bộ nếu còn dòng trong phạm vi cần định giá mà chưa có mức giá do người dùng ấn định.
+- Mức giá đã ấn định được đưa vào file kết quả sơ bộ dưới cột `Đơn giá đề xuất`.
+- Khi chuyển thành hồ sơ chính thức, chính mức giá đã ấn định này được kế thừa làm **kết quả thẩm định** của dòng tài sản, trừ trường hợp asset identity hoặc căn cứ giá bị thay đổi đáng kể và hệ thống yêu cầu phân tích lại.
+
 ## 4. S09 — Chuyển sang thẩm định chính thức
 
-Giữ nguyên baseline v2.2:
+### 4.1 Nguyên tắc
 
 - Pre-case phải có file kết quả sơ bộ.
-- Giá đề xuất sơ bộ không tự trở thành giá thẩm định chính thức.
+- Giá đã được người dùng ấn định trong Pre-case được copy vào snapshot hồ sơ chính thức cùng provenance/lineage và được dùng làm kết quả thẩm định ban đầu của tài sản.
+- Không tạo bước xác nhận lại giá chỉ để đổi tên từ `giá sơ bộ` sang `giá chính thức`.
 - Trường hồ sơ chưa điền đủ vẫn có thể tạo hồ sơ nếu chưa tới dependency bắt buộc; hiển thị `Chưa bổ sung`.
-- `Chủ đầu tư` là searchable select và dữ liệu được copy thành snapshot hồ sơ.
-- `Tên hồ sơ` dẫn xuất từ `Tài sản thẩm định`; không nhập riêng.
-- `Ngày bắt đầu dự kiến` = `Ngày hợp đồng`; `Ngày kết thúc dự kiến` = `Ngày chứng thư`.
-- `Thẩm định viên`, `Trợ lý`, `Tổ trưởng/Phụ trách` lấy từ `Cấu hình → Thông tin thực hiện mặc định`.
-- Primary CTA: `Tạo hồ sơ thẩm định chính thức`.
+- Chỉ validate format/logic khi người dùng có nhập; field trống chỉ trở thành blocking khi bước sau thực sự cần dữ liệu đó.
+
+### 4.2 Chủ đầu tư & liên hệ
+
+`Chủ đầu tư` là searchable select theo tên/MST/số điện thoại. Chọn record hiện có sẽ prefill snapshot hồ sơ: Chủ đầu tư, Mã số thuế, Số ĐT, Địa chỉ, Tài khoản Chủ đầu tư, Người đại diện, Chức vụ, Người liên hệ.
+
+Sửa snapshot trong hồ sơ không tự ghi đè customer master; cập nhật master phải là thao tác riêng.
+
+### 4.3 Thông tin hồ sơ & thẩm định
+
+**2A — Nhận diện hồ sơ**:
+
+```text
+[Tài sản thẩm định]
+[Mục đích]
+[Ghi chú]
+```
+
+- `Tên hồ sơ` ẩn và tự sinh từ `Tài sản thẩm định`.
+- Biến thể `Tài sản thẩm định (viết thường)` là dữ liệu dẫn xuất, không hiển thị field riêng.
+
+**2B — Mốc hồ sơ / số hiệu văn bản**:
+
+```text
+[Ngày hợp đồng]    [Số hợp đồng]    [Số QĐ]
+[Ngày chứng thư]   [Số chứng thư]   [Thời điểm TĐ]
+[Ngày thương thảo] [Ngày dự thảo]
+```
+
+Dữ liệu dẫn xuất/ẩn: ngày hợp đồng dạng chữ; `Ngày báo cáo = Ngày chứng thư`; ngày chứng thư dạng chữ; `Thời điểm TĐ (chân trang)` tự sinh từ `Thời điểm TĐ`.
+
+**2C — Giá trị & phí**:
+
+```text
+[Tổng giá trị] [Giá đã bao gồm]
+[Phí thẩm định]
+```
+
+**Biên bản nghiệm thu & thanh lý**:
+
+```text
+[Ngày thanh lý] [Số hóa đơn] [Ngày hóa đơn]
+```
+
+Primary CTA: `Tạo hồ sơ thẩm định chính thức`. Tạo thành công → Pre-case `Đã chuyển thành hồ sơ`, hồ sơ mới `Đang xử lý`, mở S10.
 
 ## 5. S10 — Tổng quan hồ sơ
 
-Giữ nguyên baseline v2.2:
+### 5.1 Mục tiêu
 
-- S10 là dashboard điều phối hồ sơ, không phải form nhập liệu dài.
-- Workflow gồm 8 checkpoint: `Thông tin hồ sơ`, `Danh mục triển khai`, `Hoàn thiện tài sản`, `Nguồn giá & chứng cứ`, `Giá thẩm định chính thức`, `Hoàn tất hồ sơ`, `Báo cáo & Chứng thư`, `Phát hành`.
-- Ngay sau S09, `Việc cần làm tiếp theo` dẫn vào S11.
-- S10 chỉ tổng hợp readiness và validation; mọi vấn đề cụ thể có CTA `Đi tới` đúng nơi sửa.
-- Không reintroduce `Thông tin thực hiện`, `Kiểm tra`, `KSCL` thành checkpoint riêng.
+S10 là dashboard điều phối hồ sơ chính thức, không phải form nhập liệu dài.
+
+### 5.2 Workflow rút gọn
+
+Workflow hiện tại gồm **7 checkpoint**:
+
+1. `Thông tin hồ sơ`;
+2. `Danh mục triển khai`;
+3. `Hoàn thiện tài sản`;
+4. `Nguồn giá & chứng cứ`;
+5. `Hoàn tất hồ sơ`;
+6. `Báo cáo & Chứng thư`;
+7. `Phát hành`.
+
+Không có checkpoint riêng `Thông tin thực hiện`, `Giá thẩm định chính thức`, `Kiểm tra hồ sơ`, `KSCL`.
+
+### 5.3 Readiness / cột phải
+
+Có thể tổng hợp:
+
+- mức hoàn thiện thông tin hồ sơ;
+- số tài sản triển khai;
+- tiến độ nhận diện;
+- số nguồn giá/Thuyết minh;
+- số dòng đã có giá kết quả thẩm định;
+- số dòng `Cần phân tích giá`;
+- readiness;
+- thông tin cần bổ sung;
+- nguồn Pre-case/file/snapshot/lineage;
+- người thực hiện lấy từ Cấu hình.
+
+Ngay sau S09, card `Việc cần làm tiếp theo` dẫn vào S11.
+
+S10 chỉ tổng hợp validation; mọi vấn đề cụ thể có CTA `Đi tới` đúng nơi sửa.
 
 ## 6. S11 — Xác nhận & điều chỉnh danh mục triển khai
 
-Giữ nguyên baseline v2.2:
-
-- S11 chốt phạm vi tài sản, không chốt giá.
+- S11 chốt phạm vi tài sản, không phải nơi xử lý/điều chỉnh giá.
 - Cho phép giữ nguyên, thêm mới, loại bớt và khôi phục tài sản trước khi xác nhận.
 - Tài sản bị loại không bị xóa khỏi Pre-case; giữ đầy đủ lineage.
 - Dòng mới có badge `Mới bổ sung`, không tự sao chép giá từ tài sản khác.
+- Dòng mới chưa có giá vẫn được phép đi qua S11, nhưng khi vào S12 phải ở trạng thái `Cần phân tích giá` và phải được người dùng xử lý trước Hoàn tất hồ sơ.
 - `Tổng triển khai = Giữ lại + Mới bổ sung`.
 - Primary CTA: `Xác nhận danh mục triển khai`.
 
@@ -111,7 +207,7 @@ Giữ nguyên baseline v2.2:
 
 ### 7.1 Mục tiêu
 
-S12 là bảng làm việc chính của danh mục đã được chốt tại S11. Người dùng hoàn thiện nhận diện và thông số đủ để so sánh đúng thiết bị, đồng thời giữ nguyên dữ liệu nguồn để truy vết.
+S12 là bảng làm việc chính của danh mục đã được chốt tại S11. Người dùng hoàn thiện nhận diện và thông số đủ để bảo đảm mức giá đã kế thừa vẫn áp dụng đúng thiết bị, đồng thời giữ nguyên dữ liệu nguồn để truy vết.
 
 ### 7.2 Visual baseline đã duyệt
 
@@ -123,8 +219,10 @@ S12 dùng Fluent 2, desktop-first, ưu tiên data grid lớn. Baseline hiện h�
 - notice rõ rằng dữ liệu gốc Excel luôn được giữ nguyên;
 - toolbar filter/search/tùy chỉnh cột;
 - grid lớn với nhóm cột `Thông tin từ Excel (Dữ liệu gốc)` và `Thông tin chuẩn hóa (Bạn đang chỉnh sửa)` đặt cạnh nhau;
-- cột `Thông số kỹ thuật chính`, `Trạng thái`, `Kho tri thức`, `Nguồn giá`, `Đơn giá sơ bộ`, `Thao tác`;
+- cột `Thông số kỹ thuật chính`, `Trạng thái`, `Kho tri thức`, `Nguồn giá`, `Đơn giá kết quả thẩm định`, `Thao tác`;
 - thao tác mỗi dòng `Mở ngữ cảnh` để mở S13.
+
+Trong UI có thể dùng nhãn rút gọn `Đơn giá TĐ` nếu cần tiết kiệm chiều rộng, nhưng không dùng một cột giá thứ hai để yêu cầu xác nhận lại cùng mức giá.
 
 ### 7.3 Trạng thái dòng
 
@@ -137,13 +235,20 @@ Có thể gồm:
 
 Trạng thái Kho tri thức tách riêng như `Có / Đã tìm thấy gợi ý`, `Cần xác nhận`, `Chưa có`.
 
-### 7.4 Guardrail S12
+### 7.4 Quy tắc kế thừa giá
+
+- Dòng không đổi về identity/thông số quan trọng được giữ nguyên mức giá người dùng đã ấn định từ Pre-case.
+- Dòng mới không tự sao chép giá từ tài sản khác.
+- Nếu thay đổi model/thông số identity quan trọng làm căn cứ giá cũ không còn phù hợp, hệ thống đánh dấu `Cần phân tích giá` và không âm thầm tiếp tục dùng giá cũ như kết quả hợp lệ.
+- Người dùng xử lý lại giá tại đúng context phân tích/Nguồn giá; khi đã ấn định lại thì mức giá mới trở thành kết quả thẩm định của dòng, có lineage.
+- AI/Kho tri thức không tự thay giá.
+
+### 7.5 Guardrail S12
 
 - Raw source không bị ghi đè.
-- Dòng không đổi có thể tái sử dụng candidate Kho tri thức, nguồn giá và giá sơ bộ từ Pre-case.
+- Dòng không đổi có thể tái sử dụng candidate Kho tri thức, nguồn giá và giá đã ấn định từ Pre-case.
 - Dòng mới hoặc thay đổi model/thông số quan trọng phải được đánh dấu cần xử lý lại.
-- Không tự áp dụng giá cũ cho một identity đã thay đổi đáng kể.
-- Primary CTA cuối bước vẫn là `Tiếp tục sang Nguồn giá & chứng cứ` khi readiness phù hợp.
+- Primary CTA cuối bước: `Tiếp tục sang Nguồn giá & chứng cứ` khi readiness phù hợp.
 
 ## 8. S13 — Asset Context Drawer / Ngữ cảnh tài sản
 
@@ -212,7 +317,7 @@ Quy tắc:
 - Cột raw là read-only.
 - Cột normalized cho phép chỉnh theo đúng guardrail dữ liệu.
 - Không âm thầm cập nhật raw source.
-- Field thay đổi identity quan trọng phải cảnh báo nếu làm mất/giảm hiệu lực candidate hoặc nguồn giá kế thừa.
+- Field thay đổi identity quan trọng phải cảnh báo nếu làm mất/giảm hiệu lực candidate, nguồn giá hoặc mức giá đã kế thừa.
 
 ### 8.6 Validation inline
 
@@ -228,7 +333,7 @@ Mọi validation phải trả lời được:
 Vấn đề gì → nằm ở đâu → ảnh hưởng gì → sửa thế nào
 ```
 
-Nếu thay đổi `Tên thiết bị`, `Hãng`, `Model`, `Xuất xứ` hoặc thông số identity quan trọng làm lệch dữ liệu đã kế thừa, phải confirm trước khi commit thay đổi.
+Nếu thay đổi `Tên thiết bị`, `Hãng`, `Model`, `Xuất xứ` hoặc thông số identity quan trọng làm lệch dữ liệu đã kế thừa, phải confirm trước khi commit thay đổi và nói rõ rằng giá/căn cứ hiện tại có thể phải phân tích lại.
 
 ### 8.7 Kho tri thức / Asset Identity candidate
 
@@ -259,7 +364,7 @@ Trong drawer có block summary như:
 - `Mức độ hoàn thiện`;
 - `Kho tri thức (Candidate)`;
 - `Nguồn giá đã có`;
-- `Đơn giá sơ bộ`.
+- `Đơn giá kết quả thẩm định`.
 
 Trạng thái nghiệp vụ hỗ trợ:
 
@@ -277,7 +382,7 @@ Hiển thị tối thiểu:
 
 - số nguồn Internet hiện có;
 - số Thuyết minh đơn giá;
-- giá sơ bộ kế thừa;
+- mức giá đã được người dùng ấn định/kế thừa;
 - trạng thái nguồn: còn truy cập / cần kiểm tra / chỉ còn snapshot lịch sử;
 - candidate/source liên quan tới đúng tài sản.
 
@@ -313,7 +418,7 @@ S13 phải có trạng thái thiết kế cho:
 - nguồn Internet cũ/mất truy cập nhưng còn snapshot;
 - tải candidate/source lỗi;
 - stale data / dữ liệu vừa thay đổi ở nơi khác nếu hệ thống phát hiện;
-- warning khi identity thay đổi làm candidate/nguồn/giá sơ bộ cần tái kiểm tra.
+- warning khi identity thay đổi làm candidate/nguồn/giá đã kế thừa cần tái kiểm tra.
 
 Thông báo dùng tiếng Việt nghiệp vụ, không hiển thị HTTP/SQL/stack trace/row_version.
 
@@ -324,9 +429,10 @@ Người dùng phải có khả năng truy vết logic dữ liệu:
 ```text
 Raw source / Excel
 → Dữ liệu chuẩn hóa
-→ Candidate Kho tri thức / nguồn giá / giá sơ bộ
-→ Quyết định người dùng
-→ Dữ liệu chính thức tiếp theo
+→ Candidate Kho tri thức / nguồn giá
+→ Mức giá do người dùng ấn định
+→ Kết quả thẩm định
+→ Báo cáo / Chứng thư
 ```
 
 Không cần hiển thị thuật ngữ database/API trong UI; có thể thể hiện dưới dạng `Nguồn dữ liệu`, `Lịch sử thay đổi`, `Đã kế thừa từ`, `Đã xác nhận bởi người dùng`.
@@ -339,13 +445,13 @@ S13 **được phép**:
 - chỉnh normalized fields;
 - xem raw source;
 - xem và quyết định candidate Kho tri thức;
-- xem summary nguồn giá/Thuyết minh/giá sơ bộ;
+- xem summary nguồn giá/Thuyết minh/giá đã ấn định;
 - deep-link sang đúng tài sản ở Nguồn giá & Chứng cứ.
 
 S13 **không được**:
 
-- trở thành màn hình xác nhận giá chính thức;
-- tự tính/chốt Appraised Price;
+- trở thành màn hình xác nhận giá lần thứ hai;
+- tự tính/chốt giá thay người dùng;
 - auto-accept identity candidate;
 - auto-apply nguồn giá;
 - ghi đè raw source;
@@ -353,7 +459,22 @@ S13 **không được**:
 - biến thành wizard dài nhiều bước;
 - tạo menu/navigation độc lập.
 
-## 9. Validation phân tán — không có bước Kiểm tra riêng
+## 9. Nguồn giá & Chứng cứ
+
+Đây vẫn là checkpoint nghiệp vụ sau S12/S13 để người dùng hoàn thiện, kiểm tra và truy vết căn cứ giá của tài sản.
+
+Mục tiêu của checkpoint này **không phải xác nhận giá lần thứ hai**, mà là:
+
+- bổ sung/kiểm tra nguồn Internet;
+- bổ sung hoặc rà soát Thuyết minh đơn giá;
+- bảo đảm nguồn/chứng cứ gắn đúng tài sản;
+- nhận biết nguồn cũ/mất truy cập nhưng còn snapshot;
+- xử lý các dòng `Cần phân tích giá` do mới bổ sung hoặc thay đổi identity;
+- bảo đảm mỗi mức giá dùng làm kết quả thẩm định có provenance phù hợp trước Hoàn tất hồ sơ.
+
+Nếu giá cần thay đổi tại đây, thay đổi đó phải do người dùng ấn định và ghi nhận lineage; sau khi lưu, giá mới chính là kết quả thẩm định của tài sản, không cần qua một S14 riêng.
+
+## 10. Validation phân tán — không có bước Kiểm tra riêng
 
 Không có màn hình `Kiểm tra hồ sơ` riêng nhưng validation vẫn bắt buộc.
 
@@ -361,25 +482,14 @@ Không có màn hình `Kiểm tra hồ sơ` riêng nhưng validation vẫn bắt
 - `Warning`: vẫn cho tiếp tục nhưng nêu rõ rủi ro/cần kiểm tra.
 - `Info`: chỉ cung cấp trạng thái.
 
-S10 chỉ tổng hợp readiness. S12/S13/S14 và các màn hình sau hiển thị issue ngay tại nơi phát sinh và có `Đi tới` đúng chỗ sửa khi cần.
+S10 chỉ tổng hợp readiness. S12/S13, Nguồn giá & Chứng cứ và các màn hình sau hiển thị issue ngay tại nơi phát sinh và có `Đi tới` đúng chỗ sửa khi cần.
 
-## 10. Cụm giá Pre-case tiếp tục giữ nguyên
+Ví dụ blocking trước `Hoàn tất hồ sơ`:
 
-```text
-Đơn giá KH dự kiến
-→ Giá tham chiếu Kho tri thức
-→ Giá thị trường tham khảo
-→ Vận chuyển (%)
-→ Đơn giá đề xuất
-```
-
-Không có `Chênh lệch`; không hiển thị `Chi phí vận chuyển` hoặc `Giá sau vận chuyển`.
-
-```text
-Đơn giá đề xuất = Giá thị trường × (1 + Vận chuyển % / 100)
-```
-
-Giá sơ bộ kế thừa vào hồ sơ chính thức chỉ là tham khảo, không phải giá thẩm định chính thức.
+- còn tài sản `Cần phân tích giá`;
+- tài sản trong phạm vi kết quả chưa có mức giá do người dùng ấn định;
+- thay đổi identity quan trọng nhưng giá/căn cứ chưa được rà soát lại;
+- thiếu dữ liệu bắt buộc để sinh Báo cáo/Chứng thư.
 
 ## 11. Guardrail UX / dữ liệu
 
@@ -388,12 +498,14 @@ Giá sơ bộ kế thừa vào hồ sơ chính thức chỉ là tham khảo, kh�
 - Không ghi đè dữ liệu gốc khách hàng bằng dữ liệu chuẩn hóa.
 - Staging và dữ liệu chính thức phải phân biệt.
 - Giá lịch sử Kho tri thức chỉ là tham khảo.
+- Mức giá dùng làm kết quả thẩm định phải do người dùng ấn định và có lineage.
+- Không buộc người dùng xác nhận lại một mức giá đã được chính họ ấn định nếu không có thay đổi nghiệp vụ làm mất hiệu lực của giá đó.
 - Nguồn Internet mất truy cập vẫn giữ lịch sử URL/snapshot và đánh dấu cần kiểm tra.
 - Vietnamese-first, không hiển thị HTTP/SQL/stack trace/row_version cho người dùng.
 - Mỗi màn hình/context có một primary CTA nổi bật.
 - Hành động rủi ro cao phải confirm rõ thay đổi và khả năng hoàn tác.
 - S09–S13 dùng cùng Valora shell theo Fluent 2, desktop-first cho grid/workbench.
-- Final price, hoàn tất, phát hành và các quyết định chính thức đều human-confirmed và có lineage.
+- Hoàn tất, phát hành và các quyết định chính thức đều human-confirmed và có lineage.
 
 ## 12. Screen inventory v2.3
 
@@ -402,16 +514,16 @@ Giá sơ bộ kế thừa vào hồ sơ chính thức chỉ là tham khảo, kh�
 | S02 | Quản lý yêu cầu sơ bộ | P0 — work queue + rà soát tích hợp + tạo/quản lý file kết quả + CTA chuyển chính thức |
 | S03 | Tạo yêu cầu sơ bộ | P0 |
 | S04 | Upload & Mapping Excel | P0 |
-| S05 | Phân tích danh mục & Giá sơ bộ | P0 |
+| S05 | Phân tích danh mục & Giá sơ bộ | P0 — người dùng phân tích và ấn định giá; mức giá này được kế thừa làm kết quả thẩm định |
 | S06 | Panel Kho tri thức | P0 |
 | S07 | Panel Nguồn giá & Thêm nguồn | P0 |
 | S08 | Rà soát & tạo file kết quả sơ bộ | Không có màn hình riêng; tích hợp S02 |
-| S09 | Chuyển sang thẩm định chính thức | P0 — mockup/field layout đã duyệt |
-| S10 | Tổng quan hồ sơ | P0 — workflow dashboard 8 checkpoint |
-| S11 | Xác nhận & điều chỉnh danh mục triển khai | P0 — giữ/thêm/loại + lineage; chốt phạm vi, không chốt giá |
-| S12 | Workbench tài sản | P0 — grid desktop-first + raw vs normalized + context entry point |
+| S09 | Chuyển sang thẩm định chính thức | P0 — mockup/field layout đã duyệt; kế thừa giá đã ấn định |
+| S10 | Tổng quan hồ sơ | P0 — workflow dashboard 7 checkpoint |
+| S11 | Xác nhận & điều chỉnh danh mục triển khai | P0 — giữ/thêm/loại + lineage; chốt phạm vi |
+| S12 | Workbench tài sản | P0 — grid desktop-first + raw vs normalized + context entry point + kiểm tra tính phù hợp của giá kế thừa |
 | S13 | Asset Context Drawer | **P0 — baseline đã duyệt trong v2.3; drawer trong S12, không phải màn hình độc lập** |
-| S14 | So sánh & Xác nhận giá | P0 — giá sơ bộ vs giá chính thức + rationale; thiết kế chi tiết là bước tiếp theo |
+| S14 | So sánh & Xác nhận giá | **Không dùng trong giai đoạn hiện tại; không có checkpoint xác nhận giá lần thứ hai** |
 | S15 | Kiểm tra hồ sơ | **Không dùng trong workflow single-user v2.3; validation phân tán** |
 | S16 | KSCL Checklist | **Không dùng trong workflow single-user v2.3** |
 | S17 | Hoàn tất hồ sơ | P0 — readiness summary + confirmations + blocking issues tổng hợp |
@@ -424,7 +536,7 @@ Giá sơ bộ kế thừa vào hồ sơ chính thức chỉ là tham khảo, kh�
 Baseline mockup đã được duyệt:
 
 - S09 — Chuyển sang thẩm định chính thức, Fluent 2.
-- S10 — Tổng quan hồ sơ, workflow rút gọn 8 checkpoint.
+- S10 — Tổng quan hồ sơ, workflow rút gọn.
 - S11 — Xác nhận & điều chỉnh danh mục triển khai, full-screen riêng.
 - S12 — Workbench tài sản, data grid lớn với raw vs normalized.
 - **S13 — Asset Context Drawer mở từ S12; drawer bên phải + S12 giữ nguyên ở nền.**
@@ -435,10 +547,12 @@ S13 baseline cụ thể:
 - raw vs normalized trong drawer;
 - trạng thái và mức hoàn thiện;
 - candidate Kho tri thức;
-- nguồn giá/giá sơ bộ summary;
+- nguồn giá/giá kết quả thẩm định summary;
 - tab `Tổng quan / Thông số kỹ thuật / Nguồn giá & Chứng cứ / Lịch sử`;
 - `Hủy thay đổi / Lưu thông tin / Đóng ngữ cảnh`;
 - không làm mất context S12.
+
+Mockup S14 đã thử nghiệm trước quyết định nghiệp vụ mới **không phải baseline** và không được dùng làm authority cho giai đoạn hiện tại.
 
 ## 14. Trạng thái triển khai
 
@@ -446,18 +560,16 @@ S13 baseline cụ thể:
 
 Các guardrail kỹ thuật hiện có trong repository vẫn tiếp tục có hiệu lực: tenant isolation fail-closed; staging không phải official; Apply human-confirmed; restricted Workbench fields đi qua human-controlled mutation path; AI advisory-only; source evidence phải có provenance.
 
+Quyết định UI/UX rằng giá đã được người dùng ấn định từ Pre-case được kế thừa làm kết quả thẩm định **không cấp quyền cho AI/system tự ấn định hoặc tự sửa giá**; mọi thay đổi giá vẫn là quyết định của người dùng và phải giữ provenance/audit theo guardrail kỹ thuật hiện hành.
+
 ## 15. Nhiệm vụ UI/UX tiếp theo sau v2.3
 
-Sau khi S13 đã được chốt, bước thiết kế tiếp theo là **S14 — So sánh & Xác nhận giá thẩm định chính thức**.
+**Không thiết kế S14 trong giai đoạn hiện tại.**
 
-S14 cần được thiết kế theo các nguyên tắc đã khóa:
+Sau S13, ưu tiên thiết kế tiếp:
 
-- phân biệt rõ `Giá sơ bộ` và `Giá thẩm định chính thức`;
-- dựa trên nguồn giá/chứng cứ đã được rà soát;
-- người dùng phải explicit confirm giá chính thức;
-- có rationale/ghi chú quyết định;
-- không auto-price;
-- có validation/readiness rõ trước khi cho chốt;
-- giữ lineage từ raw/normalized asset → nguồn/chứng cứ → giá sơ bộ → quyết định giá chính thức.
+1. hoàn thiện trải nghiệm checkpoint `Nguồn giá & Chứng cứ` trong hồ sơ chính thức, đặc biệt cho tài sản mới hoặc tài sản bị thay đổi identity;
+2. sau đó thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary và blocking validation;
+3. tiếp theo mới tới S18 — `Báo cáo & Chứng thư`.
 
-Không nhảy sang S17/S18 trước khi S14 được người dùng duyệt.
+S17 phải kiểm tra readiness nhưng không biến thành màn hình `Kiểm tra hồ sơ` cũ. Mọi lỗi cụ thể vẫn phát sinh/được sửa tại đúng S09–S13 hoặc Nguồn giá & Chứng cứ, còn S17 chỉ tổng hợp và dẫn `Đi tới`.
