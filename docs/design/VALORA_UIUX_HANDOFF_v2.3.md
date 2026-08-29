@@ -6,7 +6,7 @@
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
-> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, đồng thời bổ sung business rule cho checkpoint mới `Tạo & quản lý báo giá nhà cung cấp` trước `Hoàn tất hồ sơ`. Phiên bản này cũng bổ sung IA/flow chi tiết cho module `Quản lý mẫu báo giá nhà cung cấp`; mockup của module template chưa được coi là baseline cuối cho tới khi người dùng duyệt.
+> v2.3 kế thừa baseline v2.2, chốt S13 — `Asset Context Drawer / Ngữ cảnh tài sản`, loại S14 khỏi workflow hiện tại, khóa cơ chế `Đơn giá hiện hành` có thể được người dùng sửa trong quá trình xử lý hồ sơ, chốt baseline `Nguồn giá & Chứng cứ`, đồng thời **chốt baseline authority cho checkpoint `Tạo & quản lý báo giá nhà cung cấp` (NCCQ) theo mockup Iteration 6**. Phiên bản này cũng bổ sung IA/flow chi tiết cho module `Quản lý mẫu báo giá nhà cung cấp`; mockup của module template chưa được coi là baseline cuối cho tới khi người dùng duyệt.
 
 ## 0. Quyết định v2.3 đã duyệt / đã khóa
 
@@ -35,7 +35,7 @@
 - `Hồ sơ cũ / Giá lịch sử` không bị ẩn trong Kho tri thức; người dùng phải biết hồ sơ cũ cụ thể nào đang được tham khảo.
 - Giá từ mọi nguồn chỉ là căn cứ tham khảo/giải trình; `Đơn giá hiện hành` vẫn do người dùng quyết định và có thể sửa.
 
-### 0.3 Tạo & quản lý báo giá nhà cung cấp — business rule đã khóa
+### 0.3 Tạo & quản lý báo giá nhà cung cấp — business rule + visual baseline đã khóa
 
 - Sau `Nguồn giá & Chứng cứ`, workflow có checkpoint **`Tạo & quản lý báo giá nhà cung cấp`** trước `Hoàn tất hồ sơ`.
 - Mẫu hồ sơ nghiệp vụ người dùng cung cấp xác nhận pattern cuối cùng gồm **03 đơn vị báo giá và bảng so sánh 03 cột giá**. Tài liệu repository không chứa tên NCC/hồ sơ thật.
@@ -62,6 +62,7 @@
 - Việc chọn được lưu theo `NCC → báo giá cụ thể → các dòng thiết bị → đơn giá NCC đã xác nhận → file ký/đóng dấu`, không chỉ lưu tên NCC.
 - **`STT` của thiết bị là thứ tự/lineage bất biến của danh mục gốc.** Gộp thiết bị, tách báo giá, chuyển báo giá, nhóm theo NCC, nhóm theo hồ sơ cũ hoặc sort theo giá không được đánh lại hay thay đổi STT gốc.
 - Các thao tác báo giá chỉ thay quan hệ `Tài sản → Báo giá`; chúng không thay lineage/order của danh mục ban đầu. UI có thể thay thứ tự hiển thị khi sort/filter, nhưng số `STT` hiển thị cho từng tài sản vẫn giữ nguyên giá trị gốc.
+- **Mockup NCCQ Iteration 6 đã được người dùng duyệt và nâng thành baseline authority.** Các iteration NCCQ trước đó chỉ còn giá trị lịch sử/tham khảo và không được dùng để override baseline này.
 
 ### 0.4 Mẫu báo giá nhà cung cấp — capability và IA/flow đã thống nhất, mockup chưa chốt baseline
 
@@ -504,7 +505,7 @@ Hiển thị Nguồn Internet, Hồ sơ cũ/Giá lịch sử, Thuyết minh đan
 
 Không được: auto-price; tự copy giá hồ sơ cũ; auto-accept căn cứ; xóa im lặng evidence/history; biến giá lịch sử thành giá hiện hành không có thao tác người dùng.
 
-## 10. Tạo & quản lý báo giá nhà cung cấp — business rule đã khóa, mockup đang tiếp tục thiết kế
+## 10. Tạo & quản lý báo giá nhà cung cấp — baseline authority đã duyệt
 
 ### 10.1 Mục tiêu
 
@@ -512,9 +513,9 @@ Checkpoint này biến dữ liệu giá/căn cứ đã có thành các **báo gi
 
 Không dùng checkpoint này để tự thay `Đơn giá hiện hành`.
 
-### 10.2 Bố cục ưu tiên
+### 10.2 Bố cục baseline
 
-Người dùng đã chọn hướng **table-first**: phần lõi là bảng so sánh danh mục bám gần cấu trúc Excel nghiệp vụ, ưu tiên tối đa diện tích viewport cho bảng và hạn chế card giải thích chiếm chỗ.
+Baseline dùng **Fluent 2, desktop-first, table-first**, bám visual language của S11/S12/S13 và cấu trúc Excel nghiệp vụ. Bảng là bề mặt làm việc chính; hạn chế tối đa card giải thích cố định chiếm viewport.
 
 Cấu trúc tham chiếu chính:
 
@@ -533,11 +534,14 @@ STT
 | Đơn giá hiện hành
 ```
 
-- Các cột NCC phải hiển thị **số tiền trực tiếp**, không chỉ badge trạng thái.
+- Các cột NCC hiển thị **số tiền trực tiếp**, không chỉ badge trạng thái.
 - Semantic giá hiển thị ngay dưới/đi kèm số tiền bằng badge nhỏ: `Giá lịch sử`, `Giá đề nghị — chờ NCC xác nhận`, `Giá NCC đã xác nhận`.
-- Các nhóm/hạng mục như `HỆ THỐNG ...`, `I. ...`, `II. ...` phải có thể hiển thị dạng dòng section/header tương tự Excel thực tế.
-- Lineage, hồ sơ cũ nguồn, báo giá cũ và cảnh báo chi tiết ưu tiên đưa vào tooltip/drawer/context panel thay vì mở rộng bảng chính quá mức.
-- Mockup trước đó chưa được chốt baseline cuối cùng; tiếp tục tinh chỉnh từ hướng table-first.
+- Các nhóm/hạng mục như `HỆ THỐNG ...`, `I. ...`, `II. ...` hiển thị dạng section/header row tương tự Excel thực tế.
+- `STT` và `Tên tài sản` nằm ở vùng trái dễ đối chiếu; `STT` có affordance thể hiện bất biến.
+- Lineage, hồ sơ cũ nguồn, báo giá cũ và cảnh báo chi tiết ưu tiên đưa vào **drawer phải theo dòng đang chọn** thay vì mở rộng bảng chính quá mức.
+- Toolbar phía trên bảng ưu tiên search/filter, nhóm theo NCC, batch actions và `Thiết lập cột`.
+- Primary CTA của checkpoint là **`Chọn nhà cung cấp đã xác nhận giá`** khi điều kiện cho phép; các action `Xuất Excel`, `Tạo file theo template` là secondary actions.
+- Baseline không đặt các card giải thích dài phía dưới bảng; khu vực cuối bảng chỉ giữ tổng tiền, legend trạng thái và pagination cần thiết.
 
 ### 10.3 Hệ thống sinh báo giá nháp trước
 
@@ -588,9 +592,7 @@ Rule thao tác:
 - tách báo giá là thay đổi quan hệ `Tài sản → Báo giá`, không phải tái tạo tài sản hay đánh lại thứ tự;
 - **mọi thao tác gộp/tách/chuyển/nhóm không được thay `STT` gốc.**
 
-### 10.7 Bảng làm việc đề xuất
-
-Bảng chính của iteration tiếp theo ưu tiên gần Excel nghiệp vụ:
+### 10.7 Bảng làm việc baseline
 
 ```text
 Checkbox
@@ -614,10 +616,12 @@ Quy tắc hiển thị:
 - `STT` là giá trị immutable từ danh mục gốc; nên pin/freeze gần mép trái cùng `Tên tài sản` để người dùng đối chiếu nhanh.
 - Sort theo giá/NCC/trạng thái chỉ thay thứ tự hàng trên màn hình, **không renumber STT**.
 - Mỗi cột NCC hiển thị số tiền trực tiếp; dưới số tiền có badge semantic nhỏ khi cần.
-- Warning chênh lệch có icon/badge ngay cell giá NCC; hover/click mở chi tiết `Giá sơ bộ → Giá NCC lịch sử → Chênh lệch tiền → %`.
-- Dòng tài sản có thể mở context để xem `Hồ sơ cũ nguồn → Báo giá cũ → NCC → Giá lịch sử → Báo giá hiện tại`.
+- Warning chênh lệch có icon/badge ngay cell giá NCC; hover/click hoặc chọn dòng mở chi tiết `Giá sơ bộ → Giá NCC lịch sử → Chênh lệch tiền → %` trong context/drawer.
+- Dòng tài sản có thể mở `Lineage & tổng hợp` để xem `Hồ sơ cũ nguồn → Báo giá cũ → NCC → Giá lịch sử → Báo giá hiện tại`, giá trị đối chiếu, trạng thái dòng và file evidence.
 - Dòng section/header không có giá, không bị đánh STT mới và giữ đúng cấu trúc hạng mục từ danh mục gốc.
 - Toolbar phía trên bảng chứa thao tác batch `Đưa vào báo giá`, `Chuyển báo giá`, `Tách báo giá`; thông tin hướng dẫn dài không đặt thành card cố định dưới bảng.
+- Hàng tổng cuối bảng hiển thị tối thiểu `Tổng tiền (Đơn giá chọn)` và `Tổng tiền (Hiện hành)`; chênh lệch tổng có thể hiển thị khi hữu ích.
+- Legend trạng thái ở cuối bảng giải nghĩa compact: `Đã xác nhận`, `Chờ xác nhận`, `Đề nghị`, `Chưa có`.
 
 ### 10.8 Cảnh báo chênh lệch
 
@@ -634,7 +638,7 @@ Không tự đặt ngưỡng %. Warning là thông tin để người dùng bi�
 
 Khi cấu trúc báo giá đã sẵn sàng:
 
-- người dùng bấm `Tạo file báo giá`;
+- người dùng bấm `Tạo file báo giá` / `Tạo file theo template`;
 - hệ thống dùng template của NCC nếu đã cấu hình;
 - preview tối thiểu: NCC, danh sách thiết bị, SL/ĐVT, đơn giá, thành tiền, tổng cộng;
 - thứ tự/STT trong file output phải giữ STT gốc của danh mục, kể cả khi báo giá chỉ chứa một subset tài sản;
@@ -717,6 +721,24 @@ Checkpoint không được:
 - xóa lineage nguồn lịch sử khi người dùng gộp báo giá;
 - đánh lại/đổi `STT` gốc khi gộp, tách, chuyển, group hoặc sort;
 - tự chọn NCC thay người dùng.
+
+### 10.15 Visual baseline authority — NCCQ Iteration 6
+
+**Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`.
+
+Baseline trực quan chính thức của NCCQ là mockup Iteration 6, dùng cùng Valora shell/Fluent 2 với S11–S13:
+
+- sidebar trái và top app bar thống nhất với các màn hình đã duyệt;
+- header gọn, không dùng dashboard-card-heavy layout;
+- step indicator compact cho chu trình `Tạo báo giá nháp → Gửi báo giá cho NCC → Chọn NCC đã xác nhận giá`;
+- bảng chiếm phần lớn viewport;
+- drawer `Lineage & tổng hợp` mở bên phải theo dòng đang chọn và không thay thế bảng chính;
+- drawer hiển thị lineage hồ sơ cũ/báo giá cũ/NCC/báo giá hiện tại, giá sơ bộ, giá lịch sử, chênh lệch, trạng thái dòng và file ký/đóng dấu;
+- các giá trị/số hiệu trong mockup là dữ liệu giả lập phục vụ minh họa, không phải dữ liệu khách hàng/NCC/hồ sơ thật.
+
+![NCCQ — Baseline Authority v2.3](./assets/VALORA_NCCQ_BASELINE_v2.3.jpg)
+
+Các iteration NCCQ trước Iteration 6 trong phụ lục/lịch sử thiết kế **không còn là authority**. Khi có mâu thuẫn visual, Iteration 6 + business rule §10 là nguồn quyết định.
 
 ## 11. Quản lý mẫu báo giá nhà cung cấp — IA/UX đã thiết kế, mockup chưa chốt baseline
 
@@ -1090,7 +1112,7 @@ Rule blocking chi tiết của S17 sẽ được khóa khi thiết kế S17; kh�
 | S12 | Workbench tài sản | P0 — grid desktop-first + raw vs normalized + Đơn giá hiện hành |
 | S13 | Asset Context Drawer | **P0 — baseline đã duyệt; drawer trong S12** |
 | NGC | Nguồn giá & Chứng cứ | **P0 — baseline đã duyệt** |
-| NCCQ | Tạo & quản lý báo giá nhà cung cấp | **P0 — business rule đã khóa; mockup table-first đang tiếp tục thiết kế, chưa chốt baseline cuối** |
+| NCCQ | Tạo & quản lý báo giá nhà cung cấp | **P0 — baseline authority đã duyệt; Fluent 2 table-first + drawer Lineage & tổng hợp; Iteration 6** |
 | TM01 | Danh sách mẫu báo giá NCC | **P0 — IA/flow đã thiết kế; mockup chưa duyệt baseline** |
 | TM02 | Tạo/chỉnh thông tin mẫu báo giá | **P0 — IA/field structure đã thiết kế; mockup chưa duyệt baseline** |
 | TM03 | Upload & Mapping template | **P0 — IA/UX đã thiết kế; mockup chưa duyệt baseline** |
@@ -1116,17 +1138,25 @@ Baseline đã duyệt:
 - S12 — Workbench tài sản, data grid lớn với raw vs normalized.
 - S13 — Asset Context Drawer mở từ S12; drawer phải + S12 giữ context.
 - Nguồn giá & Chứng cứ — full-screen theo asset context, ba nhóm căn cứ ngang hàng và panel Hồ sơ cũ/Giá lịch sử.
+- **NCCQ — Tạo & quản lý báo giá nhà cung cấp — Iteration 6: baseline authority đã duyệt.**
 
-Đối với `Tạo & quản lý báo giá nhà cung cấp`:
+### 15.1 NCCQ — authority visual đã chốt
 
-- người dùng đã yêu cầu **bố cục dạng bảng/table-first**;
-- business rule đã khóa ở §10;
-- các mockup thử nghiệm trước chưa được coi là baseline cuối;
-- iteration tiếp theo phải bám bảng giống Excel nghiệp vụ, 03 cột NCC hiển thị số tiền trực tiếp, section/header row, semantic giá rõ ràng;
-- cùng NCC phải được tổng hợp vào cùng báo giá hiện tại phù hợp, không sinh duplicate quote chỉ vì khác hồ sơ nguồn;
-- `STT` phải giữ bất biến theo danh mục gốc trong mọi thao tác gộp/tách/chuyển/group/sort;
-- lineage/cảnh báo chi tiết ưu tiên bằng drawer/tooltip/context panel để không làm bảng chính quá rộng;
-- chỉ khi người dùng nói **`chốt baseline`** mới nâng mockup NCCQ thành baseline authority.
+Mockup NCCQ Iteration 6 là authority trực quan cho checkpoint báo giá nhà cung cấp:
+
+- **table-first**, bảng gần Excel nghiệp vụ;
+- 03 cột NCC hiển thị số tiền trực tiếp và semantic trạng thái compact;
+- section/header row giữ cấu trúc danh mục;
+- dedupe/tổng hợp cùng NCC;
+- `STT` bất biến theo danh mục gốc;
+- drawer phải `Lineage & tổng hợp` cho context dòng, warning, provenance và file evidence;
+- primary CTA `Chọn nhà cung cấp đã xác nhận giá`;
+- cùng Fluent 2 / Valora shell với các baseline S11–S13;
+- không dùng card giải thích dài phía dưới làm giảm diện tích bảng.
+
+![NCCQ — Baseline Authority v2.3](./assets/VALORA_NCCQ_BASELINE_v2.3.jpg)
+
+Các mockup NCCQ iteration 1–5 và các iteration trung gian trước đó được giữ **chỉ để truy vết lịch sử thiết kế**. Chúng không được dùng làm authority nếu mâu thuẫn với Iteration 6 hoặc business rule §10.
 
 Đối với `Quản lý mẫu báo giá nhà cung cấp`:
 
@@ -1144,9 +1174,9 @@ Các guardrail kỹ thuật hiện có trong repository vẫn có hiệu lực: 
 
 ### Nhiệm vụ thiết kế tiếp theo
 
-1. **Quay lại và hoàn thiện mockup `Tạo & quản lý báo giá nhà cung cấp`** theo bố cục table-first và business rule §10, đặc biệt hai rule mới: dedupe/tổng hợp theo cùng NCC và `STT` bất biến.
-2. Sau khi NCCQ được duyệt baseline, dựng mockup module template theo §11, ưu tiên `TM01 — Danh sách mẫu`, `TM03 — Upload & Mapping`, `TM04 — Preview / Test fill`.
+1. **NCCQ đã chốt baseline authority. Chuyển sang module `Quản lý mẫu báo giá nhà cung cấp` theo §11**, ưu tiên `TM01 — Danh sách mẫu báo giá NCC`.
+2. Sau TM01, tiếp tục `TM03 — Upload & Mapping template`, sau đó `TM04 — Preview / Test fill dữ liệu`; chỉ nâng từng mockup thành baseline khi người dùng duyệt rõ.
 3. Sau khi checkpoint báo giá NCC và luồng template đủ rõ, thiết kế **S17 — Hoàn tất hồ sơ** với readiness summary, bao gồm trạng thái báo giá/NCC đã xác nhận nếu đây là dependency bắt buộc.
 4. Tiếp theo là S18 — `Báo cáo & Chứng thư`, S19 — `Phát hành`, S20 — `Lịch sử & Lưu trữ`.
 
-Không nhảy sang S17 trước khi checkpoint báo giá NCC được người dùng duyệt baseline.
+Không nhảy sang S17 trước khi module template đủ rõ để xác định chính xác dependency tạo/nhận/chọn báo giá ở bước hoàn tất hồ sơ.
