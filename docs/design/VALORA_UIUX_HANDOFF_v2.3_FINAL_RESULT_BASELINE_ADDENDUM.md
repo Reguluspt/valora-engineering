@@ -131,3 +131,28 @@ Các mockup bước cuối trước baseline này không còn authority nếu c�
 ## H. Nhiệm vụ tiếp theo
 
 Sau khi baseline này được chốt, UI/UX nên chuyển sang **cách tạo/preview Báo cáo thẩm định giá & Chứng thư từ dữ liệu đã khóa**, hoặc module/output tiếp theo mà người dùng yêu cầu; không quay lại chèn thêm một màn NCCQ aggregate trung gian nếu chưa có business rule mới.
+
+## I. Price & Evidence authority — cập nhật mới nhất
+
+Authority chi tiết: [`VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md`](./VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md).
+
+Thứ tự ưu tiên nguồn giá/chứng cứ dùng để người dùng quyết định giá thẩm định:
+
+1. **Giá khảo sát từ Internet**;
+2. **Thuyết minh đơn giá**;
+3. **Giá trong phần Kết quả thẩm định giá của hồ sơ cũ**.
+
+Giá của các nhà cung cấp **không phải nguồn chính để xác định Đơn giá thẩm định cuối cùng**. Giá NCC phục vụ tạo/tái tạo báo giá NCC và đối chiếu tính phù hợp của Kết quả định giá.
+
+CTA `Chọn nhà cung cấp đã xác nhận giá` không có semantic tự động lấy giá NCC làm giá thẩm định.
+
+Rule kiểm tra:
+
+```text
+Đơn giá Kết quả định giá <= Đơn giá trong báo giá NCC dùng để đối chiếu
+→ Phù hợp
+```
+
+Nếu Đơn giá Kết quả cao hơn báo giá NCC thuộc tập đối chiếu bắt buộc, UI phải validation tại dependency phù hợp; hệ thống không tự sửa giá.
+
+Các semantic cũ hiểu `Nguồn Internet / Hồ sơ cũ / Thuyết minh` là ngang hàng không có thứ tự ưu tiên, hoặc coi giá NCC là nguồn chính của giá thẩm định, bị superseded bởi authority này.
