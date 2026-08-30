@@ -3,7 +3,7 @@
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Fluent 2, desktop-first, data-heavy workflow  
-**Trạng thái:** Canonical master handoff — **Consolidation v2.3 + AI-TPL-4 + 03_Hợp đồng + Managed Regions + Sync/Version + Phát hành bộ tài liệu Baseline**; không đồng nghĩa product code đã implement  
+**Trạng thái:** Canonical master handoff — **Consolidation v2.3 + AI-TPL-4 + 03_Hợp đồng + Managed Regions Báo cáo/Chứng thư + Sync/Version + Phát hành bộ tài liệu Baseline**; không đồng nghĩa product code đã implement  
 **Cập nhật:** 31/08/2026
 
 > Master này consolidate authority v2.3 hiện hành. Addendum được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
@@ -27,6 +27,7 @@ Các baseline/authority đã khóa:
 - Microsoft 365 Document Workspace / Bộ tài liệu phát hành — baseline authority.
 - **03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1 Baseline / Design Authority.**
 - **Managed Regions — Báo cáo thẩm định giá — Iteration 1 Baseline / Design Authority.**
+- **Managed Regions — Chứng thư thẩm định giá — Iteration 1 Baseline / Design Authority.**
 - **Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1 Baseline / Design Authority.**
 - **Phát hành bộ tài liệu — Iteration 1 Baseline / Design Authority.**
 - Quản lý mẫu tài liệu generic — Iteration 1.
@@ -45,7 +46,7 @@ Supersession/guardrail quan trọng:
 - AI/Kho tri thức chỉ gợi ý; user quyết định nghiệp vụ chính thức.
 - `Bảng tính` là terminology nghiệp vụ chính thức cho template Excel.
 - `03_Hợp đồng` quản lý working documents; signed scan thuộc `05_Pháp lý`.
-- Managed Regions chỉ cập nhật vùng do VALORA quản lý; narrative ngoài vùng không bị silent overwrite.
+- Managed Regions Báo cáo/Chứng thư chỉ cập nhật vùng do VALORA quản lý; narrative ngoài vùng không bị silent overwrite.
 - Sync luôn explicit; user xem thay đổi và chọn nội dung trước khi ghi vào Word.
 - Document Revision và Microsoft 365 file version là hai lớp lineage liên kết nhưng không đồng nhất.
 - Revision/release đã phát hành không được silent mutate.
@@ -93,9 +94,11 @@ Trang chủ
    → Bảng Kết quả thẩm định giá
 → Microsoft 365 Document Workspace / Bộ tài liệu phát hành
    → 03_Hợp đồng — Danh sách & tạo tài liệu
-   → Báo cáo/Chứng thư
-      → Managed Regions
-      → Đồng bộ dữ liệu & Quản lý phiên bản tài liệu
+   → Báo cáo thẩm định giá
+      → Managed Regions — Báo cáo
+   → Chứng thư thẩm định giá
+      → Managed Regions — Chứng thư
+   → Đồng bộ dữ liệu & Quản lý phiên bản tài liệu
    → Phát hành bộ tài liệu
       → Chọn tài liệu
       → Kiểm tra tình trạng
@@ -225,25 +228,11 @@ Mental model:
 
 ## 11. Bước 3 — Rà soát & chỉnh sửa
 
-Checkpoint user-controlled. Preview lớn nhất; panel mapping có summary/search/filter/group/highlight. Status:
-
-```text
-Đã mapping | Cần xác nhận | Chưa mapping | Đã bỏ qua
-```
-
-Action: `Giữ nguyên/Xác nhận`, `Đổi gán dữ liệu`, `Không dùng vùng này`. User luôn có `+ Thêm dữ liệu cần điền`, hỗ trợ cả vị trí→dữ liệu và dữ liệu→vị trí. Nếu không có field chuẩn, cho phép `Tạo trường tùy chỉnh` nhưng không tự promote thành canonical field.
+Checkpoint user-controlled. Preview lớn nhất; panel mapping có summary/search/filter/group/highlight. Status: `Đã mapping | Cần xác nhận | Chưa mapping | Đã bỏ qua`. Action: `Giữ nguyên/Xác nhận`, `Đổi gán dữ liệu`, `Không dùng vùng này`. User luôn có `+ Thêm dữ liệu cần điền`, hỗ trợ cả vị trí→dữ liệu và dữ liệu→vị trí. Nếu không có field chuẩn, cho phép `Tạo trường tùy chỉnh` nhưng không tự promote thành canonical field.
 
 ## 12. Generic Word Mapping & Review
 
-Mental model: chọn mẫu → chọn dữ liệu → click vị trí → VALORA tạo mapping phía sau → kiểm tra. UI không bắt user hiểu Region ID/source path/Content Control kỹ thuật. Sync policy user-facing:
-
-```text
-Tự cập nhật khi dữ liệu thay đổi
-Chỉ điền lần đầu
-Người dùng tự chỉnh trong Word
-```
-
-Preview không phải Word editor. Validation `Blocking / Warning / Info`; chỉ hợp lệ khi Blocking=0.
+Mental model: chọn mẫu → chọn dữ liệu → click vị trí → VALORA tạo mapping phía sau → kiểm tra. UI không bắt user hiểu Region ID/source path/Content Control kỹ thuật. Sync policy user-facing: `Tự cập nhật khi dữ liệu thay đổi / Chỉ điền lần đầu / Người dùng tự chỉnh trong Word`. Preview không phải Word editor. Validation `Blocking / Warning / Info`; chỉ hợp lệ khi Blocking=0.
 
 ## 13. Bảng tính — Format-specific Authority
 
@@ -260,9 +249,7 @@ Engine giữ formula, không staticize/đổi rule; nhân dòng cập nhật rel
 
 ## 14. Bước 4 — Kiểm tra & hoàn tất
 
-Visual baseline dùng chung Word generic + Bảng tính; validator/fill semantics chuyên biệt. Severity `Blocking | Warning | Info`; chỉ hợp lệ khi Blocking=0.
-
-Layout: Header + stepper → Preview/Test fill + vùng/section → Kết quả kiểm tra + issue list → công cụ xử lý → footer. Vùng chưa thiết lập: `Gán dữ liệu / Bỏ qua có chủ đích / Đây là nội dung cố định`. Footer: `Quay lại | Lưu nháp | Chạy lại kiểm tra | Hợp lệ & Lưu template`. Không silent publish.
+Visual baseline dùng chung Word generic + Bảng tính; validator/fill semantics chuyên biệt. Severity `Blocking | Warning | Info`; chỉ hợp lệ khi Blocking=0. Layout: Header + stepper → Preview/Test fill + vùng/section → Kết quả kiểm tra + issue list → công cụ xử lý → footer. Vùng chưa thiết lập: `Gán dữ liệu / Bỏ qua có chủ đích / Đây là nội dung cố định`. Footer: `Quay lại | Lưu nháp | Chạy lại kiểm tra | Hợp lệ & Lưu template`. Không silent publish.
 
 ## 15. Kết quả thẩm định giá — immutable company forms
 
@@ -305,139 +292,76 @@ VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status v�
 
 Command bar: `Mở trong Word`, `Đồng bộ dữ liệu`, `Tạo phiên bản mới`, `So sánh`, `Khóa phiên bản`, `...`, `Phát hành bộ tài liệu`. **Không có `Xuất PDF`.**
 
-Thư mục:
-
-```text
-01_Hồ sơ gốc
-02_Tài liệu thẩm định
-03_Hợp đồng
-04_Báo giá nhà cung cấp
-05_Pháp lý
-```
-
-Generated working document và signed scan là hai artifact khác nhau; signed scan thuộc `05_Pháp lý`.
+Thư mục: `01_Hồ sơ gốc / 02_Tài liệu thẩm định / 03_Hợp đồng / 04_Báo giá nhà cung cấp / 05_Pháp lý`. Generated working document và signed scan là hai artifact khác nhau; signed scan thuộc `05_Pháp lý`.
 
 ### 16.2 03_Hợp đồng — Baseline Iteration 1
 
-Workspace quản lý working documents vòng đời hợp đồng; không thay Generic Template Management. Bảng:
-
-```text
-STT | Tên tài liệu | Loại tài liệu | Số/Ký hiệu |
-Trạng thái | Phiên bản | Cập nhật lần cuối | Tác vụ
-```
-
-Primary CTA `Tạo tài liệu`; preview view-only; chỉnh sửa qua Word. Lifecycle:
-
-```text
-Bản nháp → Cần đồng bộ → Đã đồng bộ → Sẵn sàng phát hành → Đã phát hành
-```
-
-Lineage:
-
-```text
-Template Version → Data Snapshot → Document Revision
-→ Microsoft 365 file/version → signed scan 05_Pháp lý (nếu có)
-```
+Workspace quản lý working documents vòng đời hợp đồng; không thay Generic Template Management. Bảng: `STT | Tên tài liệu | Loại tài liệu | Số/Ký hiệu | Trạng thái | Phiên bản | Cập nhật lần cuối | Tác vụ`. Primary CTA `Tạo tài liệu`; preview view-only; chỉnh sửa qua Word. Lifecycle `Bản nháp → Cần đồng bộ → Đã đồng bộ → Sẵn sàng phát hành → Đã phát hành`. Lineage `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version → signed scan 05_Pháp lý (nếu có)`.
 
 ### 16.3 Managed Regions — Báo cáo — Baseline Iteration 1
 
 User-facing title ưu tiên `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`.
 
 ```text
-1. Xem danh sách vùng
-→ 2. Xem nội dung hiện tại
-→ 3. Xem khác biệt
-→ 4. Chọn vùng cần cập nhật
-→ Đồng bộ
+1. Xem danh sách vùng → 2. Xem nội dung hiện tại
+→ 3. Xem khác biệt → 4. Chọn vùng cần cập nhật → Đồng bộ
 ```
 
-Trạng thái: `Đã đồng bộ / Cần đồng bộ / Bạn tự chỉnh trong Word / Lỗi`. Comparison: `Dữ liệu từ VALORA ↔ Dữ liệu đang có trong Word`. Action: `Cập nhật vào Word / Giữ nguyên trong Word / Bỏ qua vùng này lần này`. Không silent sync; narrative ngoài vùng giữ nguyên. Baseline trực tiếp cho Báo cáo; Chứng thư chưa tự thành visual baseline riêng.
+Trạng thái: `Đã đồng bộ / Cần đồng bộ / Bạn tự chỉnh trong Word / Lỗi`. Comparison: `Dữ liệu từ VALORA ↔ Dữ liệu đang có trong Word`. Action: `Cập nhật vào Word / Giữ nguyên trong Word / Bỏ qua vùng này lần này`. Không silent sync; narrative ngoài vùng giữ nguyên.
 
-### 16.4 Đồng bộ dữ liệu & Quản lý phiên bản — Baseline Iteration 1
+### 16.4 Managed Regions — Chứng thư thẩm định giá — Baseline Iteration 1
+
+User-facing title ưu tiên `Quản lý nội dung do VALORA quản lý (Chứng thư thẩm định giá)`; không bắt user hiểu thuật ngữ kỹ thuật Managed Region/Region ID ở bề mặt chính.
+
+Mental model:
 
 ```text
-1. Xem những gì đã thay đổi
-→ 2. Xem chi tiết khác biệt
-→ 3. Chọn nội dung muốn cập nhật
-→ 4. Cập nhật vào Word & tạo/ghi nhận phiên bản
+1. Xem các nội dung VALORA quản lý
+→ 2. Xem khác biệt
+→ 3. Chọn nội dung cần cập nhật
+→ 4. Đồng bộ vào Word
 ```
 
-Tài liệu hiển thị `Cần cập nhật` khi dữ liệu VALORA mới hơn dữ liệu đã đồng bộ và có khác biệt truy vết được. Mức thay đổi: `Thay đổi nhiều / Thay đổi một phần / Thay đổi nhỏ / Không thay đổi`.
+Layout baseline: header + `Mở trong Word` + một primary sync CTA; stepper 4 bước; danh sách vùng bên trái; comparison `Dữ liệu từ VALORA ↔ Nội dung đang có trong Word` ở trung tâm; vùng checkbox chọn cập nhật; panel phải có tình trạng Word, tóm tắt trạng thái, lịch sử đồng bộ và trợ giúp; footer có `Quay lại / Lưu lựa chọn / Đồng bộ vào Word (n vùng)`.
 
-Chỉ managed regions user chọn được ghi. Nếu user sửa trong managed region, hệ thống phát hiện khác biệt và yêu cầu xử lý trước khi ghi. Lineage giữ `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`. Revision đã phát hành không silent mutate.
-
-### 16.5 Phát hành bộ tài liệu — Baseline Iteration 1
-
-Đây là visual/design authority cho bước cuối Document Workspace. Mental model user-facing:
+Trạng thái:
 
 ```text
-1. Chọn tài liệu
-→ 2. Kiểm tra tình trạng
-→ 3. Xem bộ tài liệu
-→ 4. Xác nhận phát hành
-→ Khóa phiên bản đã phát hành
-```
-
-Màn hình desktop-first gồm breadcrumb/title, stepper 4 bước, bảng chọn tài liệu là vùng chính, panel phải tóm tắt tình trạng bộ tài liệu + thông tin hồ sơ + lịch sử phát hành + giải thích trạng thái, notice về hậu quả phát hành và footer có một primary CTA.
-
-Bảng tối thiểu:
-
-```text
-Tài liệu | Loại tài liệu | Trạng thái | Lần cập nhật |
-Phiên bản | Người cập nhật | Chọn | Xem chi tiết
-```
-
-Trạng thái user-facing:
-
-```text
-Sẵn sàng
+Đã đồng bộ
 Cần cập nhật
-Chưa hoàn tất
-Không áp dụng
-Đã phát hành
+Bạn tự chỉnh trong Word
+Lỗi
 ```
 
-`Cần cập nhật` nghĩa dữ liệu VALORA đã thay đổi và tài liệu managed cần sync lại. `Chưa hoàn tất` nghĩa còn Blocking/dependency. `Không áp dụng` là artifact không tham gia managed-region readiness theo cùng semantics; không suy diễn mọi PDF đều hợp lệ/bắt buộc phát hành.
+Các nhóm như thông tin hồ sơ, khách hàng, đối tượng, mục đích, thời điểm, kết quả thẩm định giá, thông tin phát hành chỉ là nhóm minh họa trên visual baseline; **không hard-code field**. Vùng thực tế đến từ Template Version + mapping đã cấu hình.
 
-Readiness/selection authority:
+Chỉ managed regions user chọn mới được ghi. `Lưu lựa chọn` không đồng nghĩa sync. Narrative ngoài vùng giữ nguyên. Nếu user đã sửa trong managed region, hệ thống phải phát hiện khác biệt và cho xem/xử lý trước khi ghi; không silent overwrite. Sau sync tiếp tục dùng Sync/Version và Publishing baseline hiện hành, không tạo lifecycle song song.
 
-- Chỉ tài liệu đáp ứng điều kiện phát hành của loại tài liệu mới được chọn.
-- Tài liệu `Cần cập nhật`/`Chưa hoàn tất` phải nêu lý do và CTA đi xử lý dependency thực tế.
-- Có thể chọn tập con tài liệu sẵn sàng; không mặc định mọi artifact trong workspace đều bắt buộc thuộc package.
-- Không tạo màn `Kiểm tra hồ sơ` riêng; màn phát hành chỉ tổng hợp readiness cần thiết cho package.
-- Package đang chọn còn Blocking thì primary `Phát hành bộ tài liệu` không khả dụng.
+Companion authority: `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md`.
 
-Trước xác nhận cuối, user phải xem được chính xác danh sách tài liệu + phiên bản sẽ phát hành. Không silent publish, không silent lock, không tự thêm tài liệu hoặc âm thầm bỏ tài liệu khỏi package.
-
-Khi user explicit phát hành, freeze release manifest tối thiểu:
+### 16.5 Đồng bộ dữ liệu & Quản lý phiên bản — Baseline Iteration 1
 
 ```text
-Release ID / số lần phát hành
-→ danh sách artifact đã chọn
-→ Document Revision tương ứng
-→ Data Snapshot tương ứng nếu artifact được VALORA quản lý dữ liệu
-→ Microsoft 365 file/version tương ứng
-→ thời điểm phát hành
-→ người thao tác
+1. Xem những gì đã thay đổi → 2. Xem chi tiết khác biệt
+→ 3. Chọn nội dung muốn cập nhật → 4. Cập nhật vào Word & tạo/ghi nhận phiên bản
 ```
 
-Release/revision đã phát hành không silent mutate. Nếu cần chỉnh sau phát hành, tạo revision/version mới rồi phát hành package mới; package cũ vẫn truy vết được. Document Revision và Microsoft 365 file version tiếp tục là hai lớp lineage khác nhau.
+Tài liệu hiển thị `Cần cập nhật` khi dữ liệu VALORA mới hơn dữ liệu đã đồng bộ và có khác biệt truy vết được. Chỉ managed regions user chọn được ghi. Nếu user sửa trong managed region, hệ thống phát hiện khác biệt và yêu cầu xử lý trước khi ghi. Lineage giữ `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`. Revision đã phát hành không silent mutate.
 
-Lịch sử phát hành tối thiểu: mã/lần phát hành, thời điểm, người phát hành, số tài liệu, revision/package reference, trạng thái. Cho xem chi tiết nhưng không dùng lịch sử làm đường vòng sửa release cũ.
+### 16.6 Phát hành bộ tài liệu — Baseline Iteration 1
 
-Không có `Xuất PDF` trong baseline này. Publish không thay đổi Word narrative và không xây fake Word editor.
+```text
+1. Chọn tài liệu → 2. Kiểm tra tình trạng → 3. Xem bộ tài liệu
+→ 4. Xác nhận phát hành → Khóa phiên bản đã phát hành
+```
 
-Companion authority: `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md`.
+Trạng thái user-facing: `Sẵn sàng / Cần cập nhật / Chưa hoàn tất / Không áp dụng / Đã phát hành`. Chỉ tài liệu đáp ứng điều kiện theo loại tài liệu mới được chọn; package có Blocking thì primary publish CTA không khả dụng. Không tạo màn Kiểm tra hồ sơ riêng.
+
+Trước xác nhận cuối, user phải xem chính xác danh sách tài liệu + phiên bản sẽ phát hành. Không silent publish/lock, không tự thêm/bỏ artifact. Khi phát hành, freeze release manifest: Release ID/lần phát hành → artifact đã chọn → Document Revision → Data Snapshot nếu có → Microsoft 365 file/version → thời điểm → người thao tác. Release cũ immutable; sửa sau phát hành tạo revision/version và package mới. Không có `Xuất PDF`.
 
 ## 17. Validation phân tán
 
-Không có màn Kiểm tra hồ sơ riêng.
-
-- `Blocking`: phải xử lý trước dependency.
-- `Warning`: nêu rủi ro nhưng có thể tiếp tục nếu rule cho phép.
-- `Info`: trạng thái.
-
-S10 tổng hợp readiness; issue ở nơi phát sinh. Publishing chỉ tổng hợp release readiness và deep-link về dependency, không tạo parallel validation workflow.
+Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước dependency; `Warning` nêu rủi ro nhưng có thể tiếp tục nếu rule cho phép; `Info` là trạng thái. S10 tổng hợp readiness; Publishing chỉ tổng hợp release readiness và deep-link về dependency, không tạo parallel validation workflow.
 
 ## 18. Guardrail UX / dữ liệu
 
@@ -450,12 +374,12 @@ S10 tổng hợp readiness; issue ở nơi phát sinh. Publishing chỉ tổng h
 - Formula template không staticize; không đổi `MIN(E:G)`.
 - 03 bảng Kết quả thẩm định giá immutable.
 - Generated Word và signed scan là hai artifact khác nhau.
-- Managed Regions không silent sync/overwrite narrative ngoài vùng.
+- Managed Regions Báo cáo/Chứng thư không silent sync/overwrite narrative ngoài vùng.
+- Nhóm field minh họa trong mockup Chứng thư không phải hard-coded schema.
 - Sync/version không bắt user hiểu ID kỹ thuật.
 - Document Revision != Microsoft 365 file version trong domain.
-- Không silent mutate revision đã phát hành.
-- Publishing không silent publish/lock/mutate release.
-- Publishing không tự thêm/bỏ tài liệu khỏi package và không giả vờ package đầy đủ khi còn Blocking.
+- Không silent mutate revision/release đã phát hành.
+- Publishing không silent publish/lock/mutate release hoặc tự thêm/bỏ tài liệu khỏi package.
 - Vietnamese-first; không phơi HTTP/SQL/stack trace/row_version.
 - Mỗi context/bước có một primary CTA.
 
@@ -485,8 +409,9 @@ S10 tổng hợp readiness; issue ở nơi phát sinh. Publishing chỉ tổng h
 | M365 | Bộ tài liệu phát hành | P0 — baseline; sync/version/lock/publish; không Xuất PDF |
 | M365-03HĐ | 03_Hợp đồng — Danh sách & tạo tài liệu | P0 — baseline Iteration 1 |
 | M365-MR-REPORT | Managed Regions — Báo cáo | P0 — baseline Iteration 1 |
+| M365-MR-CERT | Managed Regions — Chứng thư | P0 — baseline Iteration 1; user-friendly compare + explicit selective sync |
 | M365-SYNC-VERSION | Đồng bộ dữ liệu & Quản lý phiên bản | P0 — baseline Iteration 1 |
-| M365-PUBLISH | Phát hành bộ tài liệu | P0 — baseline Iteration 1; readiness + selection + immutable release manifest |
+| M365-PUBLISH | Phát hành bộ tài liệu | P0 — baseline Iteration 1; immutable release manifest |
 | GTM | Quản lý mẫu tài liệu generic | P0 — baseline Iteration 1 |
 | GWM | Mapping tài liệu Word generic | P0 — baseline Iteration 2 |
 | GWR | Kiểm tra & hoàn tất Word generic | P0 — baseline Iteration 1 |
@@ -497,6 +422,7 @@ S10 tổng hợp readiness; issue ở nơi phát sinh. Publishing chỉ tổng h
 
 ## 20. Companion authority documents
 
+- `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md`.
@@ -523,19 +449,19 @@ Authority Document Workspace hiện đã khóa xuyên suốt:
 ```text
 03_Hợp đồng
 → Managed Regions — Báo cáo
+→ Managed Regions — Chứng thư
 → Đồng bộ dữ liệu & Quản lý phiên bản
 → Phát hành bộ tài liệu
 ```
 
 Hướng thiết kế tiếp theo ưu tiên:
 
-1. áp dụng/thiết kế interaction model Managed Regions cho Chứng thư thẩm định giá;
-2. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
-3. implementation contract riêng cho Excel/Bảng tính Fill Engine nếu bắt đầu triển khai;
-4. implementation contract cho release manifest/lock/version binding nếu bắt đầu triển khai Document Publishing.
+1. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
+2. implementation contract riêng cho Excel/Bảng tính Fill Engine nếu bắt đầu triển khai;
+3. implementation contract cho release manifest/lock/version binding nếu bắt đầu triển khai Document Publishing.
 
 ## 22. ADR
 
-Việc nâng `Phát hành bộ tài liệu — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
+Việc nâng `Managed Regions — Chứng thư thẩm định giá — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
 
-Nếu implementation làm thay đổi release-manifest persistence, immutable release semantics, lock boundary, Microsoft 365 version binding, domain contract phát hành, Data Snapshot/Document Revision persistence hoặc managed-region sync semantics, cần đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation làm thay đổi managed-region persistence, conflict detection, sync policy, Document Data Model, Data Snapshot/Document Revision semantics, Microsoft 365 version binding hoặc immutable published revision/release, cần đánh giá ADR riêng trước khi sửa product code.
