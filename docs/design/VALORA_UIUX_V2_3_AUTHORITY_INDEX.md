@@ -7,22 +7,23 @@
 ## 1. Thứ tự đọc hiện hành
 
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master; điểm đọc chính sau consolidation.
-2. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Phát hành bộ tài liệu — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1`**.
-4. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Báo cáo thẩm định giá — Iteration 1`**.
-5. `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — Baseline `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1`.
-6. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md` — Baseline Bước 4: Kiểm tra & hoàn tất — Iteration 1, Word + Bảng tính.
-7. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion AI Template Assistant.
-8. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion Bước 3.
-9. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion Quản lý mẫu tài liệu generic.
-10. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion Word generic Mapping.
-11. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion Word generic Review.
-12. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
-13. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
-14. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
-15. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
-16. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04.
-17. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Chứng thư thẩm định giá — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Phát hành bộ tài liệu — Iteration 1`**.
+4. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1`**.
+5. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Báo cáo thẩm định giá — Iteration 1`**.
+6. `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — Baseline `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1`.
+7. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md` — Baseline Bước 4: Kiểm tra & hoàn tất — Iteration 1, Word + Bảng tính.
+8. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion AI Template Assistant.
+9. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion Bước 3.
+10. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion Quản lý mẫu tài liệu generic.
+11. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion Word generic Mapping.
+12. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion Word generic Review.
+13. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
+14. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
+15. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
+16. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
+17. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04.
+18. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
 
 Master là điểm đọc chính sau consolidation. Quyết định explicit mới hơn master thắng trong đúng scope cho tới lần consolidation tiếp theo.
 
@@ -48,6 +49,7 @@ Trang chủ
 → Microsoft 365 Document Workspace / Bộ tài liệu phát hành
    → 03_Hợp đồng — Danh sách & tạo tài liệu
    → Báo cáo thẩm định giá — Quản lý vùng dữ liệu / Managed Regions
+   → Chứng thư thẩm định giá — Quản lý nội dung do VALORA quản lý / Managed Regions
       → Đồng bộ dữ liệu & Quản lý phiên bản tài liệu
    → Phát hành bộ tài liệu
 ```
@@ -88,8 +90,9 @@ Cách xác định tập báo giá bắt buộc để đối chiếu chưa đư�
 - Microsoft 365 Document Workspace — baseline authority.
 - `03_Hợp đồng — Danh sách & tạo tài liệu` — Baseline Iteration 1.
 - `Managed Regions — Báo cáo thẩm định giá` — Baseline Iteration 1.
+- **`Managed Regions — Chứng thư thẩm định giá` — Baseline Iteration 1.**
 - `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu` — Baseline Iteration 1.
-- **`Phát hành bộ tài liệu` — Baseline Iteration 1.**
+- `Phát hành bộ tài liệu` — Baseline Iteration 1.
 - Mapping Template tài liệu generic Word — Iteration 2.
 - Kiểm tra & hoàn tất template Word generic — Iteration 1.
 - Quản lý mẫu tài liệu generic — Iteration 1.
@@ -99,7 +102,23 @@ Cách xác định tập báo giá bắt buộc để đối chiếu chưa đư�
 
 ## 5. Document Workspace authority
 
-Managed Regions user-facing title ưu tiên: `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`.
+Managed Regions user-facing titles ưu tiên:
+
+- Báo cáo: `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`.
+- Chứng thư: `Quản lý nội dung do VALORA quản lý (Chứng thư thẩm định giá)`.
+
+Hai loại tài liệu dùng chung mental model:
+
+```text
+1. Xem nội dung VALORA quản lý
+→ 2. Xem khác biệt
+→ 3. Chọn nội dung cần cập nhật
+→ 4. Đồng bộ vào Word
+```
+
+Trạng thái vùng: `Đã đồng bộ / Cần cập nhật / Bạn tự chỉnh trong Word / Lỗi`. Comparison: `Dữ liệu từ VALORA ↔ Nội dung đang có trong Word`. Chỉ vùng user chọn mới được ghi; narrative ngoài vùng giữ nguyên; conflict trong managed region phải được xem/xử lý trước khi ghi.
+
+Các nhóm nội dung minh họa trên mockup Chứng thư không phải danh sách field hard-code; vùng thực tế đến từ Template Version + mapping.
 
 Sync/version flow:
 
@@ -167,7 +186,7 @@ AI/engine không tự thay formula. Validation kiểm tra formula/relative refer
 - Template báo giá NCC chỉ Word `.docx`.
 - Document Workspace không có `Xuất PDF` trong baseline.
 - Generated file và signed scan là hai artifact khác nhau, có lineage.
-- Managed Regions không silent sync và không overwrite narrative ngoài vùng.
+- Managed Regions Báo cáo/Chứng thư không silent sync và không overwrite narrative ngoài vùng.
 - Sync/version không silent mutate revision đã phát hành.
 - Publishing không silent publish/lock/mutate release; không tự thêm hoặc âm thầm bỏ tài liệu khỏi package.
 - Không đưa dữ liệu thật vào public repository.
