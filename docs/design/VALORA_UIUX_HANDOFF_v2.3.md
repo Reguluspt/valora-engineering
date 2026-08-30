@@ -3,10 +3,10 @@
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Fluent 2, desktop-first, data-heavy workflow  
-**Trạng thái:** Canonical master handoff — **Consolidation v2.3 lần 2 + AI-TPL-4 Baseline**; không đồng nghĩa product code đã implement  
+**Trạng thái:** Canonical master handoff — **Consolidation v2.3 lần 2 + AI-TPL-4 + 03_Hợp đồng Baseline**; không đồng nghĩa product code đã implement  
 **Cập nhật:** 30/08/2026
 
-> Master này đã consolidate toàn bộ authority v2.3 hiện hành, bao gồm Price & Evidence, Kết quả thẩm định giá, Microsoft 365 Document Workspace, Generic Template Management, Generic Word Mapping/Review, AI-assisted Template Setup cho Word + Bảng tính và visual baseline dùng chung Bước 4 — Kiểm tra & hoàn tất. Các addendum vẫn được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
+> Master này đã consolidate toàn bộ authority v2.3 hiện hành, bao gồm Price & Evidence, Kết quả thẩm định giá, Microsoft 365 Document Workspace, Generic Template Management, Generic Word Mapping/Review, AI-assisted Template Setup cho Word + Bảng tính, visual baseline dùng chung Bước 4 — Kiểm tra & hoàn tất và baseline `03_Hợp đồng — Danh sách & tạo tài liệu`. Các addendum vẫn được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
 
@@ -25,6 +25,7 @@ Các baseline/authority đã khóa:
 - NCCQ child — Hoàn tất 01 báo giá NCC — **Iteration 3**, scope 01 báo giá / 01 NCC.
 - Kết quả thẩm định giá — **Iteration 1**, 03 bảng biểu mẫu công ty immutable.
 - Microsoft 365 Document Workspace / Bộ tài liệu phát hành — baseline authority.
+- **03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1 Baseline / Design Authority.**
 - Quản lý mẫu tài liệu generic — **Iteration 1**.
 - Mapping Template tài liệu generic Word — **Iteration 2**.
 - Kiểm tra & hoàn tất template Word generic — **Iteration 1**.
@@ -44,6 +45,7 @@ Các rule supersession quan trọng:
 - AI-assisted setup bổ sung Generic Word Mapping/Review, không override specialized authority của template Báo giá NCC.
 - Bước 3 Rà soát & chỉnh sửa là checkpoint user-controlled; AI proposal không tự trở thành mapping chính thức.
 - Bước 4 dùng shell/mental model chung nhưng validator/fill semantics chuyên biệt theo Word và Bảng tính.
+- `03_Hợp đồng` quản lý working documents; signed scan thuộc `05_Pháp lý` và giữ lineage về tài liệu gốc.
 
 ## 1. Product baseline
 
@@ -87,6 +89,7 @@ Trang chủ
    → Bảng Tổng hợp giá nhà cung cấp
    → Bảng Kết quả thẩm định giá
 → Microsoft 365 Document Workspace / Bộ tài liệu phát hành
+   → 03_Hợp đồng — Danh sách & tạo tài liệu
    → tạo/quản lý Word
    → Mở trong Word
    → Đồng bộ dữ liệu
@@ -833,13 +836,68 @@ Preview Word trong VALORA: **cuộn trang liên tục**.
 
 File Word hệ thống sinh và file scan đã ký là **hai artifact khác nhau**, giữ lineage khi liên quan cùng nghiệp vụ.
 
-### 16.4 File scan / pháp lý
+### 16.4 03_Hợp đồng — Danh sách & tạo tài liệu — Baseline Iteration 1
+
+Màn hình `03_Hợp đồng` là workspace quản lý working documents trong vòng đời hợp đồng, không phải nơi thay thế toàn bộ Generic Template Management và không phải Word editor.
+
+Danh mục tối thiểu:
+
+- Phiếu/Giấy yêu cầu thẩm định giá;
+- Danh mục;
+- Biên bản/Nội dung thương thảo;
+- Dự thảo hợp đồng thẩm định giá;
+- Hợp đồng thẩm định giá;
+- Phụ lục hợp đồng;
+- Biên bản nghiệm thu;
+- Biên bản thanh lý;
+- tài liệu hợp đồng khác.
+
+Bảng baseline:
+
+```text
+STT | Tên tài liệu | Loại tài liệu | Số / Ký hiệu |
+Trạng thái | Phiên bản | Cập nhật lần cuối | Tác vụ
+```
+
+Primary CTA: `Tạo tài liệu`. Có thể tạo từ template đã cấu hình; tạo bản nháp trống khi loại tài liệu cho phép; tải lên tài liệu Word đã có; tạo hàng loạt khi nghiệp vụ cần.
+
+Preview trong VALORA chỉ để xem. Chỉnh sửa dùng `Mở trong Word`.
+
+Lineage authority:
+
+```text
+Template Version
+→ Data Snapshot
+→ Document Revision
+→ Microsoft 365 file / file version
+→ Bản scan ký ở 05_Pháp lý (nếu có)
+```
+
+Lifecycle artifact giữ nguyên:
+
+```text
+Bản nháp
+→ Cần đồng bộ
+→ Đã đồng bộ
+→ Sẵn sàng phát hành
+→ Đã phát hành
+```
+
+`Chưa tạo` có thể dùng làm planning state cho entry chưa sinh artifact; không thay thế lifecycle sau khi artifact đã tồn tại.
+
+Generated working document và signed scan là hai artifact khác nhau. Signed scan thuộc `05_Pháp lý`, không thay thế file working trong `03_Hợp đồng`.
+
+Không silent overwrite Template Version đã dùng; không silent mutate revision đã phát hành. Nếu dữ liệu VALORA thay đổi, document có thể chuyển `Cần đồng bộ`; sync chỉ cập nhật managed regions theo authority liên quan và không overwrite narrative user chỉnh trong Word.
+
+Companion authority: `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md`.
+
+### 16.5 File scan / pháp lý
 
 Người dùng tự drag/drop, upload hoặc move file vào `05_Pháp lý`.
 
 Không có modal/checkpoint bắt buộc `Xác nhận đã ký`, `Ghi nhận pháp lý`, `Đã nhận bản ký`.
 
-### 16.5 Sync/version
+### 16.6 Sync/version
 
 Phân biệt:
 
@@ -894,6 +952,7 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 - AI/engine không tự đổi `MIN(E:G)` trong Bảng tính reference authority.
 - 03 bảng Kết quả thẩm định giá là immutable layout.
 - File Word generated và file scan signed là hai artifact khác nhau, giữ lineage.
+- `03_Hợp đồng` không giữ signed scan thay working document; signed scan thuộc `05_Pháp lý`.
 - Vietnamese-first; không phơi HTTP/SQL/stack trace/row_version cho người dùng cuối.
 - Mỗi màn hình/context có một primary CTA nổi bật.
 
@@ -926,6 +985,7 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 | NCCQ-child | Hoàn tất 01 báo giá NCC | P0 — baseline Iteration 3; scope 01 báo giá / 01 NCC |
 | Result | Kết quả thẩm định giá | P0 — baseline Iteration 1; 03 bảng immutable |
 | M365 | Bộ tài liệu phát hành | P0 — baseline; sync/version/lock/publish; không Xuất PDF |
+| M365-03HĐ | 03_Hợp đồng — Danh sách & tạo tài liệu | P0 — baseline Iteration 1; table-first + preview + detail + lineage |
 | GTM | Quản lý mẫu tài liệu generic | P0 — baseline Iteration 1 |
 | GWM | Mapping tài liệu Word generic | P0 — baseline Iteration 2 |
 | GWR | Kiểm tra & hoàn tất Word generic | P0 — baseline Iteration 1 |
@@ -938,6 +998,7 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 
 Các file sau tiếp tục được giữ để truy vết chi tiết/visual authority:
 
+- `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md`.
@@ -964,6 +1025,7 @@ Pre-case
 → NCC quotation evidence
 → Final Result
 → Document Workspace
+   → 03_Hợp đồng — Danh sách & tạo tài liệu
 → Generic Template Management
 → AI-assisted Template Setup
    → AI phân tích & đề xuất
@@ -973,15 +1035,14 @@ Pre-case
 
 Hướng thiết kế tiếp theo ưu tiên:
 
-1. chi tiết cơ chế sinh tài liệu trong `03_Hợp đồng`;
-2. Managed Regions trong Báo cáo/Chứng thư;
-3. version/sync UX chi tiết;
-4. phát hành bộ tài liệu;
-5. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
-6. đặc tả implementation contract riêng cho Excel/Bảng tính Fill Engine nếu bắt đầu triển khai.
+1. Managed Regions trong Báo cáo/Chứng thư;
+2. version/sync UX chi tiết;
+3. phát hành bộ tài liệu;
+4. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
+5. đặc tả implementation contract riêng cho Excel/Bảng tính Fill Engine nếu bắt đầu triển khai.
 
 ## 22. ADR
 
-Việc nâng AI-TPL-4 thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
+Việc nâng `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
 
 Nếu triển khai làm thay đổi domain contract, Document Data Model, Excel fill semantics, version/sync boundary, validation semantics hoặc template persistence contract hiện có, cần đánh giá ADR riêng trước khi sửa product code.
