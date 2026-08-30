@@ -3,10 +3,10 @@
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
 **Visual baseline:** Fluent 2, desktop-first, data-heavy workflow  
-**Trạng thái:** Canonical master handoff — **Consolidation v2.3 lần 2 + AI-TPL-4 + 03_Hợp đồng Baseline**; không đồng nghĩa product code đã implement  
+**Trạng thái:** Canonical master handoff — **Consolidation v2.3 lần 2 + AI-TPL-4 + 03_Hợp đồng + Managed Regions Baseline**; không đồng nghĩa product code đã implement  
 **Cập nhật:** 30/08/2026
 
-> Master này đã consolidate toàn bộ authority v2.3 hiện hành, bao gồm Price & Evidence, Kết quả thẩm định giá, Microsoft 365 Document Workspace, Generic Template Management, Generic Word Mapping/Review, AI-assisted Template Setup cho Word + Bảng tính, visual baseline dùng chung Bước 4 — Kiểm tra & hoàn tất và baseline `03_Hợp đồng — Danh sách & tạo tài liệu`. Các addendum vẫn được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
+> Master này đã consolidate toàn bộ authority v2.3 hiện hành, bao gồm Price & Evidence, Kết quả thẩm định giá, Microsoft 365 Document Workspace, Generic Template Management, Generic Word Mapping/Review, AI-assisted Template Setup cho Word + Bảng tính, visual baseline dùng chung Bước 4 — Kiểm tra & hoàn tất, baseline `03_Hợp đồng — Danh sách & tạo tài liệu` và baseline `Managed Regions — Báo cáo thẩm định giá — Iteration 1`. Các addendum vẫn được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
 
@@ -26,6 +26,7 @@ Các baseline/authority đã khóa:
 - Kết quả thẩm định giá — **Iteration 1**, 03 bảng biểu mẫu công ty immutable.
 - Microsoft 365 Document Workspace / Bộ tài liệu phát hành — baseline authority.
 - **03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1 Baseline / Design Authority.**
+- **Managed Regions — Báo cáo thẩm định giá — Iteration 1 Baseline / Design Authority.**
 - Quản lý mẫu tài liệu generic — **Iteration 1**.
 - Mapping Template tài liệu generic Word — **Iteration 2**.
 - Kiểm tra & hoàn tất template Word generic — **Iteration 1**.
@@ -46,6 +47,8 @@ Các rule supersession quan trọng:
 - Bước 3 Rà soát & chỉnh sửa là checkpoint user-controlled; AI proposal không tự trở thành mapping chính thức.
 - Bước 4 dùng shell/mental model chung nhưng validator/fill semantics chuyên biệt theo Word và Bảng tính.
 - `03_Hợp đồng` quản lý working documents; signed scan thuộc `05_Pháp lý` và giữ lineage về tài liệu gốc.
+- Managed Regions chỉ cập nhật các vùng do VALORA quản lý; nội dung ngoài vùng do người dùng biên tập trong Word không bị silent overwrite.
+- Đồng bộ Managed Regions luôn là thao tác explicit; nếu có khác biệt hoặc người dùng đã sửa trong vùng, UI phải cho người dùng xem và chọn cách xử lý trước khi ghi dữ liệu.
 
 ## 1. Product baseline
 
@@ -90,6 +93,8 @@ Trang chủ
    → Bảng Kết quả thẩm định giá
 → Microsoft 365 Document Workspace / Bộ tài liệu phát hành
    → 03_Hợp đồng — Danh sách & tạo tài liệu
+   → Báo cáo/Chứng thư
+      → Managed Regions
    → tạo/quản lý Word
    → Mở trong Word
    → Đồng bộ dữ liệu
@@ -919,6 +924,72 @@ Nếu dữ liệu VALORA thay đổi: hiển thị `Cần đồng bộ`, cho xem
 
 Khi phát hành: freeze Revision + Snapshot + artifact/version state; không silent mutate tài liệu đã phát hành.
 
+### 16.7 Managed Regions — Báo cáo thẩm định giá — Baseline Iteration 1
+
+Managed Regions là lớp đồng bộ dữ liệu có cấu trúc từ VALORA vào các vùng được hệ thống quản lý trong Báo cáo thẩm định giá. VALORA **không chỉnh sửa toàn bộ tài liệu Word** và không được ghi đè nội dung ngoài managed region.
+
+Baseline ưu tiên ngôn ngữ nghiệp vụ dễ hiểu cho người không rành IT. User-facing title có thể dùng `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`; thuật ngữ kỹ thuật `Managed Regions`, `Data Snapshot`, `Document Revision` có thể tồn tại trong domain/audit nhưng không phải mental model chính.
+
+Flow hướng dẫn trên màn hình:
+
+```text
+1. Xem danh sách vùng
+→ 2. Xem nội dung hiện tại
+→ 3. Xem khác biệt (nếu có)
+→ 4. Chọn vùng cần cập nhật
+→ Đồng bộ
+```
+
+Layout authority:
+
+```text
+Danh sách vùng dữ liệu bên trái
+→ Preview Word ở giữa
+→ So sánh dữ liệu vùng đang chọn bên phải
+→ Footer tóm tắt trạng thái + hành động đồng bộ
+```
+
+Preview là vùng lớn nhất. Chọn một vùng trong danh sách phải focus/highlight đúng vị trí trong preview. Preview chỉ để xem; chỉnh sửa narrative tiếp tục dùng `Mở trong Word`.
+
+Trạng thái user-facing:
+
+```text
+Đã đồng bộ
+Cần đồng bộ
+Bạn tự chỉnh trong Word
+Lỗi
+```
+
+`Bạn tự chỉnh trong Word` cho biết vùng/nội dung đang được người dùng kiểm soát và không được hệ thống tự ghi đè. Nếu thay đổi Word xảy ra trong một managed region, hệ thống phải phát hiện khác biệt và yêu cầu người dùng chọn cách xử lý trước khi sync; không silent overwrite.
+
+Panel so sánh hiển thị tối thiểu:
+
+```text
+Dữ liệu từ VALORA
+↔
+Dữ liệu đang có trong Word
+```
+
+Các giá trị khác nhau phải được highlight trực quan. UI không bắt người dùng hiểu snapshot ID hoặc revision ID mới có thể quyết định.
+
+Với vùng đang chọn, tối thiểu có các lựa chọn explicit:
+
+```text
+Cập nhật vào Word
+Giữ nguyên trong Word (không cập nhật)
+Bỏ qua vùng này lần này
+```
+
+Primary CTA có thể là `Đồng bộ các vùng đã chọn (n)` hoặc `Đồng bộ tất cả vùng (n)` tùy context. Không có silent sync. Người dùng luôn biết vùng nào sẽ được cập nhật trước khi thực hiện.
+
+Sync chỉ ghi dữ liệu vào managed regions đã được người dùng chọn. Narrative và nội dung ngoài managed region phải giữ nguyên. Mọi lần đồng bộ cần giữ history/audit đủ để truy vết vùng, Data Snapshot/nguồn dữ liệu, Document Revision/file version và thời điểm thao tác.
+
+Mental model reassurance phải được thể hiện rõ: VALORA chỉ cập nhật những chỗ hệ thống quản lý và không thay đổi phần nội dung người dùng đã tự biên tập ngoài các vùng này.
+
+Baseline hiện tại áp dụng trực tiếp cho **Báo cáo thẩm định giá**. Chứng thư thẩm định giá có thể tái sử dụng cùng interaction model trong iteration tiếp theo nhưng chưa tự động trở thành visual baseline chỉ từ quyết định này.
+
+Companion authority: `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md`.
+
 ## 17. Validation phân tán
 
 Không có màn Kiểm tra hồ sơ riêng.
@@ -953,6 +1024,7 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 - 03 bảng Kết quả thẩm định giá là immutable layout.
 - File Word generated và file scan signed là hai artifact khác nhau, giữ lineage.
 - `03_Hợp đồng` không giữ signed scan thay working document; signed scan thuộc `05_Pháp lý`.
+- Managed Regions không được silent sync, không được overwrite nội dung ngoài vùng quản lý và phải cho người dùng xem khác biệt trước khi ghi đè dữ liệu đang có trong managed region.
 - Vietnamese-first; không phơi HTTP/SQL/stack trace/row_version cho người dùng cuối.
 - Mỗi màn hình/context có một primary CTA nổi bật.
 
@@ -986,9 +1058,10 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 | Result | Kết quả thẩm định giá | P0 — baseline Iteration 1; 03 bảng immutable |
 | M365 | Bộ tài liệu phát hành | P0 — baseline; sync/version/lock/publish; không Xuất PDF |
 | M365-03HĐ | 03_Hợp đồng — Danh sách & tạo tài liệu | P0 — baseline Iteration 1; table-first + preview + detail + lineage |
+| M365-MR-REPORT | Managed Regions — Báo cáo thẩm định giá | P0 — baseline Iteration 1; user-friendly compare + explicit sync |
 | GTM | Quản lý mẫu tài liệu generic | P0 — baseline Iteration 1 |
 | GWM | Mapping tài liệu Word generic | P0 — baseline Iteration 2 |
-| GWR | Kiểm tra & hoàn tất Word generic | P0 — baseline Iteration 1 |
+| GWR | Kiểm tra & hoàn tất template Word generic | P0 — baseline Iteration 1 |
 | AI-TPL-2 | AI phân tích & đề xuất | P0 — baseline Iteration 1 |
 | AI-TPL-3 | Rà soát & chỉnh sửa | P0 — baseline Iteration 1 |
 | Spreadsheet | Bảng tính template semantics | Design Authority — format-specific mapping/fill guardrails |
@@ -998,6 +1071,7 @@ Blocking được đặt tại dependency thực tế, ví dụ: thiếu Đơn g
 
 Các file sau tiếp tục được giữ để truy vết chi tiết/visual authority:
 
+- `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md`.
@@ -1026,6 +1100,7 @@ Pre-case
 → Final Result
 → Document Workspace
    → 03_Hợp đồng — Danh sách & tạo tài liệu
+   → Managed Regions — Báo cáo thẩm định giá
 → Generic Template Management
 → AI-assisted Template Setup
    → AI phân tích & đề xuất
@@ -1035,7 +1110,7 @@ Pre-case
 
 Hướng thiết kế tiếp theo ưu tiên:
 
-1. Managed Regions trong Báo cáo/Chứng thư;
+1. áp dụng/thiết kế interaction model Managed Regions cho Chứng thư thẩm định giá;
 2. version/sync UX chi tiết;
 3. phát hành bộ tài liệu;
 4. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
@@ -1043,6 +1118,6 @@ Hướng thiết kế tiếp theo ưu tiên:
 
 ## 22. ADR
 
-Việc nâng `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
+Việc nâng và consolidate `Managed Regions — Báo cáo thẩm định giá — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
 
-Nếu triển khai làm thay đổi domain contract, Document Data Model, Excel fill semantics, version/sync boundary, validation semantics hoặc template persistence contract hiện có, cần đánh giá ADR riêng trước khi sửa product code.
+Nếu triển khai làm thay đổi domain contract, Document Data Model, Excel fill semantics, version/sync boundary, validation semantics, managed-region persistence/sync semantics hoặc template persistence contract hiện có, cần đánh giá ADR riêng trước khi sửa product code.
