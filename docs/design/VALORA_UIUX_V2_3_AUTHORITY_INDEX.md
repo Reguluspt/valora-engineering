@@ -7,17 +7,18 @@
 ## 1. Thứ tự đọc hiện hành
 
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — **canonical master sau Consolidation v2.3 lần 2**; đã hợp nhất Price/Evidence, Final Result, M365 Workspace, Generic Template Management, Generic Word Mapping/Review, AI Template Assistant và Bảng tính authority hiện hành.
-2. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion visual/domain authority cho flow Thiết lập mẫu tài liệu 4 bước, Word generic + Bảng tính.
-3. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion authority cho Bước 3: Rà soát & chỉnh sửa — Iteration 1.
-4. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion authority Quản lý mẫu tài liệu generic — Iteration 1.
-5. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion authority Word generic Mapping — Iteration 2.
-6. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion authority Word generic Kiểm tra & hoàn tất — Iteration 1.
-7. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
-8. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
-9. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
-10. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
-11. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04 Preview/Test fill NCC.
-12. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md` — **Baseline / Design Authority Bước 4: Kiểm tra & hoàn tất — Iteration 1**, dùng chung Word + Bảng tính với validation chuyên biệt theo format.
+3. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion visual/domain authority cho flow Thiết lập mẫu tài liệu 4 bước, Word generic + Bảng tính.
+4. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion authority cho Bước 3: Rà soát & chỉnh sửa — Iteration 1.
+5. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion authority Quản lý mẫu tài liệu generic — Iteration 1.
+6. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion authority Word generic Mapping — Iteration 2.
+7. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion authority Word generic Kiểm tra & hoàn tất — Iteration 1.
+8. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
+9. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
+10. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
+11. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
+12. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04 Preview/Test fill NCC.
+13. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
 
 Từ commit Consolidation lần 2, master ở mục 1 là điểm đọc chính. Addendum dùng để truy vết chi tiết, visual baseline và nguồn quyết định. Quyết định explicit mới hơn master trong tương lai vẫn thắng trong đúng scope cho tới lần consolidation tiếp theo.
 
@@ -86,8 +87,9 @@ Cách xác định tập báo giá bắt buộc để đối chiếu chưa đư�
 - Quản lý mẫu tài liệu generic — Iteration 1.
 - Thiết lập mẫu tài liệu — AI phân tích & đề xuất — Iteration 1.
 - Thiết lập mẫu tài liệu — Bước 3: Rà soát & chỉnh sửa — Iteration 1.
+- **Thiết lập mẫu tài liệu — Bước 4: Kiểm tra & hoàn tất Word + Bảng tính — Baseline Iteration 1.**
 
-**Chưa có visual baseline dùng chung:** Bước 4 `Kiểm tra & hoàn tất` cho Word + Bảng tính. Boundary/validation mental model đã khóa.
+Bước 4 dùng chung shell/mental model `Blocking / Warning / Info`; preview là vùng chính; validator/fill semantics chuyên biệt theo Word và Bảng tính. Template chỉ `Hợp lệ` khi không còn Blocking và không có silent publish.
 
 ## 5. Template Management / AI authority
 
@@ -134,6 +136,16 @@ Chưa mapping
 
 Capability `Bổ sung trường AI bỏ sót` là bắt buộc. `Đã bỏ qua` cần explicit user intent.
 
+Bước 4 dùng severity:
+
+```text
+Blocking
+Warning
+Info
+```
+
+Vùng chưa thiết lập phải có `Gán dữ liệu`, `Bỏ qua có chủ đích`, `Đây là nội dung cố định`. Chỉ hoàn tất hợp lệ khi Blocking = 0; không silent publish.
+
 ## 6. Bảng tính authority
 
 Bảng tính dùng analyzer/fill semantics riêng, không áp Word region semantics máy móc. Mapping ưu tiên vùng/cột/dòng mẫu thay vì map từng cell lặp.
@@ -148,6 +160,8 @@ In = Dn*Hn
 `MIN(E:G)` phải được giữ từ mẫu, không biến thành static mapping và không được AI/engine tự thay bằng business rule khác.
 
 Nguồn khảo sát có thể chứa URL, text, hồ sơ nguồn và ảnh/chứng cứ.
+
+Bước 4 phải kiểm tra formula/relative reference, tổng/làm tròn, merge/style/border/number format, evidence/image, print/page layout và các workbook feature có nguy cơ không được bảo toàn; lỗi bảo toàn phải được báo trước khi hoàn tất.
 
 ## 7. Guardrail
 
