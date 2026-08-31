@@ -2,28 +2,30 @@
 
 **Status:** Canonical UI/UX reading order for v2.3  
 **Purpose:** Ngăn iteration/addendum cũ override các quyết định đã được consolidate hoặc authority mới hơn.  
-**Consolidation:** v2.3 lần 2 — 31/08/2026.
+**Consolidation:** v2.3 lần 2 — 31/08/2026; cập nhật authority Fill Engine + NCC price warning ngày 31/08/2026.
 
 ## 1. Thứ tự đọc hiện hành
 
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master; điểm đọc chính sau consolidation.
-2. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Chứng thư thẩm định giá — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Phát hành bộ tài liệu — Iteration 1`**.
-4. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1`**.
-5. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Báo cáo thẩm định giá — Iteration 1`**.
-6. `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — Baseline `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1`.
-7. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md` — Baseline Bước 4: Kiểm tra & hoàn tất — Iteration 1, Word + Bảng tính.
-8. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion AI Template Assistant.
-9. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion Bước 3.
-10. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion Quản lý mẫu tài liệu generic.
-11. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion Word generic Mapping.
-12. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion Word generic Review.
-13. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
-14. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
-15. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
-16. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
-17. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04.
-18. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_SPREADSHEET_FILL_ENGINE_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Bảng tính Fill Engine — Implementation Contract v1 — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md` — **Current Business Rule Authority** cho cảnh báo `Giá NCC ↔ Đơn giá hiện hành` ngay tại NCCQ; supersede màn `Kiểm tra quy tắc đối chiếu giá` đã bị bỏ.
+4. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Chứng thư thẩm định giá — Iteration 1`**.
+5. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Phát hành bộ tài liệu — Iteration 1`**.
+6. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1`**.
+7. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Managed Regions — Báo cáo thẩm định giá — Iteration 1`**.
+8. `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — Baseline `03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1`.
+9. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_FINAL_CHECK_BASELINE_ADDENDUM.md` — Baseline Bước 4: Kiểm tra & hoàn tất — Iteration 1, Word + Bảng tính.
+10. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM.md` — companion AI Template Assistant.
+11. `VALORA_UIUX_HANDOFF_v2.3_AI_TEMPLATE_REVIEW_EDIT_BASELINE_ADDENDUM.md` — companion Bước 3.
+12. `VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md` — companion Quản lý mẫu tài liệu generic.
+13. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_MAPPING_BASELINE_ADDENDUM.md` — companion Word generic Mapping.
+14. `VALORA_UIUX_HANDOFF_v2.3_GENERIC_DOCUMENT_TEMPLATE_REVIEW_BASELINE_ADDENDUM.md` — companion Word generic Review.
+15. `VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md` — companion Price & Evidence.
+16. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` — companion Kết quả thẩm định giá.
+17. `VALORA_UIUX_HANDOFF_v2.3_M365_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — companion Microsoft 365 Document Workspace.
+18. `VALORA_UIUX_HANDOFF_v2.3_S17_BASELINE_ADDENDUM.md` — companion child flow Hoàn tất 01 báo giá NCC.
+19. `VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md` — companion TM04.
+20. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — flow map hỗ trợ đọc; không override master.
 
 Master là điểm đọc chính sau consolidation. Quyết định explicit mới hơn master thắng trong đúng scope cho tới lần consolidation tiếp theo.
 
@@ -60,6 +62,7 @@ Supporting configuration flow:
 Cấu hình → Mẫu tài liệu → Quản lý mẫu tài liệu
 → Chọn/Tạo mẫu → AI phân tích & đề xuất
 → Rà soát & chỉnh sửa → Kiểm tra & hoàn tất
+→ Bảng tính Fill Engine: Chuẩn bị → Mapping → Preview & Validate → Fill & Recalculate → Save & Version
 ```
 
 ## 3. Price & Evidence authority
@@ -78,6 +81,22 @@ Giá NCC không phải nguồn chính xác định Đơn giá thẩm định cu�
 ```
 
 Cách xác định tập báo giá bắt buộc để đối chiếu chưa được user khóa thành công thức min/max/every-quote; không tự suy diễn.
+
+### 3.1 Cảnh báo giá NCC — authority mới nhất
+
+Không có màn `Kiểm tra quy tắc đối chiếu giá` riêng. Cảnh báo hiển thị ngay tại `Tạo & quản lý báo giá NCC` theo từng dòng:
+
+```text
+Giá NCC < Đơn giá hiện hành
+→ luôn Warning
+
+|Giá NCC - Đơn giá hiện hành| / Đơn giá hiện hành > 15%
+→ Warning chênh lệch lớn
+```
+
+Suy ra phía cao: `Giá NCC > 115% × Đơn giá hiện hành → Warning`. Warning không Blocking; VALORA không tự sửa Giá NCC, không tự sửa Đơn giá hiện hành và không tự chọn giá thay user.
+
+UI nên truy cập được ngay tại dòng: `Đơn giá hiện hành | Giá NCC | Chênh tiền | Chênh % | Cảnh báo`.
 
 ## 4. Baseline visual authority
 
@@ -99,6 +118,7 @@ Cách xác định tập báo giá bắt buộc để đối chiếu chưa đư�
 - Thiết lập mẫu tài liệu — AI phân tích & đề xuất — Iteration 1.
 - Thiết lập mẫu tài liệu — Bước 3 — Iteration 1.
 - Thiết lập mẫu tài liệu — Bước 4 Word + Bảng tính — Baseline Iteration 1.
+- **Bảng tính Fill Engine — Implementation Contract v1 — Baseline Iteration 1; Fluent 2 desktop-first.**
 
 ## 5. Document Workspace authority
 
@@ -175,6 +195,24 @@ In = Dn*Hn
 
 AI/engine không tự thay formula. Validation kiểm tra formula/relative reference, tổng/làm tròn, merge/style/border/number format, evidence/image, print/page layout và workbook feature có nguy cơ không được bảo toàn.
 
+### 8.1 Fill Engine baseline
+
+Mental flow:
+
+```text
+Chuẩn bị → Mapping → Preview & Validate → Fill & Recalculate → Save & Version
+```
+
+Logical contract:
+
+```text
+Data Sources → Mapping Engine → Fill Engine Core → Excel Processor → Validator → Output & Lineage
+```
+
+Safety: không ghi đè file mẫu; luôn tạo output mới; chỉ ghi vùng mapping được phép; giữ formula/cấu trúc/định dạng; có Fill Manifest + audit; không silent drop workbook feature. Repeating rows phải giữ relative references. Validator dùng `Blocking / Warning / Info` và không tạo checkpoint kiểm tra hồ sơ riêng.
+
+Lineage tối thiểu: `Template Version → Fill Run / Manifest → Output File → Lineage & Audit`.
+
 ## 9. Guardrail
 
 - Design authority không đồng nghĩa product code đã implement.
@@ -182,6 +220,7 @@ AI/engine không tự thay formula. Validation kiểm tra formula/relative refer
 - AI không silent publish/accept/overwrite.
 - Workbench + database là nguồn dữ liệu nghiệp vụ chính thức.
 - Giá/chứng cứ không silent overwrite Đơn giá hiện hành.
+- Cảnh báo giá NCC là Warning tại NCCQ, không Blocking và không tạo checkpoint riêng.
 - 03 bảng Kết quả thẩm định giá là immutable layout.
 - Template báo giá NCC chỉ Word `.docx`.
 - Document Workspace không có `Xuất PDF` trong baseline.
@@ -189,4 +228,5 @@ AI/engine không tự thay formula. Validation kiểm tra formula/relative refer
 - Managed Regions Báo cáo/Chứng thư không silent sync và không overwrite narrative ngoài vùng.
 - Sync/version không silent mutate revision đã phát hành.
 - Publishing không silent publish/lock/mutate release; không tự thêm hoặc âm thầm bỏ tài liệu khỏi package.
+- Fill Engine không overwrite template, không staticize formula và không silent drop workbook feature.
 - Không đưa dữ liệu thật vào public repository.
