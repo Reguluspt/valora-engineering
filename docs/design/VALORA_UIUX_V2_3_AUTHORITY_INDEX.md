@@ -1,50 +1,47 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 31/08/2026 — `Chuẩn bị bộ phát hành — Iteration 1`.
+**Consolidation:** 31/08/2026 — `Xem lại & xử lý ngoại lệ — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — **Baseline `Chuẩn bị bộ phát hành — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_RESULT_BASELINE_ADDENDUM.md` — Baseline Kết quả đồng bộ hàng loạt.
-4. Các addendum Bulk Sync Confirm/Conflict/Preview/Data Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-5. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — **Baseline `Xem lại & xử lý ngoại lệ — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+4. `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_RESULT_BASELINE_ADDENDUM.md` — Baseline Kết quả đồng bộ hàng loạt.
+5. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+6. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Publishing routing authority — simplified
-Flow 5 bước cũ bị supersede.
-
-Authority mới:
 ```text
 Chuẩn bị bộ phát hành
 → Xem lại & xử lý ngoại lệ
 → Xác nhận phát hành
 → hệ thống tạo Release Manifest + khóa các revision đã phát hành
 ```
+Flow 5 bước cũ bị supersede. Không còn UI riêng `Khóa phiên bản`. Không `Xuất PDF`.
 
-Không còn bước UI riêng `Khóa phiên bản`. Không có `Xuất PDF`.
+## 3. Release Exception Review baseline
+Exception-first: tài liệu `Sẵn sàng` không nằm trong task list; user chỉ tập trung `Cần xem lại / Có lỗi / Cảnh báo`.
 
-## 3. Release Preparation baseline
-VALORA tự chọn revision mới nhất đủ điều kiện; user chủ yếu review ngoại lệ.
+Layout: summary ngoại lệ; trái danh sách/filter; giữa preview view-only lớn + highlight + Open in Word; phải chi tiết nguyên nhân, sync/revision và action; footer progress + primary `Tiếp tục: Xác nhận phát hành`.
 
-Layout: summary `Sẵn sàng phát hành (auto-selected) / Cần xem lại / Có lỗi / Không thay đổi / Tổng tài liệu`; banner giải thích selection; bảng tài liệu + revision/status/last sync/select; preview nhanh view-only; panel Release dự kiến + breakdown + chú ý; primary CTA sang review ngoại lệ.
+Semantics:
+- Blocking/error → phải sửa/revalidate hoặc loại khỏi release; không silent bypass.
+- Cần xem lại → user review/decision theo rule.
+- Warning → không tự Blocking; có thể giữ sau explicit review.
+- Ready → không phải task tại màn này.
 
-Auto-selection rules:
-- ready revision → auto-select;
-- Blocking/error → không auto-select;
-- `Cần xem lại` → exception;
-- `Không thay đổi` có thể dùng revision hiện hành nếu vẫn hợp lệ;
-- user có thể bỏ chọn tài liệu;
-- auto-select không đồng nghĩa auto-publish.
+Actions: `Mở tài liệu để cập nhật` / `Loại khỏi bộ phát hành` / `Giữ nguyên và phát hành` (chỉ non-Blocking). Sau Word edit phải revalidate.
 
-`Chọn tài liệu để phát hành — Iteration 1` trước đó chỉ là proposal và bị supersede.
+Completion gate: mọi Blocking trong release scope đã xử lý hoặc tài liệu đã loại; release plan không stale; quyết định bắt buộc đã ghi nhận. Màn này chưa publish/lock/finalize Release Manifest.
 
-## 4. Bulk Sync Result authority
-Post-execution result theo từng tài liệu; `Đã đồng bộ / Không thay đổi / Bỏ qua / Lỗi`; không export PDF; revision/version chỉ cho tài liệu update thành công.
+## 4. Release Preparation baseline
+VALORA auto-select revision mới nhất đủ điều kiện; user chủ yếu review ngoại lệ. Auto-select không đồng nghĩa auto-publish.
 
 ## 5. Guardrails
 - Single-user; AI advisory.
-- Exception-first UX; giảm thao tác bình thường.
-- Không silent publish/overwrite.
+- Exception-first UX.
+- Không silent bypass/publish/overwrite.
 - Không fake Word editor.
 - Không export PDF.
 - Release Manifest bind đúng Document Revisions đã chọn.
@@ -52,4 +49,4 @@ Post-execution result theo từng tài liệu; `Đã đồng bộ / Không thay 
 - Vietnamese-first; một primary CTA mỗi context.
 
 ## 6. ADR
-Release-readiness computation, auto-selection persistence, Release Manifest binding, locking transaction và partial-publish semantics cần ADR nếu implementation thay đổi persistence/architecture.
+Exception-decision persistence, release-plan stale detection, revalidation after Word edit, exclusion semantics, Release Manifest binding/locking transaction cần ADR nếu implementation thay đổi persistence/architecture.
