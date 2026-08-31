@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước, Publishing simplified flow 3 bước và **`Quản lý Kho tri thức — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước, Publishing simplified flow 3 bước, `Quản lý Kho tri thức — Iteration 1` và **`Cần rà soát tri thức — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -32,6 +32,7 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 
 Supporting module, không phải checkpoint bắt buộc:
 Quản lý Kho tri thức
+  → Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc
   ↔ Workbench tra cứu Kho tri thức
   ← candidate từ Asset Identity / hồ sơ cũ / knowledge review
 ```
@@ -42,71 +43,48 @@ Quản lý Kho tri thức
 ## 3. Kết quả thẩm định giá
 03 bảng công ty immutable; giữ tên/thứ tự cột, Tổng cộng, Làm tròn, số tiền bằng chữ.
 
-## 4. Knowledge Management — Baseline Iteration 1
+## 4. Knowledge Management — Baseline
 
-### 4.1 Vai trò
+### 4.1 Quản lý Kho tri thức — Iteration 1
 `Quản lý Kho tri thức` là workspace quản trị/review độc lập với panel `Kho tri thức` trong Workbench.
 
-- Panel Workbench = tra cứu/consumer surface theo tài sản đang chọn.
-- Quản lý Kho tri thức = quản lý canonical assets, variants, aliases, candidates, historical dossiers và lineage/version.
+IA:
+`Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`.
 
-### 4.2 IA baseline
-```text
-Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc
-```
+`Tài sản chuẩn` quản lý Canonical Asset / Variant / Alias / structured KTKT / source-lineage. Chi tiết có `Thông tin chung | Đặc điểm KTKT | Biến thể | Alias | Nguồn gốc & phiên bản`.
 
-- `Tài sản chuẩn`: Canonical Asset / Variant / Alias / structured KTKT / source-lineage.
-- `Cần rà soát`: identity/contextual-alias/knowledge candidates cần human decision.
-- `Hồ sơ cũ`: historical paired dossiers và knowledge candidates; không direct inject active knowledge.
-- `Lịch sử & nguồn gốc`: source/file/locator, version, confirmed actor/time, superseded/current, usage history.
+### 4.2 Structured Đặc điểm KTKT
+KTKT là dữ liệu có cấu trúc, không chỉ narrative string. Conceptual shape: `group | attribute name | value | unit | ordering | source/lineage`. Không hard-code schema riêng cho TV.
 
-### 4.3 Layout baseline — Tài sản chuẩn
-Desktop Fluent 2:
-- trái: danh sách tài sản chuẩn + search/filter/status;
-- giữa: chi tiết tài sản;
-- phải: `Xem trước theo Báo cáo thẩm định giá` + thông tin quản trị.
+Preview `Xem trước theo Báo cáo thẩm định giá` là view-only, theo cấu trúc công ty `Tên tài sản | Đặc điểm kinh tế - kỹ thuật | Đvt | SL` và hierarchy `–` / `+`. Structured data thuộc VALORA; presentation thuộc template công ty/Microsoft 365. Fill/generation giữ table/column/font/indentation/bullet/line spacing/cell width/border/pagination theo template.
 
-Chi tiết tài sản gồm tabs:
-`Thông tin chung | Đặc điểm KTKT | Biến thể | Alias | Nguồn gốc & phiên bản`.
+### 4.3 Cần rà soát tri thức — Baseline Iteration 1
+`Cần rà soát` là human-review queue. Candidate từ extraction/rules/AI/Asset Identity/hồ sơ cũ không trở thành official knowledge nếu chưa có explicit human decision.
 
-### 4.4 Structured Đặc điểm KTKT
-`Đặc điểm kinh tế - kỹ thuật` không được quản lý chỉ dưới dạng một chuỗi mô tả dài. VALORA phải hỗ trợ dữ liệu có cấu trúc, ví dụ:
+Layout Fluent 2:
+- trái: candidate list + search/filter/sort, loại candidate, nguồn tạo, độ ưu tiên, trạng thái;
+- giữa: candidate đang xem + structured data + các tab `Thông tin ứng viên | So sánh với kho tri thức | Nguồn gốc & lý do đề xuất | Xem trước theo Báo cáo`;
+- phải: report preview view-only + ghi chú nội bộ + lịch sử quyết định;
+- footer: decision bar.
 
-- General/identity: Thương hiệu, Xuất xứ, Mã sản phẩm/model, Loại thiết bị.
-- Technical attributes theo nhóm phù hợp từng loại tài sản.
+Candidate types tối thiểu: `Tài sản mới`, `Biến thể mới`, `Alias`, `Đặc điểm KTKT`, knowledge candidate từ hồ sơ cũ.
 
-Conceptual attribute shape:
-`group | attribute name | value | unit | ordering | source/lineage`.
+Decision semantics:
+1. `Xác nhận` — explicit human commit.
+2. `Chỉnh sửa rồi xác nhận` — giữ candidate/source lineage và lưu giá trị cuối được xác nhận.
+3. `Không phù hợp` — reject nhưng không xóa source/evidence/provenance.
+4. `Để xử lý sau` — defer; chưa phải official knowledge.
 
-Không hard-code schema riêng cho TV; từng loại tài sản có thể có bộ thuộc tính khác nhau.
+Confidence/độ ưu tiên chỉ hỗ trợ sắp xếp/giải thích; không auto-approve dù confidence cao. Khi có tri thức hiện hữu liên quan, phải có surface so sánh và không silent overwrite. Decision history/audit giữ candidate, source/locator, relevant before/proposed/confirmed values, decision, actor, time.
 
-### 4.5 Preview và presentation authority của Báo cáo
-Chi tiết tài sản có `Xem trước theo Báo cáo thẩm định giá`, chỉ view-only; không fake Word editor.
+### 4.4 Human/AI boundary
+AI/rules được extract/normalize/retrieve/score/rerank/group/explain/suggest; không silent activate knowledge, không overwrite raw observation, không đổi presentation authority, không impersonate human confirmation. Direct active-knowledge injection bị cấm.
 
-Preview phải phản ánh cấu trúc Báo cáo công ty:
-`Tên tài sản | Đặc điểm kinh tế - kỹ thuật | Đvt | SL`.
-
-Trong cột KTKT, presentation mapping theo hierarchy công ty:
-```text
-– Thuộc tính cấp 1: Giá trị.
-– Thuộc tính cấp 1: Giá trị.
-– Thông số kỹ thuật:
-    + Thuộc tính: Giá trị.
-    + Thuộc tính: Giá trị.
-```
-
-VALORA quản lý structured business data; template công ty/Microsoft 365 quản lý presentation.
-
-Document generation/fill phải giữ theo template: table/column labels, font/size, alignment/indentation, `–`/`+`, line spacing, cell widths, borders, row/page continuation, page layout và pagination. Nội dung dài có thể chạy sang trang tiếp theo đúng template nhưng không được chuyển thành card hoặc free-form layout khác.
-
-### 4.6 Human/AI boundary
-AI được extract/normalize/suggest/group/explain/rerank; không được silent activate knowledge, không overwrite raw observation, không đổi company presentation authority. Official knowledge activation cần committed human decision.
-
-### 4.7 Code-base alignment
-UI surface này phải bám các domain boundary đã có: Column Mapping Memory, Raw Asset Observation, Asset Identity Memory, CanonicalAsset, AssetVariant, AssetAlias, ContextualAssetAlias, IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog, DossierBundle, DossierRowAlignment và reviewed quote/spec/knowledge candidates. Direct active-knowledge injection bị cấm.
+### 4.5 Code-base alignment
+UI bám Column Mapping Memory, Raw Asset Observation, Asset Identity Memory, CanonicalAsset, AssetVariant, AssetAlias, ContextualAssetAlias, IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog, DossierBundle, DossierRowAlignment và reviewed quote/spec/knowledge candidates.
 
 ## 5. Template / AI / Spreadsheet
-AI advisory; user xác nhận mapping/template. Không silent accept/publish/overwrite/change formula. Custom field không tự promote canonical. Fill Engine giữ authority hiện hành và phải tôn trọng presentation mapping của structured KTKT khi fill Báo cáo.
+AI advisory; user xác nhận mapping/template. Không silent accept/publish/overwrite/change formula. Custom field không tự promote canonical. Fill Engine giữ authority hiện hành và tôn trọng presentation mapping structured KTKT.
 
 ## 6. Microsoft 365 Document Workspace
 VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status, Release Manifest. Microsoft 365 quản lý Word/file/file version. `Document Revision != Microsoft 365 file version`.
@@ -141,9 +119,9 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 ## 7. Guardrails
 - Single-user; AI advisory.
 - Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
-- Exception-first UX ở Publishing.
-- Auto-select nhưng không auto-publish.
+- Không auto-approve knowledge candidate.
 - Không silent bypass Blocking/Warning/publish/overwrite/knowledge activation.
+- Reject/defer không xóa provenance; defer không phải confirmed knowledge.
 - Không fake Word/Excel editor.
 - Không export PDF trong Bulk Sync Result hoặc Publishing.
 - Structured KTKT = business data; presentation = company template authority.
@@ -155,20 +133,19 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 | Capability | Trạng thái |
 |---|---|
 | S09–S13 / NCCQ / Result | P0 baseline |
-| **Quản lý Kho tri thức** | **P0 baseline Iteration 1** |
-| Structured KTKT + report preview mapping | **P0 baseline Iteration 1** |
+| Quản lý Kho tri thức | P0 baseline Iteration 1 |
+| **Cần rà soát tri thức** | **P0 baseline Iteration 1** |
+| Structured KTKT + report preview mapping | P0 baseline Iteration 1 |
 | Microsoft 365 Document Workspace | P0 baseline |
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
 | Bulk Sync loop | P0 baseline Iteration 1 |
 | AI custom template + Confirm/Save | P0 baseline Iteration 1 |
 | Managed Regions / Generation-Sync Báo cáo & Chứng thư | P0 baseline |
-| Chuẩn bị bộ phát hành | P0 baseline Iteration 1 |
-| Xem lại & xử lý ngoại lệ | P0 baseline Iteration 1 |
-| Xác nhận phát hành | P0 baseline Iteration 1 |
 | Publishing simplified flow | P0 baseline complete |
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 9. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md`.
@@ -176,4 +153,4 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 - Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành tiếp tục có hiệu lực.
 
 ## 10. ADR
-Nếu implementation thay đổi canonical/variant/attribute persistence, knowledge activation/versioning, attribute grouping/order, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, locking atomicity, retry/idempotency, failure recovery hoặc partial-publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi review-queue/candidate lifecycle/decision-log persistence, canonical/variant/attribute persistence, knowledge activation/versioning, merge/conflict semantics, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, locking atomicity, retry/idempotency, failure recovery hoặc partial-publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
