@@ -1,97 +1,76 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Purpose:** Ngăn iteration/addendum cũ override quyết định hiện hành.  
-**Consolidation:** v2.3 — cập nhật `Sinh & Đồng bộ Chứng thư thẩm định giá — Iteration 1` ngày 31/08/2026.
+**Consolidation:** 31/08/2026 — `Tạo & Xem lại bộ tài liệu hồ sơ — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_CERTIFICATE_GENERATION_SYNC_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Sinh & Đồng bộ Chứng thư thẩm định giá — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_REPORT_GENERATION_SYNC_BASELINE_ADDENDUM.md` — Baseline `Sinh & Đồng bộ Báo cáo thẩm định giá — Iteration 1`.
-4. `VALORA_UIUX_HANDOFF_v2.3_SPREADSHEET_FILL_ENGINE_BASELINE_ADDENDUM.md` — Baseline Fill Engine.
-5. `VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md` — current NCC price warning authority.
-6. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md` — Baseline Managed Regions — Chứng thư.
-7. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md` — Baseline Publishing.
-8. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md` — Baseline Sync/Version.
-9. `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_REPORT_BASELINE_ADDENDUM.md` — Baseline Managed Regions — Báo cáo.
-10. `VALORA_UIUX_HANDOFF_v2.3_CONTRACT_DOCUMENT_WORKSPACE_BASELINE_ADDENDUM.md` — Baseline 03_Hợp đồng.
-11. Các addendum Template/AI/Result/NCCQ hiện hành trong scope tương ứng.
-12. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SET_BATCH_REVIEW_BASELINE_ADDENDUM.md` — **Baseline / Design Authority `Tạo & Xem lại bộ tài liệu hồ sơ — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_CERTIFICATE_GENERATION_SYNC_BASELINE_ADDENDUM.md` — Baseline Sinh & Đồng bộ Chứng thư.
+4. `VALORA_UIUX_HANDOFF_v2.3_REPORT_GENERATION_SYNC_BASELINE_ADDENDUM.md` — Baseline Sinh & Đồng bộ Báo cáo.
+5. `VALORA_UIUX_HANDOFF_v2.3_SPREADSHEET_FILL_ENGINE_BASELINE_ADDENDUM.md` — Baseline Fill Engine.
+6. `VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md` — NCC warning authority.
+7. Các addendum Managed Regions / Sync-Version / Publishing / Template / Result / NCCQ hiện hành trong scope tương ứng.
+8. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Routing authority
 ```text
 ... → Kết quả thẩm định giá
 → Microsoft 365 Document Workspace
-   → 03_Hợp đồng
-   → Báo cáo thẩm định giá
-      → Sinh & Đồng bộ Báo cáo
-      → Managed Regions — Báo cáo
-   → Chứng thư thẩm định giá
-      → Sinh & Đồng bộ Chứng thư
-         → Chọn template & phạm vi
-         → Data Snapshot
-         → Preview & Review vùng
-         → Tạo Document Revision
-         → Đồng bộ Microsoft 365
-         → Kết quả đồng bộ
-      → Managed Regions — Chứng thư
-   → Đồng bộ dữ liệu & Quản lý phiên bản
+   → Tạo & Xem lại bộ tài liệu hồ sơ
+      → Chọn/bộ mẫu có sẵn
+      → Data Snapshot
+      → Tạo bộ tài liệu hàng loạt
+      → Review tài liệu trong preview lớn
+      → Đồng bộ dữ liệu khi hồ sơ thay đổi
+      → Tải lên mẫu tùy biến của hồ sơ (khi cần)
+         → AI nhận diện trường → user xác nhận → test fill → Template Version
+      → Báo cáo / Chứng thư mở child-flow chuyên sâu khi cần
    → Phát hành bộ tài liệu
 ```
 
-## 3. Price & Evidence authority
+Các tài liệu mẫu cố định như Quyết định/Kế hoạch/Phiếu KSCL không cần workflow riêng; sinh hàng loạt + review chung.
+
+## 3. Document Set baseline
+Mental model:
 ```text
-1. Giá khảo sát từ Internet
-2. Thuyết minh đơn giá
-3. Giá trong phần Kết quả thẩm định giá của hồ sơ cũ
+Template Version(s) → Data Snapshot → Batch generation → Review → Sync on change → Publishing
 ```
-Giá NCC không phải nguồn chính xác định đơn giá thẩm định cuối cùng.
 
-Cảnh báo NCC: `Giá NCC < Đơn giá hiện hành` luôn Warning; `|Giá NCC - Đơn giá hiện hành| / Đơn giá hiện hành > 15%` là Warning chênh lệch lớn. Warning không Blocking; không có màn rule-check riêng.
+Layout: summary phía trên; danh sách tài liệu trái; **preview tài liệu lớn trung tâm**; metadata/mapping/history phải; zoom/page/full-screen/Open in Word. Preview nhỏ của iteration trước bị supersede.
 
-## 4. Baseline visual authority
-- NCCQ — Iteration 6.
-- Kết quả thẩm định giá — Iteration 1.
-- Microsoft 365 Document Workspace — baseline.
-- 03_Hợp đồng — Iteration 1.
-- Managed Regions — Báo cáo — Iteration 1.
-- Managed Regions — Chứng thư — Iteration 1.
-- Sync/Version — Iteration 1.
-- Publishing — Iteration 1.
-- Fill Engine — Iteration 1.
-- Sinh & Đồng bộ Báo cáo — Iteration 1.
-- **Sinh & Đồng bộ Chứng thư — Iteration 1.**
+Batch dùng chung snapshot nhưng từng tài liệu có `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version` riêng.
 
-## 5. Document Workspace authority
+`Đồng bộ dữ liệu` explicit: xem thay đổi → chọn tài liệu/vùng → sync. Không silent overwrite; conflict managed region phải xử lý; published revision immutable.
+
+Mẫu tùy biến: upload `.docx` → AI đối chiếu dữ liệu hồ sơ → gợi ý/ highlight mapping/Managed Regions → user xác nhận → test fill → lưu Template Version. Mặc định scope hồ sơ; chỉ explicit `Lưu vào thư viện mẫu` mới tái sử dụng rộng hơn.
+
+## 4. Existing Document Workspace authority
 Managed Regions status: `Đã đồng bộ / Cần cập nhật / Bạn tự chỉnh trong Word / Lỗi`.
 
-### 5.1 Document Generation/Sync shared contract
-Báo cáo và Chứng thư dùng chung mental flow:
+Báo cáo và Chứng thư giữ shared generation contract:
 ```text
 Chọn template & phạm vi → Data Snapshot → Preview & Review vùng → Tạo Document Revision → Đồng bộ Microsoft 365 → Kết quả đồng bộ
 ```
-Preview view-only; không fake Word editor. `Tạo Document Revision` là explicit action. Readiness trước sinh có thể là `Đã mapping / Cần xem / Chưa mapping`; không thay thế Managed Regions status sau khi Word tồn tại.
+Document Set workspace orchestration không thay thế child-flow chuyên sâu này.
 
-Lineage:
-```text
-Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version
-```
-Không silent đổi template/snapshot, overwrite, sync hoặc publish. Region/field trên visual chỉ minh họa, không hard-code schema. Conflict trong Managed Region phải xem/xử lý trước khi ghi; narrative ngoài vùng giữ nguyên.
+## 5. Price & Evidence authority
+Ưu tiên: `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính xác định đơn giá cuối cùng.
 
-### 5.2 Chứng thư
-Child flow Chứng thư dùng authority Managed Regions — Chứng thư sau khi revision/file Word tồn tại. Không tạo lifecycle song song với Sync/Version/Publishing.
+NCC warning: giá NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% là Warning; không Blocking; không màn rule-check riêng.
 
-## 6. Bảng tính authority
-Reference `Bang Tinh - HĐ 42.xlsx`: `Hn = MIN(En:Gn)`; `In = Dn*Hn`. Fill Engine không overwrite template, không staticize formula, không silent drop workbook feature.
+## 6. Spreadsheet authority
+`Hn = MIN(En:Gn)`; `In = Dn*Hn`. Fill Engine không overwrite template, không staticize formula, không silent drop workbook feature.
 
-## 7. Guardrail
+## 7. Guardrails
 - Single-user; AI advisory.
-- Không S14, màn Kiểm tra hồ sơ, KSCL workflow riêng hoặc màn Kiểm tra quy tắc đối chiếu giá.
+- Không S14, Kiểm tra hồ sơ riêng, KSCL workflow riêng, NCC rule-check screen.
 - Không fake Word/Excel editor.
-- Không silent accept/sync/overwrite/publish.
+- Không silent accept/mapping/sync/overwrite/publish.
+- Không auto-promote mẫu hồ sơ thành global template.
 - Document Revision != Microsoft 365 file version.
-- Revision/release đã phát hành immutable.
+- Published revision/release immutable.
 - Vietnamese-first; một primary CTA mỗi context.
 
 ## 8. ADR
-Nâng `Sinh & Đồng bộ Chứng thư thẩm định giá — Iteration 1` thành baseline là UI/UX authority update. Thay đổi persistence, transaction boundary, conflict detection, managed-region write policy hoặc Microsoft 365 version binding khi implement phải đánh giá ADR riêng.
+Baseline Document Set là UI/UX/domain interaction authority. Batch transaction semantics, template scope persistence, AI-to-managed-region conversion, conflict detection hoặc multi-document sync persistence cần đánh giá ADR riêng khi implement nếu thay đổi kiến trúc/persistence.
