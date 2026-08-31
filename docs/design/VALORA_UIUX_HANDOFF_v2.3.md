@@ -2,8 +2,8 @@
 
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
-**Visual baseline:** Fluent 2, desktop-first, data-heavy workflow  
-**Trạng thái:** Canonical master handoff — **Consolidation v2.3 + AI-TPL-4 + 03_Hợp đồng + Managed Regions Báo cáo/Chứng thư + Sync/Version + Phát hành bộ tài liệu Baseline**; không đồng nghĩa product code đã implement  
+**Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first  
+**Trạng thái:** Canonical master handoff — **Consolidated v2.3 + Spreadsheet Fill Engine Baseline + NCC Price Warning Authority**; không đồng nghĩa product code đã implement  
 **Cập nhật:** 31/08/2026
 
 > Master này consolidate authority v2.3 hiện hành. Addendum được giữ để truy vết quyết định/visual authority. Khi có xung đột, quyết định explicit mới hơn thắng trong đúng scope.
@@ -25,19 +25,25 @@ Các baseline/authority đã khóa:
 - NCCQ child — Hoàn tất 01 báo giá NCC — Iteration 3, scope 01 báo giá / 01 NCC.
 - Kết quả thẩm định giá — Iteration 1, 03 bảng biểu mẫu công ty immutable.
 - Microsoft 365 Document Workspace / Bộ tài liệu phát hành — baseline authority.
-- **03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1 Baseline / Design Authority.**
-- **Managed Regions — Báo cáo thẩm định giá — Iteration 1 Baseline / Design Authority.**
-- **Managed Regions — Chứng thư thẩm định giá — Iteration 1 Baseline / Design Authority.**
-- **Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1 Baseline / Design Authority.**
-- **Phát hành bộ tài liệu — Iteration 1 Baseline / Design Authority.**
+- 03_Hợp đồng — Danh sách & tạo tài liệu — Iteration 1 Baseline / Design Authority.
+- Managed Regions — Báo cáo thẩm định giá — Iteration 1 Baseline / Design Authority.
+- Managed Regions — Chứng thư thẩm định giá — Iteration 1 Baseline / Design Authority.
+- Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1 Baseline / Design Authority.
+- Phát hành bộ tài liệu — Iteration 1 Baseline / Design Authority.
 - Quản lý mẫu tài liệu generic — Iteration 1.
 - Mapping Template tài liệu generic Word — Iteration 2.
 - Kiểm tra & hoàn tất template Word generic — Iteration 1.
 - Thiết lập mẫu tài liệu — AI phân tích & đề xuất — Iteration 1.
 - Thiết lập mẫu tài liệu — Bước 3: Rà soát & chỉnh sửa — Iteration 1.
 - Thiết lập mẫu tài liệu — Bước 4: Kiểm tra & hoàn tất Word + Bảng tính — Iteration 1 Baseline / Design Authority.
+- **Bảng tính Fill Engine — Implementation Contract v1 — Iteration 1 Baseline / Design Authority.**
 
-Supersession/guardrail quan trọng:
+Current business-rule authority mới nhất:
+
+- **Không có màn `Kiểm tra quy tắc đối chiếu giá`.** Mockup màn này discarded, không phải baseline.
+- Cảnh báo `Giá NCC ↔ Đơn giá hiện hành` xuất hiện ngay tại NCCQ theo từng dòng; Warning, không Blocking.
+
+Supersession/guardrail:
 
 - Không dùng S14 — So sánh & Xác nhận giá thẩm định chính thức.
 - Không có màn Kiểm tra hồ sơ riêng.
@@ -46,11 +52,12 @@ Supersession/guardrail quan trọng:
 - AI/Kho tri thức chỉ gợi ý; user quyết định nghiệp vụ chính thức.
 - `Bảng tính` là terminology nghiệp vụ chính thức cho template Excel.
 - `03_Hợp đồng` quản lý working documents; signed scan thuộc `05_Pháp lý`.
-- Managed Regions Báo cáo/Chứng thư chỉ cập nhật vùng do VALORA quản lý; narrative ngoài vùng không bị silent overwrite.
+- Managed Regions chỉ cập nhật vùng do VALORA quản lý; narrative ngoài vùng không bị silent overwrite.
 - Sync luôn explicit; user xem thay đổi và chọn nội dung trước khi ghi vào Word.
 - Document Revision và Microsoft 365 file version là hai lớp lineage liên kết nhưng không đồng nhất.
 - Revision/release đã phát hành không được silent mutate.
 - Publishing không silent publish/lock và không tự thêm/bỏ tài liệu khỏi release package.
+- Fill Engine không overwrite template, không staticize formula và không silent drop workbook feature.
 
 ## 1. Product baseline
 
@@ -61,7 +68,7 @@ Supersession/guardrail quan trọng:
 - Template báo giá NCC chỉ Word `.docx`.
 - Template generic có thể Word `.docx` và Bảng tính `.xlsx/.xlsm` theo authority từng loại.
 - Microsoft 365 quản lý file/file version/Word; VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status và release manifest.
-- Không xây fake Word editor.
+- Không xây fake Word editor hoặc fake Excel editor.
 - Không đưa dữ liệu nhận diện khách hàng/NCC/hồ sơ thật vào public repository.
 
 ## 2. North-star user flow v2.3
@@ -94,10 +101,8 @@ Trang chủ
    → Bảng Kết quả thẩm định giá
 → Microsoft 365 Document Workspace / Bộ tài liệu phát hành
    → 03_Hợp đồng — Danh sách & tạo tài liệu
-   → Báo cáo thẩm định giá
-      → Managed Regions — Báo cáo
-   → Chứng thư thẩm định giá
-      → Managed Regions — Chứng thư
+   → Báo cáo thẩm định giá → Managed Regions — Báo cáo
+   → Chứng thư thẩm định giá → Managed Regions — Chứng thư
    → Đồng bộ dữ liệu & Quản lý phiên bản tài liệu
    → Phát hành bộ tài liệu
       → Chọn tài liệu
@@ -107,7 +112,7 @@ Trang chủ
       → Khóa phiên bản đã phát hành
 ```
 
-Không có checkpoint riêng: `Khai báo thông tin thực hiện`, `Xác nhận giá thẩm định chính thức`, `Kiểm tra hồ sơ`, `KSCL`.
+Không có checkpoint riêng: `Khai báo thông tin thực hiện`, `Xác nhận giá thẩm định chính thức`, `Kiểm tra hồ sơ`, `KSCL`, `Kiểm tra quy tắc đối chiếu giá`.
 
 Supporting configuration:
 
@@ -115,6 +120,7 @@ Supporting configuration:
 Cấu hình → Mẫu tài liệu → Quản lý mẫu tài liệu
 → Tạo/chọn mẫu → AI phân tích & đề xuất
 → Rà soát & chỉnh sửa → Kiểm tra & hoàn tất
+→ Bảng tính Fill Engine: Chuẩn bị → Mapping → Preview & Validate → Fill & Recalculate → Save & Version
 ```
 
 ## 3. Pre-case
@@ -183,7 +189,9 @@ NCC1 | NCC2 | NCC3 |
 
 Các cột NCC hiển thị tiền trực tiếp. Semantic giá: `Giá lịch sử`, `Giá đề nghị — chờ NCC xác nhận`, `Đơn giá NCC đã xác nhận`.
 
-Cùng NCC consolidate vào báo giá phù hợp; không duplicate chỉ vì nguồn lịch sử khác. Lineage giữ cấp dòng; STT immutable. Internet-only có thể sinh giá đề nghị trong khoảng:
+Cùng NCC consolidate vào báo giá phù hợp; không duplicate chỉ vì nguồn lịch sử khác. Lineage giữ cấp dòng; STT immutable.
+
+Thiết bị Internet-only có thể sinh giá đề nghị trong khoảng:
 
 ```text
 Đơn giá hiện hành <= Giá đề nghị <= Đơn giá hiện hành × 115%
@@ -192,6 +200,35 @@ Cùng NCC consolidate vào báo giá phù hợp; không duplicate chỉ vì ngu�
 Đây không phải giá xác nhận. Child flow `Hoàn tất 01 báo giá NCC` chỉ scope 01 báo giá/01 NCC và không tự sửa giá, tự chọn NCC hay tự hoàn tất hồ sơ.
 
 CTA `Chọn nhà cung cấp đã xác nhận giá` lưu NCC → báo giá → dòng → giá xác nhận → evidence và chuyển trực tiếp sang Kết quả thẩm định giá.
+
+### 7.1 Cảnh báo giá NCC — authority mới nhất
+
+Không dựng màn/checkpoint `Kiểm tra quy tắc đối chiếu giá`. Cảnh báo hiển thị ngay tại NCCQ theo từng dòng.
+
+```text
+A. Giá NCC < Đơn giá hiện hành
+→ luôn Warning, kể cả chênh lệch <= 15%
+
+B. |Giá NCC - Đơn giá hiện hành| / Đơn giá hiện hành > 15%
+→ Warning chênh lệch lớn
+```
+
+Suy ra phía cao:
+
+```text
+Giá NCC > 115% × Đơn giá hiện hành
+→ Warning
+```
+
+UI phải cho người dùng truy cập được ngay tại dòng:
+
+```text
+Đơn giá hiện hành | Giá NCC | Chênh tiền | Chênh % | Cảnh báo
+```
+
+Warning không Blocking. Người dùng vẫn có thể tiếp tục tạo báo giá. VALORA không tự sửa Giá NCC, không tự sửa Đơn giá hiện hành và không tự chọn giá thay user.
+
+Companion authority: `VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md`.
 
 ## 8. Template báo giá NCC — Word-only
 
@@ -245,7 +282,93 @@ Hn = MIN(En:Gn)
 In = Dn*Hn
 ```
 
-Engine giữ formula, không staticize/đổi rule; nhân dòng cập nhật relative refs và tổng/làm tròn. Không silent mất merge/style/border/format/image/evidence/page layout/named range/data validation/conditional formatting/macro; validation phải cảnh báo nếu không bảo toàn.
+Engine giữ formula, không staticize/đổi rule; nhân dòng cập nhật relative refs và tổng/làm tròn. Không silent mất merge/style/border/format/image/evidence/page layout/named range/data validation/conditional formatting/workbook feature; validation phải cảnh báo nếu không bảo toàn.
+
+### 13.1 Bảng tính Fill Engine — Implementation Contract v1 — Baseline Iteration 1
+
+Mental flow:
+
+```text
+Chuẩn bị
+→ Mapping
+→ Preview & Validate
+→ Fill & Recalculate
+→ Save & Version
+```
+
+Logical architecture:
+
+```text
+Data Sources
+→ Mapping Engine
+→ Fill Engine Core
+→ Excel Processor
+→ Validator
+→ Output & Lineage
+```
+
+Layout baseline Fluent 2 desktop-first:
+
+- Header + template/version/context + command bar.
+- Stepper 5 bước.
+- Cột trái: Template & Output, Nguồn dữ liệu, Chế độ điền, Nguyên tắc an toàn.
+- Cột giữa: Mapping Panel + Repeating Rows.
+- Vùng lớn: Preview Spreadsheet.
+- Hàng dưới: Validator + Fill Manifest + Output & Lineage.
+- Footer có một primary CTA theo bước.
+
+Preview là bề mặt kiểm tra fill, không phải Excel editor.
+
+Mapping hỗ trợ metadata hồ sơ, tài sản, vùng/cột, repeating rows, vùng tổng hợp và formula-bearing template cells. User có thể thêm/chỉnh mapping thủ công; AI chỉ gợi ý.
+
+Repeating rows phải giữ relative references, structure và STT nghiệp vụ immutable khi STT thuộc lineage gốc.
+
+Formula authority:
+
+```text
+Hn = MIN(En:Gn)
+In = Dn*Hn
+```
+
+Fill Engine phải giữ formula, không staticize, không đổi business formula; nhân dòng giữ relative refs; cập nhật Tổng cộng/Làm tròn theo cấu trúc template.
+
+Workbook feature preservation tối thiểu: merge, style, border, number format, ảnh/chứng cứ, print/page layout, named range, data validation, conditional formatting và workbook features liên quan. Không silent drop feature; nếu không thể bảo toàn phải Warning/Blocking trước khi output được coi là hợp lệ.
+
+Validator:
+
+```text
+Blocking | Warning | Info
+```
+
+Blocking cản dependency fill/save; Warning nêu rủi ro nhưng có thể tiếp tục nếu rule cho phép; Info là trạng thái. Issue phải có vị trí + thông báo nghiệp vụ + action xem chi tiết/đi tới.
+
+Fill Manifest tối thiểu ghi Template Version, sheet/vùng đích, nguồn dữ liệu/Data Snapshot hoặc dataset reference, thời điểm chạy, số dòng, số ô/vùng đã điền, formula preservation result, validator result và output identity/checksum phù hợp implementation.
+
+Lineage:
+
+```text
+Template Version
+→ Fill Run / Manifest
+→ Output File
+→ Lineage & Audit
+```
+
+Safety baseline:
+
+- không ghi đè file mẫu;
+- luôn tạo output mới;
+- chỉ ghi vào vùng mapping được phép;
+- giữ cấu trúc/công thức/định dạng;
+- có manifest/audit cho mỗi fill run;
+- không silent drop workbook feature.
+
+Boundary:
+
+- UI/UX authority khóa layout, mental model, control, validator semantics và safety communication.
+- Domain contract khóa template/mapping/formula/feature-preservation/manifest-lineage semantics.
+- Engine implementation không bị khóa technology stack/runtime chỉ bởi visual baseline.
+
+Companion authority: `VALORA_UIUX_HANDOFF_v2.3_SPREADSHEET_FILL_ENGINE_BASELINE_ADDENDUM.md`.
 
 ## 14. Bước 4 — Kiểm tra & hoàn tất
 
@@ -290,28 +413,28 @@ Cách xác định tập báo giá bắt buộc chưa được khóa thành min/
 
 VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status và release manifest. Microsoft 365/OneDrive/SharePoint/Word quản lý file/file version/Word. Preview Word cuộn trang liên tục; không fake Word editor.
 
-Command bar: `Mở trong Word`, `Đồng bộ dữ liệu`, `Tạo phiên bản mới`, `So sánh`, `Khóa phiên bản`, `...`, `Phát hành bộ tài liệu`. **Không có `Xuất PDF`.**
+Command bar: `Mở trong Word`, `Đồng bộ dữ liệu`, `Tạo phiên bản mới`, `So sánh`, `Khóa phiên bản`, `...`, `Phát hành bộ tài liệu`. Không có `Xuất PDF`.
 
 Thư mục: `01_Hồ sơ gốc / 02_Tài liệu thẩm định / 03_Hợp đồng / 04_Báo giá nhà cung cấp / 05_Pháp lý`. Generated working document và signed scan là hai artifact khác nhau; signed scan thuộc `05_Pháp lý`.
 
 ### 16.2 03_Hợp đồng — Baseline Iteration 1
 
-Workspace quản lý working documents vòng đời hợp đồng; không thay Generic Template Management. Bảng: `STT | Tên tài liệu | Loại tài liệu | Số/Ký hiệu | Trạng thái | Phiên bản | Cập nhật lần cuối | Tác vụ`. Primary CTA `Tạo tài liệu`; preview view-only; chỉnh sửa qua Word. Lifecycle `Bản nháp → Cần đồng bộ → Đã đồng bộ → Sẵn sàng phát hành → Đã phát hành`. Lineage `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version → signed scan 05_Pháp lý (nếu có)`.
+Bảng: `STT | Tên tài liệu | Loại tài liệu | Số/Ký hiệu | Trạng thái | Phiên bản | Cập nhật lần cuối | Tác vụ`. Primary CTA `Tạo tài liệu`; preview view-only; chỉnh sửa qua Word. Lifecycle `Bản nháp → Cần đồng bộ → Đã đồng bộ → Sẵn sàng phát hành → Đã phát hành`. Lineage `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version → signed scan 05_Pháp lý (nếu có)`.
 
 ### 16.3 Managed Regions — Báo cáo — Baseline Iteration 1
 
-User-facing title ưu tiên `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`.
+User-facing title: `Quản lý vùng dữ liệu trong Báo cáo thẩm định giá`.
 
 ```text
 1. Xem danh sách vùng → 2. Xem nội dung hiện tại
 → 3. Xem khác biệt → 4. Chọn vùng cần cập nhật → Đồng bộ
 ```
 
-Trạng thái: `Đã đồng bộ / Cần đồng bộ / Bạn tự chỉnh trong Word / Lỗi`. Comparison: `Dữ liệu từ VALORA ↔ Dữ liệu đang có trong Word`. Action: `Cập nhật vào Word / Giữ nguyên trong Word / Bỏ qua vùng này lần này`. Không silent sync; narrative ngoài vùng giữ nguyên.
+Trạng thái: `Đã đồng bộ / Cần cập nhật / Bạn tự chỉnh trong Word / Lỗi`. Comparison: `Dữ liệu từ VALORA ↔ Nội dung đang có trong Word`. Không silent sync; narrative ngoài vùng giữ nguyên.
 
-### 16.4 Managed Regions — Chứng thư thẩm định giá — Baseline Iteration 1
+### 16.4 Managed Regions — Chứng thư — Baseline Iteration 1
 
-User-facing title ưu tiên `Quản lý nội dung do VALORA quản lý (Chứng thư thẩm định giá)`; không bắt user hiểu thuật ngữ kỹ thuật Managed Region/Region ID ở bề mặt chính.
+User-facing title: `Quản lý nội dung do VALORA quản lý (Chứng thư thẩm định giá)`.
 
 Mental model:
 
@@ -322,22 +445,7 @@ Mental model:
 → 4. Đồng bộ vào Word
 ```
 
-Layout baseline: header + `Mở trong Word` + một primary sync CTA; stepper 4 bước; danh sách vùng bên trái; comparison `Dữ liệu từ VALORA ↔ Nội dung đang có trong Word` ở trung tâm; vùng checkbox chọn cập nhật; panel phải có tình trạng Word, tóm tắt trạng thái, lịch sử đồng bộ và trợ giúp; footer có `Quay lại / Lưu lựa chọn / Đồng bộ vào Word (n vùng)`.
-
-Trạng thái:
-
-```text
-Đã đồng bộ
-Cần cập nhật
-Bạn tự chỉnh trong Word
-Lỗi
-```
-
-Các nhóm như thông tin hồ sơ, khách hàng, đối tượng, mục đích, thời điểm, kết quả thẩm định giá, thông tin phát hành chỉ là nhóm minh họa trên visual baseline; **không hard-code field**. Vùng thực tế đến từ Template Version + mapping đã cấu hình.
-
-Chỉ managed regions user chọn mới được ghi. `Lưu lựa chọn` không đồng nghĩa sync. Narrative ngoài vùng giữ nguyên. Nếu user đã sửa trong managed region, hệ thống phải phát hiện khác biệt và cho xem/xử lý trước khi ghi; không silent overwrite. Sau sync tiếp tục dùng Sync/Version và Publishing baseline hiện hành, không tạo lifecycle song song.
-
-Companion authority: `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md`.
+Chỉ managed regions user chọn mới được ghi. `Lưu lựa chọn` không đồng nghĩa sync. Narrative ngoài vùng giữ nguyên. Nếu user sửa trong managed region, hệ thống phải phát hiện khác biệt và cho xem/xử lý trước khi ghi; không silent overwrite.
 
 ### 16.5 Đồng bộ dữ liệu & Quản lý phiên bản — Baseline Iteration 1
 
@@ -346,7 +454,7 @@ Companion authority: `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASEL
 → 3. Chọn nội dung muốn cập nhật → 4. Cập nhật vào Word & tạo/ghi nhận phiên bản
 ```
 
-Tài liệu hiển thị `Cần cập nhật` khi dữ liệu VALORA mới hơn dữ liệu đã đồng bộ và có khác biệt truy vết được. Chỉ managed regions user chọn được ghi. Nếu user sửa trong managed region, hệ thống phát hiện khác biệt và yêu cầu xử lý trước khi ghi. Lineage giữ `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`. Revision đã phát hành không silent mutate.
+Lineage giữ `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`. Revision đã phát hành không silent mutate.
 
 ### 16.6 Phát hành bộ tài liệu — Baseline Iteration 1
 
@@ -355,13 +463,11 @@ Tài liệu hiển thị `Cần cập nhật` khi dữ liệu VALORA mới hơn 
 → 4. Xác nhận phát hành → Khóa phiên bản đã phát hành
 ```
 
-Trạng thái user-facing: `Sẵn sàng / Cần cập nhật / Chưa hoàn tất / Không áp dụng / Đã phát hành`. Chỉ tài liệu đáp ứng điều kiện theo loại tài liệu mới được chọn; package có Blocking thì primary publish CTA không khả dụng. Không tạo màn Kiểm tra hồ sơ riêng.
-
-Trước xác nhận cuối, user phải xem chính xác danh sách tài liệu + phiên bản sẽ phát hành. Không silent publish/lock, không tự thêm/bỏ artifact. Khi phát hành, freeze release manifest: Release ID/lần phát hành → artifact đã chọn → Document Revision → Data Snapshot nếu có → Microsoft 365 file/version → thời điểm → người thao tác. Release cũ immutable; sửa sau phát hành tạo revision/version và package mới. Không có `Xuất PDF`.
+Trạng thái: `Sẵn sàng / Cần cập nhật / Chưa hoàn tất / Không áp dụng / Đã phát hành`. Chỉ tài liệu đủ điều kiện mới được chọn; package có Blocking thì primary publish CTA không khả dụng. Trước xác nhận cuối, user xem chính xác danh sách tài liệu + phiên bản. Freeze release manifest; release cũ immutable; sửa sau phát hành tạo revision/version và package mới. Không có `Xuất PDF`.
 
 ## 17. Validation phân tán
 
-Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước dependency; `Warning` nêu rủi ro nhưng có thể tiếp tục nếu rule cho phép; `Info` là trạng thái. S10 tổng hợp readiness; Publishing chỉ tổng hợp release readiness và deep-link về dependency, không tạo parallel validation workflow.
+Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước dependency; `Warning` nêu rủi ro nhưng có thể tiếp tục nếu rule cho phép; `Info` là trạng thái. S10 tổng hợp readiness; các issue hiển thị tại nơi phát sinh và có deep-link/Đi tới.
 
 ## 18. Guardrail UX / dữ liệu
 
@@ -369,13 +475,14 @@ Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước 
 - AI Template Assistant không silent accept/publish/overwrite.
 - Raw source luôn truy vết được.
 - Giá/chứng cứ không silent overwrite Đơn giá hiện hành.
+- Cảnh báo giá NCC là Warning tại NCCQ; không tạo checkpoint riêng.
 - STT immutable trong business dataset.
 - Template báo giá chỉ `.docx`.
 - Formula template không staticize; không đổi `MIN(E:G)`.
+- Fill Engine luôn output file mới; không silent drop workbook feature.
 - 03 bảng Kết quả thẩm định giá immutable.
 - Generated Word và signed scan là hai artifact khác nhau.
-- Managed Regions Báo cáo/Chứng thư không silent sync/overwrite narrative ngoài vùng.
-- Nhóm field minh họa trong mockup Chứng thư không phải hard-coded schema.
+- Managed Regions không silent sync/overwrite narrative ngoài vùng.
 - Sync/version không bắt user hiểu ID kỹ thuật.
 - Document Revision != Microsoft 365 file version trong domain.
 - Không silent mutate revision/release đã phát hành.
@@ -400,7 +507,7 @@ Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước 
 | S12 | Workbench tài sản | P0 — baseline |
 | S13 | Asset Context Drawer | P0 — baseline; drawer trong S12 |
 | NGC | Nguồn giá & Chứng cứ | P0 — baseline |
-| NCCQ | Tạo & quản lý báo giá NCC | P0 — baseline Iteration 6 |
+| NCCQ | Tạo & quản lý báo giá NCC | P0 — baseline Iteration 6 + inline price warnings |
 | TM01 | Danh sách mẫu báo giá NCC | P0 — baseline Iteration 1 |
 | TM03 | Upload & Mapping NCC | P0 — baseline Iteration 1 Word-only |
 | TM04 | Preview/Test fill NCC | P0 — baseline Iteration 1 |
@@ -409,7 +516,7 @@ Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước 
 | M365 | Bộ tài liệu phát hành | P0 — baseline; sync/version/lock/publish; không Xuất PDF |
 | M365-03HĐ | 03_Hợp đồng — Danh sách & tạo tài liệu | P0 — baseline Iteration 1 |
 | M365-MR-REPORT | Managed Regions — Báo cáo | P0 — baseline Iteration 1 |
-| M365-MR-CERT | Managed Regions — Chứng thư | P0 — baseline Iteration 1; user-friendly compare + explicit selective sync |
+| M365-MR-CERT | Managed Regions — Chứng thư | P0 — baseline Iteration 1 |
 | M365-SYNC-VERSION | Đồng bộ dữ liệu & Quản lý phiên bản | P0 — baseline Iteration 1 |
 | M365-PUBLISH | Phát hành bộ tài liệu | P0 — baseline Iteration 1; immutable release manifest |
 | GTM | Quản lý mẫu tài liệu generic | P0 — baseline Iteration 1 |
@@ -419,9 +526,12 @@ Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước 
 | AI-TPL-3 | Rà soát & chỉnh sửa | P0 — baseline Iteration 1 |
 | Spreadsheet | Bảng tính template semantics | Design Authority |
 | AI-TPL-4 | Kiểm tra & hoàn tất Word + Bảng tính | P0 — baseline Iteration 1 |
+| XLS-FILL | Bảng tính Fill Engine — Implementation Contract v1 | **P0 — Baseline / Design Authority Iteration 1** |
 
 ## 20. Companion authority documents
 
+- `VALORA_UIUX_HANDOFF_v2.3_SPREADSHEET_FILL_ENGINE_BASELINE_ADDENDUM.md`.
+- `VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_MANAGED_REGIONS_CERTIFICATE_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SYNC_VERSION_BASELINE_ADDENDUM.md`.
@@ -444,24 +554,20 @@ Không có màn Kiểm tra hồ sơ riêng. `Blocking` phải xử lý trước 
 
 Đây là thiết kế mục tiêu; design authority không đồng nghĩa đã implement.
 
-Authority Document Workspace hiện đã khóa xuyên suốt:
+Bảng tính authority hiện khóa xuyên suốt:
 
 ```text
-03_Hợp đồng
-→ Managed Regions — Báo cáo
-→ Managed Regions — Chứng thư
-→ Đồng bộ dữ liệu & Quản lý phiên bản
-→ Phát hành bộ tài liệu
+Template semantics
+→ AI-assisted mapping/review
+→ Kiểm tra & hoàn tất
+→ Fill Engine
+→ Output + Manifest + Lineage
 ```
 
-Hướng thiết kế tiếp theo ưu tiên:
-
-1. đặc tả dependency/rule engine cho đối chiếu `Đơn giá Kết quả <= Đơn giá báo giá NCC` mà không tự suy diễn tập báo giá bắt buộc;
-2. implementation contract riêng cho Excel/Bảng tính Fill Engine nếu bắt đầu triển khai;
-3. implementation contract cho release manifest/lock/version binding nếu bắt đầu triển khai Document Publishing.
+Hướng kỹ thuật tiếp theo nếu bắt đầu implementation: tách rõ UI/UX authority, domain contract và engine implementation; đánh giá ADR nếu thay đổi persistence/fill semantics, recalculation strategy, overwrite policy, workbook feature preservation hoặc version binding.
 
 ## 22. ADR
 
-Việc nâng `Managed Regions — Chứng thư thẩm định giá — Iteration 1` thành visual/design baseline là cập nhật UI/UX authority, **không phát sinh ADR kỹ thuật mới**.
+Việc nâng `Bảng tính Fill Engine — Implementation Contract v1 — Iteration 1` thành visual/design baseline là cập nhật UI/UX + domain contract authority, **không tự phát sinh ADR kỹ thuật mới**.
 
-Nếu implementation làm thay đổi managed-region persistence, conflict detection, sync policy, Document Data Model, Data Snapshot/Document Revision semantics, Microsoft 365 version binding hoặc immutable published revision/release, cần đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation làm thay đổi persistence, transaction boundary, formula/fill semantics, workbook feature preservation, output/version binding, Data Snapshot/Document Revision semantics hoặc immutable published revision/release thì cần đánh giá ADR riêng trước khi sửa product code.
