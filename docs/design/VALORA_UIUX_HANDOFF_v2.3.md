@@ -8,9 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa: S09–S13; Nguồn giá & Chứng cứ; NCCQ Iteration 6; Kết quả thẩm định giá; Microsoft 365 Document Workspace; Managed Regions Báo cáo/Chứng thư; Sync/Version; Publishing; Template/AI; Fill Engine; Sinh & Đồng bộ Báo cáo/Chứng thư; Tạo & Xem lại bộ tài liệu hồ sơ; AI nhận diện & thiết lập mẫu; và **Xác nhận & Lưu template tùy biến — Iteration 1**.
-
-Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước và **Đồng bộ dữ liệu hàng loạt — Iteration 1**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -22,13 +20,15 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 → Hoàn tất từng báo giá NCC → Chọn NCC đã xác nhận giá → Kết quả thẩm định giá
 → Microsoft 365 Document Workspace
    → Tạo & Xem lại bộ tài liệu hồ sơ
-      → Batch generation từ mẫu có sẵn → Review → Sync khi dữ liệu thay đổi
-      → Tải lên mẫu tùy biến
-         → Tải file & phân tích → Đề xuất mapping → Test fill → Xác nhận & Lưu template
-            → Chỉ hồ sơ này [default] / Lưu vào thư viện mẫu [explicit]
-      → template đã lưu quay về workspace để dùng trong batch
+      → Batch generation → Review
+      → khi dữ liệu thay đổi: Đồng bộ dữ liệu hàng loạt
+         → Chọn nguồn dữ liệu mới
+         → Xem thay đổi & phạm vi cập nhật
+         → Xem trước kết quả
+         → Xác nhận & Đồng bộ
+      → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
-   → Đồng bộ dữ liệu & Quản lý phiên bản → Phát hành bộ tài liệu
+   → Phát hành bộ tài liệu
 ```
 
 ## 2. Price & Evidence
@@ -38,37 +38,33 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 03 bảng công ty immutable; giữ tên/thứ tự cột, Tổng cộng, Làm tròn, số tiền bằng chữ.
 
 ## 4. Template / AI / Spreadsheet
-AI advisory; user xác nhận mapping/template. Không silent accept/publish/overwrite/change formula. Custom field không tự promote canonical.
-
-Bảng tính: `Hn = MIN(En:Gn)`; `In = Dn*Hn`. Fill Engine không overwrite template/staticize formula/silent drop workbook feature.
+AI advisory; user xác nhận mapping/template. Không silent accept/publish/overwrite/change formula. Custom field không tự promote canonical. Fill Engine giữ authority hiện hành.
 
 ## 5. Microsoft 365 Document Workspace
 VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status, release manifest. Microsoft 365 quản lý Word/file/file version. `Document Revision != Microsoft 365 file version`.
 
-### 5.1 Tạo & Xem lại bộ tài liệu hồ sơ — Baseline Iteration 1
-Tài liệu có mẫu sẵn được sinh hàng loạt và review trong workspace chung. Preview lớn là vùng review chính. `Đồng bộ dữ liệu` explicit khi hồ sơ thay đổi. Từng tài liệu có lineage `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`.
+### 5.1 Document Set — Baseline
+Tài liệu có mẫu sẵn sinh hàng loạt và review chung. Preview lớn là vùng review chính. Từng tài liệu có lineage `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`.
 
-### 5.2 AI nhận diện & thiết lập mẫu — Baseline Iteration 1
-`Tải file & phân tích → Đề xuất mapping → Test fill (xem trước) → Xác nhận & Lưu template`.
-AI đối chiếu `.docx` với dữ liệu hồ sơ và chỉ đề xuất field/mapping/Managed/Repeating Regions. User xác nhận trước khi thành cấu hình. Preview Word lớn; không fake editor.
+### 5.2 Đồng bộ dữ liệu hàng loạt — Baseline Iteration 1
+Mental flow:
+```text
+Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả → Xác nhận & Đồng bộ
+```
+Không silent sync; user chọn phạm vi trước khi ghi.
 
-### 5.3 Xác nhận & Lưu template tùy biến — Baseline Iteration 1
-Đây là bước 4/4 sau Test fill.
+Bước `Xem thay đổi & phạm vi cập nhật` dùng Fluent 2: header/stepper; summary nguồn mới + số tài liệu/vùng ảnh hưởng + Warning/Blocking; trái là phạm vi và filter; giữa là bảng tài liệu bị ảnh hưởng; phải là diff chi tiết current value → new value, warning và revision dự kiến; primary CTA `Xem trước kết quả`.
 
-Layout Fluent 2 baseline: trái là thông tin Template Version dự kiến + thống kê vùng + trạng thái Test fill; giữa là **preview Word view-only lớn** của kết quả test; phải là validation `Blocking / Warning / Info` + chi tiết vấn đề + `Phạm vi sử dụng template`; footer `Hủy`, `Quay lại: Test fill`, primary CTA `Xác nhận & Lưu template`.
+User có thể đồng bộ tất cả tài liệu bị ảnh hưởng, chỉ tài liệu được chọn hoặc theo nhóm. Tài liệu `Không thay đổi` không tạo revision mới chỉ vì nằm trong bộ hồ sơ.
 
-Validation gate:
-- `Blocking > 0` → không lưu.
-- `Blocking = 0` → cho phép lưu; Warning vẫn hiển thị nhưng không tự Blocking.
-- Info là thông tin.
-- Không silent sửa mapping, repeating region, fixed content hoặc source data để pass validation.
+Mức ảnh hưởng `Cao / Trung bình / Thấp / Không thay đổi` là review signal, không phải approval state. Blocking ngăn phần bị lỗi; Warning không tự Blocking. Conflict do user chỉnh Managed Region trong Word phải đi qua diff/conflict resolution hiện hành trước khi ghi.
 
-Scope authority:
-- `Chỉ sử dụng cho hồ sơ này` — mặc định.
-- `Lưu vào thư viện mẫu để tái sử dụng` — explicit opt-in.
-Không auto-promote template hồ sơ thành library/global template.
+Sau sync thành công, **mỗi tài liệu thực sự được cập nhật tạo Document Revision mới** và ghi nhận Microsoft 365 file/version tương ứng. Published revision/release immutable.
 
-Khi user xác nhận: lưu Template Version từ mapping/Managed Regions đã xác nhận và ghi nhận provenance Test fill/validation; giữ file nguồn/narrative ngoài vùng; **không tự tạo hoặc publish Document Revision**. Sau save, template quay về `Tạo & Xem lại bộ tài liệu hồ sơ` và sẵn sàng dùng trong batch generation.
+`Nguồn dữ liệu mới` dạng `.xlsx` trên mockup là minh họa cho Data Snapshot/source revision mới, không phải ràng buộc kiến trúc. Canonical business data vẫn là Workbench/database.
+
+### 5.3 Custom template — Baseline
+`Tải file & phân tích → Đề xuất mapping → Test fill → Xác nhận & Lưu template`. Case-only default; library reuse explicit; AI advisory.
 
 ### 5.4 Báo cáo & Chứng thư
 Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orchestration layer.
@@ -80,31 +76,26 @@ Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orche
 - Single-user; AI advisory.
 - Không fake Word/Excel editor.
 - Không silent mapping/save/sync/overwrite/publish.
+- Không tạo revision mới cho tài liệu không thay đổi.
 - Không auto-promote custom field/template scope.
-- Preview review-first.
-- Một primary CTA mỗi context.
+- Preview review-first; một primary CTA mỗi context.
 - Published revision/release immutable.
 
 ## 7. Capability inventory
 | Capability | Trạng thái |
 |---|---|
-| S09–S13 | P0 baseline |
-| NCCQ | P0 baseline Iteration 6 |
-| Result | P0 baseline; 03 bảng immutable |
+| S09–S13 / NCCQ / Result | P0 baseline |
 | Microsoft 365 Document Workspace | P0 baseline |
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
-| AI nhận diện & thiết lập mẫu | P0 baseline Iteration 1 |
-| **Xác nhận & Lưu template tùy biến** | **P0 baseline Iteration 1** |
+| **Đồng bộ dữ liệu hàng loạt** | **P0 baseline Iteration 1** |
+| AI custom template + Confirm/Save | P0 baseline Iteration 1 |
 | Managed Regions / Generation-Sync Báo cáo & Chứng thư | P0 baseline |
-| Sync/Version | P0 baseline |
-| Publishing | P0 baseline |
+| Sync/Version / Publishing | P0 baseline |
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 8. Companion authority
-- `VALORA_UIUX_HANDOFF_v2.3_CUSTOM_TEMPLATE_CONFIRM_SAVE_BASELINE_ADDENDUM.md`.
-- `VALORA_UIUX_HANDOFF_v2.3_AI_CUSTOM_TEMPLATE_RECOGNITION_BASELINE_ADDENDUM.md`.
-- `VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_SET_BATCH_REVIEW_BASELINE_ADDENDUM.md`.
-- Các addendum hiện hành khác tiếp tục có hiệu lực trong scope tương ứng.
+- `VALORA_UIUX_HANDOFF_v2.3_BULK_DATA_SYNC_BASELINE_ADDENDUM.md`.
+- Các addendum Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Publishing, Fill Engine, NCC warning, Result/NCCQ hiện hành tiếp tục có hiệu lực.
 
 ## 9. ADR
-Nếu implementation thay đổi Template Version save transaction, Test-fill provenance, scope promotion, rollback/idempotency, AI-to-mapping persistence hoặc multi-document sync persistence thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi multi-document transaction boundary, partial success/rollback, idempotency, Data Snapshot binding, conflict resolution hoặc version creation semantics thì phải đánh giá ADR riêng trước khi sửa product code.
