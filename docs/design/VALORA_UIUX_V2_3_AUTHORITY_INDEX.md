@@ -1,17 +1,42 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 31/08/2026 — `Xác nhận phát hành — Iteration 1`.
+**Consolidation:** 31/08/2026 — `Quản lý Kho tri thức — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — **Baseline `Xác nhận phát hành — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
-4. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
-5. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-6. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — **Baseline `Quản lý Kho tri thức — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
+4. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
+5. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+6. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+7. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
-## 2. Publishing routing authority — complete
+## 2. Knowledge Management authority
+`Quản lý Kho tri thức` là workspace quản trị/review độc lập với panel `Kho tri thức` trong Workbench.
+
+IA baseline:
+```text
+Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc
+```
+
+`Tài sản chuẩn` quản lý Canonical Asset / Variant / Alias / Đặc điểm KTKT có cấu trúc / lineage. `Cần rà soát` là human-review queue. `Hồ sơ cũ` phục vụ knowledge candidates từ historical dossiers. `Lịch sử & nguồn gốc` hiển thị version/lineage.
+
+### Structured KTKT
+`Đặc điểm kinh tế - kỹ thuật` phải được quản lý dưới dạng dữ liệu có cấu trúc, không chỉ một narrative string. Thuộc tính kỹ thuật có thể thay đổi theo loại tài sản; UI không hard-code schema riêng cho TV.
+
+### Report preview / presentation
+Màn chi tiết có `Xem trước theo Báo cáo thẩm định giá`, view-only. Preview theo cấu trúc công ty:
+`Tên tài sản | Đặc điểm kinh tế - kỹ thuật | Đvt | SL` và hierarchy `–` / `+`.
+
+Structured data thuộc VALORA; cách trình bày thuộc template công ty/Microsoft 365. Fill/generation phải giữ table/column/font/indentation/bullet/line spacing/cell width/border/pagination theo template. Không fake Word editor.
+
+### Human/AI
+AI chỉ gợi ý/extract/normalize/explain; không silent activate knowledge, không overwrite raw observation, không đổi presentation authority. Direct active-knowledge injection bị cấm.
+
+`Quản lý Kho tri thức` là supporting/horizontal module, không phải checkpoint bắt buộc trong north-star case flow.
+
+## 3. Publishing routing authority — complete
 ```text
 Chuẩn bị bộ phát hành
 → Xem lại & xử lý ngoại lệ
@@ -20,30 +45,20 @@ Chuẩn bị bộ phát hành
 ```
 Không UI `Khóa phiên bản` riêng. Không `Xuất PDF`.
 
-## 3. Release Confirmation baseline
-Màn cuối hiển thị thông tin phát hành dự kiến, tóm tắt tài liệu/revision/cảnh báo/loại khỏi release, danh sách tài liệu, ngoại lệ đã xử lý, integrity/readiness checks và hệ quả sau phát hành.
+## 4. Release Confirmation baseline
+Commit gate: Blocking=0; ngoại lệ bắt buộc đã xử lý; revision hợp lệ; release plan không stale; không unresolved version conflict; tài liệu giữ trong release đạt readiness. Thành công → Release Manifest final + lock + audit/lineage.
 
-Commit gate: Blocking=0; ngoại lệ bắt buộc đã xử lý; revision hợp lệ; release plan không stale; không unresolved version conflict; tài liệu giữ trong release đạt readiness. Thay đổi sau review phải revalidate.
-
-CTA `Xác nhận phát hành` là explicit commit. Thành công → tạo Release Manifest final bind đúng Document Revisions, khóa revision trong release, ghi audit/lineage. Tài liệu bị loại không thuộc manifest và không bị khóa.
-
-Release ID trước commit là dự kiến/reserved; ID trên mockup không phải schema cứng. Không được báo thành công nếu manifest chưa commit hợp lệ.
-
-## 4. Release Exception Review baseline
-Exception-first; Blocking phải sửa/revalidate hoặc loại; Warning không tự Blocking; màn này chưa publish.
-
-## 5. Release Preparation baseline
-Auto-select ready revision; không auto-publish.
-
-## 6. Guardrails
+## 5. Guardrails
 - Single-user.
-- Explicit final confirmation; không auto-publish.
-- Không silent bypass/publish.
+- Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
+- AI advisory; human-confirmed official decisions.
+- Không silent bypass/publish/overwrite/knowledge activation.
 - Không fake Word editor.
 - Không export PDF.
-- Lock revision là system consequence.
+- Historical knowledge không override v2.3 price-source authority.
+- Structured KTKT = business data; report formatting = company template authority.
 - Published revision/release immutable.
-- Vietnamese-first; một primary CTA mỗi context.
+- Một primary CTA mỗi context.
 
-## 7. ADR
-Release Manifest transaction boundary, Release ID reservation, locking atomicity, retry/idempotency, failure recovery, audit commit semantics và các release-plan persistence semantics cần ADR nếu implementation thay đổi persistence/architecture.
+## 6. ADR
+Knowledge schema/activation/versioning, attribute grouping/order persistence, lineage, presentation mapping, Managed Region merge semantics và các Release Manifest transaction semantics cần ADR nếu implementation thay đổi persistence/architecture.
