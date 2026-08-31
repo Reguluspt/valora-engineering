@@ -1,50 +1,44 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 31/08/2026 — `Xử lý xung đột khi đồng bộ — Iteration 1`.
+**Consolidation:** 31/08/2026 — `Xác nhận & Đồng bộ hàng loạt — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_SYNC_CONFLICT_RESOLUTION_BASELINE_ADDENDUM.md` — **Baseline `Xử lý xung đột khi đồng bộ — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_PREVIEW_BASELINE_ADDENDUM.md` — Baseline Xem trước kết quả đồng bộ.
-4. `VALORA_UIUX_HANDOFF_v2.3_BULK_DATA_SYNC_BASELINE_ADDENDUM.md` — Baseline Đồng bộ dữ liệu hàng loạt.
-5. Các addendum Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Publishing, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-6. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_CONFIRM_EXECUTE_BASELINE_ADDENDUM.md` — **Baseline `Xác nhận & Đồng bộ hàng loạt — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_SYNC_CONFLICT_RESOLUTION_BASELINE_ADDENDUM.md` — Baseline Xử lý xung đột khi đồng bộ.
+4. `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_PREVIEW_BASELINE_ADDENDUM.md` — Baseline Xem trước kết quả đồng bộ.
+5. `VALORA_UIUX_HANDOFF_v2.3_BULK_DATA_SYNC_BASELINE_ADDENDUM.md` — Baseline Đồng bộ dữ liệu hàng loạt.
+6. Các addendum Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Publishing, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+7. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Routing authority
 ```text
 ... → Xem trước kết quả [zero-write]
-→ nếu có conflict: Xử lý xung đột
-   → chọn tài liệu/vùng
-   → so sánh Snapshot cũ / VALORA mới / Word hiện tại
-   → user quyết định từng vùng
-   → cập nhật sync plan [vẫn zero-write]
-→ Xác nhận & Đồng bộ
+→ Xử lý xung đột nếu có [zero-write]
+→ Xác nhận & Đồng bộ [WRITE BOUNDARY]
+→ Kết quả đồng bộ hàng loạt
 ```
-Nếu không có conflict thì bỏ qua bước Xử lý xung đột.
 
-## 3. Conflict Resolution baseline
-Conflict = cùng Managed Region vừa thay đổi ở dữ liệu VALORA vừa được user chỉnh trong Word kể từ snapshot/lần sync trước. Không bên nào auto-win.
+## 3. Confirm & Execute baseline
+Đây là execution gate. Layout: summary final scope; bảng phạm vi cuối cùng; panel Blocking/Warning/conflict/readiness + snapshot info; warning banner; footer với primary `Xác nhận & Đồng bộ`.
 
-Layout: trái conflict list; giữa preview Word lớn highlight vùng; phải so sánh ba giá trị và lựa chọn; footer progress + primary `Áp dụng quyết định & quay lại xác nhận đồng bộ`.
+CTA chỉ enabled khi Blocking=0, conflict bắt buộc đã xử lý, sync plan chưa stale. Nếu Word/Data Snapshot đổi sau preview thì phải review lại.
 
-Lựa chọn từng vùng: `Dùng dữ liệu VALORA mới` / `Giữ nguyên nội dung trong Word` / `Bỏ qua vùng này trong lần đồng bộ này`. Skip/defer không được đánh dấu là đã đồng bộ.
+Execution chỉ ghi Managed Regions theo final sync plan. `Giữ Word` không overwrite; `Bỏ qua` không ghi và không coi đã đồng bộ; `Không thay đổi` không revision. Mỗi tài liệu cập nhật thành công tạo Document Revision mới + Microsoft 365 version tương ứng. Published revision/release immutable.
 
-Completion gate: mọi conflict bắt buộc trong scope phải có explicit decision. Màn này chỉ cập nhật sync plan; chưa ghi Word, chưa tạo Document Revision/version.
+Batch result phải theo từng tài liệu; không dùng một success chung nếu có partial failure.
 
-Audit: lưu được tài liệu/vùng, ba giá trị, quyết định user, thời điểm. Revision/version chỉ tạo sau execution thành công.
-
-## 4. Bulk Sync Preview authority
-Preview read-only/zero-write; revision dự kiến chưa tồn tại; Blocking ngăn execution; Warning không tự Blocking.
+## 4. Conflict / Preview authority
+Conflict so sánh Snapshot cũ / VALORA mới / Word hiện tại; user quyết định explicit. Preview và conflict screen đều zero-write.
 
 ## 5. Guardrails
 - Single-user; AI advisory.
-- Không auto-win VALORA/Word.
-- Không silent mapping/save/sync/overwrite/conflict resolution/publish.
+- Không silent overwrite/sync/conflict resolution.
 - Không fake Word editor.
+- Không revision cho unchanged/skipped docs.
 - Document Revision != Microsoft 365 file version.
-- Published revision/release immutable.
 - Vietnamese-first; một primary CTA mỗi context.
 
 ## 6. ADR
-Conflict-decision persistence, sync-plan transaction boundary, defer semantics, stale-conflict detection và audit storage cần ADR nếu implementation thay đổi persistence/architecture.
+Multi-document transaction, partial success/rollback, retry/idempotency, stale-plan/concurrency, revision creation và audit/lineage cần ADR nếu implementation thay đổi persistence/architecture.
