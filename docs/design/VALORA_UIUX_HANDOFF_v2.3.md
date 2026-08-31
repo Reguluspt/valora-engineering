@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước và **`Xử lý xung đột khi đồng bộ — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước và **`Xác nhận & Đồng bộ hàng loạt — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -25,8 +25,9 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
          → Chọn nguồn dữ liệu mới
          → Xem thay đổi & phạm vi cập nhật
          → Xem trước kết quả [zero-write]
-         → Xử lý xung đột nếu có [zero-write, user decision]
-         → Xác nhận & Đồng bộ
+         → Xử lý xung đột nếu có [zero-write]
+         → Xác nhận & Đồng bộ [write boundary]
+         → Kết quả đồng bộ hàng loạt
       → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
    → Phát hành bộ tài liệu
@@ -48,47 +49,58 @@ VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status, r
 Tài liệu có mẫu sẵn sinh hàng loạt và review chung. Preview lớn là vùng review chính. Lineage: `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`.
 
 ### 5.2 Bulk Sync — Baseline
-`Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả → [Xử lý xung đột nếu có] → Xác nhận & Đồng bộ`. User chọn scope; không silent sync; tài liệu không đổi không revision.
-
-### 5.3 Xem trước kết quả — Baseline
-Read-only simulation / zero-write. Revision dự kiến chưa tồn tại. Blocking >0 ngăn execution; Warning không tự Blocking. Current→new phải xem được theo Managed Region.
-
-### 5.4 Xử lý xung đột khi đồng bộ — Baseline Iteration 1
-Đây là **conditional step**, chỉ xuất hiện nếu cùng một Managed Region vừa thay đổi trong dữ liệu VALORA mới vừa được user chỉnh trong Word kể từ snapshot/lần đồng bộ trước. Nếu không có conflict thì bỏ qua.
-
-Mental flow:
 ```text
-Phát hiện conflict → Chọn tài liệu/vùng → So sánh 3 giá trị → User quyết định từng vùng
-→ Hoàn tất conflict bắt buộc → Cập nhật sync plan → Quay lại Xác nhận & Đồng bộ
+Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả [zero-write]
+→ Xử lý xung đột nếu có [zero-write] → Xác nhận & Đồng bộ [execution]
+→ Kết quả đồng bộ hàng loạt
 ```
 
-Layout Fluent 2: banner giải thích; trái là danh sách conflict theo tài liệu/vùng; giữa là preview Word view-only lớn highlight đúng vùng; phải so sánh `Giá trị lần đồng bộ trước (Snapshot cũ)` / `Dữ liệu VALORA mới` / `Nội dung hiện tại trong Word`, sau đó user chọn cách xử lý. Footer có progress và primary `Áp dụng quyết định & quay lại xác nhận đồng bộ`.
+### 5.3 Preview — Baseline
+Read-only simulation; revision dự kiến chưa tồn tại. Blocking ngăn execution; Warning không tự Blocking.
 
-Resolution choices:
-- `Dùng dữ liệu VALORA mới`.
-- `Giữ nguyên nội dung trong Word`.
-- `Bỏ qua vùng này trong lần đồng bộ này` — defer, không coi là đã đồng bộ.
+### 5.4 Conflict Resolution — Baseline
+Conflict = cùng Managed Region thay đổi ở VALORA và Word. So sánh Snapshot cũ / VALORA mới / Word hiện tại. User explicit chọn VALORA / giữ Word / bỏ qua. Chỉ cập nhật sync plan; zero-write.
 
-Không bên nào auto-win. Mọi conflict bắt buộc trong scope phải có explicit decision trước khi hoàn tất bước. Màn conflict chỉ cập nhật **sync plan**, chưa ghi Word, chưa tạo Document Revision/Microsoft 365 version.
+### 5.5 Xác nhận & Đồng bộ hàng loạt — Baseline Iteration 1
+Đây là **write boundary / execution gate**. Các bước trước chưa được ghi Word hoặc tạo revision/version.
 
-Mỗi quyết định phải audit được: tài liệu/vùng, ba giá trị so sánh, lựa chọn user, thời điểm. Revision/version chỉ tạo sau `Xác nhận & Đồng bộ` execution thành công. Published revision/release immutable.
+Layout Fluent 2: header/stepper; summary sau xử lý conflict (`Tài liệu trong phạm vi / Sẽ cập nhật / Không thay đổi / Bỏ qua / Vùng dữ liệu sẽ cập nhật`); bảng `Phạm vi đồng bộ cuối cùng` với quyết định cuối, revision dự kiến và readiness; panel phải `Kiểm tra trước khi đồng bộ` gồm Blocking, Warning, conflict đã xử lý, unchanged + chi tiết warning + thông tin snapshot/source; banner giải thích hậu quả; footer có Hủy, quay lại conflict và primary `Xác nhận & Đồng bộ`.
 
-### 5.5 Custom template — Baseline
+Execution gate:
+- `Blocking = 0`;
+- mọi conflict bắt buộc đã có quyết định;
+- sync plan không stale so với Word/Data Snapshot hiện tại.
+Nếu Word hoặc dữ liệu đổi sau preview/conflict decision, phải yêu cầu review lại, không silent chạy plan cũ.
+
+Khi thực thi:
+- chỉ ghi Managed Regions trong final sync plan;
+- `Giữ nội dung Word` không overwrite;
+- `Bỏ qua lần này` không ghi và không coi `Đã đồng bộ`;
+- `Không thay đổi` không tạo revision;
+- mỗi tài liệu thực sự cập nhật thành công tạo Document Revision mới và ghi nhận Microsoft 365 file/version;
+- published revision/release immutable.
+
+Warning không tự Blocking nhưng phải hiển thị trước execution. Không silent fix validation.
+
+Kết quả batch phải theo **từng tài liệu**; không hiển thị success chung nếu có partial failure. Màn kế tiếp phải phân biệt `Đã đồng bộ / Không thay đổi / Bỏ qua-Cần cập nhật / Lỗi-Cần xử lý` cùng lineage/version tương ứng.
+
+Tên `.xlsx` trên mockup chỉ minh họa Data Snapshot/source; canonical business data vẫn Workbench/database.
+
+### 5.6 Custom template — Baseline
 `Tải file & phân tích → Đề xuất mapping → Test fill → Xác nhận & Lưu template`. Case-only default; library reuse explicit; AI advisory.
 
-### 5.6 Báo cáo & Chứng thư
+### 5.7 Báo cáo & Chứng thư
 Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orchestration layer.
 
-### 5.7 Publishing
+### 5.8 Publishing
 `Chọn tài liệu → Kiểm tra tình trạng → Xem bộ tài liệu → Xác nhận phát hành → Khóa phiên bản đã phát hành`. Không `Xuất PDF` trong baseline.
 
 ## 6. Guardrails
 - Single-user; AI advisory.
-- Preview/conflict resolution zero-write đối với Word/revision.
-- Không auto-win VALORA/Word.
-- Không fake Word/Excel editor.
+- Preview/conflict zero-write; Confirm & Sync là write boundary.
 - Không silent mapping/save/sync/overwrite/conflict resolution/publish.
-- Không tạo revision cho tài liệu không thay đổi.
+- Không fake Word/Excel editor.
+- Không revision cho unchanged/skipped docs.
 - Published revision/release immutable.
 - Một primary CTA mỗi context.
 
@@ -100,17 +112,19 @@ Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orche
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
 | Đồng bộ dữ liệu hàng loạt | P0 baseline Iteration 1 |
 | Xem trước kết quả đồng bộ | P0 baseline Iteration 1 |
-| **Xử lý xung đột khi đồng bộ** | **P0 baseline Iteration 1** |
+| Xử lý xung đột khi đồng bộ | P0 baseline Iteration 1 |
+| **Xác nhận & Đồng bộ hàng loạt** | **P0 baseline Iteration 1** |
 | AI custom template + Confirm/Save | P0 baseline Iteration 1 |
 | Managed Regions / Generation-Sync Báo cáo & Chứng thư | P0 baseline |
 | Sync/Version / Publishing | P0 baseline |
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 8. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_CONFIRM_EXECUTE_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_SYNC_CONFLICT_RESOLUTION_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_PREVIEW_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_BULK_DATA_SYNC_BASELINE_ADDENDUM.md`.
 - Các addendum hiện hành khác tiếp tục có hiệu lực trong scope tương ứng.
 
 ## 9. ADR
-Nếu implementation persist conflict decisions, thay đổi sync-plan transaction boundary, defer semantics, stale-conflict detection, audit storage hoặc multi-document execution semantics thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi multi-document transaction boundary, partial success/rollback, retry/idempotency, stale-plan/concurrency, revision creation hoặc audit/lineage semantics thì phải đánh giá ADR riêng trước khi sửa product code.
