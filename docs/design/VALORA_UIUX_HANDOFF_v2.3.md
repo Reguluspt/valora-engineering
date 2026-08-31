@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước, `Đồng bộ dữ liệu hàng loạt — Iteration 1` và **`Xem trước kết quả đồng bộ — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước và **`Xử lý xung đột khi đồng bộ — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -25,7 +25,7 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
          → Chọn nguồn dữ liệu mới
          → Xem thay đổi & phạm vi cập nhật
          → Xem trước kết quả [zero-write]
-         → Xử lý xung đột nếu có
+         → Xử lý xung đột nếu có [zero-write, user decision]
          → Xác nhận & Đồng bộ
       → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
@@ -47,41 +47,47 @@ VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status, r
 ### 5.1 Document Set — Baseline
 Tài liệu có mẫu sẵn sinh hàng loạt và review chung. Preview lớn là vùng review chính. Lineage: `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`.
 
-### 5.2 Đồng bộ dữ liệu hàng loạt — Baseline Iteration 1
-`Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả → Xác nhận & Đồng bộ`. Không silent sync; user chọn phạm vi. Tài liệu không thay đổi không tạo revision mới.
+### 5.2 Bulk Sync — Baseline
+`Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả → [Xử lý xung đột nếu có] → Xác nhận & Đồng bộ`. User chọn scope; không silent sync; tài liệu không đổi không revision.
 
-### 5.3 Xem trước kết quả đồng bộ — Baseline Iteration 1
-Đây là bước 3/4 và là **read-only simulation / zero-write**. Chưa cập nhật Word, chưa tạo Document Revision, chưa tạo Microsoft 365 version.
+### 5.3 Xem trước kết quả — Baseline
+Read-only simulation / zero-write. Revision dự kiến chưa tồn tại. Blocking >0 ngăn execution; Warning không tự Blocking. Current→new phải xem được theo Managed Region.
 
-Layout Fluent 2: header/stepper; `Thông tin phiên xem trước`; summary `Sẽ được cập nhật / Không thay đổi / Warning / Blocking`; bảng tài liệu gồm loại, mức ảnh hưởng, vùng thay đổi, thay đổi dữ liệu, thay đổi Word, kết quả và revision dự kiến; panel phải hiển thị tài liệu đang chọn, revision hiện tại/dự kiến, current value → value sau sync, Warning/Blocking. Footer có quay lại, `Xử lý xung đột (nếu có)` và primary `Tiếp tục: Xác nhận & Đồng bộ`.
+### 5.4 Xử lý xung đột khi đồng bộ — Baseline Iteration 1
+Đây là **conditional step**, chỉ xuất hiện nếu cùng một Managed Region vừa thay đổi trong dữ liệu VALORA mới vừa được user chỉnh trong Word kể từ snapshot/lần đồng bộ trước. Nếu không có conflict thì bỏ qua.
 
-Semantics:
-- `Sẽ cập nhật` chỉ là kết quả mô phỏng.
-- `Revision dự kiến` chưa tồn tại và không được reserve như revision thực chỉ vì preview.
-- `Không thay đổi` không tạo revision.
-- User xem được current→new ở Managed Region.
-- Blocking >0 không cho thực thi đồng bộ; Warning không tự Blocking.
-- Preview không silent sửa dữ liệu/mapping/content để pass.
+Mental flow:
+```text
+Phát hiện conflict → Chọn tài liệu/vùng → So sánh 3 giá trị → User quyết định từng vùng
+→ Hoàn tất conflict bắt buộc → Cập nhật sync plan → Quay lại Xác nhận & Đồng bộ
+```
 
-Nếu Word và VALORA cùng thay đổi một Managed Region, user phải đi qua conflict resolution. Không auto chọn VALORA thắng hoặc Word thắng.
+Layout Fluent 2: banner giải thích; trái là danh sách conflict theo tài liệu/vùng; giữa là preview Word view-only lớn highlight đúng vùng; phải so sánh `Giá trị lần đồng bộ trước (Snapshot cũ)` / `Dữ liệu VALORA mới` / `Nội dung hiện tại trong Word`, sau đó user chọn cách xử lý. Footer có progress và primary `Áp dụng quyết định & quay lại xác nhận đồng bộ`.
 
-Tên `.xlsx` trong mockup chỉ minh họa source/Data Snapshot; canonical business data vẫn Workbench/database.
+Resolution choices:
+- `Dùng dữ liệu VALORA mới`.
+- `Giữ nguyên nội dung trong Word`.
+- `Bỏ qua vùng này trong lần đồng bộ này` — defer, không coi là đã đồng bộ.
 
-### 5.4 Custom template — Baseline
+Không bên nào auto-win. Mọi conflict bắt buộc trong scope phải có explicit decision trước khi hoàn tất bước. Màn conflict chỉ cập nhật **sync plan**, chưa ghi Word, chưa tạo Document Revision/Microsoft 365 version.
+
+Mỗi quyết định phải audit được: tài liệu/vùng, ba giá trị so sánh, lựa chọn user, thời điểm. Revision/version chỉ tạo sau `Xác nhận & Đồng bộ` execution thành công. Published revision/release immutable.
+
+### 5.5 Custom template — Baseline
 `Tải file & phân tích → Đề xuất mapping → Test fill → Xác nhận & Lưu template`. Case-only default; library reuse explicit; AI advisory.
 
-### 5.5 Báo cáo & Chứng thư
+### 5.6 Báo cáo & Chứng thư
 Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orchestration layer.
 
-### 5.6 Publishing
+### 5.7 Publishing
 `Chọn tài liệu → Kiểm tra tình trạng → Xem bộ tài liệu → Xác nhận phát hành → Khóa phiên bản đã phát hành`. Không `Xuất PDF` trong baseline.
 
 ## 6. Guardrails
 - Single-user; AI advisory.
-- Preview sync zero-write.
+- Preview/conflict resolution zero-write đối với Word/revision.
+- Không auto-win VALORA/Word.
 - Không fake Word/Excel editor.
 - Không silent mapping/save/sync/overwrite/conflict resolution/publish.
-- Không revision/version mới trong preview.
 - Không tạo revision cho tài liệu không thay đổi.
 - Published revision/release immutable.
 - Một primary CTA mỗi context.
@@ -93,16 +99,18 @@ Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orche
 | Microsoft 365 Document Workspace | P0 baseline |
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
 | Đồng bộ dữ liệu hàng loạt | P0 baseline Iteration 1 |
-| **Xem trước kết quả đồng bộ** | **P0 baseline Iteration 1** |
+| Xem trước kết quả đồng bộ | P0 baseline Iteration 1 |
+| **Xử lý xung đột khi đồng bộ** | **P0 baseline Iteration 1** |
 | AI custom template + Confirm/Save | P0 baseline Iteration 1 |
 | Managed Regions / Generation-Sync Báo cáo & Chứng thư | P0 baseline |
 | Sync/Version / Publishing | P0 baseline |
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 8. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_SYNC_CONFLICT_RESOLUTION_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_BULK_SYNC_PREVIEW_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_BULK_DATA_SYNC_BASELINE_ADDENDUM.md`.
 - Các addendum hiện hành khác tiếp tục có hiệu lực trong scope tương ứng.
 
 ## 9. ADR
-Nếu implementation persist preview simulation, reserve revision number, cache diff, hoặc thay đổi conflict/validation/multi-document transaction boundary thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation persist conflict decisions, thay đổi sync-plan transaction boundary, defer semantics, stale-conflict detection, audit storage hoặc multi-document execution semantics thì phải đánh giá ADR riêng trước khi sửa product code.
