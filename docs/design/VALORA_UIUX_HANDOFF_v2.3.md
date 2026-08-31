@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước và **`Chuẩn bị bộ phát hành — Iteration 1`** với Publishing flow rút gọn. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước và **`Xem lại & xử lý ngoại lệ — Iteration 1`** trong Publishing flow rút gọn. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -21,13 +21,7 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 → Microsoft 365 Document Workspace
    → Tạo & Xem lại bộ tài liệu hồ sơ
       → Batch generation → Review
-      → khi dữ liệu thay đổi: Đồng bộ dữ liệu hàng loạt
-         → Chọn nguồn dữ liệu mới
-         → Xem thay đổi & phạm vi cập nhật
-         → Xem trước kết quả [zero-write]
-         → Xử lý xung đột nếu có [zero-write]
-         → Xác nhận & Đồng bộ [write boundary]
-         → Kết quả đồng bộ hàng loạt
+      → khi dữ liệu thay đổi: Bulk Sync loop
       → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
    → Publishing đơn giản hóa
@@ -49,68 +43,59 @@ AI advisory; user xác nhận mapping/template. Không silent accept/publish/ove
 ## 5. Microsoft 365 Document Workspace
 VALORA quản lý structured data, Data Snapshot, lineage, audit, sync status, release manifest. Microsoft 365 quản lý Word/file/file version. `Document Revision != Microsoft 365 file version`.
 
-### 5.1 Document Set — Baseline
-Tài liệu có mẫu sẵn sinh hàng loạt và review chung. Preview lớn là vùng review chính. Lineage: `Template Version → Data Snapshot → Document Revision → Microsoft 365 file/version`.
+### 5.1 Document Set / Bulk Sync / Custom Template — Baseline
+Các baselines hiện hành tiếp tục có hiệu lực. Bulk Sync preview/conflict zero-write; Confirm & Sync là write boundary; result theo từng tài liệu. Không export PDF.
 
-### 5.2 Bulk Sync — Baseline
-```text
-Chọn nguồn dữ liệu mới → Xem thay đổi & phạm vi cập nhật → Xem trước kết quả [zero-write]
-→ Xử lý xung đột nếu có [zero-write] → Xác nhận & Đồng bộ [execution]
-→ Kết quả đồng bộ hàng loạt
-```
-Preview/conflict không ghi Word/revision; Confirm & Sync là write boundary. Result theo từng tài liệu: `Đã đồng bộ / Không thay đổi / Bỏ qua / Lỗi`. Không dùng success chung để che partial failure. Không export PDF.
-
-### 5.3 Custom template — Baseline
-`Tải file & phân tích → Đề xuất mapping → Test fill → Xác nhận & Lưu template`. AI chỉ đề xuất; case-only default; `Lưu vào thư viện mẫu` là explicit opt-in.
-
-### 5.4 Báo cáo & Chứng thư
+### 5.2 Báo cáo & Chứng thư
 Giữ Generation/Sync + Managed Regions baselines riêng; Document Set là orchestration layer.
 
-### 5.5 Publishing — Simplified Baseline
-**Flow 5 bước cũ bị supersede**:
-`Chọn tài liệu → Kiểm tra tình trạng → Xem bộ tài liệu → Xác nhận phát hành → Khóa phiên bản`.
-
-Authority mới:
+### 5.3 Publishing — Simplified Baseline
+Flow 5 bước cũ bị supersede. Authority mới:
 ```text
 Chuẩn bị bộ phát hành
 → Xem lại & xử lý ngoại lệ
 → Xác nhận phát hành
 → Release Manifest + khóa revision đã phát hành [system consequence]
 ```
-
 Không còn màn `Khóa phiên bản` riêng. Không có `Xuất PDF`.
 
-#### 5.5.1 Chuẩn bị bộ phát hành — Baseline Iteration 1
-Mục tiêu: **giảm thao tác, exception-first**.
+#### 5.3.1 Chuẩn bị bộ phát hành — Baseline Iteration 1
+Exception-first. VALORA tự động chọn revision mới nhất đủ điều kiện. Ready auto-selected nhưng không auto-publish; Blocking/error không auto-select; `Cần xem lại` thành exception; user có thể bỏ chọn. Preview view-only.
 
-VALORA tự động chọn revision mới nhất đủ điều kiện phát hành. User không phải tick từng tài liệu bình thường; user chủ yếu xem `Cần xem lại / Có lỗi` và có thể bỏ chọn tài liệu nếu không muốn đưa vào release.
+#### 5.3.2 Xem lại & xử lý ngoại lệ — Baseline Iteration 1
+Mục tiêu: user **không rà lại toàn bộ tài liệu Sẵn sàng**, chỉ xử lý ngoại lệ.
 
 Layout Fluent 2 baseline:
-- summary cards `Sẵn sàng phát hành (auto-selected) / Cần xem lại / Có lỗi / Không thay đổi / Tổng tài liệu`;
-- banner `Cách hệ thống chọn tài liệu`;
-- bảng `Danh sách tài liệu sẽ phát hành` với tên, loại, revision, trạng thái, lần đồng bộ gần nhất, chọn để phát hành;
-- preview nhanh view-only + `Mở trong Word`;
-- panel phải: Release dự kiến, ngày dự kiến, breakdown trạng thái, điểm cần chú ý;
-- một primary CTA theo context.
+- header/breadcrumb + stepper 3 bước;
+- summary `Cần xem lại / Có lỗi (bắt buộc xử lý) / Cảnh báo (không chặn)` + hướng dẫn;
+- trái: `Danh sách ngoại lệ`, filter/tab theo loại, revision + trạng thái; Ready được ẩn khỏi task list;
+- giữa: preview tài liệu view-only lớn, highlight vùng/vấn đề, `Mở trong Word` secondary;
+- phải: `Chi tiết & lý do ngoại lệ`, vấn đề, sync/revision và action xử lý;
+- footer: progress ngoại lệ bắt buộc + primary `Tiếp tục: Xác nhận phát hành`.
 
-Auto-selection rules:
-- revision `Sẵn sàng` → auto-select;
-- Blocking/error → không auto-select;
-- `Cần xem lại` → exception cần user review;
-- `Không thay đổi` có thể dùng revision hiện hành nếu revision đó vẫn đạt readiness;
-- user có thể bỏ chọn;
-- auto-select **không** đồng nghĩa auto-publish.
+Exception semantics:
+- `Có lỗi / Blocking`: tài liệu không thể ở lại release trong trạng thái lỗi; user phải sửa rồi revalidate hoặc loại khỏi release.
+- `Cần xem lại`: user review và quyết định theo rule.
+- `Cảnh báo`: không tự Blocking; user có thể giữ tài liệu sau explicit review nếu rule cho phép.
+- `Sẵn sàng`: không phải task ở màn này.
 
-Mockup `Chọn tài liệu để phát hành — Iteration 1` trước đó chỉ là Design Proposal và bị supersede bởi baseline này.
+Actions:
+- `Mở tài liệu để cập nhật`: mở Microsoft 365/Word; quay lại phải revalidate.
+- `Loại khỏi bộ phát hành`: bỏ tài liệu khỏi release plan lần này.
+- `Giữ nguyên và phát hành`: chỉ non-Blocking, explicit decision; không silent bypass.
 
-### 5.6 Release semantics
-Release bind chính xác các Document Revision đã chọn vào Release Manifest. Sau phát hành thành công, revision nằm trong release được khóa/immutable. `Khóa revision` là hậu quả hệ thống của phát hành, không phải bước thao tác riêng.
+Completion gate: CTA sang `Xác nhận phát hành` chỉ enabled khi mọi Blocking trong release scope đã xử lý hoặc tài liệu tương ứng đã loại; release plan chưa stale; quyết định bắt buộc đã ghi nhận. Nếu document/revision/readiness đổi trong lúc review, phải revalidate.
+
+Màn này chưa publish, chưa tạo Release Manifest final, chưa khóa revision. Quyết định ngoại lệ phải audit được: tài liệu, revision, vấn đề, lựa chọn user, thời điểm.
+
+### 5.4 Release semantics
+Release bind chính xác các Document Revision đã chọn vào Release Manifest. Sau phát hành thành công, revision trong release được khóa/immutable. Lock là system consequence, không phải UI step.
 
 ## 6. Guardrails
 - Single-user; AI advisory.
-- Exception-first UX để giảm thao tác.
+- Exception-first UX; giảm thao tác bình thường.
 - Auto-select nhưng không auto-publish.
-- Không silent mapping/save/sync/overwrite/conflict resolution/publish.
+- Không silent bypass Blocking/cảnh báo/publish/overwrite.
 - Không fake Word/Excel editor.
 - Không export PDF trong Bulk Sync Result hoặc Publishing.
 - Published revision/release immutable.
@@ -125,13 +110,15 @@ Release bind chính xác các Document Revision đã chọn vào Release Manifes
 | Bulk Sync loop | P0 baseline Iteration 1 |
 | AI custom template + Confirm/Save | P0 baseline Iteration 1 |
 | Managed Regions / Generation-Sync Báo cáo & Chứng thư | P0 baseline |
-| **Chuẩn bị bộ phát hành** | **P0 baseline Iteration 1** |
+| Chuẩn bị bộ phát hành | P0 baseline Iteration 1 |
+| **Xem lại & xử lý ngoại lệ** | **P0 baseline Iteration 1** |
 | Publishing simplified flow | P0 authority |
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 8. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md`.
 - Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành tiếp tục có hiệu lực.
 
 ## 9. ADR
-Nếu implementation thay đổi release-readiness computation, auto-selection persistence, Release Manifest binding, locking transaction, partial-publish semantics, hoặc các persistence/transaction semantics đã nêu trong authority Bulk Sync/Template thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi exception-decision persistence, release-plan stale detection, revalidation after Word edit, exclusion semantics, release-readiness computation, Release Manifest binding/locking transaction hoặc partial-publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
