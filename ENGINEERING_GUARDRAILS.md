@@ -18,11 +18,11 @@ Accepted code baseline: `origin/main`
 Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
-Active assignment: PR-00 — Authority Alignment Guard, ratchet-only.
-No workflow runtime, persistence, migration, NCC Selection, M365 or Publishing change is authorized.
-Existing QC/approval/standalone-validation implementation is legacy debt: preserve behavior in PR-00,
-prevent expansion, and do not use it as the source for new navigation or Global Case State.
-PR-01 remains blocked until PR-00 is complete and reported.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+No active implementation assignment.
+PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
+Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
+not use it as the source for new navigation or Global Case State.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.

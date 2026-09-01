@@ -39,11 +39,12 @@ Accepted code baseline: `origin/main` at
 Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
 
-Active assignment: PR-00 — Authority Alignment Guard, ratchet-only.
-PR-00 must not change workflow runtime, persistence, migrations, NCC Selection, M365 or Publishing.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+No active implementation assignment.
+PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
-Do not start PR-01 until PR-00 is complete and reported. The earlier S13-PR-004/005 execution
-sequence is historical implementation context, not the current owner-authorized UI/UX track.
+The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
+owner-authorized UI/UX track.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.

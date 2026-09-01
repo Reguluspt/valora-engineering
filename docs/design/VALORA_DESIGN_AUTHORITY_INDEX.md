@@ -63,7 +63,8 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
 Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
 
-PR-00 Authority Alignment Guard
+PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
+PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; explicit owner assignment is required.
 → PR-01 Case State Projection Foundation
 → PR-02 Case State Frontend Hub Wiring
 

@@ -2,6 +2,8 @@
 
 **Result:** PASS
 
+**Closure:** COMPLETE / CLOSED locally after owner instruction on 2026-09-01
+
 **Mode:** Ratchet-only
 
 **Date:** 2026-09-01
@@ -11,6 +13,9 @@
 **Starting authority tip:** `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
 **Accepted code ancestor:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6`
+
+**Implementation commits:** `2072b8375e392c04730ab07442c340bdc3b62339`,
+`89fd599cf975b80bcd2cea564ea8dc0facbad1ed`
 
 ## Design authority
 

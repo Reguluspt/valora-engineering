@@ -11,10 +11,11 @@
 Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`, then the directly relevant v2.3 addendum.
 
-Active assignment: PR-00 — Authority Alignment Guard, ratchet-only.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+No active implementation assignment.
+PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
-or drive new UI. PR-00 adds no runtime capability, persistence or migration. Do not start PR-01
-until PR-00 is complete and reported. Earlier S13 sequencing below is historical context only.
+or drive new UI. Earlier S13 sequencing below is historical context only.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.

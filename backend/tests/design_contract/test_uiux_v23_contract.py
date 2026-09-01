@@ -95,7 +95,7 @@ def test_forbidden_backend_surfaces_are_not_introduced() -> None:
     assert '"/resume-context"' not in combined
 
 
-def test_repository_live_gates_point_to_v23_pr00() -> None:
+def test_repository_live_gates_point_to_v23_pr00_closeout() -> None:
     live_gate_paths = (
         REPOSITORY_ROOT / "README.md",
         REPOSITORY_ROOT / "CODEX.md",
@@ -110,6 +110,9 @@ def test_repository_live_gates_point_to_v23_pr00() -> None:
         assert "VALORA_UIUX_HANDOFF_v2.3.md" in current_gate
         assert "VALORA_UIUX_V2_3_AUTHORITY_INDEX.md" in current_gate
         assert "PR-00" in current_gate
+        assert "CLOSED" in current_gate
+        assert "PR-01" in current_gate
+        assert "NOT OWNER-ASSIGNED" in current_gate
         assert "Active runtime assignment: S13" not in current_gate
 
     all_live_gate_text = "\n".join(
