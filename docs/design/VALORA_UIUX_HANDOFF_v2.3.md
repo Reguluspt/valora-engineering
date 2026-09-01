@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước, Publishing simplified flow 3 bước, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và **`Lịch sử & nguồn gốc — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước, Publishing simplified flow 3 bước, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -43,6 +43,39 @@ Nhập hồ sơ cũ → Phân loại tài liệu → Trích xuất dữ liệu �
 
 ## 2. Price & Evidence
 `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu trong Kho tri thức chỉ là hỗ trợ/tra cứu và không override price-source authority này.
+
+### 2.1 Chọn NCC đã xác nhận giá — Baseline Iteration 1
+`Chọn NCC đã xác nhận giá` là checkpoint sau `Hoàn tất từng báo giá NCC` và trước `Kết quả thẩm định giá`.
+
+Selection scope:
+```text
+1 Project + 1 ProjectAssetLine + 1 confirmed QuoteLine = 1 current NCC Selection
+```
+
+Selection là project-line context, không phải trạng thái toàn cục của Supplier/QuoteLine. Một dòng tài sản có một current selection; đổi NCC tạo revision mới và giữ lịch sử. Quote revision/source thay đổi sau khi đã chọn không auto-rebind; selection chuyển `Cần xem lại` cho đến khi user explicit xác nhận lại.
+
+Eligibility tối thiểu: đúng dòng tài sản; NCC xác định; đơn giá hợp lệ; báo giá đã hoàn tất/xác nhận giá; evidence/source truy xuất được. Warning không Blocking; quote chưa hoàn tất hoặc evidence lỗi thì không eligible.
+
+Warning surface bắt buộc:
+`Đơn giá hiện hành | Giá NCC | Chênh lệch | Chênh lệch % | Warning`.
+- `Giá NCC < đơn giá hiện hành` → luôn Warning.
+- `abs(diff)/current > 15%` → Warning.
+- `Giá NCC > 115% × đơn giá hiện hành` → Warning.
+- Nếu current price bằng 0/chưa có thì không tính phần trăm giả.
+
+Layout baseline:
+- KPI: tổng dòng tài sản, đã chọn NCC, chưa chọn, cần xem lại, tổng báo giá đủ điều kiện;
+- filter/search;
+- table-first: `STT | Tên tài sản | ĐVT | SL | Đơn giá hiện hành | NCC đã chọn | Giá NCC đã chọn | Chênh lệch | Chênh lệch % | Cảnh báo | Trạng thái`;
+- chọn dòng mở drawer `Chi tiết dòng tài sản`;
+- drawer tabs `Danh sách báo giá đủ điều kiện | Thông tin chọn hiện tại | Lịch sử chọn`;
+- drawer hiển thị candidate quotes, evidence, price comparison và Warning.
+
+Primary commit CTA: `Xác nhận NCC đã chọn` / `Xác nhận NCC đã chọn cho dòng này`. Đây là explicit human commit; AI không auto-select. Server phải resolve lại quote/supplier/price/warnings, không tin monetary values do frontend gửi.
+
+Selection snapshot phải giữ supplier/quote identifiers, QuoteBatch revision, supplier/price/currency/date snapshot, evidence/source, current price/difference/warning snapshot, actor/time và selection revision. Concurrency dùng expected revision; conflict không last-write-wins.
+
+Downstream chỉ dùng selection cho tạo/tái tạo/đối chiếu báo giá NCC, bảng báo giá và evidence/audit/lineage. NCC Selection không tự tạo/sửa `AppraisedPriceDecision`, không ghi đè giá ở `Kết quả thẩm định giá`, không đổi price-source priority và không tạo NCCQ aggregate trung gian.
 
 ## 3. Kết quả thẩm định giá
 03 bảng công ty immutable; giữ tên/thứ tự cột, Tổng cộng, Làm tròn, số tiền bằng chữ.
@@ -183,6 +216,7 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 ## 7. Guardrails
 - Single-user; AI advisory.
 - Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
+- NCC Selection: AI không auto-select; Warning không Blocking; không silent rebind sau quote revision; không override appraisal price.
 - Không auto-approve knowledge candidate.
 - Không direct active-knowledge injection từ hồ sơ cũ.
 - Không silent bypass Blocking/Warning/publish/overwrite/knowledge activation.
@@ -199,10 +233,11 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 | Capability | Trạng thái |
 |---|---|
 | S09–S13 / NCCQ / Result | P0 baseline |
+| **Chọn NCC đã xác nhận giá** | **P0 baseline Iteration 1** |
 | Quản lý Kho tri thức | P0 baseline Iteration 1 |
 | Cần rà soát tri thức | P0 baseline Iteration 1 |
 | Hồ sơ cũ | P0 baseline Iteration 1 |
-| **Lịch sử & nguồn gốc** | **P0 baseline Iteration 1** |
+| Lịch sử & nguồn gốc | P0 baseline Iteration 1 |
 | Structured KTKT + report preview mapping | P0 baseline Iteration 1 |
 | Microsoft 365 Document Workspace | P0 baseline |
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
@@ -213,6 +248,7 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 9. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md`.
@@ -223,4 +259,4 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 - Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành tiếp tục có hiệu lực.
 
 ## 10. ADR
-Nếu implementation thay đổi DossierBundle/source-role persistence, extraction/table-role contract, DossierRowAlignment lifecycle/decision semantics, candidate-creation transaction/reliable jobs, review-queue/candidate lifecycle/decision-log persistence, canonical/variant/attribute persistence, knowledge activation/versioning, merge/conflict semantics, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, hoặc semantics/persistence của KnowledgeLineage/KnowledgeVersion/IdentityDecisionLog thì cần ADR tương ứng. UI/UX baseline không tự tạo architecture mới.
+Nếu implementation thay đổi NCC-selection persistence/revision/stale semantics, DossierBundle/source-role persistence, extraction/table-role contract, DossierRowAlignment lifecycle/decision semantics, candidate-creation transaction/reliable jobs, review-queue/candidate lifecycle/decision-log persistence, canonical/variant/attribute persistence, knowledge activation/versioning, merge/conflict semantics, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, hoặc semantics/persistence của KnowledgeLineage/KnowledgeVersion/IdentityDecisionLog thì cần ADR tương ứng. UI/UX baseline không tự tạo architecture mới.
