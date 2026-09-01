@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa Publishing simplified flow, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
+Đã khóa Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
 
 ## 1. North-star flow
 ```text
@@ -29,6 +29,7 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
       → Xem lại & xử lý ngoại lệ
       → Xác nhận phát hành [commit boundary]
       → Release Manifest + khóa revision + audit [system consequence]
+      → Đã phát hành [success/read-only result]
 
 Supporting module, không phải checkpoint bắt buộc:
 Quản lý Kho tri thức
@@ -55,6 +56,24 @@ Global Case State + Resume / Next-action Contract v1:
 Layout baseline: header/thông tin hồ sơ; `Trạng thái hồ sơ` với stage nghiệp vụ + completion + Blocking/Warning/Cần xem lại; progress 16 canonical stages có Document Sync Review và Publishing Exception Review; group progress; blockers; warnings; thông tin/thống kê; right rail `Hành động tiếp theo | Ngữ cảnh hồ sơ (Resume Target) | Hoạt động gần đây`; một primary CTA `Tiếp tục xử lý` hoặc contextual equivalent.
 
 Implementation direction: read projection `GET /api/v1/projects/{project_id}/case-state`; resume persistence `PUT /api/v1/projects/{project_id}/resume-context`; backend trả semantic route key, frontend sở hữu URL mapping; concurrency dùng case/row version phù hợp.
+
+## 1.2 Đã phát hành — Post-Publish Success Baseline Iteration 1
+`Đã phát hành` là success/read-only result state sau `Xác nhận phát hành` commit thành công. Không phải bước thứ 4 của Publishing và không phải checkpoint mới.
+
+UI chỉ được hiển thị success khi Release Manifest final đã commit hợp lệ. Success surface phản ánh Release ID thật, thời điểm/người phát hành, số tài liệu trong manifest, Document Revision đã bind/khóa, M365 file/version nếu có, retained warnings và audit/lineage.
+
+Layout authority:
+- `Bộ tài liệu đã được phát hành` + banner `Phát hành thành công!` + badge `ĐÃ PHÁT HÀNH`;
+- release summary;
+- 3 bước Publishing hoàn thành + result state `Đã phát hành`;
+- tính toàn vẹn/warning/ngoại lệ/M365 sync/lịch sử;
+- bảng `Tên tài liệu | Loại tài liệu | Document Revision đã phát hành | Trạng thái | Phiên bản M365 | Lần đồng bộ cuối`;
+- right rail `Thông tin Release | Tính toàn vẹn bản phát hành | Lịch sử phát hành | Hành động`;
+- immutable notice.
+
+Primary CTA: `Về Tổng quan hồ sơ`. Secondary: xem Release Manifest, mở tài liệu, xem lịch sử/lineage. Không edit/unlock/rollback/replace release, không Export PDF.
+
+Sau success: Global Case State canonical stage = `PUBLISHED`, terminal/completed, `next_action = null`. Muốn thay đổi sau phát hành phải tạo revision mới, revalidate/sync và phát hành release mới; release cũ immutable.
 
 ## 2. Price & Evidence
 `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu trong Kho tri thức chỉ là hỗ trợ/tra cứu và không override price-source authority này.
@@ -89,8 +108,8 @@ Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | L�
 VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, Document Revision, Release Manifest. Microsoft 365 sở hữu Word file/OneDrive-SharePoint file/version. Document Revision != M365 file version. Managed Region không silent overwrite; conflict phải explicit resolve. Published revision/release immutable.
 
 ## 6. Publishing
-`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + locked revisions + audit [system consequence]`.
-Không màn khóa riêng, không Export PDF.
+`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + locked revisions + audit [system consequence] → Đã phát hành [success/read-only result]`.
+`Đã phát hành` không phải step thao tác mới. Không màn khóa riêng, không Export PDF.
 
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; một primary CTA/context. AI advisory; human explicit commit cho official decisions. Không KSCL/multi-level approval, S14, NCCQ aggregate, separate rule-check, fake Word/Excel editor, silent overwrite/publish/knowledge activation/state transition/stale reconciliation.
+Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; một primary CTA/context. AI advisory; human explicit commit cho official decisions. Không KSCL/multi-level approval, S14, NCCQ aggregate, separate rule-check, fake Word/Excel editor, silent overwrite/publish/knowledge activation/state transition/stale reconciliation. Published release/revision immutable.
