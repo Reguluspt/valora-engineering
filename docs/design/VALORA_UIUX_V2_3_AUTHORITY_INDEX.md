@@ -1,24 +1,37 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 01/09/2026 — `Đã phát hành — Iteration 1`.
+**Consolidation:** 01/09/2026 — `Cross-product State Pattern Board — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_POST_PUBLISH_SUCCESS_BASELINE_ADDENDUM.md` — **Baseline `Đã phát hành — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_CASE_OVERVIEW_ORCHESTRATION_BASELINE_ADDENDUM.md` — Baseline `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`.
-4. `VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md` — Baseline `Chọn NCC đã xác nhận giá — Iteration 1`.
-5. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md` — Baseline `Lịch sử & nguồn gốc — Iteration 1`.
-6. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — Baseline `Hồ sơ cũ — Iteration 1`.
-7. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
-8. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
-9. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
-10. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
-11. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
-12. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-13. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_CROSS_PRODUCT_STATE_PATTERN_BASELINE_ADDENDUM.md` — **Baseline `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_POST_PUBLISH_SUCCESS_BASELINE_ADDENDUM.md` — Baseline `Đã phát hành — Iteration 1`.
+4. `VALORA_UIUX_HANDOFF_v2.3_CASE_OVERVIEW_ORCHESTRATION_BASELINE_ADDENDUM.md` — Baseline `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`.
+5. `VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md` — Baseline `Chọn NCC đã xác nhận giá — Iteration 1`.
+6. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md` — Baseline `Lịch sử & nguồn gốc — Iteration 1`.
+7. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — Baseline `Hồ sơ cũ — Iteration 1`.
+8. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
+9. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
+10. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
+11. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
+12. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+13. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+14. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
-## 2. Post-Publish Success authority
+## 2. Cross-product state authority
+`Cross-product Empty / Loading / Error / Retry Contract v1` là state-presentation và recovery authority dùng chung toàn VALORA. Nó không thay `VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md`; Error Registry vẫn là message authority, còn State Contract phân loại state, scope, surface, recovery action và preserve/replace behavior.
+
+Canonical states:
+`INITIAL_LOADING | SECTION_LOADING | BACKGROUND_REFRESH | PROCESSING | EMPTY_FIRST_USE | EMPTY_NO_RESULTS | EMPTY_NOT_APPLICABLE | EMPTY_COMPLETED | INLINE_ERROR | SECTION_ERROR | PAGE_ERROR | FATAL_ERROR | STALE_DATA | VERSION_CONFLICT | OFFLINE | RECONNECTING | PARTIAL_SUCCESS`.
+
+Hard invariants: Empty không che Error; Loading khác Processing; usable data không blank khi refresh; retry phải thật/đúng scope; mutation không blind retry khi commit chưa xác định; 409 không last-write-wins; partial failure giữ phần thành công; Warning không tự thành Blocking; Offline không fake success; local draft không đồng nghĩa persisted; technical detail không phải primary copy; search error không là No Results; không spinner vô hạn cho durable job; frontend không dựng fallback business state machine khi API/projection authority lỗi; một primary recovery CTA/context.
+
+Surface authority: field/action nhỏ → inline; section lỗi → section error/inline alert; page notice còn thao tác được → banner; action success ngắn hạn → toast; conflict cần explicit decision → dialog/drawer theo context; empty → Empty State; capability chính không dùng được → Page Error.
+
+Board baseline là cross-product design-system authority, không phải workflow checkpoint hay màn nghiệp vụ độc lập.
+
+## 3. Post-Publish Success authority
 `Đã phát hành` là success/read-only result state sau `Xác nhận phát hành` commit thành công. Đây không phải bước thứ 4 của Publishing và không phải workflow checkpoint mới.
 
 Flow:
@@ -32,7 +45,7 @@ Primary CTA: `Về Tổng quan hồ sơ`. Secondary: xem Release Manifest, mở 
 
 Global Case State sau thành công: canonical stage `PUBLISHED`, terminal/completed, `next_action = null`; published release/revisions immutable. Muốn thay đổi phải tạo revision mới và release mới.
 
-## 3. Tổng quan hồ sơ / orchestration authority
+## 4. Tổng quan hồ sơ / orchestration authority
 `Tổng quan hồ sơ` là project-level orchestration hub. Không tạo màn `Tiến độ hồ sơ` riêng.
 
 Global Case State projection tổng hợp Project + WorkflowInstance + domain completion facts + ValidationIssue + document/release state + last meaningful context. `Project.status` hoặc `WorkflowInstance.current_state` không tự động là UI route authority.
@@ -43,25 +56,26 @@ Một hồ sơ có một primary next-action. Precedence: Blocking → stale c�
 
 Resume Target ưu tiên last meaningful context còn hợp lệ, nhưng blocker/stale mới có thể thắng. Resume không phải business commit, không bypass blocker và last visited route không mặc định là resume authority.
 
-## 4. NCC Selection authority
+## 5. NCC Selection authority
 `Chọn NCC đã xác nhận giá` là checkpoint sau `Hoàn tất từng báo giá NCC` và trước `Kết quả thẩm định giá`. Selection là project-line context; đổi NCC tạo revision mới; quote revision mới không auto-rebind. Warning không Blocking. Primary commit CTA `Xác nhận NCC đã chọn`; selection không override appraisal price.
 
-## 5. Knowledge Management authority
+## 6. Knowledge Management authority
 Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`. Structured KTKT là business data; report presentation thuộc template công ty/Microsoft 365. Historical knowledge không override price-source authority. Không direct-inject active knowledge; knowledge review cần explicit human decision; history/lineage read-only.
 
-## 6. Publishing routing authority — complete
+## 7. Publishing routing authority — complete
 `Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + khóa revision + audit [system consequence] → Đã phát hành [success/read-only result]`.
 Không UI `Khóa phiên bản` riêng. Không `Xuất PDF`.
 
-## 7. Guardrails
+## 8. Guardrails
 - Single-user.
 - Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
 - AI advisory; human-confirmed official decisions.
 - Không silent bypass/publish/overwrite/knowledge activation/state transition/stale reconciliation.
+- Không silent retry mutation khi commit status chưa xác định.
 - Không revive KSCL/QC/multi-level approval từ legacy workflow commands.
 - Không fake Word/Excel editor; không export PDF.
 - Published revision/release immutable.
-- Một primary CTA mỗi context.
+- Một primary CTA/recovery CTA mỗi context.
 
-## 8. ADR
-Global Case State projection/resume persistence; post-publish published-state projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics cần ADR nếu implementation thay đổi persistence/architecture.
+## 9. ADR
+Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish published-state projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics cần ADR nếu implementation thay đổi persistence/architecture.
