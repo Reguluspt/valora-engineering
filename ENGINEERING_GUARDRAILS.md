@@ -20,8 +20,10 @@ Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
 PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
-ADR 0036 accepts computed-on-read with no migration. Runtime waits for an owner-accepted
-fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
+ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
+owner-accepted fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
+ADR 0037 official-intake fact/command is PROPOSED; migration/runtime require owner acceptance and
+a canonical preliminary-result artifact prerequisite.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```

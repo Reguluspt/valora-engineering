@@ -22,7 +22,7 @@ second workflow authority.
 
 1. **Compute on read.** PR-01 will implement Global Case State as an application-level,
    read-only projection. It will not add a case-state table, materialized state column,
-   migration or hidden workflow enum.
+   projection migration or hidden workflow enum.
 2. **Facts remain authoritative.** Stage completion, blockers, stale state and next action are
    derived only from an approved, versioned fact matrix. Project/workflow status values may be
    inputs, but neither may select a UI route or claim completion alone.
@@ -68,7 +68,8 @@ facts silently.
 
 ## Consequences
 
-- No migration is required for PR-01.
+- No case-state projection migration is permitted. Separately accepted source-domain facts may
+  require their own migrations without persisting the projection.
 - The projection cannot drift independently from business facts.
 - Cache invalidation and projection-row synchronization are avoided.
 - `case_version` changes when any participating authoritative fact changes, but is intentionally

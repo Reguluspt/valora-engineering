@@ -13,8 +13,10 @@ Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
 PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
-ADR 0036 accepts computed-on-read with no migration. Runtime waits for an owner-accepted
-fact/completion matrix; resume persistence remains deferred.
+ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
+owner-accepted fact/completion matrix; resume persistence remains deferred.
+ADR 0037 official-intake fact/command is PROPOSED; migration/runtime await owner review and a
+canonical preliminary-result artifact decision.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
 or drive new UI. Earlier S13 sequencing below is historical context only.
 ```

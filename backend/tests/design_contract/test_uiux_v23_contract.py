@@ -114,7 +114,8 @@ def test_repository_live_gates_point_to_v23_pr01_design_gate() -> None:
         assert "PR-01" in current_gate
         assert "OWNER-ASSIGNED" in current_gate
         assert "ADR 0036" in current_gate
-        assert "no migration" in current_gate.casefold()
+        assert "ADR 0037" in current_gate
+        assert "no projection migration" in current_gate.casefold()
         assert "Active runtime assignment: S13" not in current_gate
 
     all_live_gate_text = "\n".join(

@@ -3,7 +3,7 @@
 **Status:** ACTIVE DESIGN GATE — runtime not yet authorized
 **Task:** PR-01 — Case State Projection Foundation
 **Date:** 2026-09-01
-**Architecture:** ADR 0036 — computed on read, no migration
+**Architecture:** ADR 0036 — computed on read, no projection migration
 
 ## 1. Scope
 
@@ -48,7 +48,7 @@ may be treated as completion.
 | `PRELIMINARY_REQUEST` | preliminary request facts + completion predicate | no canonical provider identified | MISSING |
 | `PRELIMINARY_ANALYSIS` | preliminary analysis decision/facts | no canonical provider identified | MISSING |
 | `PRELIMINARY_READY` | explicit readiness fact | no canonical provider identified | MISSING |
-| `OFFICIAL_INTAKE` | official-intake commit/transition fact | Project/workflow legacy states exist; mapping not approved | UNMAPPED |
+| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per proposed ADR 0037 | durable fact/command designed; preliminary-result artifact prerequisite missing | DESIGNED / NOT IMPLEMENTED |
 | `ASSET_REVIEW` | mandatory asset-review predicates | asset-line review/validation facts exist; completeness predicate not approved | UNMAPPED |
 | `ASSET_WORKBENCH` | mandatory workbench completion facts | asset lines and sessions exist; completion predicate not approved | UNMAPPED |
 | `PRICE_EVIDENCE` | required price-evidence coverage | evidence/quote primitives exist; project-line coverage predicate not approved | UNMAPPED |
@@ -65,6 +65,10 @@ may be treated as completion.
 **Gate result:** The architecture is accepted, but a truthful `current_stage` cannot yet be
 computed for all valid projects. Runtime connection remains blocked until the owner accepts a
 bounded first-stage predicate set or the missing providers are implemented in their assigned PRs.
+
+For the official boundary specifically, ADR 0037 proposes the durable fact and command. Its
+presence proves only that official intake was committed and the Project is eligible for the hub;
+it does not infer completion of other stages.
 
 ## 5. Cross-cutting predicates already locked
 
@@ -104,5 +108,5 @@ the envelope requires a versioned contract update and tests.
 - [ ] Blocking > stale > in-progress > incomplete > next > published precedence tests.
 - [ ] Warning-not-Blocking test.
 - [ ] Unknown target/provider fail-closed test.
-- [ ] No migration and no resume-context endpoint.
+- [ ] No case-state projection migration and no resume-context endpoint.
 - [ ] Existing legacy-conflict ratchet does not expand.
