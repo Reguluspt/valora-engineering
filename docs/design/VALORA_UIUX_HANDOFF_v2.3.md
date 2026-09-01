@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
+Đã khóa `Microsoft 365 Return / Revalidation Contract v1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
 
 ## 1. North-star flow
 ```text
@@ -21,6 +21,7 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 → Microsoft 365 Document Workspace
    → Tạo & Xem lại bộ tài liệu hồ sơ
       → Batch generation → Review
+      → Mở trong Word ↔ Return / Revalidation [integration state, không checkpoint]
       → khi dữ liệu thay đổi: Bulk Sync loop
       → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
@@ -134,6 +135,45 @@ Cross-product hard invariants:
 
 Visual baseline `Cross-product State Pattern Board — Iteration 1` là design-system authority dùng chung, không phải workflow checkpoint hay màn nghiệp vụ độc lập.
 
+## 1.4 Microsoft 365 Return / Revalidation — Baseline Contract v1
+Contract này khóa hành vi khi user `Mở trong Word` rồi quay lại VALORA. Return/Revalidation là integration/state contract, không phải workflow checkpoint và không phải business commit.
+
+Canonical flow:
+```text
+Mở trong Word
+→ ghi nhận handoff context
+→ user quay lại / regain focus / explicit refresh / action cần freshness
+→ BACKGROUND_REFRESH
+→ revalidate M365 file state
+→ so sánh với M365 file/version + Managed Region baseline đã bind vào Document Revision hiện hành
+→ classify
+→ derive sync/readiness
+→ continue / review / conflict / recovery
+```
+
+Canonical classifications:
+`NO_CHANGE | EXTERNAL_CHANGE_OUTSIDE_MANAGED | EXTERNAL_CHANGE_IN_MANAGED | FILE_REPLACED_OR_MOVED | ACCESS_UNAVAILABLE`.
+
+Three-way Managed Region semantics với `Old = snapshot/lần sync đã bind`, `V = VALORA hiện tại`, `W = Word hiện tại`:
+- `V=Old, W=Old` → không đổi;
+- `V=Old, W!=Old` → Word-only edit, bảo toàn Word, không silent overwrite;
+- `V!=Old, W=Old` → VALORA-only change, `Cần cập nhật`, không conflict;
+- `V!=Old, W!=Old` và V/W khác semantic value → conflict cần explicit decision;
+- V/W hội tụ cùng semantic value có thể non-conflict nếu implementation giữ audit/lineage đầy đủ.
+
+Hard rules:
+- quay lại VALORA không đồng nghĩa Word đã đổi;
+- revalidation có usable data dùng `BACKGROUND_REFRESH`, không blank page;
+- M365 version mới không tự tạo Document Revision;
+- thay đổi ngoài Managed Region không mặc định conflict;
+- user edit trong Managed Region không silent overwrite;
+- không tự bind file thay thế chỉ theo filename;
+- không fake `Đã đồng bộ`/`Sẵn sàng phát hành` khi freshness chưa xác minh;
+- reconnect phải revalidate trước official mutation phụ thuộc freshness;
+- published revision/release immutable.
+
+Sync/Publishing phải dùng freshness đủ theo policy. Revalidation result feed vào document/release readiness và Global Case State `stale/blocking/next_action`; frontend không dựng workflow truth riêng. Visual M365 Return/Revalidation chưa được chốt; mockup tiếp theo mặc định Design Proposal / Iteration.
+
 ## 2. Price & Evidence
 `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu trong Kho tri thức chỉ là hỗ trợ/tra cứu và không override price-source authority này.
 
@@ -166,9 +206,11 @@ Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | L�
 ## 5. Microsoft 365 / Documents
 VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, Document Revision, Release Manifest. Microsoft 365 sở hữu Word file/OneDrive-SharePoint file/version. Document Revision != M365 file version. Managed Region không silent overwrite; conflict phải explicit resolve. Published revision/release immutable.
 
+Return/Revalidation authority: external Word return phải revalidate M365 state trước mutation phụ thuộc freshness; M365 version mới không tự tạo Document Revision; Managed Region changes dùng three-way semantics và explicit conflict handling khi cần.
+
 ## 6. Publishing
 `Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + locked revisions + audit [system consequence] → Đã phát hành [success/read-only result]`.
 `Đã phát hành` không phải step thao tác mới. Không màn khóa riêng, không Export PDF.
 
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; một primary CTA/context. AI advisory; human explicit commit cho official decisions. Không KSCL/multi-level approval, S14, NCCQ aggregate, separate rule-check, fake Word/Excel editor, silent overwrite/publish/knowledge activation/state transition/stale reconciliation. Không blind retry mutation khi commit status chưa xác định. Published release/revision immutable.
+Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context.
