@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-01 (UI/UX v2.3 PR-00 authority alignment)
+**Reconciled:** 2026-09-01 (UI/UX v2.3 PR-01 design gate)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -34,6 +34,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0032 | Paired dossier aggregate, extraction and row alignment | Implementation gated by S15 plan |
 | ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Phase-appropriate implementation begins with domain decisions; AI runtime gated by S16 |
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
+| ADR 0036 | Computed Global Case State projection | PR-01 architecture accepted; runtime waits for approved fact predicates; resume persistence deferred |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -64,8 +65,8 @@ Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
 Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
 
 PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
-PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; explicit owner assignment is required.
-→ PR-01 Case State Projection Foundation
+PR-01 Case State Projection Foundation — OWNER-ASSIGNED; design/ADR gate active
+ADR 0036: computed on read, no migration; runtime waits for approved fact matrix
 → PR-02 Case State Frontend Hub Wiring
 
 PR-00 → PR-03 NCC Selection Persistence → PR-04 NCC Selection API + UI

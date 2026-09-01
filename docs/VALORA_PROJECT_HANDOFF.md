@@ -1,7 +1,7 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-01 — PR-00 Authority Alignment Guard
+**Reconciled:** 2026-09-01 — PR-01 Case State Projection design gate
 **Accepted code baseline:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
 **Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
@@ -12,8 +12,9 @@ Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`, then the directly relevant v2.3 addendum.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-No active implementation assignment.
-PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+ADR 0036 accepts computed-on-read with no migration. Runtime waits for an owner-accepted
+fact/completion matrix; resume persistence remains deferred.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
 or drive new UI. Earlier S13 sequencing below is historical context only.
 ```

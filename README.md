@@ -6,7 +6,7 @@
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 **PR-00 status:** **COMPLETE / CLOSED locally**
-**Next task:** **PR-01 NOT STARTED / NOT OWNER-ASSIGNED**
+**Active task:** **PR-01 OWNER-ASSIGNED — design/ADR gate open; runtime not yet authorized**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -40,8 +40,8 @@ Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-No active implementation assignment.
-PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+ADR 0036 accepts computed-on-read with no migration; runtime waits for an approved fact matrix.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 Earlier S13 sequencing is historical context.
 ```

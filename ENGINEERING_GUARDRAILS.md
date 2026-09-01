@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-01 (UI/UX v2.3 PR-00 authority alignment)
+**Last reconciled:** 2026-09-01 (UI/UX v2.3 PR-01 design gate)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -19,8 +19,9 @@ Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-No active implementation assignment.
-PR-01 is NOT STARTED / NOT OWNER-ASSIGNED; do not begin without explicit owner assignment.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+ADR 0036 accepts computed-on-read with no migration. Runtime waits for an owner-accepted
+fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```
