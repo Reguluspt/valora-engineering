@@ -1,17 +1,18 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 31/08/2026 — `Cần rà soát tri thức — Iteration 1`.
+**Consolidation:** 01/09/2026 — `Hồ sơ cũ — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — **Baseline `Cần rà soát tri thức — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
-4. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
-5. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
-6. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
-7. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-8. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — **Baseline `Hồ sơ cũ — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
+4. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
+5. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
+6. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
+7. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+8. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+9. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Knowledge Management authority
 `Quản lý Kho tri thức` là supporting workspace độc lập với panel tra cứu trong Workbench.
@@ -23,24 +24,35 @@ Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gố
 
 Structured KTKT là business data; report presentation thuộc template công ty/Microsoft 365. Historical knowledge không override price-source authority.
 
-### 2.1 Cần rà soát tri thức — Baseline Iteration 1
-`Cần rà soát` là human-review queue cho identity/contextual-alias/KTKT/knowledge candidates. Candidate không trở thành official knowledge nếu chưa có explicit human decision.
+### 2.1 Hồ sơ cũ — Baseline Iteration 1
+`Hồ sơ cũ` quản lý historical `DossierBundle`, source files, extraction, row alignment và candidate creation. Đây không phải active-case workflow và không được direct-inject active knowledge.
 
-Layout: candidate list bên trái; candidate/structured comparison ở giữa; report preview view-only + note/history bên phải; decision bar phía dưới.
+Flow:
+```text
+Nhập hồ sơ cũ
+→ Phân loại tài liệu
+→ Trích xuất dữ liệu
+→ Ghép khớp dòng
+→ Rà soát xung đột/chưa khớp
+→ Tạo ứng viên tri thức
+→ Cần rà soát tri thức
+→ human decision
+→ official/versioned knowledge khi xác nhận
+```
+
+Layout: dossier list bên trái; hồ sơ/progress/tabs và row-alignment table ở giữa; source files + extraction preview + processing/history bên phải. Primary CTA `Tạo ứng viên từ các dòng` chỉ tạo candidate.
+
+Row alignment status tối thiểu: `Đã khớp | Chưa khớp | Cần xem xét`. Confidence chỉ hỗ trợ review; row order không phải authority duy nhất. Raw source/locator/lineage luôn được giữ.
+
+AI/rules chỉ classify/extract/align/rank/explain/suggest; không auto-confirm mapping/identity/price, không activate knowledge. Candidate phải qua `Cần rà soát tri thức`.
+
+### 2.2 Cần rà soát tri thức — Baseline Iteration 1
+`Cần rà soát` là human-review queue cho identity/contextual-alias/KTKT/knowledge candidates. Candidate không trở thành official knowledge nếu chưa có explicit human decision.
 
 Decision semantics:
 `Xác nhận | Chỉnh sửa rồi xác nhận | Không phù hợp | Để xử lý sau`.
 
-- Confidence/độ ưu tiên chỉ hỗ trợ review, không auto-approve.
-- Confirm là explicit human commit.
-- Edit+confirm giữ source/candidate lineage và giá trị cuối đã xác nhận.
-- Reject không xóa evidence/provenance.
-- Defer không được coi là official knowledge.
-- Khi tri thức hiện hữu có liên quan, user phải có surface so sánh; không silent overwrite.
-- Decision phải có history/lineage/audit.
-- AI/system không impersonate human confirmation.
-
-Preview KTKT tiếp tục theo authority Báo cáo công ty, view-only, không fake Word editor.
+Confidence/độ ưu tiên không auto-approve; reject/defer không xóa provenance; decision phải có history/lineage/audit.
 
 ## 3. Publishing routing authority — complete
 ```text
@@ -57,7 +69,8 @@ Không UI `Khóa phiên bản` riêng. Không `Xuất PDF`.
 - AI advisory; human-confirmed official decisions.
 - Không silent bypass/publish/overwrite/knowledge activation.
 - Không auto-approve knowledge candidate.
-- Không fake Word editor.
+- Không direct active-knowledge injection từ hồ sơ cũ.
+- Không fake Word/Excel editor.
 - Không export PDF.
 - Historical knowledge không override v2.3 price-source authority.
 - Structured KTKT = business data; report formatting = company template authority.
@@ -65,4 +78,4 @@ Không UI `Khóa phiên bản` riêng. Không `Xuất PDF`.
 - Một primary CTA mỗi context.
 
 ## 5. ADR
-Knowledge review queue/candidate lifecycle/decision log/activation/versioning, attribute persistence, lineage, presentation mapping, Managed Region merge semantics và Release Manifest transaction semantics cần ADR nếu implementation thay đổi persistence/architecture.
+DossierBundle/source-role persistence, extraction/table-role contract, row-alignment lifecycle/decision semantics, candidate creation transaction/reliable jobs, knowledge review/activation/versioning, lineage, presentation mapping, Managed Region merge semantics và Release Manifest transaction semantics cần ADR nếu implementation thay đổi persistence/architecture.
