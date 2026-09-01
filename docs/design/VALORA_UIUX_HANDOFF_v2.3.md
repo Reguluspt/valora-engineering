@@ -3,12 +3,12 @@
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
 **Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first  
 **Trạng thái:** Canonical master — Consolidated v2.3  
-**Cập nhật:** 31/08/2026
+**Cập nhật:** 01/09/2026
 
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa các authority trước, Publishing simplified flow 3 bước, `Quản lý Kho tri thức — Iteration 1` và **`Cần rà soát tri thức — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
+Đã khóa các authority trước, Publishing simplified flow 3 bước, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1` và **`Hồ sơ cũ — Iteration 1`**. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian hoặc màn rule-check giá riêng.
 
 ## 1. North-star flow
 ```text
@@ -35,6 +35,10 @@ Quản lý Kho tri thức
   → Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc
   ↔ Workbench tra cứu Kho tri thức
   ← candidate từ Asset Identity / hồ sơ cũ / knowledge review
+
+Historical knowledge bootstrap:
+Nhập hồ sơ cũ → Phân loại tài liệu → Trích xuất dữ liệu → Ghép khớp dòng
+→ Tạo ứng viên tri thức → Cần rà soát tri thức → human decision → official/versioned knowledge
 ```
 
 ## 2. Price & Evidence
@@ -45,7 +49,7 @@ Quản lý Kho tri thức
 
 ## 4. Knowledge Management — Baseline
 
-### 4.1 Quản lý Kho tri thức — Iteration 1
+### 4.1 Quản lý Kho tri thức — Baseline Iteration 1
 `Quản lý Kho tri thức` là workspace quản trị/review độc lập với panel `Kho tri thức` trong Workbench.
 
 IA:
@@ -77,11 +81,48 @@ Decision semantics:
 
 Confidence/độ ưu tiên chỉ hỗ trợ sắp xếp/giải thích; không auto-approve dù confidence cao. Khi có tri thức hiện hữu liên quan, phải có surface so sánh và không silent overwrite. Decision history/audit giữ candidate, source/locator, relevant before/proposed/confirmed values, decision, actor, time.
 
-### 4.4 Human/AI boundary
-AI/rules được extract/normalize/retrieve/score/rerank/group/explain/suggest; không silent activate knowledge, không overwrite raw observation, không đổi presentation authority, không impersonate human confirmation. Direct active-knowledge injection bị cấm.
+### 4.4 Hồ sơ cũ — Baseline Iteration 1
+`Hồ sơ cũ` là historical-dossier workspace của Knowledge Management. Nó quản lý `DossierBundle`, source files, extraction, row alignment và candidate creation; không phải active-case workflow.
 
-### 4.5 Code-base alignment
+Flow authority:
+```text
+Nhập hồ sơ cũ
+→ Phân loại tài liệu
+→ Trích xuất dữ liệu
+→ Ghép khớp dòng
+→ Rà soát xung đột/chưa khớp
+→ Tạo ứng viên tri thức
+→ Cần rà soát tri thức
+→ human decision
+→ official/versioned knowledge khi được xác nhận
+```
+
+Layout Fluent 2 baseline:
+- trái: `Danh sách hồ sơ cũ` + search/filter theo trạng thái, năm, loại tài sản;
+- giữa: dossier đang chọn, progress pipeline, tabs `Tổng quan | Tài liệu & tệp tin | Dữ liệu trích xuất | Ghép khớp dòng | Ứng viên đã tạo | Lịch sử xử lý`;
+- phải: danh sách tài liệu nguồn, preview dữ liệu trích xuất, thông tin xử lý, ghi chú và lịch sử;
+- primary CTA theo context: `Tạo ứng viên từ các dòng`.
+
+Extraction/table-role authority tối thiểu:
+- `excel_customer_asset_table`;
+- `word_technical_asset_table`;
+- `word_quote_comparison_table`;
+- `word_final_result_table`.
+
+Row alignment status tối thiểu: `Đã khớp | Chưa khớp | Cần xem xét`. Row order không phải authority duy nhất; missing/inserted/split/merged/reordered/conflicting rows phải được biểu diễn và review. Confidence chỉ hỗ trợ review, không auto-confirm.
+
+`Tạo ứng viên từ các dòng` chỉ tạo knowledge candidates. Không có đường tắt từ `Hồ sơ cũ` sang active knowledge. Raw source, source locator, extraction output, alignment và candidate lineage không được xóa/ghi đè khi chuẩn hóa.
+
+Dữ liệu giá lịch sử giữ đúng semantics: customer/working price là observation; supplier price là quote observation/candidate; appraiser proposal là proposal observation; final Word result chỉ là appraised-price decision candidate sau review. Không override price-source authority v2.3.
+
+### 4.5 Human/AI boundary
+AI/rules được extract/normalize/retrieve/score/rerank/group/classify/align/explain/suggest; không silent activate knowledge, không overwrite raw observation, không đổi presentation authority, không impersonate human confirmation. Direct active-knowledge injection bị cấm.
+
+### 4.6 Code-base alignment
 UI bám Column Mapping Memory, Raw Asset Observation, Asset Identity Memory, CanonicalAsset, AssetVariant, AssetAlias, ContextualAssetAlias, IdentityCandidate, SimilarityScore, IdentityReviewItem, IdentityDecisionLog, DossierBundle, DossierRowAlignment và reviewed quote/spec/knowledge candidates.
+
+Historical lineage tối thiểu:
+`Dossier → source file → table/page/sheet/row/cell locator → extracted row → alignment candidate/decision → knowledge candidate → review decision → Knowledge Version`.
 
 ## 5. Template / AI / Spreadsheet
 AI advisory; user xác nhận mapping/template. Không silent accept/publish/overwrite/change formula. Custom field không tự promote canonical. Fill Engine giữ authority hiện hành và tôn trọng presentation mapping structured KTKT.
@@ -120,6 +161,7 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 - Single-user; AI advisory.
 - Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
 - Không auto-approve knowledge candidate.
+- Không direct active-knowledge injection từ hồ sơ cũ.
 - Không silent bypass Blocking/Warning/publish/overwrite/knowledge activation.
 - Reject/defer không xóa provenance; defer không phải confirmed knowledge.
 - Không fake Word/Excel editor.
@@ -134,7 +176,8 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 |---|---|
 | S09–S13 / NCCQ / Result | P0 baseline |
 | Quản lý Kho tri thức | P0 baseline Iteration 1 |
-| **Cần rà soát tri thức** | **P0 baseline Iteration 1** |
+| Cần rà soát tri thức | P0 baseline Iteration 1 |
+| **Hồ sơ cũ** | **P0 baseline Iteration 1** |
 | Structured KTKT + report preview mapping | P0 baseline Iteration 1 |
 | Microsoft 365 Document Workspace | P0 baseline |
 | Tạo & Xem lại bộ tài liệu hồ sơ | P0 baseline Iteration 1 |
@@ -145,6 +188,7 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 | Spreadsheet Fill Engine | P0 baseline |
 
 ## 9. Companion authority
+- `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md`.
 - `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md`.
@@ -153,4 +197,4 @@ Published Release và các Document Revision đã bind là immutable. Muốn tha
 - Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành tiếp tục có hiệu lực.
 
 ## 10. ADR
-Nếu implementation thay đổi review-queue/candidate lifecycle/decision-log persistence, canonical/variant/attribute persistence, knowledge activation/versioning, merge/conflict semantics, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, locking atomicity, retry/idempotency, failure recovery hoặc partial-publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi DossierBundle/source-role persistence, extraction/table-role contract, DossierRowAlignment lifecycle/decision semantics, candidate-creation transaction/reliable jobs, review-queue/candidate lifecycle/decision-log persistence, canonical/variant/attribute persistence, knowledge activation/versioning, merge/conflict semantics, source lineage, presentation mapping/Managed Region merge semantics, Release Manifest transaction boundary, locking atomicity, retry/idempotency, failure recovery hoặc partial-publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
