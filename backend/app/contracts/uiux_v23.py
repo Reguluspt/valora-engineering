@@ -56,10 +56,22 @@ LEGACY_BACKEND_CONFLICT_RATCHET = {
     '"/approval-gates"': {"app/api/workflow.py": 1},
 }
 
-FORBIDDEN_NEW_BACKEND_TERMS = (
-    "KSCL",
-    "NCCQ",
-    "LOCK_VERSION",
+FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS = (
+    "/kscl",
+    "KSCLWorkflow",
+    "/multi-level-approval",
+    "MultiLevelApproval",
+    "/lock-version",
+    "LockVersionScreen",
+    "/nccq-intermediate",
+    "/nccq-aggregate",
+    "NCCQIntermediate",
+    "/rule-check",
+    "RuleCheckScreen",
+    "/global-audit",
+    "GlobalAuditScreen",
+    "/export-pdf",
+    "/pdf-export",
     "Export PDF",
     "PDF export",
 )

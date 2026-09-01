@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -7,7 +9,7 @@ import {
   CANONICAL_CASE_STAGES,
   CANONICAL_CROSS_PRODUCT_UI_STATES,
   FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS,
-  LEGACY_ROUTE_ALIASES,
+  FORBIDDEN_NEW_STANDALONE_ROUTES,
   LEGACY_ROUTE_RATCHET
 } from "../valoraV23";
 
@@ -51,6 +53,19 @@ const EXPECTED_UI_STATES = [
   "PARTIAL_SUCCESS"
 ] as const;
 
+const FRONTEND_SRC_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const RAW_PAGE_ROUTE_LITERAL = /(["'`])\/(?:workbench(?:\/[^"'`\r\n]*)?|queue|validation|kscl|qc|approval|lock-version|nccq(?:-[^"'`\r\n]*)?|rule-check|audit|global-audit|export-pdf|pdf-export)\1/g;
+
+function productionTsxFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "__tests__" ? [] : productionTsxFiles(path);
+    }
+    return entry.isFile() && entry.name.endsWith(".tsx") ? [path] : [];
+  });
+}
+
 describe("VALORA UI/UX v2.3 implementation contract", () => {
   it("keeps the canonical case-stage and cross-product state vocabularies exact", () => {
     expect(CANONICAL_CASE_STAGES).toEqual(EXPECTED_CASE_STAGES);
@@ -69,6 +84,7 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
     const registeredRoutes = Object.values(APP_ROUTES);
     const unapprovedForbiddenRoutes = registeredRoutes.filter((route) => {
       if ((LEGACY_ROUTE_RATCHET as readonly string[]).includes(route)) return false;
+      if ((FORBIDDEN_NEW_STANDALONE_ROUTES as readonly string[]).includes(route)) return true;
       return FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS.some((fragment) =>
         route.includes(fragment)
       );
@@ -76,21 +92,23 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
     expect(unapprovedForbiddenRoutes).toEqual([]);
   });
 
-  it("keeps production route literals centralized in the contract", () => {
-    const routeOwners = [
-      new URL("../../App.tsx", import.meta.url),
-      new URL("../../components/layout/AppShell.tsx", import.meta.url)
-    ];
-    const forbiddenRawLiterals = [
-      ...Object.values(APP_ROUTES),
-      ...Object.values(LEGACY_ROUTE_ALIASES)
-    ];
+  it("keeps production page-route literals centralized in the contract", () => {
+    const violations = productionTsxFiles(FRONTEND_SRC_ROOT).flatMap((path) => {
+      const source = readFileSync(path, "utf8");
+      return [...source.matchAll(RAW_PAGE_ROUTE_LITERAL)].map(
+        (match) => `${path}: ${match[0]}`
+      );
+    });
 
-    for (const owner of routeOwners) {
-      const source = readFileSync(owner, "utf8");
-      for (const route of forbiddenRawLiterals) {
-        expect(source).not.toContain(`"${route}"`);
-      }
+    expect(violations).toEqual([]);
+  });
+
+  it("distinguishes forbidden intermediate surfaces from valid NCCQ terminology", () => {
+    expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS).not.toContain("/nccq");
+    expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS).toContain("/nccq-intermediate");
+    expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS).toContain("/nccq-aggregate");
+    for (const route of FORBIDDEN_NEW_STANDALONE_ROUTES) {
+      expect(route).not.toContain("nccq");
     }
   });
 });

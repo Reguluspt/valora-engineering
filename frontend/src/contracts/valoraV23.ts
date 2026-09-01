@@ -67,9 +67,15 @@ export const FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS = [
   "/qc",
   "/approval",
   "/lock-version",
-  "/nccq",
+  "/nccq-intermediate",
+  "/nccq-aggregate",
   "/rule-check",
-  "/audit",
+  "/global-audit",
   "/export-pdf",
   "/pdf-export"
+] as const;
+
+export const FORBIDDEN_NEW_STANDALONE_ROUTES = [
+  "/audit",
+  "/workbench/audit"
 ] as const;

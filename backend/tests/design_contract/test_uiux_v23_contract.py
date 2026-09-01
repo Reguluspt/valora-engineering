@@ -3,7 +3,7 @@ from pathlib import Path
 from app.contracts.uiux_v23 import (
     CANONICAL_CASE_STAGES,
     CANONICAL_CROSS_PRODUCT_UI_STATES,
-    FORBIDDEN_NEW_BACKEND_TERMS,
+    FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS,
     LEGACY_BACKEND_CONFLICT_RATCHET,
 )
 
@@ -83,8 +83,13 @@ def test_forbidden_backend_surfaces_are_not_introduced() -> None:
     sources = _runtime_python_sources()
     combined = "\n".join(sources.values())
 
-    for term in FORBIDDEN_NEW_BACKEND_TERMS:
-        assert term not in combined
+    for marker in FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS:
+        assert marker.casefold() not in combined.casefold()
+
+    # Authority forbids specific workflow/UI surfaces, not valid domain terminology or
+    # concurrency-version fields by themselves.
+    assert "NCCQ" not in FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS
+    assert "LOCK_VERSION" not in FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS
 
     assert '"/case-state"' not in combined
     assert '"/resume-context"' not in combined
@@ -92,6 +97,7 @@ def test_forbidden_backend_surfaces_are_not_introduced() -> None:
 
 def test_repository_live_gates_point_to_v23_pr00() -> None:
     live_gate_paths = (
+        REPOSITORY_ROOT / "README.md",
         REPOSITORY_ROOT / "CODEX.md",
         REPOSITORY_ROOT / "ENGINEERING_GUARDRAILS.md",
         REPOSITORY_ROOT / "docs" / "design" / "VALORA_DESIGN_AUTHORITY_INDEX.md",

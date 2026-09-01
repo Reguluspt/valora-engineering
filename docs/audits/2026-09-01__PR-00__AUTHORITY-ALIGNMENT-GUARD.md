@@ -58,10 +58,10 @@ routes. Removal or semantic reinterpretation is deferred to a separately authori
 | Gate | Result |
 |---|---|
 | Backend focused design-contract tests | PASS — 4 passed |
-| Frontend focused design-contract tests | PASS — 3 passed |
+| Frontend focused design-contract tests | PASS — 4 passed |
 | Backend full CI-equivalent suite with PostgreSQL + MinIO | PASS — 1,079 passed, 0 skipped, 28 warnings |
 | Worker suite | PASS — 5 passed |
-| Frontend suite | PASS — 19 files, 89 tests |
+| Frontend suite | PASS — 19 files, 90 tests |
 | Backend Ruff | PASS |
 | Worker Ruff | PASS |
 | Frontend type-check/lint | PASS |
@@ -73,10 +73,27 @@ routes. Removal or semantic reinterpretation is deferred to a separately authori
 | Frontend dependency audit | PASS — 0 vulnerabilities |
 | Docker services | PASS — backend, PostgreSQL, Redis and MinIO healthy; frontend and worker running |
 
-The PostgreSQL suite used the isolated local database `valora_pr00_ci_test`; it did not reuse,
-reset or delete the application database. An exploratory run that also set `DATABASE_URL` caused
-unit fixtures to share and drop integration tables; that configuration was rejected. The final run
-matches CI semantics by setting only `TEST_DATABASE_URL` for integration tests.
+Environment-aware PostgreSQL tests used the isolated local database `valora_pr00_ci_test`. One
+legacy auth-concurrency test hard-codes the local `valora` database; it ran `alembic upgrade head`,
+created a uniquely named test organization and cleaned that test data afterward, without a schema
+or application-data reset. An exploratory run that also set `DATABASE_URL` caused unit fixtures to
+share and drop integration tables; that configuration was rejected. The final run matches CI
+semantics for environment-aware tests by setting only `TEST_DATABASE_URL`.
+
+## Local review remediation
+
+The local review identified three non-runtime guard defects; all were corrected before PR-00
+closeout:
+
+1. `README.md` now points to the v2.3 authority and is included in the repository live-gate test.
+2. The frontend contract test recursively scans production `.tsx` files for raw page-route
+   literals, preventing a hard-coded route from bypassing `APP_ROUTES`.
+3. Backend and frontend guards now distinguish forbidden workflow/UI surfaces from valid `NCCQ`
+   terminology and concurrency-version fields.
+
+The first remediation full-suite attempt omitted the repository virtual-environment Scripts folder
+from `PATH`; one legacy auth test could not launch its `alembic` subprocess. The targeted test passed
+after correcting `PATH`, and the clean full rerun then passed all 1,079 backend tests.
 
 ## Security and migration assessment
 
