@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
+Đã khóa `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
 
 ## 1. North-star flow
 ```text
@@ -31,6 +31,11 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
       → Xác nhận phát hành [commit boundary]
       → Release Manifest + khóa revision + audit [system consequence]
       → Đã phát hành [success/read-only result]
+
+Horizontal traceability pattern, không phải checkpoint:
+Audit / Lineage Entry-points
+  → Xem lịch sử thay đổi | Xem nguồn gốc | Xem quyết định | Xem phiên bản | Xem Release Manifest
+  → deep-link đúng domain surface và giữ business context / return target
 
 Supporting module, không phải checkpoint bắt buộc:
 Quản lý Kho tri thức
@@ -105,6 +110,50 @@ Hard rules: quay lại VALORA không đồng nghĩa Word đã đổi; revalidati
 
 **Visual baseline `M365 Return & Revalidation — Iteration 1` đã được explicit chốt ngày 01/09/2026.** Board authority gồm: high-level return flow; 5 semantic outcome cards; state UI patterns; three-way comparison; conflict decision surface; background revalidation indicator; mandatory principles. Nếu wording minh họa mâu thuẫn semantic contract, contract thắng.
 
+## 1.5 Audit / Lineage Entry-point Consistency — Baseline Contract v1 + Visual Iteration 1
+Contract này khóa cách người dùng đi từ một business object/context sang đúng traceability surface. Đây là cross-product navigation/traceability pattern, không phải workflow checkpoint, không phải business commit và không tạo một màn `Audit toàn hệ thống`.
+
+5 entry point chuẩn:
+- `Xem lịch sử thay đổi` — trả lời ai làm gì, khi nào, thay đổi gì.
+- `Xem nguồn gốc` — trả lời dữ liệu/giá trị đến từ đâu.
+- `Xem quyết định` — trả lời ai xác nhận/chọn/xử lý và vì sao.
+- `Xem phiên bản` / `Xem chuỗi phiên bản` — trả lời đây là version nào và sinh ra từ version/snapshot nào.
+- `Xem Release Manifest` — trả lời release đã bind chính xác những Document Revision nào.
+
+Context-first authority:
+- entry point đặt gần object/dữ liệu cần truy vết;
+- chỉ hiển thị capability có ý nghĩa với object hiện tại, không ép đủ 5 entry point;
+- không dùng generic `Xem Audit` xuyên sản phẩm;
+- persistence/domain primitives như `AuditEvent`, `UserActionLog`, `KnowledgeLineage`, `IdentityDecisionLog` không phải primary UI label;
+- domain histories vẫn độc lập: case/price history, Knowledge lineage, Document lineage, Release history có thể deep-link qua lại nhưng không duplicate thành timeline toàn cục.
+
+Deep-link context conceptual contract:
+```text
+context_type
+context_id
+project_id?
+parent_context?
+return_target
+anchor?
+```
+
+`return_target` phải đưa user về đúng business context có ý nghĩa như asset line, document revision, knowledge item, quote line hoặc release; không mặc định chỉ về landing page.
+
+Canonical lineage mental models:
+- Document/Release: `Release → Release Manifest → Document Revision → Data Snapshot → Managed Region/business data → source/evidence nếu có`.
+- Knowledge: `Knowledge Version → review decision → candidate → extracted value → source locator → historical dossier/file`.
+- NCC Selection: `NCC Selection Revision → selected QuoteLine → Quote revision → Supplier → Evidence/Source → confirmation event`.
+
+Missing/broken link:
+- không có provenance đã lưu → `Chưa được ghi nhận`;
+- source không còn khả dụng → `Không khả dụng`;
+- user không còn quyền → `Không còn quyền truy cập`;
+- không suy diễn lineage, tự bind source thay thế hoặc che read/access failure thành Empty.
+
+Visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1` đã được explicit chốt ngày 01/09/2026. Board authority gồm 5 entry points, decision tree, cross-product entry-point map, Deep-link Context Contract, lineage mental models, surface relationships, missing-link behavior, UX/access guidelines và Do/Don't. Nếu wording minh họa mâu thuẫn semantic/domain authority, semantic/domain authority thắng.
+
+Implementation ưu tiên reuse audit/lineage primitives hiện hữu. Nếu cần unified traceability projection, generic cross-domain reference persistence, lineage graph persistence hoặc thay đổi semantics của audit/lineage primitives thì phải đánh giá ADR trước persistence/architecture change.
+
 ## 2. Price & Evidence
 `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu Kho tri thức chỉ hỗ trợ/tra cứu và không override price-source authority.
 
@@ -121,14 +170,20 @@ Giữ Tổng cộng/Làm tròn/Số tiền bằng chữ; không rename/reorder/c
 ## 4. Knowledge Management
 Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`. Structured KTKT là business data; template/Microsoft 365 sở hữu presentation. Historical dossier là candidate pipeline, không direct-inject active knowledge. Knowledge review cần explicit human decision. History/lineage read-oriented.
 
+Knowledge traceability entry-points tuân Audit/Lineage Contract: `Lịch sử & nguồn gốc` tiếp tục là knowledge-governance surface; có thể deep-link tới hồ sơ cũ, tài sản chuẩn, review decision hoặc source locator nhưng không biến thành case/price audit timeline.
+
 ## 5. Microsoft 365 / Documents
 VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, Document Revision, Release Manifest. Microsoft 365 sở hữu Word file/OneDrive-SharePoint file/version. Document Revision != M365 file version. Managed Region không silent overwrite; conflict phải explicit resolve. Published revision/release immutable.
 
 Return/Revalidation authority: external Word return phải revalidate M365 state trước mutation phụ thuộc freshness; M365 version mới không tự tạo Document Revision; Managed Region changes dùng three-way semantics và explicit conflict handling khi cần.
 
+Document/Release traceability entry-points tuân Audit/Lineage Contract: mở đúng history/source/decision/version/manifest surface theo câu hỏi nghiệp vụ và giữ document/revision/release return context.
+
 ## 6. Publishing
 `Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + locked revisions + audit [system consequence] → Đã phát hành [success/read-only result]`.
 Không màn khóa riêng, không Export PDF.
 
+Release traceability dùng `Xem Release Manifest` làm entry point chuyên trách; không thay bằng generic Audit timeline.
+
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context.
+Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context; traceability context-first, giữ return target và không dựng `Audit toàn hệ thống`.
