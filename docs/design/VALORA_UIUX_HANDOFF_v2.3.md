@@ -8,7 +8,7 @@
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
+Đã khóa `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng hoặc màn Tiến độ hồ sơ riêng.
 
 ## 1. North-star flow
 ```text
@@ -75,6 +75,65 @@ Primary CTA: `Về Tổng quan hồ sơ`. Secondary: xem Release Manifest, mở 
 
 Sau success: Global Case State canonical stage = `PUBLISHED`, terminal/completed, `next_action = null`. Muốn thay đổi sau phát hành phải tạo revision mới, revalidate/sync và phát hành release mới; release cũ immutable.
 
+## 1.3 Cross-product Empty / Loading / Error / Retry — Baseline Contract v1
+Contract này là state-presentation + recovery authority dùng chung cho toàn VALORA và không thay thế Error Registry hiện hành. Error Registry sở hữu Vietnamese-friendly message payload; Cross-product State Contract sở hữu classification, scope, surface, recovery action và preserve/replace behavior.
+
+Canonical states:
+`INITIAL_LOADING | SECTION_LOADING | BACKGROUND_REFRESH | PROCESSING | EMPTY_FIRST_USE | EMPTY_NO_RESULTS | EMPTY_NOT_APPLICABLE | EMPTY_COMPLETED | INLINE_ERROR | SECTION_ERROR | PAGE_ERROR | FATAL_ERROR | STALE_DATA | VERSION_CONFLICT | OFFLINE | RECONNECTING | PARTIAL_SUCCESS`.
+
+Loading authority:
+- initial load chỉ khi chưa có usable data;
+- section load chỉ thay đúng section;
+- background refresh giữ usable data;
+- Loading khác Processing;
+- durable/long-running jobs dùng lifecycle `queued | running | retrying | completed | failed | cancelled`, có current step/progress thật nếu có, không tạo % giả và không spinner vô hạn.
+
+Empty authority:
+- First Use = chưa từng có dữ liệu;
+- No Results = filter/search không khớp;
+- Not Applicable = capability không áp dụng;
+- Completed = không còn item cần xử lý vì đã hoàn tất;
+- Empty không bao giờ che Error.
+
+Error authority:
+- inline/section/page/fatal theo phạm vi thực tế;
+- lỗi một section không collapse toàn page nếu phần khác còn dùng được;
+- technical detail không là primary user-facing copy.
+
+Retry/concurrency authority:
+- retry phải thật và đúng scope;
+- read thường có thể retry;
+- mutation không blind retry khi commit status chưa xác định;
+- `409 → reload/reconcile → review nếu cần → explicit commit lại`, không last-write-wins;
+- client timeout của write không đồng nghĩa domain failure.
+
+Preserve/partial/connectivity authority:
+- usable old data + refresh failure → giữ old data + stale/error indicator + Retry;
+- partial failure giữ phần thành công và retry chỉ phần retryable nếu domain cho phép;
+- Offline giữ view/local draft phù hợp nhưng disable official mutations cần server confirmation; không fake success; reconnect phải refresh/revalidate trước khi re-enable commit.
+
+Surface selection:
+`field/action nhỏ → inline | section lỗi → section error/inline alert | page notice còn thao tác được → banner | success ngắn hạn → toast | conflict cần quyết định → dialog/drawer | empty → Empty State | capability chính lỗi → Page Error`.
+
+Cross-product hard invariants:
+1. Empty không che Error.
+2. Loading không đồng nghĩa Processing.
+3. Có usable data thì không blank page khi background refresh.
+4. Retry phải thật và đúng scope.
+5. Mutation không blind retry khi commit status chưa xác định.
+6. 409 không last-write-wins.
+7. Partial failure giữ phần thành công.
+8. Warning không tự biến thành Blocking.
+9. Offline không fake success.
+10. Local draft không đồng nghĩa persisted state.
+11. Technical error details không là primary user-facing copy.
+12. Search error không hiển thị No Results.
+13. Không spinner vô hạn cho durable job.
+14. Frontend không tự dựng fallback business state machine khi projection/API authority lỗi.
+15. Một primary recovery CTA mỗi context.
+
+Visual baseline `Cross-product State Pattern Board — Iteration 1` là design-system authority dùng chung, không phải workflow checkpoint hay màn nghiệp vụ độc lập.
+
 ## 2. Price & Evidence
 `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu trong Kho tri thức chỉ là hỗ trợ/tra cứu và không override price-source authority này.
 
@@ -112,4 +171,4 @@ VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, D
 `Đã phát hành` không phải step thao tác mới. Không màn khóa riêng, không Export PDF.
 
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; một primary CTA/context. AI advisory; human explicit commit cho official decisions. Không KSCL/multi-level approval, S14, NCCQ aggregate, separate rule-check, fake Word/Excel editor, silent overwrite/publish/knowledge activation/state transition/stale reconciliation. Published release/revision immutable.
+Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; một primary CTA/context. AI advisory; human explicit commit cho official decisions. Không KSCL/multi-level approval, S14, NCCQ aggregate, separate rule-check, fake Word/Excel editor, silent overwrite/publish/knowledge activation/state transition/stale reconciliation. Không blind retry mutation khi commit status chưa xác định. Published release/revision immutable.
