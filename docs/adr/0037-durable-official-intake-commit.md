@@ -1,6 +1,6 @@
 # ADR 0037 — Durable Official Intake Commit
 
-**Status:** Proposed — owner review required
+**Status:** Accepted — runtime foundation implemented locally
 **Date:** 2026-09-01
 **Context:** VALORA UI/UX v2.3 PR-01 official-intake design slice
 **Deciders:** Product Owner, Core Engineering Team
@@ -52,9 +52,8 @@ authoritative source fact.
 8. **Global Case State meaning.** Fact presence proves only that the official-intake commit
    occurred and that the Project is eligible for `Tổng quan hồ sơ`. It must not backfill
    completion for unrelated preliminary or downstream stages.
-9. **No endpoint in this design commit.** Migration, command runtime, HTTP contract and
-   case-state wiring require the prerequisites and acceptance criteria in the accompanying
-   implementation contract.
+9. **No endpoint in this slice.** Persistence and the internal command may be implemented after
+   acceptance. HTTP exposure, artifact generation and case-state wiring remain separately gated.
 
 ## Proposed persistence shape
 
@@ -108,9 +107,26 @@ partial lineage.
 - Global Case State gains a truthful official-intake boundary without using legacy workflow
   status as route authority.
 - The transition is idempotent, auditable and lineage-preserving.
-- A preliminary-result artifact foundation must be designed and implemented before this command
-  can ship; the current `ProjectFile` model is not silently promoted to that role.
+- A narrow preliminary-result artifact foundation is implemented by migration `e3f4a5b6c7d8`;
+  the current `ProjectFile` model is not silently promoted to that role.
 - A later reversal/cancellation is a separate explicit business command and fact. This ADR does
   not permit deletion or mutation of the original commit.
 - Accepting this ADR expands PR-01 with a source-domain migration, but still does not create a
   persisted Global Case State projection.
+
+## Local implementation evidence
+
+Accepted by the Product Owner on 2026-09-01 and implemented locally in PR-01a:
+
+- `PreliminaryResultArtifact`: immutable/versioned persistence shape with tenant-safe Project and
+  actor references, content checksum, storage identity and source-snapshot lineage manifest;
+- `ProjectOfficialIntakeCommit`: append-only one-per-Project fact with tenant-safe artifact and
+  actor references, idempotency and request digest;
+- `CommitProjectOfficialIntake`: internal atomic service with active actor/org checks, safe tenant
+  resolution, optimistic versions, known Project/ProjectAssetLine blocker registry, Warning ≠
+  Blocking, exact replay and atomic audit;
+- Alembic `e3f4a5b6c7d8`: one linear head; schema-drift check PASS locally.
+
+The artifact-generation pipeline is intentionally not invented in this slice because the current
+codebase has no canonical preliminary-price analysis snapshot. HTTP and Global Case State wiring
+remain out of scope.

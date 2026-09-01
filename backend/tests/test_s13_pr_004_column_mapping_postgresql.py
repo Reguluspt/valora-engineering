@@ -454,6 +454,8 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "project_official_intake_commits",
+        "preliminary_result_artifacts",
         "dossier_row_alignments",
         "dossier_alignment_runs",
         "dossier_extracted_rows",

@@ -22,8 +22,8 @@ PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
 PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
 ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
 owner-accepted fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
-ADR 0037 official-intake fact/command is PROPOSED; migration/runtime require owner acceptance and
-a canonical preliminary-result artifact prerequisite.
+ADR 0037 is ACCEPTED; PreliminaryResultArtifact + internal official-intake command foundation are
+implemented locally. Artifact generation, HTTP and case-state wiring remain separately gated.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```

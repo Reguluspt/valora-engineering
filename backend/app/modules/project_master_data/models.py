@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid, BigInteger, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -891,6 +892,170 @@ class ProjectFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
     __table_args__ = (
         CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
+    )
+
+
+class PreliminaryResultArtifact(Base, UUIDMixin):
+    """Immutable, versioned preliminary-result file and source-snapshot lineage."""
+
+    __tablename__ = "preliminary_result_artifacts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), nullable=False
+    )
+    content_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    source_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    lineage_manifest: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "version",
+            name="uq_preliminary_result_project_version",
+        ),
+        UniqueConstraint(
+            "storage_object_key", name="uq_preliminary_result_storage_object"
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "customer_id",
+            "project_id",
+            "id",
+            name="uq_preliminary_result_tenant_project_id",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_preliminary_result_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_preliminary_result_creator_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="chk_preliminary_result_version"),
+        CheckConstraint("file_size_bytes >= 0", name="chk_preliminary_result_size"),
+        CheckConstraint(
+            "length(content_checksum_sha256) = 64 "
+            "AND content_checksum_sha256 = lower(content_checksum_sha256) "
+            "AND content_checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_result_content_checksum",
+        ),
+        CheckConstraint(
+            "length(source_snapshot_sha256) = 64 "
+            "AND source_snapshot_sha256 = lower(source_snapshot_sha256) "
+            "AND source_snapshot_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_result_source_snapshot",
+        ),
+        Index("idx_preliminary_result_project", "organization_id", "project_id"),
+    )
+
+
+class ProjectOfficialIntakeCommit(Base, UUIDMixin):
+    """Append-only business fact for the official-intake commit boundary."""
+
+    __tablename__ = "project_official_intake_commits"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    preliminary_result_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    preliminary_result_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    preliminary_result_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_version_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    committed_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    committed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "project_id", name="uq_official_intake_project"
+        ),
+        UniqueConstraint(
+            "organization_id", "idempotency_key", name="uq_official_intake_idempotency"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_official_intake_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "customer_id",
+                "project_id",
+                "preliminary_result_artifact_id",
+            ],
+            [
+                "preliminary_result_artifacts.organization_id",
+                "preliminary_result_artifacts.customer_id",
+                "preliminary_result_artifacts.project_id",
+                "preliminary_result_artifacts.id",
+            ],
+            name="fk_official_intake_artifact_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "committed_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_official_intake_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "preliminary_result_version > 0", name="chk_official_intake_artifact_version"
+        ),
+        CheckConstraint(
+            "project_version_before > 0", name="chk_official_intake_project_version"
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0", name="chk_official_intake_idempotency"
+        ),
+        CheckConstraint(
+            "length(preliminary_result_sha256) = 64 "
+            "AND preliminary_result_sha256 = lower(preliminary_result_sha256) "
+            "AND preliminary_result_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_result_checksum",
+        ),
+        CheckConstraint(
+            "length(source_snapshot_sha256) = 64 "
+            "AND source_snapshot_sha256 = lower(source_snapshot_sha256) "
+            "AND source_snapshot_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_source_snapshot",
+        ),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_request_digest",
+        ),
+        Index("idx_official_intake_project", "organization_id", "project_id"),
     )
 
 

@@ -44,8 +44,8 @@ PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate acti
 ADR 0036 accepts computed-on-read with no projection migration. Do not connect the runtime
 endpoint until the canonical fact/completion matrix is owner-accepted; resume persistence remains
 deferred.
-ADR 0037 official-intake fact/command is PROPOSED. Do not implement its migration/runtime until
-the owner accepts the ADR and the canonical preliminary-result artifact prerequisite.
+ADR 0037 is ACCEPTED; PreliminaryResultArtifact + internal official-intake command foundation are
+implemented locally. Do not add artifact-generation/HTTP/case-state wiring without its next gate.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
 owner-authorized UI/UX track.

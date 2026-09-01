@@ -6,7 +6,7 @@
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 **PR-00 status:** **COMPLETE / CLOSED locally**
-**Active task:** **PR-01 OWNER-ASSIGNED — ADR 0037 official-intake design slice proposed**
+**Active task:** **PR-01 OWNER-ASSIGNED — ADR 0037 runtime foundation implemented locally**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -43,8 +43,8 @@ PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
 PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
 ADR 0036 accepts computed-on-read with no projection migration; runtime waits for an approved
 fact matrix.
-ADR 0037 proposes a durable official-intake commit; migration/runtime await owner review and a
-canonical preliminary-result artifact decision.
+ADR 0037 is accepted; PreliminaryResultArtifact + durable official-intake command foundation are
+implemented locally. HTTP and case-state provider wiring remain gated.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 Earlier S13 sequencing is historical context.
 ```

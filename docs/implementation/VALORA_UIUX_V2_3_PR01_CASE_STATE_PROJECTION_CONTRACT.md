@@ -34,6 +34,8 @@ The eventual response must expose, at minimum:
 | `ProjectAssetLine` | review status, validation status, appraised price, `row_version` | does not prove supplier selection, quote completion or release readiness |
 | `WorkflowInstance` | target, current state, lifecycle status, `row_version` | legacy state is not Global Case State or route authority |
 | `ValidationIssue` | target, Warning/Blocking, open/resolved/ignored, `row_version` | target-to-project resolution must be explicit and tenant-safe |
+| `PreliminaryResultArtifact` | immutable result version, content/source digests, lineage manifest | generation command is deferred; generic ProjectFile is not substituted |
+| `ProjectOfficialIntakeCommit` | durable official boundary, artifact/version snapshot, actor/time, idempotency | implemented locally; projection provider not wired yet |
 | document-engine records | legacy document/render/package records | no approved M365 freshness, managed-region or Release Manifest semantics |
 | resume context | none approved for v2.3 | deferred; no PUT endpoint in PR-01 |
 
@@ -48,7 +50,7 @@ may be treated as completion.
 | `PRELIMINARY_REQUEST` | preliminary request facts + completion predicate | no canonical provider identified | MISSING |
 | `PRELIMINARY_ANALYSIS` | preliminary analysis decision/facts | no canonical provider identified | MISSING |
 | `PRELIMINARY_READY` | explicit readiness fact | no canonical provider identified | MISSING |
-| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per proposed ADR 0037 | durable fact/command designed; preliminary-result artifact prerequisite missing | DESIGNED / NOT IMPLEMENTED |
+| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per ADR 0037 | artifact/fact/command implemented locally; projection provider not wired | IMPLEMENTED / NOT WIRED |
 | `ASSET_REVIEW` | mandatory asset-review predicates | asset-line review/validation facts exist; completeness predicate not approved | UNMAPPED |
 | `ASSET_WORKBENCH` | mandatory workbench completion facts | asset lines and sessions exist; completion predicate not approved | UNMAPPED |
 | `PRICE_EVIDENCE` | required price-evidence coverage | evidence/quote primitives exist; project-line coverage predicate not approved | UNMAPPED |

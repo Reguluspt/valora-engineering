@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — PR-01 Official Intake Commit Contract
 
-**Status:** PROPOSED DESIGN SLICE — owner review required
+**Status:** RUNTIME FOUNDATION IMPLEMENTED LOCALLY — HTTP not authorized
 **Task:** PR-01a — Durable Official Intake Fact/Command
 **Date:** 2026-09-01
 **Architecture:** ADR 0037
@@ -15,7 +15,7 @@ This slice may define the durable fact and command boundary for
 - frontend implementation;
 - NCC, M365, document release or publishing persistence;
 - reuse of legacy submit/QC/approval commands;
-- migration/runtime work before ADR 0037 and prerequisites are accepted.
+- artifact generation or direct/manual artifact creation outside an accepted generation command.
 
 ## 2. Command
 
@@ -51,9 +51,12 @@ All conditions are mandatory:
 9. idempotency key is valid and not bound to another request digest;
 10. no authoritative open blocker prohibits the transition.
 
-The exact blocker registry must be ratcheted before runtime. Warning alone cannot fail condition
-10. Empty optional S09 fields are not blockers unless a later domain rule explicitly requires
-them.
+The bounded v1 blocker registry under local review resolves open Blocking issues directly
+targeting the Project or its ProjectAssetLine rows, accepting the existing target spellings
+`project | Project` and
+`project_asset_line | ProjectAssetLine`. Warning alone cannot fail condition 10. Other target
+types do not contribute until a tenant-safe resolver is explicitly ratcheted. Empty optional S09
+fields are not blockers unless a later domain rule explicitly requires them.
 
 ## 4. Lock and transaction order
 
@@ -124,29 +127,30 @@ content, client data, credentials and display text. Audit does not replace the c
 Vietnamese UI copy is supplied later through the shared error registry; technical detail stays
 secondary and must not leak identifiers across tenants.
 
-## 8. Prerequisite gap
+## 8. Preliminary-result foundation
 
-The codebase does not currently provide a canonical `PreliminaryResultArtifact` or a preliminary
-aggregate with finalized/versioned status. Before migration/runtime, the owner must accept one
-of these follow-up designs:
+The owner accepted a narrow `PreliminaryResultArtifact`, implemented locally with:
 
-1. introduce a narrow immutable preliminary-result artifact owned by the preliminary/intake
-   domain; or
-2. explicitly version and harden an existing artifact model so it satisfies every invariant in
-   this contract.
+- tenant-safe Project and creator references;
+- positive per-Project version and unique storage object identity;
+- content checksum, source-snapshot digest and lineage manifest;
+- append-only model with no update/delete application command.
 
-The current generic `ProjectFile` is not sufficient without that explicit decision.
+This slice deliberately does not expose a generic artifact-creation API. A later accepted
+preliminary-result generation command must produce the file, verify its content and persist this
+artifact atomically. The current generic `ProjectFile` remains insufficient.
 
 ## 9. Runtime exit checklist
 
-- [ ] ADR 0037 accepted.
-- [ ] PreliminaryResultArtifact authority accepted and implemented.
+- [x] ADR 0037 accepted.
+- [x] PreliminaryResultArtifact authority accepted and implemented.
 - [ ] Exact official-intake permission accepted.
-- [ ] Exact blocker registry accepted.
-- [ ] Migration has one linear head and tenant-safe constraints.
-- [ ] Idempotency replay/conflict tests.
-- [ ] Cross-tenant safe 404 and inactive actor/org tests.
+- [ ] Exact v1 blocker registry owner-accepted; bounded Project/ProjectAssetLine behavior is
+  implemented for review.
+- [x] Migration has one linear head and tenant-safe constraints.
+- [x] Idempotency replay/conflict tests.
+- [x] Cross-tenant safe 404 and inactive actor/org tests.
 - [ ] Concurrency and lock-order tests.
-- [ ] Atomic fact + audit rollback tests.
-- [ ] No appraised-price promotion or legacy workflow transition.
+- [x] Atomic fact + audit rollback tests.
+- [x] No appraised-price promotion or legacy workflow transition.
 - [ ] Global Case State consumes the fact, not the audit event.

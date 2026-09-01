@@ -35,7 +35,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Phase-appropriate implementation begins with domain decisions; AI runtime gated by S16 |
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
 | ADR 0036 | Computed Global Case State projection | PR-01 architecture accepted; runtime waits for approved fact predicates; resume persistence deferred |
-| ADR 0037 | Durable Official Intake commit | Proposed PR-01 design slice; migration/runtime await owner review and preliminary-result artifact authority |
+| ADR 0037 | Durable Official Intake commit | Accepted; artifact/fact/internal command implemented locally; HTTP and projection wiring remain gated |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -68,7 +68,7 @@ Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
 PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
 PR-01 Case State Projection Foundation — OWNER-ASSIGNED; design/ADR gate active
 ADR 0036: computed on read, no projection migration; runtime waits for approved fact matrix
-ADR 0037: durable official-intake fact/command PROPOSED; runtime not yet authorized
+ADR 0037: durable official-intake runtime foundation IMPLEMENTED locally; HTTP not authorized
 → PR-02 Case State Frontend Hub Wiring
 
 PR-00 → PR-03 NCC Selection Persistence → PR-04 NCC Selection API + UI
