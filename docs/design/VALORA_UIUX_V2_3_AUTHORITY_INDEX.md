@@ -1,18 +1,19 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3  
-**Consolidation:** 01/09/2026 — `Hồ sơ cũ — Iteration 1`.
+**Consolidation:** 01/09/2026 — `Lịch sử & nguồn gốc — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — **Baseline `Hồ sơ cũ — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
-4. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
-5. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
-6. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
-7. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
-8. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-9. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md` — **Baseline `Lịch sử & nguồn gốc — Iteration 1`**.
+3. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — Baseline `Hồ sơ cũ — Iteration 1`.
+4. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
+5. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
+6. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
+7. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
+8. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+9. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+10. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Knowledge Management authority
 `Quản lý Kho tri thức` là supporting workspace độc lập với panel tra cứu trong Workbench.
@@ -24,7 +25,16 @@ Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gố
 
 Structured KTKT là business data; report presentation thuộc template công ty/Microsoft 365. Historical knowledge không override price-source authority.
 
-### 2.1 Hồ sơ cũ — Baseline Iteration 1
+### 2.1 Lịch sử & nguồn gốc — Baseline Iteration 1
+`Lịch sử & nguồn gốc` là read-oriented knowledge-governance traceability surface. Nó không tạo audit/version subsystem mới mà chiếu các primitive hiện hữu như `IdentityDecisionLog`, `KnowledgeVersion`, `KnowledgeLineage`, historical dossier/source locator và review decisions.
+
+Layout authority: filter area + history table `Thời điểm | Tài sản / Tri thức | Nội dung thay đổi | Nguồn | Quyết định | Phiên bản | Người thao tác | Trạng thái` + read-only detail drawer.
+
+Drawer tối thiểu: `Thay đổi | Nguồn gốc | Quyết định | Phiên bản & Sử dụng`; lineage chain: `Hồ sơ / nguồn gốc → File → Vị trí dữ liệu → Dữ liệu trích xuất → Candidate → Quyết định rà soát → Knowledge Version → Tài sản chuẩn / Variant / KTKT`.
+
+Không commit CTA, edit/delete history, restore/rollback, approve hoặc activate knowledge. Chỉ contextual deep-link như `Xem nguồn gốc đầy đủ`, `Mở hồ sơ cũ`, `Mở tài sản chuẩn`, `Xem quyết định rà soát`.
+
+### 2.2 Hồ sơ cũ — Baseline Iteration 1
 `Hồ sơ cũ` quản lý historical `DossierBundle`, source files, extraction, row alignment và candidate creation. Đây không phải active-case workflow và không được direct-inject active knowledge.
 
 Flow:
@@ -46,7 +56,7 @@ Row alignment status tối thiểu: `Đã khớp | Chưa khớp | Cần xem xét
 
 AI/rules chỉ classify/extract/align/rank/explain/suggest; không auto-confirm mapping/identity/price, không activate knowledge. Candidate phải qua `Cần rà soát tri thức`.
 
-### 2.2 Cần rà soát tri thức — Baseline Iteration 1
+### 2.3 Cần rà soát tri thức — Baseline Iteration 1
 `Cần rà soát` là human-review queue cho identity/contextual-alias/KTKT/knowledge candidates. Candidate không trở thành official knowledge nếu chưa có explicit human decision.
 
 Decision semantics:
@@ -70,6 +80,7 @@ Không UI `Khóa phiên bản` riêng. Không `Xuất PDF`.
 - Không silent bypass/publish/overwrite/knowledge activation.
 - Không auto-approve knowledge candidate.
 - Không direct active-knowledge injection từ hồ sơ cũ.
+- Không edit/delete history hoặc restore/rollback từ `Lịch sử & nguồn gốc`.
 - Không fake Word/Excel editor.
 - Không export PDF.
 - Historical knowledge không override v2.3 price-source authority.
