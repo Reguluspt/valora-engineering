@@ -1,6 +1,7 @@
 import React from "react";
 import { AppShell as AstryxAppShell } from "@astryxdesign/core/AppShell";
 import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
+import { APP_ROUTES, LEGACY_ROUTE_ALIASES } from "../../contracts/valoraV23";
 import { t } from "../../i18n";
 
 interface AppShellProps {
@@ -15,10 +16,10 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
   };
 
   const handleWorkbenchClick = () => {
-    if (currentPath.startsWith("/workbench/projects/")) {
+    if (currentPath.startsWith(APP_ROUTES.projectDetailPrefix)) {
       onNavigate(currentPath);
     } else {
-      onNavigate("/workbench/projects");
+      onNavigate(APP_ROUTES.projectList);
     }
   };
 
@@ -30,19 +31,19 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
         </div>
         <SideNavSection title="Menu" isHeaderHidden={true}>
           <SideNavItem
-            isSelected={getLinkActive("/workbench/projects")}
+            isSelected={getLinkActive(APP_ROUTES.projectList)}
             label={t("nav.workbench")}
             onClick={handleWorkbenchClick}
           />
           <SideNavItem
-            isSelected={getLinkActive("/workbench/queue") || getLinkActive("/queue")}
+            isSelected={getLinkActive(APP_ROUTES.legacyReviewQueue) || getLinkActive(LEGACY_ROUTE_ALIASES.reviewQueue)}
             label={t("review.queue")}
-            onClick={() => onNavigate("/workbench/queue")}
+            onClick={() => onNavigate(APP_ROUTES.legacyReviewQueue)}
           />
           <SideNavItem
-            isSelected={getLinkActive("/workbench/validation") || getLinkActive("/validation")}
+            isSelected={getLinkActive(APP_ROUTES.legacyValidationDashboard) || getLinkActive(LEGACY_ROUTE_ALIASES.validationDashboard)}
             label={t("nav.errorDashboard")}
-            onClick={() => onNavigate("/workbench/validation")}
+            onClick={() => onNavigate(APP_ROUTES.legacyValidationDashboard)}
           />
         </SideNavSection>
       </SideNav>

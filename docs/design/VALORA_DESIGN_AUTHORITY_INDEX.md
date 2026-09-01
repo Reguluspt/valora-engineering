@@ -1,20 +1,21 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Reconciled:** 2026-09-01 (UI/UX v2.3 PR-00 authority alignment)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
 
 1. `CODEX.md` — live task gate and agent operating rules.
 2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
-3. This file — version relationship and supersession map.
-4. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation state and next authorized sequence.
-5. Design Book v1.2-final package — established domain model and bounded contexts.
-6. `VALORA_DESIGN_BOOK_V1_3_MVP_COMPLETION_ADDENDUM.md` — Vietnamese-first UX, Astryx, MVP scope and AI-provider architecture.
-7. `VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md` — Adaptive Intake, two memories, paired dossiers, row alignment, feedback, bounded-AI automation readiness and revised roadmap.
-8. Feature contracts under `docs/design/` and accepted ADRs under `docs/adr/`.
-9. Active remediation plan `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`, then task-specific audit evidence.
+3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
+4. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
+5. The v2.3 addendum directly governing the assigned PR.
+6. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
+7. This file — earlier-version relationship and supersession map.
+8. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
+9. Design Book v1.2-final plus v1.3/v1.4 addenda — established domain model and bounded contexts.
+10. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
@@ -22,6 +23,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 
 | Authority | Continues to govern | Superseded or extended by later authority |
 |---|---|---|
+| UI/UX Handoff v2.3 + v2.3 Authority Index | North-star flow, single-user UX, stage/state vocabulary, NCC, M365, Publishing and audit/lineage UI semantics | Newer explicit v2.3 addendum wins only in its named scope |
 | Design Book v1.2-final | Core domain architecture, canonical assets, evidence/knowledge, workflow and document boundaries | Extended, not replaced, by v1.3/v1.4 |
 | Design Book v1.3 | MVP scope, Vietnamese-first UX, Astryx, provider gateway and human-in-the-loop AI | **§7 roadmap sequencing** is superseded by v1.4 (Sprint 13 is no longer “AI Assistant first”) |
 | Design Book v1.4 | Adaptive workbook intake, Column Mapping Memory, Asset Identity Memory, historical dossier bootstrap, row alignment and feedback | Does **not** silently change S12 Apply v1 |
@@ -58,19 +60,18 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-S12-PR-004 engineering gate: CLOSED (merged)
-S13-PR-001 design-authority gate: CLOSED (merged)
-Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
-S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact: MERGED / CLOSED
-S13-PR-003 Workbook Structure Discovery and Row Classification: MERGED / CLOSED
-Runtime assignment state: S13-PR-004 assigned from main 2af7535…
-→ S13-PR-004 Column Mapping Memory Persistence and Application Services (design-first)
-→ S13-PR-005 Mapping Confirmation API / UX (requires separate owner assignment)
-→ S14 Asset Identity Memory
-→ S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
-→ S16 reliable audited AI suggestion runtime and shadow evaluation
-→ S17 report generation
-→ S18 real auth and pilot acceptance
+Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
+Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
+
+PR-00 Authority Alignment Guard
+→ PR-01 Case State Projection Foundation
+→ PR-02 Case State Frontend Hub Wiring
+
+PR-00 → PR-03 NCC Selection Persistence → PR-04 NCC Selection API + UI
+PR-00 → PR-05 M365 Integration Foundation → PR-06 Return/Revalidation → PR-07 Sync/Conflict
+PR-07 → PR-08 Release Domain Foundation → PR-09 Publishing Commit/Success
+PR-03 + PR-07 + PR-09 → PR-10 Audit/Lineage Wiring
+PR-02 → PR-10 → PR-11 State Sweep → PR-12 Template Fidelity → PR-13 North-star E2E
 ```
 
 
@@ -108,16 +109,14 @@ Gate 0c — bounded-AI automation readiness (satisfied):
 3. Owner Ready, squash and merge of Gate 0c PR #13 — **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`).
 4. Exact post-merge main CI PASS — **satisfied** (run `29504915362`).
 
-Before any S13 runtime PR (still required for each task ID):
+Historical S13 runtime gate record:
 
 1. Separate explicit owner assignment of a runtime task ID.
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 and S13-PR-003 are merged / closed. S13-PR-004 is separately owner-assigned with
-assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`; its design/evidence gate must be frozen before
-runtime implementation. S13-PR-005+ still require separate owner assignment.
+S13-PR-002 through S13-PR-004 are implemented historical foundation. This record does not
+authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
 
 ## 7. Module ownership (future runtime)
 

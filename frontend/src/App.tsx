@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
+import { APP_ROUTES } from "./contracts/valoraV23";
 
 import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
 
-const WORKBENCH_BASE = "/workbench/projects";
+const WORKBENCH_BASE = APP_ROUTES.projectList;
 const NEUTRAL_PATH = WORKBENCH_BASE;
 
 export function App() {
@@ -31,12 +32,12 @@ export function App() {
   };
 
   const renderRoute = () => {
-    if (currentPath.startsWith("/workbench/projects/")) {
-      const ref = currentPath.substring("/workbench/projects/".length);
+    if (currentPath.startsWith(APP_ROUTES.projectDetailPrefix)) {
+      const ref = currentPath.substring(APP_ROUTES.projectDetailPrefix.length);
       return <WorkbenchLayout projectRef={ref || null} />;
     }
 
-    if (currentPath === "/workbench/projects") {
+    if (currentPath === APP_ROUTES.projectList) {
       return (
         <div style={{ padding: "var(--space-xl)" }}>
           <h2 style={{ color: "#fff" }}>Chọn hồ sơ</h2>
@@ -47,11 +48,11 @@ export function App() {
       );
     }
 
-    if (currentPath === "/workbench/queue") {
+    if (currentPath === APP_ROUTES.legacyReviewQueue) {
       return <ReviewQueueDashboard />;
     }
 
-    if (currentPath === "/workbench/validation") {
+    if (currentPath === APP_ROUTES.legacyValidationDashboard) {
       return (
         <div style={{ padding: "var(--space-xl)" }}>
           <h2 style={{ color: "#fff" }}>Bảng lỗi cần xử lý</h2>
