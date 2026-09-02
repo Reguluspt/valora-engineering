@@ -1,6 +1,6 @@
 # ADR 0037 — Durable Official Intake Commit
 
-**Status:** Accepted — runtime foundation implemented locally
+**Status:** Accepted — PR-01a authority closeout complete locally
 **Date:** 2026-09-01
 **Context:** VALORA UI/UX v2.3 PR-01 official-intake design slice
 **Deciders:** Product Owner, Core Engineering Team
@@ -116,7 +116,8 @@ partial lineage.
 
 ## Local implementation evidence
 
-Accepted by the Product Owner on 2026-09-01 and implemented locally in PR-01a:
+Accepted by the Product Owner on 2026-09-01 and closed locally in PR-01a at `f0e7c73` after
+independent review:
 
 - `PreliminaryResultArtifact`: immutable/versioned persistence shape with tenant-safe Project and
   actor references, content checksum, storage identity and source-snapshot lineage manifest;
@@ -126,6 +127,8 @@ Accepted by the Product Owner on 2026-09-01 and implemented locally in PR-01a:
   resolution, optimistic versions, known Project/ProjectAssetLine blocker registry, Warning ≠
   Blocking, exact replay and atomic audit;
 - Alembic `e3f4a5b6c7d8`: one linear head; schema-drift check PASS locally.
+
+The closeout baseline used local PostgreSQL and reported `1111 passed`, `0 failed`, `0 skipped`.
 
 The artifact-generation pipeline is intentionally not invented in this slice because the current
 codebase has no canonical preliminary-price analysis snapshot. HTTP and Global Case State wiring

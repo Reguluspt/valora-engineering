@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-01 (UI/UX v2.3 PR-01 design gate)
+**Last reconciled:** 2026-09-02 (UI/UX v2.3 PR-01a authority closeout)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -40,12 +40,16 @@ Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; predicate/design gate remains open.
 ADR 0036 accepts computed-on-read with no projection migration. Do not connect the runtime
 endpoint until the canonical fact/completion matrix is owner-accepted; resume persistence remains
 deferred.
-ADR 0037 is ACCEPTED; PreliminaryResultArtifact + internal official-intake command foundation are
-implemented locally. Do not add artifact-generation/HTTP/case-state wiring without its next gate.
+PR-01a / ADR 0037 authority closeout is COMPLETE locally at `f0e7c73`: the
+PreliminaryResultArtifact, durable official-intake fact and internal command passed independent
+review and the PostgreSQL-backed baseline (`1111 passed`, `0 failed`, `0 skipped`). Do not add
+artifact-generation/HTTP/case-state wiring without its next gate.
+Next gate: owner acceptance of a bounded stage predicate matrix. PR-02 frontend wiring remains
+unauthorized until the PR-01 read contract is implemented and accepted.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
 owner-authorized UI/UX track.

@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-01 (UI/UX v2.3 PR-01 design gate)
+**Reconciled:** 2026-09-02 (UI/UX v2.3 PR-01a authority closeout)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -35,7 +35,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Phase-appropriate implementation begins with domain decisions; AI runtime gated by S16 |
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
 | ADR 0036 | Computed Global Case State projection | PR-01 architecture accepted; runtime waits for approved fact predicates; resume persistence deferred |
-| ADR 0037 | Durable Official Intake commit | Accepted; artifact/fact/internal command implemented locally; HTTP and projection wiring remain gated |
+| ADR 0037 | Durable Official Intake commit | Accepted; PR-01a authority closeout independently passed locally at `f0e7c73`; HTTP and projection wiring remain gated |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -54,6 +54,9 @@ S13-PR-002 closed evidence:
   main 137f8c527422b656974e569c924dafa8150b8b22 (PR #15); CI 29641452155 PASS
 S13-PR-003 closed evidence:
   main 2af753520ab6b7885555adc5b7945a28d32ee311 (PR #17); CI 29676915010 PASS
+Current local UI/UX evidence:
+  PR-00 closeout b176820; PR-01a authority closeout f0e7c73
+  PostgreSQL-backed backend baseline: 1111 passed, 0 failed, 0 skipped
 ```
 
 
@@ -66,10 +69,11 @@ Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
 Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
 
 PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
-PR-01 Case State Projection Foundation — OWNER-ASSIGNED; design/ADR gate active
+PR-01 Case State Projection Foundation — OWNER-ASSIGNED; predicate/design gate remains open
 ADR 0036: computed on read, no projection migration; runtime waits for approved fact matrix
-ADR 0037: durable official-intake runtime foundation IMPLEMENTED locally; HTTP not authorized
-→ PR-02 Case State Frontend Hub Wiring
+PR-01a / ADR 0037: authority closeout COMPLETE locally at f0e7c73; HTTP not authorized
+Next gate: owner acceptance of a bounded stage predicate matrix before the PR-01 GET endpoint
+→ PR-02 Case State Frontend Hub Wiring only after PR-01 runtime acceptance
 
 PR-00 → PR-03 NCC Selection Persistence → PR-04 NCC Selection API + UI
 PR-00 → PR-05 M365 Integration Foundation → PR-06 Return/Revalidation → PR-07 Sync/Conflict
@@ -121,6 +125,15 @@ Historical S13 runtime gate record:
 
 S13-PR-002 through S13-PR-004 are implemented historical foundation. This record does not
 authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
+
+Current v2.3 PR-01 gate:
+
+1. PR-01a durable official-intake authority closeout — **satisfied locally** at `f0e7c73` after
+   independent review and a PostgreSQL-backed backend run of `1111 passed`, `0 failed`, `0 skipped`.
+2. Bounded stage predicate matrix for the first projection runtime slice — **open; owner acceptance
+   required**.
+3. PR-01 GET endpoint and provider integration — **blocked by item 2**.
+4. PR-02 frontend hub wiring — **not authorized before PR-01 runtime acceptance**.
 
 ## 7. Module ownership (future runtime)
 

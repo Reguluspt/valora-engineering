@@ -1,9 +1,14 @@
 # PR-01a — Durable Official Intake Fact/Command Design Intake
 
 **Date:** 2026-09-01
-**Status:** PROPOSED — owner review required
+**Status:** HISTORICAL DESIGN INTAKE — accepted and closed by PR-01a
 **Branch:** `pr-01-case-state-projection-foundation`
 **Parent design gate:** ADR 0036 / commit `3154d00e85bda0b2d83e3e6a3cfc1f1a15ad3732`
+
+> Closeout note (2026-09-02): the Product Owner accepted ADR 0037 and the bounded authority
+> details. Runtime foundation commit `23de078` plus correction/closeout commit `f0e7c73` passed the
+> independent local gate. This document remains the historical intake record; the binding runtime
+> contract and evidence are the PR-01a contract and runtime foundation audit.
 
 ## Owner authorization
 
@@ -20,7 +25,7 @@ approve migration, runtime endpoint or GitHub publication.
   the official dossier flow.
 - v2.3 requires Global Case State to use business facts rather than a legacy status or route visit.
 
-## Codebase findings
+## Codebase findings at intake
 
 - no canonical pre-case aggregate;
 - no finalized/versioned preliminary-result artifact;
@@ -30,11 +35,12 @@ approve migration, runtime endpoint or GitHub publication.
 
 ## Proposed resolution
 
-ADR 0037 proposes a stable Project identity plus an append-only, one-per-Project
+ADR 0037 proposed a stable Project identity plus an append-only, one-per-Project
 `ProjectOfficialIntakeCommit`, created only by an idempotent human-confirmed command. The command
 requires a canonical immutable preliminary-result artifact and writes atomic audit evidence.
 
 ## Gate result
 
-Design proposal is complete. Runtime remains blocked pending owner acceptance of ADR 0037 and a
-narrow PreliminaryResultArtifact design decision.
+At intake, the design proposal was complete and runtime remained blocked pending owner acceptance
+of ADR 0037 and a narrow PreliminaryResultArtifact design decision. Those conditions were later
+satisfied by the accepted ADR, runtime foundation `23de078` and reviewed closeout `f0e7c73`.

@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-01 (UI/UX v2.3 PR-01 design gate)
+**Last reconciled:** 2026-09-02 (UI/UX v2.3 PR-01a authority closeout)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -19,11 +19,14 @@ Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; predicate/design gate remains open.
 ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
 owner-accepted fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
-ADR 0037 is ACCEPTED; PreliminaryResultArtifact + internal official-intake command foundation are
-implemented locally. Artifact generation, HTTP and case-state wiring remain separately gated.
+PR-01a / ADR 0037 authority closeout is COMPLETE locally at `f0e7c73`: the
+PreliminaryResultArtifact, durable official-intake fact and internal command passed independent
+review and the PostgreSQL-backed baseline (`1111 passed`, `0 failed`, `0 skipped`). Artifact
+generation, HTTP and case-state wiring remain separately gated.
+Next gate: owner acceptance of a bounded stage predicate matrix; PR-02 is not yet authorized.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```

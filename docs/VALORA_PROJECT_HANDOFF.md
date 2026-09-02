@@ -1,7 +1,7 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-01 — PR-01 Case State Projection design gate
+**Reconciled:** 2026-09-02 — PR-01a official-intake authority closeout
 **Accepted code baseline:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
 **Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
@@ -12,11 +12,14 @@ Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`, then the directly relevant v2.3 addendum.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; design/ADR gate active.
+PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; predicate/design gate remains open.
 ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
 owner-accepted fact/completion matrix; resume persistence remains deferred.
-ADR 0037 is ACCEPTED; PreliminaryResultArtifact + internal official-intake command foundation are
-implemented locally. Artifact generation, HTTP and case-state provider wiring remain gated.
+PR-01a / ADR 0037 authority closeout is COMPLETE locally at `f0e7c73`: the
+PreliminaryResultArtifact, durable official-intake fact and internal command passed independent
+review and the PostgreSQL-backed baseline (`1111 passed`, `0 failed`, `0 skipped`). Artifact
+generation, HTTP and case-state provider wiring remain separately gated.
+Next gate: owner acceptance of a bounded stage predicate matrix; PR-02 is not yet authorized.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
 or drive new UI. Earlier S13 sequencing below is historical context only.
 ```
@@ -106,6 +109,15 @@ Apply (s12-pr-004-v1) → human confirm, DRAFT-only, all-valid all-or-nothing,
 Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.cells`. It does **not** implement Adaptive Intake v2.
 
 ## 8. Progress snapshot
+
+### Current local UI/UX track
+
+| ID | Status | Evidence / next gate |
+|---|---|---|
+| PR-00 | COMPLETE / CLOSED locally | closeout `b176820` |
+| PR-01a | AUTHORITY CLOSEOUT COMPLETE locally | independently reviewed runtime closeout `f0e7c73`; backend `1111 passed`, `0 failed`, `0 skipped` |
+| PR-01 | DESIGN GATE OPEN | accept a bounded stage predicate matrix before the read endpoint |
+| PR-02 | NOT AUTHORIZED | waits for an implemented and accepted PR-01 projection contract |
 
 ### Merged on main (do not re-open)
 

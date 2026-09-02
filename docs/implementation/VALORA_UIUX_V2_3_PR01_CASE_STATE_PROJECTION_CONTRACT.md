@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — PR-01 Case State Projection Contract
 
-**Status:** ACTIVE DESIGN GATE — runtime not yet authorized
+**Status:** ACTIVE PREDICATE GATE — PR-01a source fact closed; projection runtime not authorized
 **Task:** PR-01 — Case State Projection Foundation
 **Date:** 2026-09-01
 **Architecture:** ADR 0036 — computed on read, no projection migration
@@ -35,7 +35,7 @@ The eventual response must expose, at minimum:
 | `WorkflowInstance` | target, current state, lifecycle status, `row_version` | legacy state is not Global Case State or route authority |
 | `ValidationIssue` | target, Warning/Blocking, open/resolved/ignored, `row_version` | target-to-project resolution must be explicit and tenant-safe |
 | `PreliminaryResultArtifact` | immutable result version, content/source digests, lineage manifest | generation command is deferred; generic ProjectFile is not substituted |
-| `ProjectOfficialIntakeCommit` | durable official boundary, artifact/version snapshot, actor/time, idempotency | implemented locally; projection provider not wired yet |
+| `ProjectOfficialIntakeCommit` | durable official boundary, artifact/version snapshot, actor/time, idempotency | PR-01a authority closeout passed locally at `f0e7c73`; projection provider not wired yet |
 | document-engine records | legacy document/render/package records | no approved M365 freshness, managed-region or Release Manifest semantics |
 | resume context | none approved for v2.3 | deferred; no PUT endpoint in PR-01 |
 
@@ -50,7 +50,7 @@ may be treated as completion.
 | `PRELIMINARY_REQUEST` | preliminary request facts + completion predicate | no canonical provider identified | MISSING |
 | `PRELIMINARY_ANALYSIS` | preliminary analysis decision/facts | no canonical provider identified | MISSING |
 | `PRELIMINARY_READY` | explicit readiness fact | no canonical provider identified | MISSING |
-| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per ADR 0037 | artifact/fact/command implemented locally; projection provider not wired | IMPLEMENTED / NOT WIRED |
+| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per ADR 0037 | PR-01a artifact/fact/command authority closeout passed locally; projection provider not wired | IMPLEMENTED / NOT WIRED |
 | `ASSET_REVIEW` | mandatory asset-review predicates | asset-line review/validation facts exist; completeness predicate not approved | UNMAPPED |
 | `ASSET_WORKBENCH` | mandatory workbench completion facts | asset lines and sessions exist; completion predicate not approved | UNMAPPED |
 | `PRICE_EVIDENCE` | required price-evidence coverage | evidence/quote primitives exist; project-line coverage predicate not approved | UNMAPPED |
@@ -68,7 +68,8 @@ may be treated as completion.
 computed for all valid projects. Runtime connection remains blocked until the owner accepts a
 bounded first-stage predicate set or the missing providers are implemented in their assigned PRs.
 
-For the official boundary specifically, ADR 0037 proposes the durable fact and command. Its
+For the official boundary specifically, ADR 0037 defines the durable fact and command, and PR-01a
+closed that source-domain authority slice locally. Its
 presence proves only that official intake was committed and the Project is eligible for the hub;
 it does not infer completion of other stages.
 
@@ -102,6 +103,10 @@ display text, unordered query results or database-specific object representation
 the envelope requires a versioned contract update and tests.
 
 ## 7. First runtime acceptance checklist
+
+PR-01a prerequisite status: **satisfied locally** at `f0e7c73`, with independent review and a
+PostgreSQL-backed backend baseline of `1111 passed`, `0 failed`, `0 skipped`. This closes only the
+official-intake source fact; it does not authorize the projection endpoint.
 
 - [ ] Owner-approved predicates for every stage the endpoint can return.
 - [ ] Explicit behavior for every other canonical stage.

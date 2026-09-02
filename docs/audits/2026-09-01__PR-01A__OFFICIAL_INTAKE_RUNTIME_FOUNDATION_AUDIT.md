@@ -1,9 +1,10 @@
 # PR-01a — Official Intake Runtime Foundation Audit
 
 **Date:** 2026-09-01
-**Status:** AUTHORITY CLOSEOUT IMPLEMENTED LOCALLY — independent gate pending
+**Status:** INDEPENDENT GATE PASS — authority closeout complete locally
 **Branch:** `pr-01-case-state-projection-foundation`
 **Authority:** accepted ADR 0037 plus Product Owner authority closeout, 2026-09-02
+**Reviewed closeout:** `f0e7c731d0ea5b5a7817ab3f819cce4422ff7885`
 
 ## Implemented
 
@@ -144,7 +145,15 @@ The earlier foundation evidence at `23de078` remains historical: full backend `1
 9 explicit MinIO skips, PostgreSQL migration-isolation/concurrent-refresh `2 passed`, frontend
 `19` files / `90` tests, backend/frontend lint and build PASS, Alembic single head
 `e3f4a5b6c7d8`, round-trip migration PASS and `alembic check` clean. It is not relabeled as
-evidence for this uncommitted authority-closeout diff.
+evidence for the reviewed authority-closeout commit.
+
+## Independent gate conclusion
+
+The authority-closeout correction at `f0e7c73` passed independent review. The exact permission,
+blocker registry, tenant-safe replay behavior, deterministic PostgreSQL lock-order proof and atomic
+audit boundary match the accepted contract. PR-01a is complete locally. This conclusion does not
+authorize an HTTP endpoint, artifact-generation workflow, seeded-role grant or Global Case State
+provider.
 
 ## Explicitly deferred
 
