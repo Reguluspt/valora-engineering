@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 from fastapi import HTTPException
@@ -23,9 +24,12 @@ from app.modules.project_master_data.models import (
     OrganizationStatus,
     PreliminaryResultArtifact,
     Project,
+    ProjectAssetLine,
     ProjectOfficialIntakeCommit,
     ProjectWorkflowStatus,
+    Role,
     User,
+    UserRole,
     UserStatus,
     ValidationIssue,
     ValidationIssueSeverity,
@@ -33,6 +37,9 @@ from app.modules.project_master_data.models import (
     ValidationRule,
     ValidationRuleCategory,
 )
+
+
+OFFICIAL_INTAKE_PERMISSION = "project:official_intake:commit"
 
 
 @pytest.fixture
@@ -51,7 +58,12 @@ def intake_db() -> Session:
         Base.metadata.drop_all(engine)
 
 
-def _seed(intake_db: Session, *, suffix: str = "a") -> dict:
+def _seed(
+    intake_db: Session,
+    *,
+    suffix: str = "a",
+    grant_permission: bool = True,
+) -> dict:
     org = OrganizationProfile(
         legal_name=f"Official Intake Org {suffix}",
         organization_slug=f"official-intake-{suffix}-{uuid.uuid4().hex[:8]}",
@@ -67,6 +79,15 @@ def _seed(intake_db: Session, *, suffix: str = "a") -> dict:
     )
     intake_db.add(actor)
     intake_db.flush()
+    role = Role(
+        code=f"official-intake-{suffix}-{uuid.uuid4().hex[:8]}",
+        display_name="Official Intake Fixture",
+        permissions=[OFFICIAL_INTAKE_PERMISSION] if grant_permission else [],
+    )
+    intake_db.add(role)
+    intake_db.flush()
+    user_role = UserRole(user_id=actor.id, role_id=role.id, is_active=True)
+    intake_db.add(user_role)
     customer = Customer(
         organization_id=org.id,
         legal_name=f"Official Intake Customer {suffix}",
@@ -104,6 +125,8 @@ def _seed(intake_db: Session, *, suffix: str = "a") -> dict:
     return {
         "org": org,
         "actor": actor,
+        "role": role,
+        "user_role": user_role,
         "customer": customer,
         "project": project,
         "artifact": artifact,
@@ -173,6 +196,85 @@ def test_same_idempotency_key_and_request_replays_without_new_fact_or_audit(
         .count()
         == 1
     )
+
+
+def test_missing_permission_denies_without_fact_or_success_audit(intake_db: Session) -> None:
+    seeded = _seed(intake_db, grant_permission=False)
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 403, "official_intake_forbidden")
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
+    assert (
+        intake_db.query(AuditEvent)
+        .filter(AuditEvent.event_name == "ProjectOfficialIntakeCommitted")
+        .count()
+        == 0
+    )
+
+
+@pytest.mark.parametrize("binding_state", ["inactive", "revoked"])
+def test_inactive_or_revoked_role_binding_does_not_grant_permission(
+    intake_db: Session,
+    binding_state: str,
+) -> None:
+    seeded = _seed(intake_db)
+    if binding_state == "inactive":
+        seeded["user_role"].is_active = False
+    else:
+        seeded["user_role"].revoked_at = datetime.now(timezone.utc)
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 403, "official_intake_forbidden")
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
+    assert intake_db.query(AuditEvent).count() == 0
+
+
+def test_permission_is_rechecked_before_idempotent_replay(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    committed = _commit(intake_db, seeded)
+    seeded["user_role"].revoked_at = datetime.now(timezone.utc)
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 403, "official_intake_forbidden")
+    assert intake_db.query(ProjectOfficialIntakeCommit).one().id == committed.id
+    assert (
+        intake_db.query(AuditEvent)
+        .filter(AuditEvent.event_name == "ProjectOfficialIntakeCommitted")
+        .count()
+        == 1
+    )
+
+
+def test_permission_is_organization_scoped_without_project_acl(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    second_actor = User(
+        organization_id=seeded["org"].id,
+        email=f"official-intake-peer-{uuid.uuid4().hex[:8]}@example.com",
+        full_name="Official Intake Peer",
+        status=UserStatus.ACTIVE,
+    )
+    intake_db.add(second_actor)
+    intake_db.flush()
+    intake_db.add(
+        UserRole(
+            user_id=second_actor.id,
+            role_id=seeded["role"].id,
+            is_active=True,
+        )
+    )
+    intake_db.commit()
+
+    committed = _commit(intake_db, seeded, actor=second_actor)
+
+    assert committed.committed_by_user_id == second_actor.id
 
 
 def test_reused_idempotency_key_with_different_request_is_rejected(intake_db: Session) -> None:
@@ -256,45 +358,206 @@ def test_inactive_actor_or_organization_is_forbidden(
     assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
 
 
-def _add_issue(intake_db: Session, seeded: dict, severity: ValidationIssueSeverity) -> None:
+def _add_asset_line(intake_db: Session, seeded: dict) -> ProjectAssetLine:
+    line = ProjectAssetLine(
+        project_id=seeded["project"].id,
+        asset_name=f"Official intake asset {uuid.uuid4().hex[:6]}",
+        quantity=1,
+    )
+    intake_db.add(line)
+    intake_db.commit()
+    return line
+
+
+def _add_issue(
+    intake_db: Session,
+    seeded: dict,
+    severity: ValidationIssueSeverity,
+    *,
+    status: ValidationIssueStatus = ValidationIssueStatus.OPEN,
+    target_type: str = "project",
+    target_id: uuid.UUID | None = None,
+    rule_is_blocking: bool | None = None,
+    rule_is_active: bool = True,
+    rule_category: ValidationRuleCategory = ValidationRuleCategory.EVIDENCE,
+) -> None:
     rule = ValidationRule(
         rule_code=f"OI-{severity.value}-{uuid.uuid4().hex[:6]}",
-        category=ValidationRuleCategory.EVIDENCE,
+        category=rule_category,
         name="Official intake fixture rule",
-        is_blocking=severity == ValidationIssueSeverity.BLOCKING,
-        is_active=True,
+        is_blocking=(
+            severity == ValidationIssueSeverity.BLOCKING
+            if rule_is_blocking is None
+            else rule_is_blocking
+        ),
+        is_active=rule_is_active,
     )
     intake_db.add(rule)
     intake_db.flush()
     intake_db.add(
         ValidationIssue(
             validation_rule_id=rule.id,
-            target_type="project",
-            target_id=seeded["project"].id,
+            target_type=target_type,
+            target_id=target_id or seeded["project"].id,
             severity=severity,
-            status=ValidationIssueStatus.OPEN,
+            status=status,
             issue_message="Fixture issue",
         )
     )
     intake_db.commit()
 
 
-def test_open_blocker_rejects_but_warning_does_not_block(intake_db: Session) -> None:
-    blocked = _seed(intake_db, suffix="blocked")
-    _add_issue(intake_db, blocked, ValidationIssueSeverity.BLOCKING)
+@pytest.mark.parametrize(
+    ("target_type", "target_kind"),
+    [
+        ("project", "project"),
+        ("Project", "project"),
+        ("project_asset_line", "line"),
+        ("ProjectAssetLine", "line"),
+    ],
+)
+def test_exact_v1_target_spellings_block_open_blocking_issues(
+    intake_db: Session,
+    target_type: str,
+    target_kind: str,
+) -> None:
+    blocked = _seed(intake_db, suffix=f"blocked-{target_kind}")
+    target_id = (
+        blocked["project"].id
+        if target_kind == "project"
+        else _add_asset_line(intake_db, blocked).id
+    )
+    _add_issue(
+        intake_db,
+        blocked,
+        ValidationIssueSeverity.BLOCKING,
+        target_type=target_type,
+        target_id=target_id,
+    )
 
     with pytest.raises(HTTPException) as exc:
         _commit(intake_db, blocked)
     _assert_error(exc, 409, "official_intake_blocked")
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
+    assert intake_db.query(AuditEvent).count() == 0
 
-    warned = _seed(intake_db, suffix="warned")
-    _add_issue(intake_db, warned, ValidationIssueSeverity.WARNING)
-    committed = _commit(
-        intake_db,
-        warned,
-        idempotency_key="official-intake-warning-command",
+
+@pytest.mark.parametrize(
+    ("severity", "status", "target_type"),
+    [
+        (ValidationIssueSeverity.WARNING, ValidationIssueStatus.OPEN, "Project"),
+        (ValidationIssueSeverity.WARNING, ValidationIssueStatus.OPEN, "ProjectAssetLine"),
+        (ValidationIssueSeverity.BLOCKING, ValidationIssueStatus.RESOLVED, "project"),
+        (ValidationIssueSeverity.BLOCKING, ValidationIssueStatus.IGNORED, "project"),
+    ],
+)
+def test_warning_resolved_and_ignored_issues_do_not_block(
+    intake_db: Session,
+    severity: ValidationIssueSeverity,
+    status: ValidationIssueStatus,
+    target_type: str,
+) -> None:
+    seeded = _seed(intake_db, suffix=f"allowed-{status.value}")
+    target_id = (
+        _add_asset_line(intake_db, seeded).id
+        if target_type == "ProjectAssetLine"
+        else seeded["project"].id
     )
-    assert committed.project_id == warned["project"].id
+    _add_issue(
+        intake_db,
+        seeded,
+        severity,
+        status=status,
+        target_type=target_type,
+        target_id=target_id,
+    )
+
+    committed = _commit(intake_db, seeded)
+
+    assert committed.project_id == seeded["project"].id
+
+
+@pytest.mark.parametrize(
+    ("rule_is_blocking", "rule_is_active", "rule_category"),
+    [
+        (False, True, ValidationRuleCategory.QUOTE),
+        (True, False, ValidationRuleCategory.TECHNICAL_SPEC),
+    ],
+)
+def test_issue_severity_and_status_are_the_only_v1_rule_filters(
+    intake_db: Session,
+    rule_is_blocking: bool,
+    rule_is_active: bool,
+    rule_category: ValidationRuleCategory,
+) -> None:
+    seeded = _seed(intake_db, suffix="rule-flags")
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        rule_is_blocking=rule_is_blocking,
+        rule_is_active=rule_is_active,
+        rule_category=rule_category,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "official_intake_blocked")
+
+
+def test_unknown_and_other_project_targets_do_not_block(intake_db: Session) -> None:
+    seeded = _seed(intake_db, suffix="target-scope")
+    other = _seed(intake_db, suffix="same-tenant-other")
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        target_type="future_target",
+    )
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        target_type="Project",
+        target_id=other["project"].id,
+    )
+    other_line = _add_asset_line(intake_db, other)
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        target_type="ProjectAssetLine",
+        target_id=other_line.id,
+    )
+
+    committed = _commit(intake_db, seeded)
+
+    assert committed.project_id == seeded["project"].id
+
+
+def test_cross_tenant_project_and_line_issues_do_not_block(intake_db: Session) -> None:
+    seeded = _seed(intake_db, suffix="tenant-owner")
+    other_tenant = _seed(intake_db, suffix="tenant-other")
+    other_line = _add_asset_line(intake_db, other_tenant)
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        target_type="project",
+        target_id=other_tenant["project"].id,
+    )
+    _add_issue(
+        intake_db,
+        seeded,
+        ValidationIssueSeverity.BLOCKING,
+        target_type="project_asset_line",
+        target_id=other_line.id,
+    )
+
+    committed = _commit(intake_db, seeded)
+
+    assert committed.project_id == seeded["project"].id
 
 
 def test_empty_lineage_is_rejected(intake_db: Session) -> None:

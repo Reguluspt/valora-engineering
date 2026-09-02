@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — PR-01 Official Intake Commit Contract
 
-**Status:** RUNTIME FOUNDATION IMPLEMENTED LOCALLY — HTTP not authorized
+**Status:** AUTHORITY ACCEPTED AND RUNTIME FOUNDATION IMPLEMENTED LOCALLY — HTTP not authorized
 **Task:** PR-01a — Durable Official Intake Fact/Command
 **Date:** 2026-09-01
 **Architecture:** ADR 0037
@@ -19,7 +19,7 @@ This slice may define the durable fact and command boundary for
 
 ## 2. Command
 
-Proposed semantic command: `CommitProjectOfficialIntake`.
+Semantic command: `CommitProjectOfficialIntake`.
 
 Minimum request contract:
 
@@ -39,8 +39,9 @@ from spoofable headers or request ownership fields.
 
 All conditions are mandatory:
 
-1. actor is an active human in an active organization with the explicit official-intake
-   permission;
+1. actor is an active human in an active organization with the explicit
+   `project:official_intake:commit` permission, derived from active, non-revoked role bindings
+   in the existing organization-scoped RBAC model on every invocation, including replay;
 2. Project resolves inside that organization, otherwise safe 404;
 3. expected Project version matches;
 4. preliminary-result artifact resolves to the same organization and Project;
@@ -51,12 +52,17 @@ All conditions are mandatory:
 9. idempotency key is valid and not bound to another request digest;
 10. no authoritative open blocker prohibits the transition.
 
-The bounded v1 blocker registry under local review resolves open Blocking issues directly
-targeting the Project or its ProjectAssetLine rows, accepting the existing target spellings
-`project | Project` and
-`project_asset_line | ProjectAssetLine`. Warning alone cannot fail condition 10. Other target
-types do not contribute until a tenant-safe resolver is explicitly ratcheted. Empty optional S09
-fields are not blockers unless a later domain rule explicitly requires them.
+The owner-accepted bounded v1 blocker registry resolves only `OPEN` + `BLOCKING`
+`ValidationIssue` rows directly targeting the scoped Project or one of its scoped
+ProjectAssetLine rows. It accepts exactly the existing target spellings `project | Project` and
+`project_asset_line | ProjectAssetLine`. `WARNING`, `RESOLVED`, `IGNORED`, unknown target types,
+other-Project targets and cross-tenant targets do not block. Rule category, rule `is_blocking`
+and rule active state are not additional v1 filters. There is no blocker bypass. Empty optional
+S09 fields are not synthesized into blockers.
+
+The permission is not a Project ACL. Actor and organization are trusted server context; neither
+is accepted as request-owned authority. This slice does not grant the permission to any seeded
+role.
 
 ## 4. Lock and transaction order
 
@@ -64,13 +70,14 @@ fields are not blockers unless a later domain rule explicitly requires them.
 scoped Project FOR UPDATE
 → scoped PreliminaryResultArtifact FOR UPDATE (or immutable version lock)
 → scoped preliminary aggregate/version, if separately persisted
-→ idempotency lookup / insert
+→ idempotency resolution/recheck
 → ProjectOfficialIntakeCommit insert
 → AuditEvent insert
 → one outer commit
 ```
 
-Every query includes tenant/project scope. No lock is acquired from an unscoped identifier.
+Every query includes tenant/project scope. No lock is acquired from an unscoped identifier. A
+replay does not short-circuit the permission check or the canonical Project/artifact lock order.
 
 ## 5. Fact semantics for Global Case State
 
@@ -144,13 +151,14 @@ artifact atomically. The current generic `ProjectFile` remains insufficient.
 
 - [x] ADR 0037 accepted.
 - [x] PreliminaryResultArtifact authority accepted and implemented.
-- [ ] Exact official-intake permission accepted.
-- [ ] Exact v1 blocker registry owner-accepted; bounded Project/ProjectAssetLine behavior is
-  implemented for review.
+- [x] Exact permission `project:official_intake:commit` accepted and enforced through existing
+  organization-scoped RBAC on every invocation; no seeded-role grant.
+- [x] Exact v1 blocker registry owner-accepted and implemented for the four accepted target
+  spellings and state/tenant behavior.
 - [x] Migration has one linear head and tenant-safe constraints.
 - [x] Idempotency replay/conflict tests.
 - [x] Cross-tenant safe 404 and inactive actor/org tests.
-- [ ] Concurrency and lock-order tests.
+- [x] PostgreSQL two-session concurrency and lock-order tests.
 - [x] Atomic fact + audit rollback tests.
 - [x] No appraised-price promotion or legacy workflow transition.
 - [ ] Global Case State consumes the fact, not the audit event.

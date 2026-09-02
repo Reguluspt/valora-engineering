@@ -9,9 +9,10 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.audit import log_audit_event
+from app.core.rbac import derive_effective_permissions
 from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
@@ -20,11 +21,17 @@ from app.modules.project_master_data.models import (
     ProjectAssetLine,
     ProjectOfficialIntakeCommit,
     User,
+    UserRole,
     UserStatus,
     ValidationIssue,
     ValidationIssueSeverity,
     ValidationIssueStatus,
 )
+
+
+OFFICIAL_INTAKE_COMMIT_PERMISSION = "project:official_intake:commit"
+_PROJECT_TARGET_TYPES = ("project", "Project")
+_PROJECT_ASSET_LINE_TARGET_TYPES = ("project_asset_line", "ProjectAssetLine")
 
 
 def _status_value(value: Any) -> str:
@@ -65,18 +72,34 @@ def _request_digest(
 def _reload_active_actor_and_org(
     db: Session, *, actor: User, org_id: uuid.UUID
 ) -> User:
-    persisted_actor = (
-        db.query(User)
-        .filter(User.id == actor.id, User.organization_id == org_id)
+    organization = (
+        db.query(OrganizationProfile)
+        .filter(OrganizationProfile.id == org_id)
         .populate_existing()
         .first()
     )
-    organization = db.query(OrganizationProfile).filter(OrganizationProfile.id == org_id).first()
+    actor_id = getattr(actor, "id", None)
+    persisted_actor = None
+    if actor_id is not None:
+        persisted_actor = (
+            db.query(User)
+            .options(
+                selectinload(User.organization),
+                selectinload(User.roles).selectinload(UserRole.role),
+            )
+            .filter(User.id == actor_id, User.organization_id == org_id)
+            .populate_existing()
+            .first()
+        )
     if (
         persisted_actor is None
         or organization is None
         or _status_value(persisted_actor.status) != UserStatus.ACTIVE.value
         or _status_value(organization.status) != OrganizationStatus.ACTIVE.value
+    ):
+        _abort(db, 403, "official_intake_forbidden", "Không thể thực hiện thao tác này.")
+    if OFFICIAL_INTAKE_COMMIT_PERMISSION not in derive_effective_permissions(
+        persisted_actor, db
     ):
         _abort(db, 403, "official_intake_forbidden", "Không thể thực hiện thao tác này.")
     return persisted_actor
@@ -98,8 +121,17 @@ def _same_request(
     )
 
 
-def _has_open_blocker(db: Session, *, project_id: uuid.UUID) -> bool:
-    line_ids = db.query(ProjectAssetLine.id).filter(ProjectAssetLine.project_id == project_id)
+def _has_open_blocker(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID
+) -> bool:
+    line_ids = (
+        db.query(ProjectAssetLine.id)
+        .join(Project, Project.id == ProjectAssetLine.project_id)
+        .filter(
+            Project.organization_id == org_id,
+            ProjectAssetLine.project_id == project_id,
+        )
+    )
     return (
         db.query(ValidationIssue.id)
         .filter(
@@ -107,11 +139,11 @@ def _has_open_blocker(db: Session, *, project_id: uuid.UUID) -> bool:
             ValidationIssue.status == ValidationIssueStatus.OPEN,
             or_(
                 (
-                    ValidationIssue.target_type.in_(("project", "Project"))
+                    ValidationIssue.target_type.in_(_PROJECT_TARGET_TYPES)
                     & (ValidationIssue.target_id == project_id)
                 ),
                 (
-                    ValidationIssue.target_type.in_(("project_asset_line", "ProjectAssetLine"))
+                    ValidationIssue.target_type.in_(_PROJECT_ASSET_LINE_TARGET_TYPES)
                     & ValidationIssue.target_id.in_(line_ids)
                 ),
             ),
@@ -151,6 +183,30 @@ def commit_project_official_intake(
         expected_project_version=expected_project_version,
         expected_artifact_version=expected_preliminary_result_version,
     )
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.organization_id == org_id)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
+    if project is None:
+        _abort(db, 404, "project_not_found", "Không tìm thấy hồ sơ.")
+
+    artifact = (
+        db.query(PreliminaryResultArtifact)
+        .filter(
+            PreliminaryResultArtifact.id == preliminary_result_artifact_id,
+            PreliminaryResultArtifact.organization_id == org_id,
+            PreliminaryResultArtifact.customer_id == project.customer_id,
+            PreliminaryResultArtifact.project_id == project.id,
+        )
+        .with_for_update()
+        .first()
+    )
+    if artifact is None:
+        _abort(db, 404, "preliminary_result_not_found", "Không tìm thấy kết quả sơ bộ.")
+
     existing = (
         db.query(ProjectOfficialIntakeCommit)
         .filter(
@@ -169,33 +225,12 @@ def commit_project_official_intake(
             request_digest=request_digest,
         ):
             _abort(db, 409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+        db.commit()
+        db.refresh(existing)
         return existing
 
-    project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.organization_id == org_id)
-        .with_for_update()
-        .populate_existing()
-        .first()
-    )
-    if project is None:
-        _abort(db, 404, "project_not_found", "Không tìm thấy hồ sơ.")
     if project.row_version != expected_project_version:
         _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
-
-    artifact = (
-        db.query(PreliminaryResultArtifact)
-        .filter(
-            PreliminaryResultArtifact.id == preliminary_result_artifact_id,
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.customer_id == project.customer_id,
-            PreliminaryResultArtifact.project_id == project.id,
-        )
-        .with_for_update()
-        .first()
-    )
-    if artifact is None:
-        _abort(db, 404, "preliminary_result_not_found", "Không tìm thấy kết quả sơ bộ.")
     if artifact.version != expected_preliminary_result_version:
         _abort(db, 409, "preliminary_result_version_conflict", "Kết quả sơ bộ đã thay đổi.")
     if not artifact.lineage_manifest:
@@ -205,7 +240,7 @@ def commit_project_official_intake(
             "preliminary_result_lineage_incomplete",
             "Nguồn gốc kết quả sơ bộ chưa đầy đủ.",
         )
-    if _has_open_blocker(db, project_id=project.id):
+    if _has_open_blocker(db, org_id=org_id, project_id=project.id):
         _abort(
             db,
             409,
@@ -280,6 +315,26 @@ def commit_project_official_intake(
             request_digest=request_digest,
         ):
             return raced
+        if raced is not None:
+            raise _error(
+                409,
+                "idempotency_key_reused",
+                "Mã lệnh đã được dùng cho dữ liệu khác.",
+            ) from exc
+        raced_project = (
+            db.query(ProjectOfficialIntakeCommit.id)
+            .filter(
+                ProjectOfficialIntakeCommit.organization_id == org_id,
+                ProjectOfficialIntakeCommit.project_id == project_id,
+            )
+            .first()
+        )
+        if raced_project is not None:
+            raise _error(
+                409,
+                "official_intake_already_committed",
+                "Hồ sơ đã được chuyển chính thức.",
+            ) from exc
         raise _error(
             409,
             "official_intake_conflict",
