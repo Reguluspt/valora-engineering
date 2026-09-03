@@ -123,3 +123,99 @@ def test_repository_live_gates_point_to_v23_pr01_design_gate() -> None:
     )
     assert "active S13-PR-004 assignment" not in all_live_gate_text
     assert "S13-PR-004 is separately owner-assigned" not in all_live_gate_text
+
+
+def _pr01_stage_classifications() -> dict[str, str]:
+    """Parse the documented provider-gate classification from case-state contract section 4.
+
+    The current contract inventory records, for each canonical stage, whether its provider
+    gate is MISSING, UNMAPPED, or IMPLEMENTED / NOT WIRED. Parsing is bounded to the section 4
+    authority matrix so unrelated tables in the contract never contribute. These values are the
+    documented current classification; the product-owner predicate gate is still open and no
+    complete stage predicates are approved here.
+    """
+    source = (
+        REPOSITORY_ROOT
+        / "docs"
+        / "implementation"
+        / "VALORA_UIUX_V2_3_PR01_CASE_STATE_PROJECTION_CONTRACT.md"
+    ).read_text(encoding="utf-8")
+
+    section_marker = "## 4. Canonical stage authority matrix"
+    lines = source.splitlines()
+    if section_marker not in lines:
+        raise AssertionError(
+            "PR-01 case-state contract is missing the required "
+            "## 4. Canonical stage authority matrix section"
+        )
+    section_idx = lines.index(section_marker)
+
+    classifications: dict[str, str] = {}
+    seen: set[str] = set()
+    for line in lines[section_idx + 1:]:
+        if line.startswith("#"):
+            break
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) != 4:
+            continue
+        stage = cells[0].strip("`").strip()
+        if stage not in CANONICAL_CASE_STAGES:
+            continue
+        if stage in seen:
+            raise AssertionError(
+                f"duplicate canonical-stage row for {stage!r} in the section 4 matrix "
+                "of the PR-01 case-state contract"
+            )
+        seen.add(stage)
+        classifications[stage] = cells[3].strip()
+
+    if not seen:
+        raise AssertionError(
+            "no canonical-stage rows parsed from the section 4 matrix "
+            "of the PR-01 case-state contract"
+        )
+    return classifications
+
+
+def test_pr01_stage_predicate_matrix_ratchet() -> None:
+    """Lock the documented case-state provider-gate classification inventory.
+
+    The current contract inventory is 9 MISSING, 6 UNMAPPED and a single IMPLEMENTED / NOT
+    WIRED stage (OFFICIAL_INTAKE). It fails closed: no stage may be presented as COMPLETE or
+    NOT_APPLICABLE, and no stage other than OFFICIAL_INTAKE may be IMPLEMENTED / NOT WIRED.
+    These are documented current classifications, not an owner-accepted predicate set.
+    """
+    classifications = _pr01_stage_classifications()
+
+    # Every canonical stage is classified exactly once, with nothing extraneous.
+    assert set(classifications) == set(CANONICAL_CASE_STAGES)
+    assert len(classifications) == 16
+
+    # Only the documented classification values are permitted; runtime stays unconnected.
+    assert set(classifications.values()) <= {
+        "MISSING",
+        "UNMAPPED",
+        "IMPLEMENTED / NOT WIRED",
+    }
+
+    # Fail closed: no stage may be inferred complete or not-applicable at this point.
+    assert "COMPLETE" not in classifications.values()
+    assert "NOT_APPLICABLE" not in classifications.values()
+
+    # The documented classification inventory is exact.
+    assert sum(1 for s in classifications.values() if s == "MISSING") == 9
+    assert sum(1 for s in classifications.values() if s == "UNMAPPED") == 6
+    assert sum(
+        1 for s in classifications.values() if s == "IMPLEMENTED / NOT WIRED"
+    ) == 1
+
+    # Only OFFICIAL_INTAKE is IMPLEMENTED / NOT WIRED; every other stage stays gated.
+    implemented = [
+        stage
+        for stage, status in classifications.items()
+        if status == "IMPLEMENTED / NOT WIRED"
+    ]
+    assert implemented == ["OFFICIAL_INTAKE"]
