@@ -35,7 +35,7 @@ The eventual response must expose, at minimum:
 | `WorkflowInstance` | target, current state, lifecycle status, `row_version` | legacy state is not Global Case State or route authority |
 | `ValidationIssue` | target, Warning/Blocking, open/resolved/ignored, `row_version` | target-to-project resolution must be explicit and tenant-safe |
 | `PreliminaryResultArtifact` | immutable result version, content/source digests, lineage manifest | generation command is deferred; generic ProjectFile is not substituted |
-| `ProjectOfficialIntakeCommit` | durable official boundary, artifact/version snapshot, actor/time, idempotency | PR-01a authority closeout passed locally at `f0e7c73`; projection provider not wired yet |
+| `ProjectOfficialIntakeCommit` | durable official boundary, artifact/version snapshot, actor/time, idempotency | PR-01a authority closeout passed locally at `f0e7c73`; `OFFICIAL_INTAKE` predicate accepted in `VALORA_UIUX_V2_3_PR01_OFFICIAL_INTAKE_PROJECTION_PREDICATE_PROPOSAL.md`; projection runtime not wired |
 | document-engine records | legacy document/render/package records | no approved M365 freshness, managed-region or Release Manifest semantics |
 | resume context | none approved for v2.3 | deferred; no PUT endpoint in PR-01 |
 
@@ -50,7 +50,7 @@ may be treated as completion.
 | `PRELIMINARY_REQUEST` | preliminary request facts + completion predicate | no canonical provider identified | MISSING |
 | `PRELIMINARY_ANALYSIS` | preliminary analysis decision/facts | no canonical provider identified | MISSING |
 | `PRELIMINARY_READY` | explicit readiness fact | no canonical provider identified | MISSING |
-| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per ADR 0037 | PR-01a artifact/fact/command authority closeout passed locally; projection provider not wired | IMPLEMENTED / NOT WIRED |
+| `OFFICIAL_INTAKE` | `ProjectOfficialIntakeCommit` per ADR 0037 | PR-01a artifact/fact/command authority closeout passed locally; predicate accepted in `VALORA_UIUX_V2_3_PR01_OFFICIAL_INTAKE_PROJECTION_PREDICATE_PROPOSAL.md` | PREDICATE ACCEPTED / NOT WIRED |
 | `ASSET_REVIEW` | mandatory asset-review predicates | asset-line review/validation facts exist; completeness predicate not approved | UNMAPPED |
 | `ASSET_WORKBENCH` | mandatory workbench completion facts | asset lines and sessions exist; completion predicate not approved | UNMAPPED |
 | `PRICE_EVIDENCE` | required price-evidence coverage | evidence/quote primitives exist; project-line coverage predicate not approved | UNMAPPED |
@@ -64,9 +64,11 @@ may be treated as completion.
 | `PUBLISHING_CONFIRMATION` | publish confirmation readiness/commit boundary | PR-09 not implemented | MISSING |
 | `PUBLISHED` | final immutable Release Manifest | PR-08/PR-09 not implemented | MISSING |
 
-**Gate result:** The architecture is accepted, but a truthful `current_stage` cannot yet be
-computed for all valid projects. Runtime connection remains blocked until the owner accepts a
-bounded first-stage predicate set or the missing providers are implemented in their assigned PRs.
+**Gate result:** The architecture is accepted and the `OFFICIAL_INTAKE` predicate is now
+owner-accepted, but a truthful `current_stage` cannot yet be computed for all valid projects
+because preceding mandatory stages still lack accepted predicates (D4). Runtime connection and
+`current_stage` publication remain blocked until the owner accepts a bounded contiguous prefix
+of canonical stages or the missing providers are implemented in their assigned PRs.
 
 For the official boundary specifically, ADR 0037 defines the durable fact and command, and PR-01a
 closed that source-domain authority slice locally. Its
