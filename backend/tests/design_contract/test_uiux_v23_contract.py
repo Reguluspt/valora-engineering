@@ -91,7 +91,7 @@ def test_forbidden_backend_surfaces_are_not_introduced() -> None:
     assert "NCCQ" not in FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS
     assert "LOCK_VERSION" not in FORBIDDEN_NEW_BACKEND_SURFACE_MARKERS
 
-    assert '"/case-state"' not in combined
+    assert combined.count('"/{project_id}/case-state"') == 1
     assert '"/resume-context"' not in combined
 
 
@@ -129,10 +129,8 @@ def _pr01_stage_classifications() -> dict[str, str]:
     """Parse the documented provider-gate classification from case-state contract section 4.
 
     The current contract inventory records, for each canonical stage, whether its provider
-    gate is MISSING, UNMAPPED, or IMPLEMENTED / NOT WIRED. Parsing is bounded to the section 4
-    authority matrix so unrelated tables in the contract never contribute. These values are the
-    documented current classification; the product-owner predicate gate is still open and no
-    complete stage predicates are approved here.
+    gate is MISSING, UNMAPPED, or IMPLEMENTED / WIRED. Parsing is bounded to the section 4
+    authority matrix so unrelated tables in the contract never contribute.
     """
     source = (
         REPOSITORY_ROOT
@@ -183,10 +181,9 @@ def _pr01_stage_classifications() -> dict[str, str]:
 def test_pr01_stage_predicate_matrix_ratchet() -> None:
     """Lock the documented case-state provider-gate classification inventory.
 
-    The current contract inventory is 9 MISSING, 6 UNMAPPED and a single IMPLEMENTED / NOT
-    WIRED stage (OFFICIAL_INTAKE). It fails closed: no stage may be presented as COMPLETE or
-    NOT_APPLICABLE, and no stage other than OFFICIAL_INTAKE may be IMPLEMENTED / NOT WIRED.
-    These are documented current classifications, not an owner-accepted predicate set.
+    The current contract inventory is 6 MISSING, 6 UNMAPPED and 4 IMPLEMENTED / WIRED
+    prefix stages. It fails closed: no downstream stage may be presented as COMPLETE or
+    NOT_APPLICABLE merely because the PR-01 prefix is wired.
     """
     classifications = _pr01_stage_classifications()
 
@@ -194,11 +191,11 @@ def test_pr01_stage_predicate_matrix_ratchet() -> None:
     assert set(classifications) == set(CANONICAL_CASE_STAGES)
     assert len(classifications) == 16
 
-    # Only the documented classification values are permitted; runtime stays unconnected.
+    # Only the documented classification values are permitted.
     assert set(classifications.values()) <= {
         "MISSING",
         "UNMAPPED",
-        "IMPLEMENTED / NOT WIRED",
+        "IMPLEMENTED / WIRED",
     }
 
     # Fail closed: no stage may be inferred complete or not-applicable at this point.
@@ -206,16 +203,21 @@ def test_pr01_stage_predicate_matrix_ratchet() -> None:
     assert "NOT_APPLICABLE" not in classifications.values()
 
     # The documented classification inventory is exact.
-    assert sum(1 for s in classifications.values() if s == "MISSING") == 9
+    assert sum(1 for s in classifications.values() if s == "MISSING") == 6
     assert sum(1 for s in classifications.values() if s == "UNMAPPED") == 6
     assert sum(
-        1 for s in classifications.values() if s == "IMPLEMENTED / NOT WIRED"
-    ) == 1
+        1 for s in classifications.values() if s == "IMPLEMENTED / WIRED"
+    ) == 4
 
-    # Only OFFICIAL_INTAKE is IMPLEMENTED / NOT WIRED; every other stage stays gated.
+    # Only the bounded PR-01 prefix is wired; every downstream stage stays gated.
     implemented = [
         stage
         for stage, status in classifications.items()
-        if status == "IMPLEMENTED / NOT WIRED"
+        if status == "IMPLEMENTED / WIRED"
     ]
-    assert implemented == ["OFFICIAL_INTAKE"]
+    assert implemented == [
+        "PRELIMINARY_REQUEST",
+        "PRELIMINARY_ANALYSIS",
+        "PRELIMINARY_READY",
+        "OFFICIAL_INTAKE",
+    ]

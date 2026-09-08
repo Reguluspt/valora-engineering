@@ -912,6 +912,8 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
     content_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     storage_object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
     source_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    request_digest_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     lineage_manifest: Mapped[dict] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), nullable=False
     )
@@ -940,6 +942,14 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
             "id",
             name="uq_preliminary_result_tenant_project_id",
         ),
+        Index(
+            "uq_preliminary_result_idempotency",
+            "organization_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+            sqlite_where=text("idempotency_key IS NOT NULL"),
+        ),
         ForeignKeyConstraint(
             ["organization_id", "customer_id", "project_id"],
             ["projects.organization_id", "projects.customer_id", "projects.id"],
@@ -965,6 +975,21 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
             "AND source_snapshot_sha256 = lower(source_snapshot_sha256) "
             "AND source_snapshot_sha256 ~ '^[0-9a-f]{64}$'",
             name="chk_preliminary_result_source_snapshot",
+        ),
+        CheckConstraint(
+            "idempotency_key IS NULL OR length(trim(idempotency_key)) > 0",
+            name="chk_preliminary_result_idempotency_trim",
+        ),
+        CheckConstraint(
+            "request_digest_sha256 IS NULL OR ("
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$')",
+            name="chk_preliminary_result_request_digest",
+        ),
+        CheckConstraint(
+            "(idempotency_key IS NULL) = (request_digest_sha256 IS NULL)",
+            name="chk_preliminary_result_request_pairing",
         ),
         Index("idx_preliminary_result_project", "organization_id", "project_id"),
     )
@@ -1057,6 +1082,191 @@ class ProjectOfficialIntakeCommit(Base, UUIDMixin):
         ),
         Index("idx_official_intake_project", "organization_id", "project_id"),
     )
+
+
+class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
+    """Immutable, versioned authoritative fact for preliminary catalog/price analysis."""
+
+    __tablename__ = "preliminary_analysis_snapshots"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    structure_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    mapping_decision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    mapping_profile_usage_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_artifact_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    mapping_decision_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    profile_usage_mapping_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    line_manifest: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    line_manifest_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    finalized_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    finalized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "version",
+            name="uq_preliminary_analysis_project_version",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "idempotency_key",
+            name="uq_preliminary_analysis_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_preliminary_analysis_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_preliminary_analysis_batch_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+            ],
+            [
+                "import_source_artifacts.organization_id",
+                "import_source_artifacts.project_id",
+                "import_source_artifacts.import_batch_id",
+                "import_source_artifacts.id",
+            ],
+            name="fk_preliminary_analysis_artifact_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+            ],
+            [
+                "workbook_structure_snapshots.organization_id",
+                "workbook_structure_snapshots.project_id",
+                "workbook_structure_snapshots.import_batch_id",
+                "workbook_structure_snapshots.source_artifact_id",
+                "workbook_structure_snapshots.id",
+            ],
+            name="fk_preliminary_analysis_structure_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "customer_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+                "mapping_decision_id",
+            ],
+            [
+                "column_mapping_decisions.organization_id",
+                "column_mapping_decisions.customer_id",
+                "column_mapping_decisions.project_id",
+                "column_mapping_decisions.import_batch_id",
+                "column_mapping_decisions.source_artifact_id",
+                "column_mapping_decisions.structure_snapshot_id",
+                "column_mapping_decisions.id",
+            ],
+            name="fk_preliminary_analysis_decision_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+                "mapping_profile_usage_id",
+            ],
+            [
+                "column_mapping_profile_usages.organization_id",
+                "column_mapping_profile_usages.project_id",
+                "column_mapping_profile_usages.import_batch_id",
+                "column_mapping_profile_usages.source_artifact_id",
+                "column_mapping_profile_usages.structure_snapshot_id",
+                "column_mapping_profile_usages.id",
+            ],
+            name="fk_preliminary_analysis_usage_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "finalized_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_preliminary_analysis_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="chk_preliminary_analysis_version"),
+        CheckConstraint(
+            "source_artifact_generation > 0",
+            name="chk_preliminary_analysis_generation",
+        ),
+        CheckConstraint(
+            "length(mapping_decision_digest_sha256) = 64 "
+            "AND mapping_decision_digest_sha256 = lower(mapping_decision_digest_sha256) "
+            "AND mapping_decision_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_decision_digest",
+        ),
+        CheckConstraint(
+            "length(profile_usage_mapping_digest_sha256) = 64 "
+            "AND profile_usage_mapping_digest_sha256 = lower(profile_usage_mapping_digest_sha256) "
+            "AND profile_usage_mapping_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_usage_digest",
+        ),
+        CheckConstraint(
+            "length(line_manifest_digest_sha256) = 64 "
+            "AND line_manifest_digest_sha256 = lower(line_manifest_digest_sha256) "
+            "AND line_manifest_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_line_manifest_digest",
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0",
+            name="chk_preliminary_analysis_idempotency",
+        ),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_request_digest",
+        ),
+        Index("idx_preliminary_analysis_project", "organization_id", "project_id"),
+    )
+
 
 
 class AuditEvent(Base, UUIDMixin):

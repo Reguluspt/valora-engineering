@@ -153,6 +153,90 @@ def _has_open_blocker(
     )
 
 
+def get_official_intake_open_blockers(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID
+) -> list[ValidationIssue]:
+    """Return deterministic ordered accepted OPEN+BLOCKING rows for OFFICIAL_INTAKE."""
+    project_exists = (
+        db.query(Project.id)
+        .filter(Project.id == project_id, Project.organization_id == org_id)
+        .first()
+        is not None
+    )
+    line_ids = (
+        db.query(ProjectAssetLine.id)
+        .join(Project, Project.id == ProjectAssetLine.project_id)
+        .filter(
+            Project.organization_id == org_id,
+            ProjectAssetLine.project_id == project_id,
+        )
+    )
+    target_conditions = [
+        (
+            ValidationIssue.target_type.in_(_PROJECT_ASSET_LINE_TARGET_TYPES)
+            & ValidationIssue.target_id.in_(line_ids)
+        )
+    ]
+    if project_exists:
+        target_conditions.append(
+            ValidationIssue.target_type.in_(_PROJECT_TARGET_TYPES)
+            & (ValidationIssue.target_id == project_id)
+        )
+
+    return (
+        db.query(ValidationIssue)
+        .filter(
+            ValidationIssue.severity == ValidationIssueSeverity.BLOCKING,
+            ValidationIssue.status == ValidationIssueStatus.OPEN,
+            or_(*target_conditions),
+        )
+        .order_by(ValidationIssue.id.asc())
+        .all()
+    )
+
+
+def get_official_intake_open_warnings(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID
+) -> list[ValidationIssue]:
+    """Return deterministic ordered accepted OPEN+WARNING rows for OFFICIAL_INTAKE."""
+    project_exists = (
+        db.query(Project.id)
+        .filter(Project.id == project_id, Project.organization_id == org_id)
+        .first()
+        is not None
+    )
+    line_ids = (
+        db.query(ProjectAssetLine.id)
+        .join(Project, Project.id == ProjectAssetLine.project_id)
+        .filter(
+            Project.organization_id == org_id,
+            ProjectAssetLine.project_id == project_id,
+        )
+    )
+    target_conditions = [
+        (
+            ValidationIssue.target_type.in_(_PROJECT_ASSET_LINE_TARGET_TYPES)
+            & ValidationIssue.target_id.in_(line_ids)
+        )
+    ]
+    if project_exists:
+        target_conditions.append(
+            ValidationIssue.target_type.in_(_PROJECT_TARGET_TYPES)
+            & (ValidationIssue.target_id == project_id)
+        )
+
+    return (
+        db.query(ValidationIssue)
+        .filter(
+            ValidationIssue.severity == ValidationIssueSeverity.WARNING,
+            ValidationIssue.status == ValidationIssueStatus.OPEN,
+            or_(*target_conditions),
+        )
+        .order_by(ValidationIssue.id.asc())
+        .all()
+    )
+
+
 def commit_project_official_intake(
     db: Session,
     *,

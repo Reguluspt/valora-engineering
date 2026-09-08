@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 
 from app.db import get_db
-from app.core.rbac import require_permission
+from app.core.rbac import get_current_user, require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
     User,
@@ -38,7 +38,11 @@ from app.modules.project_master_data.schemas import (
     ProjectAssetLineCreate, ProjectAssetLineUpdate, ProjectAssetLineResponse,
     ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse,
-    ProjectResolutionResponse
+    ProjectResolutionResponse, CaseStateResponse,
+)
+from app.modules.project_master_data.application.case_state_projection import (
+    ProjectionError,
+    get_case_state_projection,
 )
 from app.modules.project_master_data.workbench_schemas import (
     ProjectDraftStateResponse,
@@ -291,6 +295,60 @@ def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     return project
+
+
+@router.get("/{project_id}/case-state", response_model=CaseStateResponse)
+def get_project_case_state(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        projection = get_case_state_projection(
+            db,
+            actor=current_user,
+            org_id=current_user.organization_id,
+            project_id=project_id,
+        )
+    except ProjectionError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_code": "case_state_projection_failed",
+                "detail": "Không thể tải trạng thái hồ sơ.",
+            },
+        ) from exc
+
+    return {
+        "case_version": projection.case_version,
+        "current_stage": projection.current_stage,
+        "next_action": None if projection.next_action is None else {
+            "kind": projection.next_action.kind,
+            "stage": projection.next_action.stage,
+            "semantic_route_key": projection.next_action.semantic_route_key,
+            "validation_issue_id": projection.next_action.validation_issue_id,
+        },
+        "stages": [
+            {
+                "stage": stage.stage,
+                "result": stage.result,
+                "provider_key": stage.provider_key,
+            }
+            for stage in projection.stages
+        ],
+        "blockers": projection.blockers,
+        "warnings": projection.warnings,
+        "stale": projection.stale,
+        "capabilities": [
+            {
+                "stage": capability.stage,
+                "available": capability.available,
+                "provider_key": capability.provider_key,
+                "version": capability.version,
+            }
+            for capability in projection.capabilities
+        ],
+    }
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
