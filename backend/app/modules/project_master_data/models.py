@@ -511,6 +511,7 @@ class Supplier(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "tax_code", name="uq_supplier_tax_org"),
+        UniqueConstraint("organization_id", "id", name="uq_suppliers_tenant_id"),
     )
 
 
@@ -722,6 +723,7 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
             "id",
             name="uq_s13_pr004_project_tenant_customer_id",
         ),
+        UniqueConstraint("organization_id", "id", name="uq_projects_tenant_id"),
         CheckConstraint("fee_amount >= 0", name="chk_project_fee_positive"),
     )
 
@@ -852,6 +854,7 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
 
     __table_args__ = (
+        UniqueConstraint("project_id", "id", name="uq_project_asset_lines_project_id"),
         CheckConstraint("quantity >= 0", name="chk_asset_quantity_positive"),
         CheckConstraint("raw_price >= 0", name="chk_asset_raw_price_positive"),
         CheckConstraint("appraised_unit_price >= 0", name="chk_asset_appraised_price_positive"),
@@ -2505,6 +2508,11 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Aggregation folder for vendor/market pricing quotes relating to canonical assets or variants."""
     __tablename__ = "quote_batches"
 
+    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
         nullable=True
@@ -2537,6 +2545,7 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
     override_blocking_conflict_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
     asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
@@ -2544,10 +2553,19 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     previous_quote_batch: Mapped[Optional["QuoteBatch"]] = relationship("QuoteBatch", remote_side="QuoteBatch.id")
     quote_lines: Mapped[list["QuoteLine"]] = relationship("QuoteLine", back_populates="quote_batch")
 
+    __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_quote_batches_tenant_id"),
+    )
+
 
 class QuoteLine(Base, UUIDMixin, TimestampMixin):
     """Raw pricing detail entries extracted from evidence files or catalog sources."""
     __tablename__ = "quote_lines"
+
+    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
 
     quote_batch_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("quote_batches.id", ondelete="RESTRICT"),
@@ -2556,6 +2574,10 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
     evidence_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         ForeignKey("evidence_files.id", ondelete="RESTRICT"),
         nullable=True
+    )
+    supplier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
     quoted_unit_price: Mapped[float] = mapped_column(nullable=False)
@@ -2573,8 +2595,14 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
         default=QuoteLineStatus.DRAFT
     )
 
+    organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
     quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", back_populates="quote_lines")
     evidence_file: Mapped[Optional["EvidenceFile"]] = relationship("EvidenceFile")
+    supplier: Mapped[Optional["Supplier"]] = relationship("Supplier")
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_quote_lines_tenant_id"),
+    )
 
 
 class AppraisedPriceDecisionStatus(str, enum.Enum):
@@ -4090,6 +4118,151 @@ class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
         Index("idx_staging_row_project", "project_id"),
         Index("idx_staging_row_batch", "import_batch_id"),
         Index("idx_staging_row_validation", "validation_status"),
+    )
+
+
+class NccSelectionRevision(Base, UUIDMixin):
+    """Immutable revision of a confirmed NCC selection for a project asset line."""
+
+    __tablename__ = "ncc_selection_revisions"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    selection_revision: Mapped[int] = mapped_column(nullable=False)
+    quote_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    quote_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    supplier_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    evidence_file_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    supplier_name_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
+    quoted_unit_price_snapshot: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    currency_snapshot: Mapped[str] = mapped_column(String(10), nullable=False)
+    quantity_snapshot: Mapped[Optional[float]] = mapped_column(Numeric(15, 4), nullable=True)
+    unit_of_measure_snapshot: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    quote_date_snapshot: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    quote_batch_revision_number_snapshot: Mapped[int] = mapped_column(nullable=False)
+    current_unit_price_snapshot: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    current_unit_price_currency_id_snapshot: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("currencies.id", ondelete="RESTRICT"), nullable=True
+    )
+    difference_amount: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    difference_percent: Mapped[Optional[float]] = mapped_column(Numeric(15, 6), nullable=True)
+    warning_codes: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list
+    )
+    acknowledged_warning_codes: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    confirmed_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    project: Mapped["Project"] = relationship("Project", foreign_keys=[project_id])
+    asset_line: Mapped["ProjectAssetLine"] = relationship(
+        "ProjectAssetLine", foreign_keys=[project_asset_line_id]
+    )
+    quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", foreign_keys=[quote_batch_id])
+    quote_line: Mapped["QuoteLine"] = relationship("QuoteLine", foreign_keys=[quote_line_id])
+    supplier: Mapped["Supplier"] = relationship("Supplier", foreign_keys=[supplier_id])
+    evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile", foreign_keys=[evidence_file_id])
+    current_unit_price_currency: Mapped[Optional["Currency"]] = relationship(
+        "Currency", foreign_keys=[current_unit_price_currency_id_snapshot]
+    )
+    confirmer: Mapped["User"] = relationship("User", foreign_keys=[confirmed_by_user_id])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "project_id", "project_asset_line_id", "selection_revision",
+            name="uq_ncc_selection_revision",
+        ),
+        UniqueConstraint("organization_id", "idempotency_key", name="uq_ncc_rev_idempotency_org"),
+        UniqueConstraint("organization_id", "id", name="uq_ncc_selection_revisions_tenant_id"),
+        Index("idx_ncc_rev_project_line", "organization_id", "project_id", "project_asset_line_id"),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"], ["projects.organization_id", "projects.id"],
+            name="fk_ncc_rev_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "project_asset_line_id"],
+            ["project_asset_lines.project_id", "project_asset_lines.id"],
+            name="fk_ncc_rev_asset_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "quote_batch_id"],
+            ["quote_batches.organization_id", "quote_batches.id"],
+            name="fk_ncc_rev_quote_batch_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "quote_line_id"],
+            ["quote_lines.organization_id", "quote_lines.id"],
+            name="fk_ncc_rev_quote_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "supplier_id"], ["suppliers.organization_id", "suppliers.id"],
+            name="fk_ncc_rev_supplier_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["current_unit_price_currency_id_snapshot"], ["currencies.id"],
+            name="fk_ncc_rev_current_currency", ondelete="RESTRICT",
+        ),
+        CheckConstraint("selection_revision > 0", name="chk_ncc_rev_selection_revision"),
+        CheckConstraint("length(trim(idempotency_key)) > 0", name="chk_ncc_rev_idempotency_trim"),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_ncc_rev_request_digest",
+        ),
+    )
+
+
+class NccSelectionCurrentHead(Base):
+    """One current NCC selection head per project asset line."""
+
+    __tablename__ = "ncc_selection_current_heads"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False, primary_key=True
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, primary_key=True)
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, primary_key=True)
+    current_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    selection_revision: Mapped[int] = mapped_column(nullable=False)
+
+    project: Mapped["Project"] = relationship("Project", foreign_keys=[project_id])
+    asset_line: Mapped["ProjectAssetLine"] = relationship(
+        "ProjectAssetLine", foreign_keys=[project_asset_line_id]
+    )
+    current_revision: Mapped["NccSelectionRevision"] = relationship(
+        "NccSelectionRevision", foreign_keys=[current_revision_id]
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"], ["projects.organization_id", "projects.id"],
+            name="fk_ncc_head_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "project_asset_line_id"],
+            ["project_asset_lines.project_id", "project_asset_lines.id"],
+            name="fk_ncc_head_asset_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "current_revision_id"],
+            ["ncc_selection_revisions.organization_id", "ncc_selection_revisions.id"],
+            name="fk_ncc_head_revision_tenant", ondelete="RESTRICT",
+        ),
+        CheckConstraint("selection_revision > 0", name="chk_ncc_head_selection_revision"),
     )
 
 

@@ -488,3 +488,125 @@ class PreliminaryAnalysisSnapshotResponse(BaseSchema):
     finalized_at: datetime
 
 
+# ==========================================
+# NCC Selection (PR-04) Schemas
+# ==========================================
+
+NccSelectionState = Literal["unselected", "selected", "stale"]
+
+
+class NccSelectionConfirmRequest(BaseSchema):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    quote_line_id: uuid.UUID
+    expected_selection_revision: int = Field(..., ge=0)
+    acknowledged_warning_codes: list[str] = Field(default_factory=list)
+    idempotency_key: str = Field(..., max_length=128)
+    confirmed: bool
+
+    @field_validator("confirmed", mode="before")
+    @classmethod
+    def _strict_bool(cls, value):
+        if not isinstance(value, bool):
+            raise ValueError("must be a boolean")
+        return value
+
+    @field_validator("acknowledged_warning_codes", mode="before")
+    @classmethod
+    def _strict_str_list(cls, value):
+        if value is None:
+            return []
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError("must be a list of strings")
+        return value
+
+
+class NccSelectionEvidenceResponse(BaseSchema):
+    evidence_file_id: uuid.UUID
+    filename: Optional[str]
+    status: Optional[str]
+
+
+class NccSelectionCandidateResponse(BaseSchema):
+    quote_line_id: uuid.UUID
+    quote_batch_id: uuid.UUID
+    quote_batch_revision_number: int
+    supplier_id: uuid.UUID
+    supplier_name: str
+    quoted_unit_price: float
+    currency: str
+    quantity: Optional[float]
+    unit_of_measure: Optional[str]
+    quote_date: Optional[datetime]
+    evidence: NccSelectionEvidenceResponse
+    difference_amount: Optional[float]
+    difference_percent: Optional[float]
+    warnings: List[str]
+    eligible: bool
+
+
+class NccSelectionCurrentResponse(BaseSchema):
+    selection_id: uuid.UUID
+    selection_revision: int
+    quote_line_id: uuid.UUID
+    quote_batch_id: uuid.UUID
+    quote_batch_revision_number: int
+    supplier_id: uuid.UUID
+    supplier_name: str
+    quoted_unit_price: float
+    currency: str
+    quantity: Optional[float]
+    unit_of_measure: Optional[str]
+    quote_date: Optional[datetime]
+    evidence: NccSelectionEvidenceResponse
+    current_unit_price: Optional[float]
+    current_unit_price_currency_id: Optional[uuid.UUID]
+    difference_amount: Optional[float]
+    difference_percent: Optional[float]
+    warnings: List[str]
+    acknowledged_warning_codes: List[str]
+    confirmed_by_user_id: uuid.UUID
+    confirmed_at: datetime
+    stale: bool
+
+
+class NccSelectionHistoryItemResponse(BaseSchema):
+    selection_revision: int
+    quote_line_id: uuid.UUID
+    supplier_name: str
+    quoted_unit_price: float
+    currency: str
+    difference_amount: Optional[float]
+    difference_percent: Optional[float]
+    warnings: List[str]
+    confirmed_by_user_id: uuid.UUID
+    confirmed_at: datetime
+
+
+class NccSelectionAssetLineResponse(BaseSchema):
+    asset_line_id: uuid.UUID
+    asset_name: str
+    unit_id: Optional[uuid.UUID]
+    unit_name: Optional[str]
+    quantity: float
+    appraised_unit_price: Optional[float]
+    appraised_currency_id: Optional[uuid.UUID]
+    current_selection: Optional[NccSelectionCurrentResponse]
+    candidates: List[NccSelectionCandidateResponse]
+    history: List[NccSelectionHistoryItemResponse]
+    state: NccSelectionState
+
+
+class NccSelectionKpisResponse(BaseSchema):
+    total_asset_lines: int
+    selected: int
+    unselected: int
+    stale: int
+    eligible_quotes: int
+
+
+class NccSelectionAggregateResponse(BaseSchema):
+    project_id: uuid.UUID
+    kpis: NccSelectionKpisResponse
+    asset_lines: List[NccSelectionAssetLineResponse]
+

@@ -2,7 +2,13 @@ import React, { useState, useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
-import { APP_ROUTES } from "./contracts/valoraV23";
+import { CaseOverviewPage } from "./components/case-overview/CaseOverviewPage";
+import { NccSelectionPage } from "./components/ncc-selection/NccSelectionPage";
+import {
+  APP_ROUTES,
+  projectOverviewPath,
+  splitProjectRoute,
+} from "./contracts/valoraV23";
 
 import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
 
@@ -32,9 +38,22 @@ export function App() {
   };
 
   const renderRoute = () => {
-    if (currentPath.startsWith(APP_ROUTES.projectDetailPrefix)) {
-      const ref = currentPath.substring(APP_ROUTES.projectDetailPrefix.length);
-      return <WorkbenchLayout projectRef={ref || null} />;
+    const projectRoute = splitProjectRoute(currentPath);
+    if (projectRoute?.view === "overview") {
+      return <CaseOverviewPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
+    }
+
+    if (projectRoute?.view === "workbench") {
+      return (
+        <WorkbenchLayout
+          projectRef={projectRoute.projectRef}
+          onNavigateOverview={() => handleNavigate(projectOverviewPath(projectRoute.projectRef))}
+        />
+      );
+    }
+
+    if (projectRoute?.view === "ncc-selection") {
+      return <NccSelectionPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
     }
 
     if (currentPath === APP_ROUTES.projectList) {

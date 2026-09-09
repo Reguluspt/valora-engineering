@@ -15,7 +15,20 @@ vi.mock("@astryxdesign/core/SideNav", () => ({
 }));
 
 describe("AppShell routing", () => {
-  it("preserves active /workbench/projects/{ref} when Workbench clicked", () => {
+  it("returns from project Overview to the same project's Workbench", () => {
+    const nav = vi.fn();
+    let root: any;
+    act(() => {
+      root = create(
+        React.createElement(AppShell, { currentPath: "/workbench/projects/hd-98-test/overview", onNavigate: nav, children: null })
+      );
+    });
+    const btn = root!.root.findAllByProps({ "data-testid": "nav.workbench" })[0];
+    act(() => { btn.props.onClick(); });
+    expect(nav).toHaveBeenCalledWith("/workbench/projects/hd-98-test");
+  });
+
+  it("opens Overview while preserving the current project reference", () => {
     const nav = vi.fn();
     let root: any;
     act(() => {
@@ -23,9 +36,9 @@ describe("AppShell routing", () => {
         React.createElement(AppShell, { currentPath: "/workbench/projects/hd-98-test", onNavigate: nav, children: null })
       );
     });
-    const btn = root!.root.findAllByProps({ "data-testid": "nav.workbench" })[0];
+    const btn = root!.root.findAllByProps({ "data-testid": "nav.caseOverview" })[0];
     act(() => { btn.props.onClick(); });
-    expect(nav).toHaveBeenCalledWith("/workbench/projects/hd-98-test");
+    expect(nav).toHaveBeenCalledWith("/workbench/projects/hd-98-test/overview");
   });
 
   it("navigates to /workbench/projects from a neutral route", () => {
