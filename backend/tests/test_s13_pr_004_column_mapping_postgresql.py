@@ -454,6 +454,7 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "preliminary_analysis_snapshots",
         "project_official_intake_commits",
         "preliminary_result_artifacts",
         "dossier_row_alignments",
@@ -478,15 +479,20 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
             connection.execute(text(f'SET LOCAL search_path TO "{schema}"'))
             Base.metadata.create_all(connection)
-            reference = {
-                table_name: _table_signature(connection, table_name)
-                for table_name in parity_tables
-            }
             for table_name in later_tables:
                 table = Base.metadata.tables.get(table_name)
                 if table is not None:
                     table.drop(connection, checkfirst=True)
             operations = Operations(MigrationContext.configure(connection))
+            operations.drop_constraint(
+                "uq_mapping_usage_generation_id",
+                "column_mapping_profile_usages",
+                type_="unique",
+            )
+            reference = {
+                table_name: _table_signature(connection, table_name)
+                for table_name in parity_tables
+            }
             migration.op = operations
             migration.downgrade()
             assert mapping_tables.isdisjoint(inspect(connection).get_table_names())
