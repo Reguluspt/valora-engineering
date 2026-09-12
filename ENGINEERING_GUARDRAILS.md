@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-02 (UI/UX v2.3 PR-01a authority closeout)
+**Last reconciled:** 2026-09-12 (PR #28 / UI/UX v2.3 PR-02 through PR-04 closeout)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -19,14 +19,17 @@ Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; predicate/design gate remains open.
-ADR 0036 accepts computed-on-read with no projection migration. Runtime waits for an
-owner-accepted fact/completion matrix; resume persistence and its PUT endpoint remain deferred.
-PR-01a / ADR 0037 authority closeout is COMPLETE locally at `f0e7c73`: the
-PreliminaryResultArtifact, durable official-intake fact and internal command passed independent
-review and the PostgreSQL-backed baseline (`1111 passed`, `0 failed`, `0 skipped`). Artifact
-generation, HTTP and case-state wiring remain separately gated.
-Next gate: owner acceptance of a bounded stage predicate matrix; PR-02 is not yet authorized.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+PR-02 through PR-04 were implemented together by GitHub PR #28 from base
+`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
+`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
+PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
+PR #28 remains open and Draft; it is not merged, released or deployed.
+Residual non-blocking evidence gaps: PR-02 pixel-level browser acceptance remains pending, and
+migration `d4b7c9e2f1a6` has PostgreSQL round-trip audit evidence but no committed downgrade CI
+regression test.
+The next roadmap candidate is PR-05 — M365 Integration Foundation. It requires a separate task and
+must not be started under the PR #28 closeout authority.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```
