@@ -1,7 +1,7 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-12 — PR #28 / UI/UX v2.3 PR-02 through PR-04 closeout
+**Reconciled:** 2026-09-12 — PR #28 residual evidence closeout
 **Accepted code baseline:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
 **Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
@@ -18,9 +18,11 @@ PR-02 through PR-04 were implemented together by GitHub PR #28 from base
 `51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
 PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
 PR #28 remains open and Draft; it is not merged, released or deployed.
-Residual non-blocking evidence gaps: PR-02 pixel-level browser acceptance remains pending, and
-migration `d4b7c9e2f1a6` has PostgreSQL round-trip audit evidence but no committed downgrade CI
-regression test.
+The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
+local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
+upgrade/downgrade/upgrade CI regression is committed at
+`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
+reviewed remote head above and do not change PR #28's Draft/unmerged status.
 PR-05 — M365 Integration Foundation is only the next roadmap candidate. It requires a separate task
 and authority and must not start under this closeout.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
@@ -119,8 +121,8 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 |---|---|---|
 | PR-00 | COMPLETE / CLOSED locally | closeout `b176820` |
 | PR-01 / PR-01a | ACCEPTED FOUNDATION | PR-01 runtime closeout is the PR #28 base `5ed0922f50ae1ef3b31346f7245423aae9c01cd2` |
-| PR-02 | IMPLEMENTED IN DRAFT PR #28 | exact reviewed head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; pixel-level browser acceptance remains pending |
-| PR-03 | IMPLEMENTED IN DRAFT PR #28 | append-only tenant-safe NCC Selection persistence; PostgreSQL round-trip audit evidence; no committed downgrade CI regression test |
+| PR-02 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | reviewed remote head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; desktop/laptop browser acceptance PASS after corrective commit `69ecd97` |
+| PR-03 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | append-only tenant-safe NCC Selection persistence; committed PostgreSQL upgrade/downgrade/upgrade CI regression `ad3faad` |
 | PR-04 | IMPLEMENTED IN DRAFT PR #28 | API/UI slice included in the exact reviewed head; formal gate PASS with no P0/P1/P2 findings |
 | PR-05 | ROADMAP CANDIDATE / NOT STARTED | requires a separate task and authority after this closeout |
 

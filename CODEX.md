@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR #28 / UI/UX v2.3 PR-02 through PR-04 closeout)
+**Last reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -46,9 +46,11 @@ PR-02 through PR-04 were implemented together by GitHub PR #28 from base
 `51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
 PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
 PR #28 remains open and Draft; it is not merged, released or deployed.
-Residual non-blocking evidence gaps: PR-02 pixel-level browser acceptance remains pending, and
-migration `d4b7c9e2f1a6` has PostgreSQL round-trip audit evidence but no committed downgrade CI
-regression test.
+The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
+local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
+upgrade/downgrade/upgrade CI regression is committed at
+`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
+reviewed remote head above and do not change PR #28's Draft/unmerged status.
 The next roadmap candidate is PR-05 — M365 Integration Foundation. It requires a separate task and
 must not be started under the PR #28 closeout authority.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.

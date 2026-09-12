@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-12 (PR #28 / UI/UX v2.3 PR-02 through PR-04 closeout)
+**Reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -77,9 +77,10 @@ PR-02 through PR-04 — IMPLEMENTED in Draft PR #28
   reviewed head 51db33ec7fc7a82b9abba151e13f268b5e875fc4
   formal gate and current CI PASS; no P0/P1/P2 findings
   not merged, released or deployed
-Residual non-blocking evidence gaps:
-  PR-02 pixel-level browser acceptance remains pending
-  migration d4b7c9e2f1a6 has PostgreSQL round-trip audit evidence but no committed downgrade CI regression
+Residual evidence gaps — CLOSED locally:
+  PR-02 desktop/laptop browser acceptance PASS after local corrective commit 69ecd97
+  migration d4b7c9e2f1a6 upgrade/downgrade/upgrade CI regression committed at ad3faad
+  these local commits are not part of the reviewed remote head and do not change PR #28 Draft status
 
 PR-05 M365 Integration Foundation — NEXT ROADMAP CANDIDATE; separate task/authority required
 PR-05 → PR-06 Return/Revalidation → PR-07 Sync/Conflict
@@ -137,7 +138,7 @@ Current v2.3 PR-01 through PR-04 disposition:
 1. PR-01 / PR-01a Case State Projection Foundation and durable official intake — **accepted foundation**; PR-01 runtime closeout is the PR #28 base `5ed0922f50ae1ef3b31346f7245423aae9c01cd2`.
 2. PR-02 through PR-04 — **implemented** in GitHub PR #28 at reviewed head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; formal gate PASS with no P0/P1/P2 findings and current CI checks PASS.
 3. PR #28 remains **open and Draft**; it is not merged, released or deployed.
-4. Residual non-blocking evidence gaps: PR-02 pixel-level browser acceptance remains pending; migration `d4b7c9e2f1a6` has PostgreSQL round-trip audit evidence but no committed downgrade CI regression test.
+4. The two residual evidence gaps are **closed locally**: PR-02 desktop/laptop browser acceptance PASS after corrective commit `69ecd97`; migration `d4b7c9e2f1a6` upgrade/downgrade/upgrade CI regression committed at `ad3faad`. These local commits are not part of the reviewed remote head.
 5. PR-05 is only the next roadmap candidate and requires a separate task and authority.
 
 ## 7. Module ownership (future runtime)
