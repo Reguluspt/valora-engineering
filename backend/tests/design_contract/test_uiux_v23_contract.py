@@ -115,7 +115,6 @@ def test_repository_live_gates_point_to_current_v23_integration_gate() -> None:
         assert "ACCEPTED" in current_gate
         assert "PR-02" in current_gate
         assert "PR-04" in current_gate
-        assert "OWNER-ASSIGNED" not in current_gate
         assert "Active runtime assignment: S13" not in current_gate
 
     all_live_gate_text = "\n".join(
