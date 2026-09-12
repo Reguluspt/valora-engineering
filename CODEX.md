@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
+**Last reconciled:** 2026-09-12 (PR-00 through PR-06 merged; Software Completion required before Windows Preview)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -35,24 +35,18 @@ Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 
 ```text
 Accepted code baseline: `origin/main` at
-`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31).
 Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
 
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-PR-02 through PR-04 were implemented together by GitHub PR #28 from base
-`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
-`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
-PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
-PR #28 remains open and Draft; it is not merged, released or deployed.
-The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
-local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
-upgrade/downgrade/upgrade CI regression is committed at
-`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
-reviewed remote head above and do not change PR #28's Draft/unmerged status.
-PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This task does not change PR #28's remote Draft head.
-PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
+PR-00 through PR-04 — MERGED to `main` by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566859cb` after PR #28 merged into the integration branch. PR-01 is a bounded prefix foundation, not all 16 stages. PR-02 browser acceptance and the PR-03 migration round-trip regression are included in the merged rollup.
+PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`. Delegated OneDrive Personal foundation and live-account acceptance passed; OneDrive for Business and SharePoint remain deferred.
+PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`. Canonical document provision, immutable revalidation baseline, five-way classification, computed readiness, PostgreSQL gates and live OneDrive Personal acceptance passed.
+The authoritative PR-00 through PR-13 feature/acceptance status is recorded in `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. A merged PR is not evidence that backend, frontend, browser and end-to-end columns all pass.
+Frontend Operational Completion — login/session restoration/logout, account/organization context, real project selection and OneDrive Personal connect/provision-or-adopt/revalidation/readiness must be available through real APIs without placeholder data before Software Completion.
+PR-07 through PR-13 — NOT IMPLEMENTED. PR-07 runtime is blocked on an accepted protected-value snapshot and sync/conflict transaction contract/ADR; later PRs follow the dependency sequence in the acceptance matrix.
+Software Completion — all authorized backend and frontend runtime through PR-13, operational entry, connected production surfaces and North-star E2E must pass on an exact merged candidate SHA before any Windows Preview runtime work begins.
+Windows Preview — `VALORA-WIN-PREVIEW-001` follows Software Completion and precedes cloud staging. It packages the already-complete product for isolated Windows/Docker Desktop UAT and must not be used to discover or fill missing product implementation.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
 owner-authorized UI/UX track.

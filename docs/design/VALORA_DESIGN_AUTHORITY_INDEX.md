@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
+**Reconciled:** 2026-09-12 (PR-00 through PR-06 merged; PR-07 contract/ADR is the next runtime gate)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -55,10 +55,10 @@ S13-PR-002 closed evidence:
 S13-PR-003 closed evidence:
   main 2af753520ab6b7885555adc5b7945a28d32ee311 (PR #17); CI 29676915010 PASS
 Current UI/UX integration evidence:
-  PR-00 closeout b176820; PR-01 / PR-01a accepted base 5ed0922f50ae1ef3b31346f7245423aae9c01cd2
-  PR #28 reviewed head 51db33ec7fc7a82b9abba151e13f268b5e875fc4
-  Formal gate PASS with no P0/P1/P2 findings; current PR checks PASS
-  PR #28 remains open and Draft; it is not merged, released or deployed
+  PR-00 through PR-04 merged by PR #29 at 2775cb9a96a8067be3e558a84c96bb69566859cb
+  PR-05 merged by PR #30 at 42a87fca1a90f5b94724a4ca0d7a83fa5dec1699
+  PR-06 merged by PR #31 at 27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6
+  Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md
 ```
 
 
@@ -67,29 +67,17 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
+Accepted code baseline: origin/main 27d1cc6… (PR #31)
 Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
 
-PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
-PR-01 / PR-01a Case State Projection Foundation and durable official intake — ACCEPTED foundation
-PR-02 through PR-04 — IMPLEMENTED in Draft PR #28
-  base 5ed0922f50ae1ef3b31346f7245423aae9c01cd2
-  reviewed head 51db33ec7fc7a82b9abba151e13f268b5e875fc4
-  formal gate and current CI PASS; no P0/P1/P2 findings
-  not merged, released or deployed
-Residual evidence gaps — CLOSED locally:
-  PR-02 desktop/laptop browser acceptance PASS after local corrective commit 69ecd97
-  migration d4b7c9e2f1a6 upgrade/downgrade/upgrade CI regression committed at ad3faad
-  these local commits are not part of the reviewed remote head and do not change PR #28 Draft status
-
-PR-05 M365 Integration Foundation — ENGINEERING + LIVE ACCOUNT ACCEPTANCE PASSED locally on task VALORA-PR05-IMPL-001
-  branch integration/phase1c-pr05-m365-foundation at baseline 839debf
-  survey and architecture challenge complete; OneDrive Personal ADR 0040 accepted
-  OneDrive for Business and SharePoint deferred; bounded runtime implementation verified
-  live OneDrive Personal delegated OAuth and Graph verification passed on 2026-09-12
-  no change to PR #28 remote Draft head
-  PR-01 remains the historical OWNER-ASSIGNED gate: ADR 0036 and ADR 0037 accepted,
-  computed-on-read with no projection migration under ADR 0036
+PR-00 through PR-04 — MERGED by PR #29 at 2775cb9; PR-01 is a bounded prefix foundation
+PR-02 browser acceptance and PR-03 migration round-trip evidence are included on main
+PR-05 OneDrive Personal foundation — MERGED by PR #30 at 42a87fc; no frontend
+PR-06 OneDrive Personal return/revalidation — MERGED by PR #31 at 27d1cc6; no frontend
+Operational frontend entry — REQUIRED before Software Completion
+PR-07 through PR-13 — NOT IMPLEMENTED
+PR-07 runtime — BLOCKED on an accepted protected-value snapshot and sync/conflict contract/ADR
+Software Completion — REQUIRED before Windows Preview
 PR-05 → PR-06 Return/Revalidation → PR-07 Sync/Conflict
 PR-07 → PR-08 Release Domain Foundation → PR-09 Publishing Commit/Success
 PR-03 + PR-07 + PR-09 → PR-10 Audit/Lineage Wiring
@@ -140,13 +128,14 @@ Historical S13 runtime gate record:
 S13-PR-002 through S13-PR-004 are implemented historical foundation. This record does not
 authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
 
-Current v2.3 PR-01 through PR-04 disposition:
+Current v2.3 disposition:
 
-1. PR-01 / PR-01a Case State Projection Foundation and durable official intake — **accepted foundation**; PR-01 runtime closeout is the PR #28 base `5ed0922f50ae1ef3b31346f7245423aae9c01cd2`.
-2. PR-02 through PR-04 — **implemented** in GitHub PR #28 at reviewed head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; formal gate PASS with no P0/P1/P2 findings and current CI checks PASS.
-3. PR #28 remains **open and Draft**; it is not merged, released or deployed.
-4. The two residual evidence gaps are **closed locally**: PR-02 desktop/laptop browser acceptance PASS after corrective commit `69ecd97`; migration `d4b7c9e2f1a6` upgrade/downgrade/upgrade CI regression committed at `ad3faad`. These local commits are not part of the reviewed remote head.
-5. PR-05 has separate local task `VALORA-PR05-IMPL-001`; OneDrive Personal ADR 0040 is accepted, implementation, full backend and live-account gates passed, and final Qwen review returned READY. OneDrive for Business and SharePoint are deferred; PR #28's remote Draft head is unchanged.
+1. PR-00 through PR-04 — **merged** by PR #29 at `2775cb9`; PR #28 is the merged integration precursor. PR-01 remains a bounded prefix foundation rather than all 16 stages.
+2. PR-02 desktop/laptop browser acceptance and the PR-03 migration upgrade/downgrade/upgrade regression are included in the PR #29 rollup on `main`.
+3. PR-05 OneDrive Personal foundation — **merged** by PR #30 at `42a87fc`; backend/provider acceptance passed, frontend absent. OneDrive for Business and SharePoint remain deferred.
+4. PR-06 OneDrive Personal return/revalidation — **merged** by PR #31 at `27d1cc6`; backend/provider acceptance passed, frontend absent.
+5. PR-07 through PR-13 — **not implemented**. PR-07 runtime requires an accepted protected-value snapshot and sync/conflict transaction contract/ADR first.
+6. Exact per-layer status and residual gaps are governed by `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`.
 
 ## 7. Module ownership (future runtime)
 

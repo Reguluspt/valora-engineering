@@ -1,13 +1,13 @@
 # Valora Engineering
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
-**Accepted code baseline (not evergreen):** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
+**Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` and
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
-**PR-00 status:** **COMPLETE / CLOSED locally**
-**PR-01 / PR-01a status:** **ACCEPTED foundation**
-**Active task:** **PR-02 through PR-04 integration in Draft PR #28; residual evidence CLOSED locally**
+**PR-00 through PR-04:** **MERGED by PR #29**
+**PR-05 and PR-06:** **MERGED by PR #30 and PR #31; backend/provider slices only**
+**Active task:** **Operational frontend completion, then PR-07 contract/ADR before runtime**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -32,21 +32,25 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
+| UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
+| UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
+| UI/UX v2.3 PR-07 through PR-13 | **Not implemented**; PR-07 requires contract/ADR first |
+| Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
 ### Live task gate
 
 ```text
-Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26).
+Accepted code baseline: origin/main 27d1cc6… (PR #31).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-ADR 0036 accepts computed-on-read with no projection migration; ADR 0037 accepts the durable
-official-intake fact and command used by the implemented PR-01 provider.
-PR-02 through PR-04 — IMPLEMENTED in Draft PR #28; exact-head CI remains the merge gate.
-Residual evidence gaps — CLOSED locally, including PR-02 browser acceptance and the NCC migration
-downgrade/upgrade round-trip regression.
+PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
+PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
+PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
+Operational frontend entry — REQUIRED before Software Completion.
+PR-07 through PR-13 — NOT IMPLEMENTED; PR-07 requires accepted contract/ADR before runtime.
+Software Completion — REQUIRED before Windows Preview.
+Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 Earlier S13 sequencing is historical context.
 ```

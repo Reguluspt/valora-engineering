@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
+**Last reconciled:** 2026-09-12 (PR-00 through PR-06 merged; Software Completion required before Windows Preview)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -14,24 +14,18 @@ Valora is in the **Engineering Phase**.
 VALORA UI/UX v2.3 implementation alignment
 
 Accepted code baseline: `origin/main`
-`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31).
 Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-PR-02 through PR-04 were implemented together by GitHub PR #28 from base
-`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
-`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
-PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
-PR #28 remains open and Draft; it is not merged, released or deployed.
-The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
-local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
-upgrade/downgrade/upgrade CI regression is committed at
-`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
-reviewed remote head above and do not change PR #28's Draft/unmerged status.
-PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This task does not change PR #28's remote Draft head.
-PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
+PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566859cb`; PR #28 is the merged integration precursor. PR-01 remains a bounded prefix foundation, not complete coverage of all 16 stages. PR-02 browser acceptance and the PR-03 migration round-trip regression are part of the rollup now on `main`.
+PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDrive Personal only. OneDrive for Business and SharePoint remain deferred.
+PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
+The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
+Frontend Operational Completion — authentication/session/account context, real project selection and the PR-05/PR-06 OneDrive Personal journey must use real APIs and truthful states before Software Completion.
+PR-07 through PR-13 — NOT IMPLEMENTED. PR-07 requires an accepted protected-value snapshot and sync/conflict transaction contract/ADR before runtime work.
+Software Completion — all authorized backend and frontend runtime through PR-13 plus North-star E2E must pass on the exact candidate SHA before Windows Preview.
+Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```
