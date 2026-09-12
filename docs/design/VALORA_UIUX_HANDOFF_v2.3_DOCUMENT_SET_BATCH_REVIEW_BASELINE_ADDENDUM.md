@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Tạo & Xem lại bộ tài liệu hồ sơ — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
 **Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
 
 ## 1. Quyết định baseline

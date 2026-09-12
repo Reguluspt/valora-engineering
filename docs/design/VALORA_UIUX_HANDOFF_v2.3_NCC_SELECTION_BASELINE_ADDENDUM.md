@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — NCC Selection Baseline Addendum
 
-**Baseline:** `Chọn NCC đã xác nhận giá — Iteration 1`  
-**Status:** Design Authority / Baseline  
-**Date:** 01/09/2026  
+**Baseline:** `Chọn NCC đã xác nhận giá — Iteration 1`
+**Status:** Design Authority / Baseline
+**Date:** 01/09/2026
 **Parent authority:** `VALORA_UIUX_HANDOFF_v2.3.md`
 
 ## 1. Purpose

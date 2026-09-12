@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — Cần rà soát tri thức — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
 **Parent:** `Quản lý Kho tri thức — Iteration 1`
 
 ## 1. Vai trò

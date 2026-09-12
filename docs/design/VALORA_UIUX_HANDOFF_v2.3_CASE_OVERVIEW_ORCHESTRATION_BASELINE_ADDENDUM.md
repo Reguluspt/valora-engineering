@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Tổng quan hồ sơ / Orchestration Hub Baseline Addendum
 
-**Status:** DESIGN AUTHORITY / BASELINE  
-**Baseline:** `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`  
-**Date:** 01/09/2026  
+**Status:** DESIGN AUTHORITY / BASELINE
+**Baseline:** `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`
+**Date:** 01/09/2026
 **Contract:** `Global Case State + Resume / Next-action Contract v1`
 
 ## 1. Vai trò

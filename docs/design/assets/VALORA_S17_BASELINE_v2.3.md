@@ -1,7 +1,7 @@
 # VALORA — Hoàn tất một báo giá nhà cung cấp — Baseline Authority v2.3
 
-**Nguồn duyệt:** `S17 — Iteration 3`  
-**Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`  
+**Nguồn duyệt:** `S17 — Iteration 3`
+**Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`
 **Phạm vi nghiệp vụ:** **01 báo giá cụ thể của 01 nhà cung cấp (NCC)** trong checkpoint `Tạo & quản lý báo giá nhà cung cấp`.
 
 > Quyết định authority quan trọng: Iteration 3 được duyệt về visual + interaction, nhưng scope nghiệp vụ được khóa là **hoàn tất một báo giá của một NCC**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định. Badge `S17` xuất hiện trên mockup được giữ như nhãn iteration lịch sử; khi triển khai/chuẩn hóa screen ID, màn hình này phải được phân loại là child screen của NCCQ. `S17 — Hoàn tất hồ sơ` ở cấp hồ sơ là một scope riêng và không được suy diễn từ baseline này.

@@ -1,8 +1,8 @@
 # VALORA — UI/UX Handoff v2.1
 
-**Tài liệu thiết kế quy trình làm việc của người dùng**  
-**Mô hình:** Single-user Workflow  
-**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX  
+**Tài liệu thiết kế quy trình làm việc của người dùng**
+**Mô hình:** Single-user Workflow
+**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh
 
 > v2.1 kế thừa toàn bộ baseline v2.0 và **supersede workflow phản hồi khách hàng trong Pre-case**. Sau khi tạo file kết quả sơ bộ, Valora không thiết kế các bước/trạng thái `Ghi nhận đã gửi/trao đổi`, `Chờ khách hàng phản hồi`, `Ghi nhận phản hồi` hoặc `Đã chấp thuận giá đề xuất`. Khi khách hàng đồng ý triển khai ở ngoài hệ thống, người dùng chỉ cần bấm **`Chuyển sang thẩm định chính thức`**.

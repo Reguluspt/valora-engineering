@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Audit / Lineage Entry-point Baseline Addendum
 
-**Contract:** `Audit / Lineage Entry-point Consistency Contract v1`  
-**Visual baseline:** `Audit & Lineage Entry-point Pattern Board — Iteration 1`  
-**Status:** Design Authority / Baseline  
+**Contract:** `Audit / Lineage Entry-point Consistency Contract v1`
+**Visual baseline:** `Audit & Lineage Entry-point Pattern Board — Iteration 1`
+**Status:** Design Authority / Baseline
 **Date:** 01/09/2026
 
 ## 1. Purpose

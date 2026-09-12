@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — AI Template Review & Edit Baseline Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Baseline:** `Thiết lập mẫu tài liệu — Bước 3: Rà soát & chỉnh sửa — Iteration 1`  
-**Scope:** User review/edit of AI-proposed template mappings for Word and Bảng tính  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Baseline:** `Thiết lập mẫu tài liệu — Bước 3: Rà soát & chỉnh sửa — Iteration 1`
+**Scope:** User review/edit of AI-proposed template mappings for Word and Bảng tính
 **Ngày chốt:** 30/08/2026
 
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: mockup **Bước 3 — Rà soát & chỉnh sửa** được nâng thành **Baseline / Design Authority**.

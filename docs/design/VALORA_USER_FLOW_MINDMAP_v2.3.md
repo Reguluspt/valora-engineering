@@ -1,6 +1,6 @@
 # VALORA v2.3 — User Flow Mindmap
 
-**Trạng thái:** `DESIGN SUPPORT / FLOW MAP`  
+**Trạng thái:** `DESIGN SUPPORT / FLOW MAP`
 **Authority:** Bám theo handoff v2.3 + các addendum mới nhất. Nếu mâu thuẫn, business/design authority mới nhất thắng.
 
 ```mermaid

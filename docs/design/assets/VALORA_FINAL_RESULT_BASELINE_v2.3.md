@@ -1,7 +1,7 @@
 # VALORA — Bước cuối Kết quả thẩm định giá — Baseline Authority v2.3
 
-**Nguồn duyệt:** `Bước cuối — Kết quả thẩm định giá — Iteration 1`  
-**Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`  
+**Nguồn duyệt:** `Bước cuối — Kết quả thẩm định giá — Iteration 1`
+**Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`
 **Phạm vi:** Bước cuối sau thao tác `Chọn nhà cung cấp đã xác nhận giá`, dùng để dựng lại các bảng chính thức phục vụ Báo cáo thẩm định giá.
 
 > Authority rule quan trọng: **03 bảng nghiệp vụ là biểu mẫu do công ty ban hành và có layout bất biến.** Fluent Design 2 chỉ áp dụng cho application shell và các vùng điều khiển xung quanh; không được redesign cấu trúc biểu mẫu.

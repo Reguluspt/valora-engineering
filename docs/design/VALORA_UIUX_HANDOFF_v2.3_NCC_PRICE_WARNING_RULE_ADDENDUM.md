@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Cảnh báo giá NCC tại Tạo & quản lý báo giá — Authority Addendum
 
-**Status:** Current Business Rule Authority  
-**Date:** 31/08/2026  
+**Status:** Current Business Rule Authority
+**Date:** 31/08/2026
 **Scope:** NCCQ — `Tạo & quản lý báo giá nhà cung cấp`.
 
 ## 1. Supersession

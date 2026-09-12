@@ -1,8 +1,8 @@
 # TM01 — Danh sách mẫu báo giá nhà cung cấp — Visual Baseline v2.3
 
-**Trạng thái:** BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY  
-**Mockup:** TM01 Iteration 1  
-**Phong cách:** VALORA shell + Fluent 2, desktop-first  
+**Trạng thái:** BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY
+**Mockup:** TM01 Iteration 1
+**Phong cách:** VALORA shell + Fluent 2, desktop-first
 **Phạm vi:** Visual/interaction baseline cho màn hình `Cấu hình → Mẫu báo giá NCC → Danh sách mẫu`
 
 Tài liệu này ghi lại visual baseline của mockup TM01 Iteration 1 đã được người dùng duyệt. Dữ liệu hiển thị trong mockup chỉ là dữ liệu minh họa; không phải dữ liệu khách hàng/NCC/hồ sơ thật.

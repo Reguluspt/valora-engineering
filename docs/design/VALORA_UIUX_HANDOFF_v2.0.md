@@ -1,8 +1,8 @@
 # VALORA — UI/UX Handoff v2.0
 
-**Tài liệu thiết kế quy trình làm việc của người dùng**  
-**Mô hình:** Single-user Workflow  
-**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX  
+**Tài liệu thiết kế quy trình làm việc của người dùng**
+**Mô hình:** Single-user Workflow
+**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh
 
 > v2.0 kế thừa baseline v1.9 nhưng **supersede cách tổ chức S08**: `Rà soát giá đề xuất` không còn là một màn hình độc lập. Chức năng rà soát được tích hợp vào `S02 — Quản lý yêu cầu sơ bộ`, đồng thời bổ sung bước **Tạo file kết quả sơ bộ** từ file Excel khách hàng.

@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — Cross-product Empty / Loading / Error / Retry Contract v1
 
-**Status:** Design Authority / Baseline  
-**Baseline visual:** `Cross-product State Pattern Board — Iteration 1`  
-**Date:** 01/09/2026  
+**Status:** Design Authority / Baseline
+**Baseline visual:** `Cross-product State Pattern Board — Iteration 1`
+**Date:** 01/09/2026
 **Scope:** Toàn bộ VALORA — Thẩm định giá, Workbench, Knowledge Management, Microsoft 365 Workspace, NCC Selection, Publishing.
 
 ## 1. Purpose

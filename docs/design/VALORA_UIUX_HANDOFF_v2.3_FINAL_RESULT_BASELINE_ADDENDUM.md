@@ -1,6 +1,6 @@
 # VALORA UI/UX Handoff v2.3 — Addendum Baseline Bước cuối Kết quả thẩm định giá
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
 **Áp dụng từ:** sau khi người dùng chốt `Bước cuối — Kết quả thẩm định giá — Iteration 1` làm baseline.
 
 Authority chi tiết: [`assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md`](./assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md).

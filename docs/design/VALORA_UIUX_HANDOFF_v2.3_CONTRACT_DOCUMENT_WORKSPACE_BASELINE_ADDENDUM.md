@@ -1,7 +1,7 @@
 # VALORA UI/UX Handoff v2.3 — 03_Hợp đồng / Danh sách & tạo tài liệu
 
-**Trạng thái:** `BASELINE / DESIGN AUTHORITY`  
-**Iteration:** 1  
+**Trạng thái:** `BASELINE / DESIGN AUTHORITY`
+**Iteration:** 1
 **Ngày duyệt:** 30/08/2026
 
 ## 1. Scope

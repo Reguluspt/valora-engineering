@@ -1,9 +1,9 @@
 # VALORA — UI/UX Handoff v2.2
 
-**Tài liệu thiết kế quy trình làm việc của người dùng**  
-**Mô hình:** Single-user Workflow  
-**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX đã duyệt  
-**Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh  
+**Tài liệu thiết kế quy trình làm việc của người dùng**
+**Mô hình:** Single-user Workflow
+**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX đã duyệt
+**Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh
 **Visual baseline:** Valora shell bám sát Fluent 2, desktop-first
 
 > v2.2 kế thừa baseline v2.1 và cập nhật S09–S12. Workflow chính thức được rút gọn cho giai đoạn chỉ có 01 người xử lý toàn bộ hồ sơ: thông tin người thực hiện chuyển vào Cấu hình; không còn checkpoint riêng `Kiểm tra hồ sơ` và `KSCL`; validation vẫn bắt buộc nhưng hiển thị ngay tại nơi phát sinh.

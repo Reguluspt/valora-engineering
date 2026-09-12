@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Managed Regions — Chứng thư thẩm định giá — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
 **Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → Quản lý nội dung do VALORA quản lý.
 
 ## 1. Quyết định baseline

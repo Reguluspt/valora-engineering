@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Managed Regions Báo cáo thẩm định giá Baseline Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Baseline:** `Managed Regions — Báo cáo thẩm định giá — Iteration 1`  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Baseline:** `Managed Regions — Báo cáo thẩm định giá — Iteration 1`
 **Ngày chốt:** 30/08/2026
 
 Addendum này ghi nhận mockup Iteration 1 đã được người dùng explicit nâng thành Baseline. Khi có xung đột trong đúng scope, authority mới hơn này thắng mô tả cũ.

@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — Quản lý mẫu tài liệu Generic Baseline Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Baseline:** `Quản lý mẫu tài liệu generic — Iteration 1`  
-**Scope:** Cấu hình mẫu tài liệu dùng chung toàn VALORA  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Baseline:** `Quản lý mẫu tài liệu generic — Iteration 1`
+**Scope:** Cấu hình mẫu tài liệu dùng chung toàn VALORA
 **Ngày chốt:** 30/08/2026
 
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: mockup **Quản lý mẫu tài liệu generic** được nâng thành **Baseline / Design Authority**.

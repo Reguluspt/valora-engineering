@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — M365 Return & Revalidation — Iteration 1
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date promoted:** 01/09/2026  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date promoted:** 01/09/2026
 **Semantic authority:** `Microsoft 365 Return / Revalidation Contract v1`
 
 ## 1. Baseline decision

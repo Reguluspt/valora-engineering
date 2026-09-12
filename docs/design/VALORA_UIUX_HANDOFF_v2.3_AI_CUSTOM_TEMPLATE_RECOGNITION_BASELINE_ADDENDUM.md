@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — AI nhận diện & thiết lập mẫu từ tài liệu tải lên — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
-**Scope:** Microsoft 365 Document Workspace → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
+**Scope:** Microsoft 365 Document Workspace → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.
 **Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
 
 ## 1. Quyết định baseline

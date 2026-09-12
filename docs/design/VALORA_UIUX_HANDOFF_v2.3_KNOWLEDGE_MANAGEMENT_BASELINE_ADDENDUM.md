@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — Knowledge Management Baseline Addendum
 
-**Baseline:** `Quản lý Kho tri thức — Iteration 1`  
-**Status:** Design Authority / P0 UI/UX baseline  
-**Date:** 31/08/2026  
+**Baseline:** `Quản lý Kho tri thức — Iteration 1`
+**Status:** Design Authority / P0 UI/UX baseline
+**Date:** 31/08/2026
 **Scope:** Knowledge-management workspace aligned with `taxonomy_asset_identity`, `knowledge_evidence`, `document_engine_intelligence` and existing v1.4 Knowledge Memory authority.
 
 ## 1. Purpose

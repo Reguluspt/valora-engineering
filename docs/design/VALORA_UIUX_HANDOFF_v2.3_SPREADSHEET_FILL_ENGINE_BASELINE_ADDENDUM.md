@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — Bảng tính Fill Engine — Implementation Contract v1 — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
-**Scope:** Generic Template Management → Bảng tính → Fill Engine; UI/UX contract và format-specific fill semantics.  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
+**Scope:** Generic Template Management → Bảng tính → Fill Engine; UI/UX contract và format-specific fill semantics.
 **Visual language:** Microsoft Fluent 2, desktop-first, table/data-heavy, Vietnamese-first.
 
 ## 1. Quyết định baseline

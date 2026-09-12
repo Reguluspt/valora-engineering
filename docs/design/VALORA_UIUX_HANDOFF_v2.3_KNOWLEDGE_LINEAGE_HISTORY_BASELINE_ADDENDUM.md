@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Knowledge Lineage History Baseline Addendum
 
-**Baseline:** `Lịch sử & nguồn gốc — Iteration 1`  
-**Status:** Design Authority / Baseline  
+**Baseline:** `Lịch sử & nguồn gốc — Iteration 1`
+**Status:** Design Authority / Baseline
 **Date:** 01/09/2026
 
 ## 1. Scope

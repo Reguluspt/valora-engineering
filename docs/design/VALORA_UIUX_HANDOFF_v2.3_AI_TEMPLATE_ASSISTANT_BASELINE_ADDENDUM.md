@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — AI Template Assistant Baseline Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Baseline:** `Thiết lập mẫu tài liệu — AI phân tích & đề xuất — Iteration 1`  
-**Scope:** AI-assisted template setup cho Word và Bảng tính  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Baseline:** `Thiết lập mẫu tài liệu — AI phân tích & đề xuất — Iteration 1`
+**Scope:** AI-assisted template setup cho Word và Bảng tính
 **Ngày chốt:** 30/08/2026
 
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: mockup **Thiết lập mẫu tài liệu — AI phân tích & đề xuất** được nâng thành **Baseline / Design Authority**.

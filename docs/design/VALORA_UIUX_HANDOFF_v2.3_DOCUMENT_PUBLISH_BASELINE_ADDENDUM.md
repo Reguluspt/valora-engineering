@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Phát hành bộ tài liệu Baseline Addendum
 
-**Screen:** Phát hành bộ tài liệu  
-**Iteration:** 1  
-**Status:** Baseline / Design Authority  
+**Screen:** Phát hành bộ tài liệu
+**Iteration:** 1
+**Status:** Baseline / Design Authority
 **Scope:** Microsoft 365 Document Workspace — release package selection, readiness, preview, confirmation, immutable release lineage.
 
 ## 1. Mental model

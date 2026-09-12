@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — Authority Index
 
-**Status:** Canonical UI/UX reading order for v2.3  
+**Status:** Canonical UI/UX reading order for v2.3
 **Consolidation:** 01/09/2026 — `Audit & Lineage Entry-point Pattern Board — Iteration 1`.
 
 ## 1. Thứ tự đọc hiện hành

@@ -1,8 +1,8 @@
 # VALORA — UI/UX Handoff v1.8
 
-**Tài liệu thiết kế quy trình làm việc của người dùng**  
-**Mô hình:** Single-user Workflow  
-**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX  
+**Tài liệu thiết kế quy trình làm việc của người dùng**
+**Mô hình:** Single-user Workflow
+**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh
 
 > Đây là bản GitHub-native của `VALORA_Quy_trinh_nguoi_dung_UIUX_Handoff_v1.8.docx`, dùng để Engineering/UI/UX có thể review, diff và tiếp tục thiết kế trong repository. SHA-256 của bản DOCX nguồn: `56be39297b3c25e7c3484335f7dc8f596901ba66165b6fab3b8d261688785dbd`.

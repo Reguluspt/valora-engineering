@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Ngày chốt:** 30/08/2026  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Ngày chốt:** 30/08/2026
 **Scope:** Microsoft 365 Document Workspace — UX đồng bộ dữ liệu và quản lý phiên bản tài liệu Word sau khi dữ liệu VALORA thay đổi.
 
 ## 1. Mục tiêu

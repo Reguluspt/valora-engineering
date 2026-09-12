@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — Sinh & Đồng bộ Chứng thư thẩm định giá — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Date:** 31/08/2026  
-**Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Date:** 31/08/2026
+**Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
 **Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
 
 ## 1. Quyết định baseline

@@ -1,8 +1,8 @@
 # VALORA UI/UX Handoff v2.3 — Historical Dossier Baseline Addendum
 
-**Baseline:** `Hồ sơ cũ — Iteration 1`  
-**Scope:** Knowledge Management / Historical paired-dossier bootstrap  
-**Status:** Design Authority — Iteration 1  
+**Baseline:** `Hồ sơ cũ — Iteration 1`
+**Scope:** Knowledge Management / Historical paired-dossier bootstrap
+**Status:** Design Authority — Iteration 1
 **Visual:** Microsoft Fluent 2, desktop-first, Vietnamese-first
 
 ## 1. Vai trò

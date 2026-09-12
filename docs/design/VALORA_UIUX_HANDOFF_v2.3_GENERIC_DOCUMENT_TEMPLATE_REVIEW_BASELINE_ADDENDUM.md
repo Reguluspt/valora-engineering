@@ -1,9 +1,9 @@
 # VALORA UI/UX Handoff v2.3 — Generic Document Template Review Baseline Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Baseline:** `Kiểm tra & hoàn tất template — Iteration 1`  
-**Flow cha:** `Mapping Template tài liệu generic — Iteration 2`  
-**Scope chính:** `Microsoft 365 Document Workspace / 03_Hợp đồng`  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Baseline:** `Kiểm tra & hoàn tất template — Iteration 1`
+**Flow cha:** `Mapping Template tài liệu generic — Iteration 2`
+**Scope chính:** `Microsoft 365 Document Workspace / 03_Hợp đồng`
 **Ngày chốt:** 30/08/2026
 
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: mockup màn hình **Bước 3 — Kiểm tra & hoàn tất template** được nâng thành **Baseline / Design Authority**.

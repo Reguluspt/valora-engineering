@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Xử lý xung đột khi đồng bộ — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
 **Date:** 31/08/2026
 
 ## 1. Quyết định baseline

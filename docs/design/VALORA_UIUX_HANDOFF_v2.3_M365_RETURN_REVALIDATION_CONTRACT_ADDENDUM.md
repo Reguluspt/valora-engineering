@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Microsoft 365 Return / Revalidation Contract v1
 
-**Status:** Baseline / Design Authority  
-**Contract:** v1  
-**Date:** 01/09/2026  
+**Status:** Baseline / Design Authority
+**Contract:** v1
+**Date:** 01/09/2026
 **Scope:** Microsoft 365 Document Workspace — return from external Word/Microsoft 365 editing, revalidation, stale/conflict classification, and safe continuation into sync/publishing.
 
 ## 1. Purpose

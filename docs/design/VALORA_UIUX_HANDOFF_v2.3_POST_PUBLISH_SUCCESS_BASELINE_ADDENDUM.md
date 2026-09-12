@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Đã phát hành — Baseline Addendum
 
-**Status:** DESIGN AUTHORITY / BASELINE  
-**Baseline:** `Đã phát hành — Iteration 1`  
-**Date:** 01/09/2026  
+**Status:** DESIGN AUTHORITY / BASELINE
+**Baseline:** `Đã phát hành — Iteration 1`
+**Date:** 01/09/2026
 **Scope:** Post-Publish Success / terminal `PUBLISHED` state
 
 ## 1. Vai trò

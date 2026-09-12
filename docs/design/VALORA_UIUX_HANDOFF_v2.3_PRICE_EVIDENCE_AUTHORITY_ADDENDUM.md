@@ -1,7 +1,7 @@
 # VALORA UI/UX Handoff v2.3 — Price & Evidence Authority Addendum
 
-**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`  
-**Phạm vi:** Nguồn giá & Chứng cứ → NCCQ → Kết quả thẩm định giá  
+**Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
+**Phạm vi:** Nguồn giá & Chứng cứ → NCCQ → Kết quả thẩm định giá
 **Nguyên tắc supersession:** Addendum này ưu tiên áp dụng nếu mâu thuẫn với mô tả cũ trong master handoff hoặc iteration trước.
 
 ## A. Thứ tự ưu tiên nguồn giá & chứng cứ

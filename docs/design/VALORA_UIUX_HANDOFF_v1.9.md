@@ -1,8 +1,8 @@
 # VALORA — UI/UX Handoff v1.9
 
-**Tài liệu thiết kế quy trình làm việc của người dùng**  
-**Mô hình:** Single-user Workflow  
-**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX  
+**Tài liệu thiết kế quy trình làm việc của người dùng**
+**Mô hình:** Single-user Workflow
+**Trạng thái:** Baseline thiết kế sản phẩm / bàn giao UI/UX
 **Phạm vi:** Thẩm định giá máy móc thiết bị bằng phương pháp so sánh
 
 > Phiên bản v1.9 kế thừa toàn bộ baseline v1.8 và bổ sung/chốt chi tiết S08 — **Rà soát giá đề xuất**. Các màn hình S02–S07 đã duyệt không bị thiết kế lại.

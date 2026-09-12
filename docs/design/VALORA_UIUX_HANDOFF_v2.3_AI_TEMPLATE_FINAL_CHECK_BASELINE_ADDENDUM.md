@@ -1,8 +1,8 @@
 # VALORA UI/UX v2.3 — Thiết lập mẫu tài liệu — Bước 4: Kiểm tra & hoàn tất
 
-**Status:** Baseline / Design Authority  
-**Iteration:** 1  
-**Scope:** Dùng chung cho Word generic và Bảng tính; validation chuyên biệt theo format  
+**Status:** Baseline / Design Authority
+**Iteration:** 1
+**Scope:** Dùng chung cho Word generic và Bảng tính; validation chuyên biệt theo format
 **Approved:** 30/08/2026
 
 ## 1. Authority

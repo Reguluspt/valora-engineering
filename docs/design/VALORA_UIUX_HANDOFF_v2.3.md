@@ -1,8 +1,8 @@
 # VALORA — UI/UX Handoff v2.3
 
-**Tài liệu thiết kế quy trình người dùng — Single-user Workflow**  
-**Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first  
-**Trạng thái:** Canonical master — Consolidated v2.3  
+**Tài liệu thiết kế quy trình người dùng — Single-user Workflow**
+**Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first
+**Trạng thái:** Canonical master — Consolidated v2.3
 **Cập nhật:** 01/09/2026
 
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
