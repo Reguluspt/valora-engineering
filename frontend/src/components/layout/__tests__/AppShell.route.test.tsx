@@ -5,7 +5,7 @@ import { AppShell } from "../../layout/AppShell";
 
 vi.mock("../../../i18n", () => ({ t: (k: string) => k }));
 vi.mock("@astryxdesign/core/AppShell", () => ({
-  AppShell: ({ children }: any) => React.createElement("div", null, children)
+  AppShell: ({ children, sideNav }: any) => React.createElement("div", null, sideNav, children)
 }));
 vi.mock("@astryxdesign/core/SideNav", () => ({
   SideNav: ({ children }: any) => React.createElement("div", null, children),

@@ -241,6 +241,7 @@
 .case-skeleton-body > div:last-child { height: 320px; }
 
 .case-overview-error {
+  --case-accent: #66fcf1;
   width: min(560px, calc(100% - 48px));
   margin: auto;
   padding: 32px;
