@@ -6,7 +6,8 @@
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 **PR-00 status:** **COMPLETE / CLOSED locally**
-**Active task:** **PR-01 OWNER-ASSIGNED — projection predicate gate remains open**
+**PR-01 / PR-01a status:** **ACCEPTED foundation**
+**Active task:** **PR-02 through PR-04 integration in Draft PR #28; residual evidence CLOSED locally**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -40,15 +41,12 @@ Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
 PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 — Case State Projection Foundation: OWNER-ASSIGNED; predicate/design gate remains open.
-ADR 0036 accepts computed-on-read with no projection migration; runtime waits for an approved
-fact matrix.
-PR-01a / ADR 0037 authority closeout is COMPLETE locally at `f0e7c73`: the immutable/versioned
-PreliminaryResultArtifact, durable official-intake fact and internal command passed independent
-review and the PostgreSQL-backed baseline (`1111 passed`, `0 failed`, `0 skipped`).
-Artifact generation, HTTP exposure and case-state provider wiring remain separately gated.
-Next gate: owner-accept a bounded stage predicate matrix before adding the PR-01 GET endpoint;
-PR-02 frontend wiring is not yet authorized.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+ADR 0036 accepts computed-on-read with no projection migration; ADR 0037 accepts the durable
+official-intake fact and command used by the implemented PR-01 provider.
+PR-02 through PR-04 — IMPLEMENTED in Draft PR #28; exact-head CI remains the merge gate.
+Residual evidence gaps — CLOSED locally, including PR-02 browser acceptance and the NCC migration
+downgrade/upgrade round-trip regression.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 Earlier S13 sequencing is historical context.
 ```
