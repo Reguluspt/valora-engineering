@@ -12,11 +12,15 @@ Covers:
 - Lifecycle audit events emitted in-transaction
 - PostgreSQL concurrent /refresh endpoint test (run only on CI with real PG)
 """
-import uuid
-import pytest
+import os
+import subprocess
+import sys
 import threading
+import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
@@ -725,7 +729,9 @@ def test_postgres_concurrent_refresh_endpoint():
     - Audit events are correct
     - No partial state
     """
-    pg_url = "postgresql+psycopg://valora:valora_local_password@localhost:5432/valora"
+    pg_url = os.environ.get("TEST_DATABASE_URL") or (
+        "postgresql+psycopg://valora:valora_local_password@localhost:5432/valora"
+    )
     try:
         pg_engine = create_engine(
             pg_url,
@@ -738,10 +744,8 @@ def test_postgres_concurrent_refresh_endpoint():
         return
 
     # Run migrations on pg database to ensure clean schema
-    import subprocess
-    import os
     cwd = "backend" if os.path.exists("backend") else "."
-    subprocess.run(["alembic", "upgrade", "head"], cwd=cwd, check=True)
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=cwd, check=True)
 
     # Set up PG-backed app with real DB
     from sqlalchemy.orm import sessionmaker as sm

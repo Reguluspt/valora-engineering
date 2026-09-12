@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
+**Last reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -30,8 +30,8 @@ local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d
 upgrade/downgrade/upgrade CI regression is committed at
 `ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
 reviewed remote head above and do not change PR #28's Draft/unmerged status.
-The next roadmap candidate is PR-05 — M365 Integration Foundation. It requires a separate task and
-must not be started under the PR #28 closeout authority.
+PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This task does not change PR #28's remote Draft head.
+PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```

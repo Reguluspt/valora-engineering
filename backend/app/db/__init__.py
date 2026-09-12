@@ -17,6 +17,12 @@ from app.modules.project_master_data.models import (
 from app.modules.ai_governance_security.models import (
     SecurityEvent, SecurityAuditLog, TenantBoundaryCheck
 )
+from app.modules.document_workspace.models import (
+    DocumentRecord, DocumentRevision, DocumentRevisionCurrentHead
+)
+from app.modules.m365_integration.models import (
+    M365EncryptedCredential, M365OAuthState, M365RevisionBinding, OneDriveConnection
+)
 
 __all__ = [
     "Base",
@@ -71,4 +77,11 @@ __all__ = [
     "SecurityEvent",
     "SecurityAuditLog",
     "TenantBoundaryCheck",
+    "DocumentRecord",
+    "DocumentRevision",
+    "DocumentRevisionCurrentHead",
+    "M365EncryptedCredential",
+    "M365OAuthState",
+    "M365RevisionBinding",
+    "OneDriveConnection",
 ]

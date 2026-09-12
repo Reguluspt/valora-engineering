@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import List
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +26,12 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
     app_secret_key: str = "valora-local-secret-key-change-this-in-production"
+
+    m365_client_id: str = ""
+    m365_client_secret: SecretStr = SecretStr("")
+    m365_redirect_uri: str = ""
+    m365_vault_keys_json: SecretStr = SecretStr("")
+    m365_vault_active_key_version: str = ""
 
     @property
     def database_url(self) -> str:

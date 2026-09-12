@@ -13,8 +13,12 @@ from app.api.workbench import router as workbench_router
 from app.api.document_engine import router as document_engine_router
 from app.api.document_intelligence import router as document_intelligence_router
 from app.api.auth import router as auth_router, csrf_gate
+from app.api.m365 import router as m365_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.modules.m365_integration.infrastructure.access_log_redaction import (
+    OAuthCallbackAccessLogRedactionMiddleware,
+)
 
 settings = get_settings()
 configure_logging(settings.valora_log_level)
@@ -40,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Valora-Page-Limit", "X-Valora-Next-Cursor"],
 )
+app.add_middleware(OAuthCallbackAccessLogRedactionMiddleware)
 
 app.include_router(health_router)
 app.include_router(master_data_router)
@@ -53,6 +58,7 @@ app.include_router(workbench_router)
 app.include_router(document_engine_router)
 app.include_router(document_intelligence_router)
 app.include_router(auth_router)
+app.include_router(m365_router)
 
 
 @app.get("/")
