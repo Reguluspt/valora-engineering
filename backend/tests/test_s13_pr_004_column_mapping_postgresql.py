@@ -473,6 +473,13 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
         "tenant_boundary_checks",
         "security_audit_logs",
         "security_events",
+        "m365_revision_bindings",
+        "m365_oauth_states",
+        "onedrive_connections",
+        "m365_encrypted_credentials",
+        "document_revision_current_heads",
+        "document_revisions",
+        "document_records",
     )
     try:
         with engine.begin() as connection:

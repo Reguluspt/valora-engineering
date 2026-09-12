@@ -1,7 +1,7 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-12 — PR #28 residual evidence closeout
+**Reconciled:** 2026-09-12 — PR-05 engineering and live-account gates passed
 **Accepted code baseline:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
 **Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
@@ -23,8 +23,8 @@ local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d
 upgrade/downgrade/upgrade CI regression is committed at
 `ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
 reviewed remote head above and do not change PR #28's Draft/unmerged status.
-PR-05 — M365 Integration Foundation is only the next roadmap candidate. It requires a separate task
-and authority and must not start under this closeout.
+PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This local task does not change PR #28's remote Draft head.
+PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
 Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
 or drive new UI. Earlier S13 sequencing below is historical context only.
 ```
@@ -124,7 +124,7 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | PR-02 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | reviewed remote head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; desktop/laptop browser acceptance PASS after corrective commit `69ecd97` |
 | PR-03 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | append-only tenant-safe NCC Selection persistence; committed PostgreSQL upgrade/downgrade/upgrade CI regression `ad3faad` |
 | PR-04 | IMPLEMENTED IN DRAFT PR #28 | API/UI slice included in the exact reviewed head; formal gate PASS with no P0/P1/P2 findings |
-| PR-05 | ROADMAP CANDIDATE / NOT STARTED | requires a separate task and authority after this closeout |
+| PR-05 | ENGINEERING + LIVE ACCOUNT ACCEPTANCE PASSED | task `VALORA-PR05-IMPL-001`; 1,360 backend tests, final Qwen review and live OneDrive Personal delegated OAuth/Graph verification passed; OneDrive for Business and SharePoint deferred |
 
 ### Merged on main (do not re-open)
 

@@ -1,0 +1,1 @@
+"""OneDrive integration infrastructure adapters."""

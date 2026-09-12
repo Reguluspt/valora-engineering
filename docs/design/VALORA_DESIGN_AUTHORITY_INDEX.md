@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
+**Reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
@@ -82,7 +82,14 @@ Residual evidence gaps — CLOSED locally:
   migration d4b7c9e2f1a6 upgrade/downgrade/upgrade CI regression committed at ad3faad
   these local commits are not part of the reviewed remote head and do not change PR #28 Draft status
 
-PR-05 M365 Integration Foundation — NEXT ROADMAP CANDIDATE; separate task/authority required
+PR-05 M365 Integration Foundation — ENGINEERING + LIVE ACCOUNT ACCEPTANCE PASSED locally on task VALORA-PR05-IMPL-001
+  branch integration/phase1c-pr05-m365-foundation at baseline 839debf
+  survey and architecture challenge complete; OneDrive Personal ADR 0040 accepted
+  OneDrive for Business and SharePoint deferred; bounded runtime implementation verified
+  live OneDrive Personal delegated OAuth and Graph verification passed on 2026-09-12
+  no change to PR #28 remote Draft head
+  PR-01 remains the historical OWNER-ASSIGNED gate: ADR 0036 and ADR 0037 accepted,
+  computed-on-read with no projection migration under ADR 0036
 PR-05 → PR-06 Return/Revalidation → PR-07 Sync/Conflict
 PR-07 → PR-08 Release Domain Foundation → PR-09 Publishing Commit/Success
 PR-03 + PR-07 + PR-09 → PR-10 Audit/Lineage Wiring
@@ -139,7 +146,7 @@ Current v2.3 PR-01 through PR-04 disposition:
 2. PR-02 through PR-04 — **implemented** in GitHub PR #28 at reviewed head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; formal gate PASS with no P0/P1/P2 findings and current CI checks PASS.
 3. PR #28 remains **open and Draft**; it is not merged, released or deployed.
 4. The two residual evidence gaps are **closed locally**: PR-02 desktop/laptop browser acceptance PASS after corrective commit `69ecd97`; migration `d4b7c9e2f1a6` upgrade/downgrade/upgrade CI regression committed at `ad3faad`. These local commits are not part of the reviewed remote head.
-5. PR-05 is only the next roadmap candidate and requires a separate task and authority.
+5. PR-05 has separate local task `VALORA-PR05-IMPL-001`; OneDrive Personal ADR 0040 is accepted, implementation, full backend and live-account gates passed, and final Qwen review returned READY. OneDrive for Business and SharePoint are deferred; PR #28's remote Draft head is unchanged.
 
 ## 7. Module ownership (future runtime)
 

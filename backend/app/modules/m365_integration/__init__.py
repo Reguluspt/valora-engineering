@@ -1,0 +1,1 @@
+"""OneDrive Personal integration foundation."""
