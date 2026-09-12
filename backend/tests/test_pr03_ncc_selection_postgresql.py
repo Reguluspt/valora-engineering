@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import threading
 import uuid
+from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.project_master_data.application.ncc_selection_service import (
@@ -36,6 +40,32 @@ from tests.test_pr03_ncc_selection_service import _seed
 
 NCC_SELECTION_CONFIRMED = "NCC_SELECTION_CONFIRMED"
 
+NCC_MIGRATION_COLUMNS = {
+    "quote_batches": {"organization_id"},
+    "quote_lines": {"organization_id", "supplier_id"},
+}
+NCC_MIGRATION_UNIQUE_CONSTRAINTS = {
+    "quote_batches": {"uq_quote_batches_tenant_id"},
+    "quote_lines": {"uq_quote_lines_tenant_id"},
+    "suppliers": {"uq_suppliers_tenant_id"},
+    "projects": {"uq_projects_tenant_id"},
+    "project_asset_lines": {"uq_project_asset_lines_project_id"},
+}
+NCC_MIGRATION_FOREIGN_KEYS = {
+    "quote_batches": {
+        (("organization_id",), "organization_profiles", ("id",), "RESTRICT"),
+    },
+    "quote_lines": {
+        (("organization_id",), "organization_profiles", ("id",), "RESTRICT"),
+        (("supplier_id",), "suppliers", ("id",), "RESTRICT"),
+    },
+}
+NCC_MIGRATION_INDEXES = {
+    "quote_batches": {"idx_quote_batches_organization"},
+    "quote_lines": {"idx_quote_lines_organization", "idx_quote_lines_supplier"},
+    "ncc_selection_revisions": {"idx_ncc_rev_project_line"},
+}
+
 
 def _postgres_engine_or_skip():
     url = os.getenv("TEST_DATABASE_URL")
@@ -54,6 +84,91 @@ def _postgres_engine_or_skip():
             pytest.fail("CI PostgreSQL is not migrated to the PR-03 head")
         pytest.skip("PostgreSQL is not migrated to the PR-03 head")
     return engine
+
+
+def _migration_artifacts(connection) -> dict[str, object]:
+    inspector = inspect(connection)
+    tables = set(inspector.get_table_names())
+    return {
+        "tables": tables
+        & {"ncc_selection_revisions", "ncc_selection_current_heads"},
+        "columns": {
+            table_name: {
+                column["name"]
+                for column in inspector.get_columns(table_name)
+                if column["name"] in column_names
+            }
+            for table_name, column_names in NCC_MIGRATION_COLUMNS.items()
+        },
+        "unique_constraints": {
+            table_name: {
+                constraint["name"]
+                for constraint in inspector.get_unique_constraints(table_name)
+                if constraint.get("name") in constraint_names
+            }
+            for table_name, constraint_names in NCC_MIGRATION_UNIQUE_CONSTRAINTS.items()
+        },
+        "foreign_keys": {
+            table_name: {
+                signature
+                for foreign_key in inspector.get_foreign_keys(table_name)
+                if (
+                    signature := (
+                        tuple(foreign_key["constrained_columns"]),
+                        foreign_key["referred_table"],
+                        tuple(foreign_key["referred_columns"]),
+                        (foreign_key.get("options") or {}).get("ondelete"),
+                    )
+                )
+                in foreign_keys
+            }
+            for table_name, foreign_keys in NCC_MIGRATION_FOREIGN_KEYS.items()
+        },
+        "indexes": {
+            table_name: {
+                index["name"]
+                for index in inspector.get_indexes(table_name)
+                if index.get("name") in index_names
+            }
+            for table_name, index_names in NCC_MIGRATION_INDEXES.items()
+            if table_name in tables
+        },
+    }
+
+
+def _database_migration_artifacts(database_url: URL) -> dict[str, object]:
+    engine = create_engine(database_url, connect_args={"connect_timeout": 5})
+    try:
+        with engine.connect() as connection:
+            return _migration_artifacts(connection)
+    finally:
+        engine.dispose()
+
+
+def _run_alembic(database_url: URL, *arguments: str) -> None:
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "VALORA_ENV": "test",
+            "POSTGRES_HOST": database_url.host or "localhost",
+            "POSTGRES_PORT": str(database_url.port or 5432),
+            "POSTGRES_DB": database_url.database or "",
+            "POSTGRES_USER": database_url.username or "",
+            "POSTGRES_PASSWORD": database_url.password or "",
+        }
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", *arguments],
+        cwd=Path(__file__).parents[1],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.fail(
+            f"Alembic {' '.join(arguments)} failed:\n{result.stdout}\n{result.stderr}"
+        )
 
 
 def _cleanup(SessionLocal, ids: dict[str, uuid.UUID]) -> None:
@@ -299,3 +414,46 @@ def test_concurrent_different_keys_one_wins_with_version_conflict() -> None:
     finally:
         _cleanup(SessionLocal, ids)
         engine.dispose()
+
+
+def test_postgresql_migration_downgrade_upgrade_restores_owned_artifacts() -> None:
+    prerequisite_engine = _postgres_engine_or_skip()
+    prerequisite_engine.dispose()
+    source_url = make_url(os.environ["TEST_DATABASE_URL"])
+    database_name = f"pr03_ncc_migration_{uuid.uuid4().hex}"
+    admin_engine = create_engine(
+        source_url.set(database="postgres"),
+        isolation_level="AUTOCOMMIT",
+        connect_args={"connect_timeout": 5},
+    )
+    database_url = source_url.set(database=database_name)
+
+    try:
+        with admin_engine.connect() as connection:
+            connection.execute(text(f'CREATE DATABASE "{database_name}"'))
+
+        _run_alembic(database_url, "upgrade", "d4b7c9e2f1a6")
+        reference = _database_migration_artifacts(database_url)
+        assert reference["tables"] == {
+            "ncc_selection_revisions",
+            "ncc_selection_current_heads",
+        }
+        assert reference["columns"] == NCC_MIGRATION_COLUMNS
+        assert reference["unique_constraints"] == NCC_MIGRATION_UNIQUE_CONSTRAINTS
+        assert reference["foreign_keys"] == NCC_MIGRATION_FOREIGN_KEYS
+        assert reference["indexes"] == NCC_MIGRATION_INDEXES
+
+        _run_alembic(database_url, "downgrade", "c159fab13c3a")
+        downgraded = _database_migration_artifacts(database_url)
+        assert not downgraded["tables"]
+        assert all(not names for names in downgraded["columns"].values())
+        assert all(not names for names in downgraded["unique_constraints"].values())
+        assert all(not names for names in downgraded["foreign_keys"].values())
+        assert all(not names for names in downgraded["indexes"].values())
+
+        _run_alembic(database_url, "upgrade", "d4b7c9e2f1a6")
+        assert _database_migration_artifacts(database_url) == reference
+    finally:
+        with admin_engine.connect() as connection:
+            connection.execute(text(f'DROP DATABASE IF EXISTS "{database_name}" WITH (FORCE)'))
+        admin_engine.dispose()
