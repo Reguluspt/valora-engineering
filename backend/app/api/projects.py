@@ -39,6 +39,13 @@ from app.modules.project_master_data.schemas import (
     ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse,
     ProjectResolutionResponse, CaseStateResponse,
+    NccSelectionConfirmRequest, NccSelectionCurrentResponse, NccSelectionAggregateResponse,
+)
+from app.modules.project_master_data.application.ncc_selection_service import (
+    build_current_selection_response,
+    confirm_ncc_selection,
+    get_ncc_selection_aggregate,
+    is_ncc_selection_stale,
 )
 from app.modules.project_master_data.application.case_state_projection import (
     ProjectionError,
@@ -569,7 +576,12 @@ def list_project_asset_lines(
         query = query.filter(ProjectAssetLine.review_status == valuation_status)
 
     total = query.count()
-    items = query.offset(offset).limit(limit).all()
+    items = (
+        query.order_by(ProjectAssetLine.asset_name.asc(), ProjectAssetLine.id.asc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
     return {
         "project_id": project_id,
@@ -1265,6 +1277,49 @@ def update_project_asset_line(
     db.commit()
 
     return line
+
+
+# ==========================================
+# NCC SELECTION ENDPOINTS (PR-04)
+# ==========================================
+
+@router.get("/{project_id}/ncc-selections", response_model=NccSelectionAggregateResponse)
+def get_project_ncc_selections(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read"))
+):
+    org_id = current_user.organization_id
+    return get_ncc_selection_aggregate(db, org_id=org_id, project_id=project_id)
+
+
+@router.post(
+    "/{project_id}/asset-lines/{line_id}/ncc-selection",
+    response_model=NccSelectionCurrentResponse,
+)
+def confirm_project_asset_line_ncc_selection(
+    project_id: uuid.UUID,
+    line_id: uuid.UUID,
+    payload: NccSelectionConfirmRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update"))
+):
+    revision = confirm_ncc_selection(
+        db,
+        actor=current_user,
+        org_id=current_user.organization_id,
+        project_id=project_id,
+        project_asset_line_id=line_id,
+        quote_line_id=payload.quote_line_id,
+        expected_selection_revision=payload.expected_selection_revision,
+        acknowledged_warning_codes=payload.acknowledged_warning_codes,
+        idempotency_key=payload.idempotency_key,
+        confirmed=payload.confirmed,
+        correlation_id=get_correlation_id(request),
+    )
+    stale = is_ncc_selection_stale(db, revision=revision)
+    return build_current_selection_response(revision, stale=stale)
 
 
 # ==========================================

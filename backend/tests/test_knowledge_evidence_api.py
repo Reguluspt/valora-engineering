@@ -282,6 +282,7 @@ def test_quote_batches_endpoints(client: TestClient, db_session: Session, setup_
     headers_admin = {"X-User-Id": setup_rbac_users["admin_id"]}
 
     batch = QuoteBatch(
+        organization_id=setup_rbac_users["org_id"],
         created_by=uuid.UUID(setup_rbac_users["admin_id"]),
         status=QuoteBatchStatus.DRAFT,
         revision_number=1

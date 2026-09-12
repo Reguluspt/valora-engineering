@@ -46,9 +46,48 @@ export const CANONICAL_CROSS_PRODUCT_UI_STATES = [
 export const APP_ROUTES = {
   projectList: "/workbench/projects",
   projectDetailPrefix: "/workbench/projects/",
+  projectOverviewSuffix: "/overview",
+  projectNccSelectionSuffix: "/ncc-selection",
   legacyReviewQueue: "/workbench/queue",
   legacyValidationDashboard: "/workbench/validation"
 } as const;
+
+export function projectWorkbenchPath(projectRef: string): string {
+  return `${APP_ROUTES.projectDetailPrefix}${encodeURIComponent(projectRef)}`;
+}
+
+export function projectOverviewPath(projectRef: string): string {
+  return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectOverviewSuffix}`;
+}
+
+export function projectNccSelectionPath(projectRef: string): string {
+  return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectNccSelectionSuffix}`;
+}
+
+export function splitProjectRoute(path: string): {
+  projectRef: string;
+  view: "overview" | "workbench" | "ncc-selection";
+} | null {
+  const pathname = path.split("?", 1)[0];
+  if (!pathname.startsWith(APP_ROUTES.projectDetailPrefix)) return null;
+  const remainder = pathname.slice(APP_ROUTES.projectDetailPrefix.length);
+  const isNccSelection = remainder.endsWith(APP_ROUTES.projectNccSelectionSuffix);
+  const isOverview = remainder.endsWith(APP_ROUTES.projectOverviewSuffix);
+  const encodedRef = isNccSelection
+    ? remainder.slice(0, -APP_ROUTES.projectNccSelectionSuffix.length)
+    : isOverview
+      ? remainder.slice(0, -APP_ROUTES.projectOverviewSuffix.length)
+      : remainder;
+  if (!encodedRef || encodedRef.includes("/")) return null;
+  try {
+    return {
+      projectRef: decodeURIComponent(encodedRef),
+      view: isNccSelection ? "ncc-selection" : isOverview ? "overview" : "workbench",
+    };
+  } catch {
+    return null;
+  }
+}
 
 export const LEGACY_ROUTE_ALIASES = {
   reviewQueue: "/queue",

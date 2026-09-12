@@ -10,7 +10,11 @@ import {
   CANONICAL_CROSS_PRODUCT_UI_STATES,
   FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS,
   FORBIDDEN_NEW_STANDALONE_ROUTES,
-  LEGACY_ROUTE_RATCHET
+  LEGACY_ROUTE_RATCHET,
+  projectOverviewPath,
+  projectWorkbenchPath,
+  projectNccSelectionPath,
+  splitProjectRoute
 } from "../valoraV23";
 
 
@@ -109,6 +113,30 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
     expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS).toContain("/nccq-aggregate");
     for (const route of FORBIDDEN_NEW_STANDALONE_ROUTES) {
       expect(route).not.toContain("nccq");
+    }
+  });
+
+  it("preserves project context between Overview and the existing Workbench", () => {
+    expect(projectOverviewPath("HD 01")).toBe("/workbench/projects/HD%2001/overview");
+    expect(projectWorkbenchPath("HD 01")).toBe("/workbench/projects/HD%2001");
+    expect(splitProjectRoute("/workbench/projects/HD%2001/overview")).toEqual({
+      projectRef: "HD 01",
+      view: "overview",
+    });
+    expect(splitProjectRoute("/workbench/projects/HD%2001")).toEqual({
+      projectRef: "HD 01",
+      view: "workbench",
+    });
+  });
+
+  it("exposes a canonical NCC Selection project route without a forbidden fragment", () => {
+    expect(projectNccSelectionPath("HD 01")).toBe("/workbench/projects/HD%2001/ncc-selection");
+    expect(splitProjectRoute("/workbench/projects/HD%2001/ncc-selection")).toEqual({
+      projectRef: "HD 01",
+      view: "ncc-selection",
+    });
+    for (const route of Object.values(APP_ROUTES)) {
+      expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS.some((fragment) => route.includes(fragment))).toBe(false);
     }
   });
 });
