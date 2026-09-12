@@ -21,7 +21,13 @@ from app.modules.document_workspace.models import (
     DocumentRecord, DocumentRevision, DocumentRevisionCurrentHead
 )
 from app.modules.m365_integration.models import (
-    M365EncryptedCredential, M365OAuthState, M365RevisionBinding, OneDriveConnection
+    M365EncryptedCredential,
+    M365ManagedContentBaseline,
+    M365ManagedRegionBaseline,
+    M365OAuthState,
+    M365RevalidationObservation,
+    M365RevisionBinding,
+    OneDriveConnection,
 )
 
 __all__ = [
@@ -81,7 +87,10 @@ __all__ = [
     "DocumentRevision",
     "DocumentRevisionCurrentHead",
     "M365EncryptedCredential",
+    "M365ManagedContentBaseline",
+    "M365ManagedRegionBaseline",
     "M365OAuthState",
+    "M365RevalidationObservation",
     "M365RevisionBinding",
     "OneDriveConnection",
 ]

@@ -64,3 +64,7 @@ class M365GraphGateway(Protocol):
     def get_drive_item(
         self, *, access_token: str, drive_id: str, drive_item_id: str
     ) -> GraphDriveItem: ...
+
+    def get_drive_item_content(
+        self, *, access_token: str, drive_id: str, drive_item_id: str
+    ) -> bytes: ...

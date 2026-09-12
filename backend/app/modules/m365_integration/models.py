@@ -6,10 +6,13 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
     Index,
+    Integer,
+    JSON,
     LargeBinary,
     String,
     UniqueConstraint,
@@ -20,6 +23,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base_class import Base
 from app.db.mixins import TimestampMixin, UUIDMixin, utc_now
+
+
+def _sha256_check(column: str, *, nullable: bool = False) -> str:
+    expression = (
+        f"length({column}) = 64 "
+        f"AND {column} = lower({column}) "
+        f"AND {column} ~ '^[0-9a-f]{{64}}$'"
+    )
+    return f"{column} IS NULL OR ({expression})" if nullable else expression
 
 
 class M365EncryptedCredential(Base, UUIDMixin, TimestampMixin):
@@ -252,5 +264,336 @@ class M365RevisionBinding(Base, UUIDMixin):
         ),
         Index(
             "idx_m365_binding_item", "organization_id", "drive_id", "drive_item_id"
+        ),
+    )
+
+
+class M365ManagedContentBaseline(Base, UUIDMixin):
+    """Immutable content proof attached to one PR-05 revision binding."""
+
+    __tablename__ = "m365_managed_content_baselines"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    binding_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    connection_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    drive_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    drive_item_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    source_e_tag: Mapped[str] = mapped_column(String(512), nullable=False)
+    source_c_tag: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    bind_metadata_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    authority_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    parser_contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    fingerprint_contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    managed_region_manifest_digest_sha256: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )
+    outside_managed_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    whole_canonical_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    provenance_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "binding_id", name="uq_m365_content_baseline_binding"
+        ),
+        UniqueConstraint(
+            "organization_id", "idempotency_key", name="uq_m365_content_baseline_idempotency"
+        ),
+        UniqueConstraint(
+            "organization_id", "id", name="uq_m365_content_baselines_tenant_id"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "binding_id"],
+            ["m365_revision_bindings.organization_id", "m365_revision_bindings.id"],
+            name="fk_m365_content_baseline_binding_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "document_id", "document_revision_id"],
+            [
+                "document_revisions.organization_id",
+                "document_revisions.project_id",
+                "document_revisions.document_id",
+                "document_revisions.id",
+            ],
+            name="fk_m365_content_baseline_revision_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "connection_id"],
+            ["onedrive_connections.organization_id", "onedrive_connections.id"],
+            name="fk_m365_content_baseline_connection_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_m365_content_baseline_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("source_size_bytes >= 0", name="chk_m365_content_baseline_size"),
+        CheckConstraint(
+            "provenance_kind IN ('existing_binding_verified', 'new_binding_atomic')",
+            name="chk_m365_content_baseline_provenance",
+        ),
+        CheckConstraint(
+            "length(trim(authority_ref)) > 0",
+            name="chk_m365_content_baseline_authority",
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0",
+            name="chk_m365_content_baseline_idempotency_trim",
+        ),
+        CheckConstraint(
+            _sha256_check("source_content_sha256"),
+            name="chk_m365_content_baseline_source_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("bind_metadata_digest_sha256"),
+            name="chk_m365_content_baseline_metadata_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("managed_region_manifest_digest_sha256"),
+            name="chk_m365_content_baseline_manifest_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("outside_managed_digest_sha256"),
+            name="chk_m365_content_baseline_outside_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("whole_canonical_digest_sha256"),
+            name="chk_m365_content_baseline_whole_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("request_digest_sha256"),
+            name="chk_m365_content_baseline_request_digest",
+        ),
+        Index(
+            "idx_m365_content_baseline_revision",
+            "organization_id",
+            "project_id",
+            "document_id",
+            "document_revision_id",
+        ),
+    )
+
+
+class M365ManagedRegionBaseline(Base, UUIDMixin):
+    """Digest-only snapshot of one Managed Region in a sealed content baseline."""
+
+    __tablename__ = "m365_managed_region_baselines"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    content_baseline_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    region_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    locator: Mapped[str] = mapped_column(String(255), nullable=False)
+    locator_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    semantic_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    normalization_contract: Mapped[str] = mapped_column(String(64), nullable=False)
+    normalized_value_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    structural_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "content_baseline_id",
+            "region_key",
+            name="uq_m365_region_baseline_key",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "content_baseline_id",
+            "position",
+            name="uq_m365_region_baseline_position",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "content_baseline_id"],
+            [
+                "m365_managed_content_baselines.organization_id",
+                "m365_managed_content_baselines.id",
+            ],
+            name="fk_m365_region_baseline_parent_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("position >= 0", name="chk_m365_region_baseline_position"),
+        CheckConstraint(
+            "length(trim(region_key)) > 0 AND length(trim(locator)) > 0",
+            name="chk_m365_region_baseline_identity",
+        ),
+        CheckConstraint(
+            _sha256_check("locator_digest_sha256"),
+            name="chk_m365_region_baseline_locator_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("normalized_value_digest_sha256"),
+            name="chk_m365_region_baseline_value_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("structural_digest_sha256"),
+            name="chk_m365_region_baseline_structure_digest",
+        ),
+        Index(
+            "idx_m365_region_baseline_parent",
+            "organization_id",
+            "content_baseline_id",
+        ),
+    )
+
+
+class M365RevalidationObservation(Base, UUIDMixin):
+    """Append-only terminal fact for one provider-backed revalidation attempt."""
+
+    __tablename__ = "m365_revalidation_observations"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    binding_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    content_baseline_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    connection_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    trigger: Mapped[str] = mapped_column(String(40), nullable=False)
+    classification: Mapped[str] = mapped_column(String(48), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+    observed_drive_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observed_drive_item_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observed_graph_version_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observed_e_tag: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    observed_c_tag: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    observed_last_modified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    observed_size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    observed_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observed_path: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    observed_web_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    observed_content_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    observed_whole_canonical_digest_sha256: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    observed_outside_managed_digest_sha256: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    parser_contract_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    fingerprint_contract_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    affected_region_keys: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    affected_region_digests: Mapped[list[dict[str, str]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+    reason_category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    retryable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    correlation_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "idempotency_key",
+            name="uq_m365_revalidation_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "binding_id"],
+            ["m365_revision_bindings.organization_id", "m365_revision_bindings.id"],
+            name="fk_m365_revalidation_binding_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "content_baseline_id"],
+            [
+                "m365_managed_content_baselines.organization_id",
+                "m365_managed_content_baselines.id",
+            ],
+            name="fk_m365_revalidation_baseline_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "document_id", "document_revision_id"],
+            [
+                "document_revisions.organization_id",
+                "document_revisions.project_id",
+                "document_revisions.document_id",
+                "document_revisions.id",
+            ],
+            name="fk_m365_revalidation_revision_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "connection_id"],
+            ["onedrive_connections.organization_id", "onedrive_connections.id"],
+            name="fk_m365_revalidation_connection_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "actor_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_m365_revalidation_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "trigger IN ('explicit_refresh', 'freshness_required_action', 'reconnect')",
+            name="chk_m365_revalidation_trigger",
+        ),
+        CheckConstraint(
+            "classification IN ("
+            "'no_change', 'external_change_outside_managed', "
+            "'external_change_in_managed', 'file_replaced_or_moved', "
+            "'access_unavailable')",
+            name="chk_m365_revalidation_classification",
+        ),
+        CheckConstraint(
+            "observed_size_bytes IS NULL OR observed_size_bytes >= 0",
+            name="chk_m365_revalidation_size",
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0",
+            name="chk_m365_revalidation_idempotency_trim",
+        ),
+        CheckConstraint(
+            _sha256_check("observed_content_sha256", nullable=True),
+            name="chk_m365_revalidation_content_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("observed_whole_canonical_digest_sha256", nullable=True),
+            name="chk_m365_revalidation_whole_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("observed_outside_managed_digest_sha256", nullable=True),
+            name="chk_m365_revalidation_outside_digest",
+        ),
+        CheckConstraint(
+            _sha256_check("request_digest_sha256"),
+            name="chk_m365_revalidation_request_digest",
+        ),
+        Index(
+            "idx_m365_revalidation_current",
+            "organization_id",
+            "project_id",
+            "document_id",
+            "document_revision_id",
+            "completed_at",
         ),
     )
