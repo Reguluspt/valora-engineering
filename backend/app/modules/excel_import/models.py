@@ -886,6 +886,15 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
             "structure_snapshot_id",
             name="uq_mapping_usage_generation",
         ),
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "import_batch_id",
+            "source_artifact_id",
+            "structure_snapshot_id",
+            "id",
+            name="uq_mapping_usage_generation_id",
+        ),
         UniqueConstraint("organization_id", "command_id", name="uq_mapping_usage_command"),
         CheckConstraint(
             "(profile_id IS NULL AND profile_version IS NULL) OR "

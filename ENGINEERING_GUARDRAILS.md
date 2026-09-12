@@ -1,7 +1,7 @@
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Last reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
 **Applies to:** All engineering work after Design Book v1.2-final
 
 ## 1. Engineering Mode
@@ -11,24 +11,29 @@ Valora is in the **Engineering Phase**.
 ### Current phase (authoritative — live gate)
 
 ```text
-Sprint 13 — Column Mapping Memory
+VALORA UI/UX v2.3 implementation alignment
 
-S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
-Gate 0c (Design Book v1.4 §20 + ADR 0033–0034 + canonical reconciliation)
-is CLOSED / SATISFIED.
-S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
-(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
-`29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
-(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
-`17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
-post-merge main CI `29676915010`, all PASS).
+Accepted code baseline: `origin/main`
+`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
+Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
+`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
-Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
-Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`. Freeze its design/evidence gate before runtime.
-S13-PR-005 API/UX and later candidates still require separate owner assignment.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+PR-02 through PR-04 were implemented together by GitHub PR #28 from base
+`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
+`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
+PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
+PR #28 remains open and Draft; it is not merged, released or deployed.
+The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
+local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
+upgrade/downgrade/upgrade CI regression is committed at
+`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
+reviewed remote head above and do not change PR #28's Draft/unmerged status.
+The next roadmap candidate is PR-05 — M365 Integration Foundation. It requires a separate task and
+must not be started under the PR #28 closeout authority.
+Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
+not use it as the source for new navigation or Global Case State.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen.
@@ -62,6 +67,10 @@ S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and mu
 Valora Design Book v1.2-final
 + v1.3 MVP completion addendum
 + v1.4 Adaptive Intake / Knowledge Memory addendum
+docs/design/VALORA_UIUX_HANDOFF_v2.3.md
+docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
+directly relevant VALORA_UIUX_HANDOFF_v2.3_* addendum
+docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md
 docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
 docs/design/* contracts (including Excel staging §15, frozen s12-pr-004-v1)
 docs/adr/* (including ADR 0028–0034)
@@ -102,8 +111,9 @@ Official promotion for S12 staging uses Apply (ADR 0029 / s12-pr-004-v1) — imp
 S12 parser v1 remains `.xlsx` + fixed aliases for its historical upload path.
 S13-PR-002 adds bounded `.xls`/`.xlsx` source adapters and immutable source artifacts;
 S13-PR-003 adds deterministic structure discovery and row classification.
-S13-PR-004 mapping-memory persistence/application services are assigned; S13-PR-005 API/UX
-and any replacement of S12 Apply v1 are not authorized by that assignment.
+S13-PR-004 mapping-memory persistence/application services are implemented historical foundation.
+The old S13-PR-005 API/UX sequence no longer authorizes current work; follow the v2.3 PR track.
+Any replacement of S12 Apply v1 still requires explicit authority and ADR review.
 ```
 
 ### Price
@@ -142,7 +152,7 @@ deterministic S13–S15 foundations and ADR-governed provider integration.
 ```text
 Column Mapping Memory and Asset Identity Memory are separate.
 Workbook source/adapter and structure-discovery foundations are implemented by S13-PR-002/003.
-Column Mapping Memory persistence/application services are the active S13-PR-004 assignment.
+Column Mapping Memory persistence/application services are implemented historical foundation.
 RawAssetObservation is immutable; normalization never overwrites raw wording.
 Human confirmation is required before reusable feedback or active knowledge.
 No cross-organization learning. No per-click online training.

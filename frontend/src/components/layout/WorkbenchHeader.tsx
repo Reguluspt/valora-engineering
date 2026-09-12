@@ -7,9 +7,15 @@ interface WorkbenchHeaderProps {
   projectTitle: string;
   status?: "draft" | "review" | "approved" | "warning" | "error" | "blocking";
   statusLabel?: string;
+  onNavigateOverview?: () => void;
 }
 
-export function WorkbenchHeader({ projectTitle, status, statusLabel }: WorkbenchHeaderProps) {
+export function WorkbenchHeader({
+  projectTitle,
+  status,
+  statusLabel,
+  onNavigateOverview,
+}: WorkbenchHeaderProps) {
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -26,6 +32,11 @@ export function WorkbenchHeader({ projectTitle, status, statusLabel }: Workbench
     <header className="workbench-header">
       <h2 className="project-title">{projectTitle}</h2>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+        {onNavigateOverview && (
+          <button className="action-btn" onClick={onNavigateOverview} type="button">
+            {t("nav.caseOverview")}
+          </button>
+        )}
         {apiReachable !== null && (
           <span style={{
             fontSize: "var(--font-size-xs)",

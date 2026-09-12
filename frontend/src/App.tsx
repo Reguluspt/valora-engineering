@@ -2,10 +2,17 @@ import React, { useState, useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
+import { CaseOverviewPage } from "./components/case-overview/CaseOverviewPage";
+import { NccSelectionPage } from "./components/ncc-selection/NccSelectionPage";
+import {
+  APP_ROUTES,
+  projectOverviewPath,
+  splitProjectRoute,
+} from "./contracts/valoraV23";
 
 import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
 
-const WORKBENCH_BASE = "/workbench/projects";
+const WORKBENCH_BASE = APP_ROUTES.projectList;
 const NEUTRAL_PATH = WORKBENCH_BASE;
 
 export function App() {
@@ -31,12 +38,25 @@ export function App() {
   };
 
   const renderRoute = () => {
-    if (currentPath.startsWith("/workbench/projects/")) {
-      const ref = currentPath.substring("/workbench/projects/".length);
-      return <WorkbenchLayout projectRef={ref || null} />;
+    const projectRoute = splitProjectRoute(currentPath);
+    if (projectRoute?.view === "overview") {
+      return <CaseOverviewPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
     }
 
-    if (currentPath === "/workbench/projects") {
+    if (projectRoute?.view === "workbench") {
+      return (
+        <WorkbenchLayout
+          projectRef={projectRoute.projectRef}
+          onNavigateOverview={() => handleNavigate(projectOverviewPath(projectRoute.projectRef))}
+        />
+      );
+    }
+
+    if (projectRoute?.view === "ncc-selection") {
+      return <NccSelectionPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
+    }
+
+    if (currentPath === APP_ROUTES.projectList) {
       return (
         <div style={{ padding: "var(--space-xl)" }}>
           <h2 style={{ color: "#fff" }}>Chọn hồ sơ</h2>
@@ -47,11 +67,11 @@ export function App() {
       );
     }
 
-    if (currentPath === "/workbench/queue") {
+    if (currentPath === APP_ROUTES.legacyReviewQueue) {
       return <ReviewQueueDashboard />;
     }
 
-    if (currentPath === "/workbench/validation") {
+    if (currentPath === APP_ROUTES.legacyValidationDashboard) {
       return (
         <div style={{ padding: "var(--space-xl)" }}>
           <h2 style={{ color: "#fff" }}>Bảng lỗi cần xử lý</h2>

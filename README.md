@@ -1,9 +1,13 @@
 # Valora Engineering
 
-**Phase:** Engineering — Sprint 13 Column Mapping Memory
-**Main evidence (not evergreen):** `2af753520ab6b7885555adc5b7945a28d32ee311` (S13-PR-003 PR #17); main CI `29676915010` PASS
-**Runtime assignment state:** **S13-PR-004 assigned**
-**Assigned branch name/baseline:** `s13-pr-004-column-mapping-memory` from accepted main `2af753520ab6b7885555adc5b7945a28d32ee311`; design-first gate
+**Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
+**Accepted code baseline (not evergreen):** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
+**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` and
+`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
+`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
+**PR-00 status:** **COMPLETE / CLOSED locally**
+**PR-01 / PR-01a status:** **ACCEPTED foundation**
+**Active task:** **PR-02 through PR-04 integration in Draft PR #28; residual evidence CLOSED locally**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -24,7 +28,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | S12 parser capability | `.xlsx` fixed-alias staging + validate + Apply v1 remains frozen |
 | **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
 | **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
-| Adaptive Intake / Column Mapping Memory | Adapters + structure implemented; **S13-PR-004 persistence/application services assigned**; S13-PR-005 API/UX not started |
+| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current UI/UX work follows the v2.3 PR track |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
@@ -33,13 +37,18 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ### Live task gate
 
 ```text
-S12-PR-004 is merged and closed.
-S13-PR-001 design-authority gate is closed (merged to main).
-Gate 0c bounded-AI automation readiness is closed / satisfied.
-Runtime assignment state: S13-PR-004 assigned / design-first.
-S13-PR-002 and S13-PR-003 are merged / closed.
-S13-PR-004 is owner-assigned from main 2af7535…; freeze design before runtime.
-S13-PR-005 and later slices require separate owner assignment.
+Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26).
+Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
+VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+ADR 0036 accepts computed-on-read with no projection migration; ADR 0037 accepts the durable
+official-intake fact and command used by the implemented PR-01 provider.
+PR-02 through PR-04 — IMPLEMENTED in Draft PR #28; exact-head CI remains the merge gate.
+Residual evidence gaps — CLOSED locally, including PR-02 browser acceptance and the NCC migration
+downgrade/upgrade round-trip regression.
+Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
+Earlier S13 sequencing is historical context.
 ```
 
 ## Architecture (monorepo)

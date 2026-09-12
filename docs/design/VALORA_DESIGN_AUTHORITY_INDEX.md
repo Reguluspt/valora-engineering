@@ -1,20 +1,21 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 
 ## 1. Read order
 
 1. `CODEX.md` — live task gate and agent operating rules.
 2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
-3. This file — version relationship and supersession map.
-4. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation state and next authorized sequence.
-5. Design Book v1.2-final package — established domain model and bounded contexts.
-6. `VALORA_DESIGN_BOOK_V1_3_MVP_COMPLETION_ADDENDUM.md` — Vietnamese-first UX, Astryx, MVP scope and AI-provider architecture.
-7. `VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md` — Adaptive Intake, two memories, paired dossiers, row alignment, feedback, bounded-AI automation readiness and revised roadmap.
-8. Feature contracts under `docs/design/` and accepted ADRs under `docs/adr/`.
-9. Active remediation plan `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`, then task-specific audit evidence.
+3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
+4. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
+5. The v2.3 addendum directly governing the assigned PR.
+6. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
+7. This file — earlier-version relationship and supersession map.
+8. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
+9. Design Book v1.2-final plus v1.3/v1.4 addenda — established domain model and bounded contexts.
+10. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
@@ -22,6 +23,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 
 | Authority | Continues to govern | Superseded or extended by later authority |
 |---|---|---|
+| UI/UX Handoff v2.3 + v2.3 Authority Index | North-star flow, single-user UX, stage/state vocabulary, NCC, M365, Publishing and audit/lineage UI semantics | Newer explicit v2.3 addendum wins only in its named scope |
 | Design Book v1.2-final | Core domain architecture, canonical assets, evidence/knowledge, workflow and document boundaries | Extended, not replaced, by v1.3/v1.4 |
 | Design Book v1.3 | MVP scope, Vietnamese-first UX, Astryx, provider gateway and human-in-the-loop AI | **§7 roadmap sequencing** is superseded by v1.4 (Sprint 13 is no longer “AI Assistant first”) |
 | Design Book v1.4 | Adaptive workbook intake, Column Mapping Memory, Asset Identity Memory, historical dossier bootstrap, row alignment and feedback | Does **not** silently change S12 Apply v1 |
@@ -32,6 +34,8 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0032 | Paired dossier aggregate, extraction and row alignment | Implementation gated by S15 plan |
 | ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Phase-appropriate implementation begins with domain decisions; AI runtime gated by S16 |
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
+| ADR 0036 | Computed Global Case State projection | Accepted foundation; PR-01 computed-on-read runtime is implemented and accepted; resume persistence remains deferred |
+| ADR 0037 | Durable Official Intake commit | Accepted foundation; the durable official-intake fact and command feed the implemented PR-01 provider |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -50,6 +54,11 @@ S13-PR-002 closed evidence:
   main 137f8c527422b656974e569c924dafa8150b8b22 (PR #15); CI 29641452155 PASS
 S13-PR-003 closed evidence:
   main 2af753520ab6b7885555adc5b7945a28d32ee311 (PR #17); CI 29676915010 PASS
+Current UI/UX integration evidence:
+  PR-00 closeout b176820; PR-01 / PR-01a accepted base 5ed0922f50ae1ef3b31346f7245423aae9c01cd2
+  PR #28 reviewed head 51db33ec7fc7a82b9abba151e13f268b5e875fc4
+  Formal gate PASS with no P0/P1/P2 findings; current PR checks PASS
+  PR #28 remains open and Draft; it is not merged, released or deployed
 ```
 
 
@@ -58,19 +67,26 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-S12-PR-004 engineering gate: CLOSED (merged)
-S13-PR-001 design-authority gate: CLOSED (merged)
-Gate 0c bounded-AI automation readiness: CLOSED / SATISFIED
-S13-PR-002 Legacy Workbook Adapter and Immutable Source Artifact: MERGED / CLOSED
-S13-PR-003 Workbook Structure Discovery and Row Classification: MERGED / CLOSED
-Runtime assignment state: S13-PR-004 assigned from main 2af7535…
-→ S13-PR-004 Column Mapping Memory Persistence and Application Services (design-first)
-→ S13-PR-005 Mapping Confirmation API / UX (requires separate owner assignment)
-→ S14 Asset Identity Memory
-→ S15 paired-dossier extraction, reliable jobs, alignment and bootstrap
-→ S16 reliable audited AI suggestion runtime and shadow evaluation
-→ S17 report generation
-→ S18 real auth and pilot acceptance
+Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26)
+Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
+
+PR-00 Authority Alignment Guard — COMPLETE / CLOSED locally
+PR-01 / PR-01a Case State Projection Foundation and durable official intake — ACCEPTED foundation
+PR-02 through PR-04 — IMPLEMENTED in Draft PR #28
+  base 5ed0922f50ae1ef3b31346f7245423aae9c01cd2
+  reviewed head 51db33ec7fc7a82b9abba151e13f268b5e875fc4
+  formal gate and current CI PASS; no P0/P1/P2 findings
+  not merged, released or deployed
+Residual evidence gaps — CLOSED locally:
+  PR-02 desktop/laptop browser acceptance PASS after local corrective commit 69ecd97
+  migration d4b7c9e2f1a6 upgrade/downgrade/upgrade CI regression committed at ad3faad
+  these local commits are not part of the reviewed remote head and do not change PR #28 Draft status
+
+PR-05 M365 Integration Foundation — NEXT ROADMAP CANDIDATE; separate task/authority required
+PR-05 → PR-06 Return/Revalidation → PR-07 Sync/Conflict
+PR-07 → PR-08 Release Domain Foundation → PR-09 Publishing Commit/Success
+PR-03 + PR-07 + PR-09 → PR-10 Audit/Lineage Wiring
+PR-02 → PR-10 → PR-11 State Sweep → PR-12 Template Fidelity → PR-13 North-star E2E
 ```
 
 
@@ -108,16 +124,22 @@ Gate 0c — bounded-AI automation readiness (satisfied):
 3. Owner Ready, squash and merge of Gate 0c PR #13 — **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`).
 4. Exact post-merge main CI PASS — **satisfied** (run `29504915362`).
 
-Before any S13 runtime PR (still required for each task ID):
+Historical S13 runtime gate record:
 
 1. Separate explicit owner assignment of a runtime task ID.
 2. Runtime work must branch from the then-current accepted `origin/main`.
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
-S13-PR-002 and S13-PR-003 are merged / closed. S13-PR-004 is separately owner-assigned with
-assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`; its design/evidence gate must be frozen before
-runtime implementation. S13-PR-005+ still require separate owner assignment.
+S13-PR-002 through S13-PR-004 are implemented historical foundation. This record does not
+authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
+
+Current v2.3 PR-01 through PR-04 disposition:
+
+1. PR-01 / PR-01a Case State Projection Foundation and durable official intake — **accepted foundation**; PR-01 runtime closeout is the PR #28 base `5ed0922f50ae1ef3b31346f7245423aae9c01cd2`.
+2. PR-02 through PR-04 — **implemented** in GitHub PR #28 at reviewed head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; formal gate PASS with no P0/P1/P2 findings and current CI checks PASS.
+3. PR #28 remains **open and Draft**; it is not merged, released or deployed.
+4. The two residual evidence gaps are **closed locally**: PR-02 desktop/laptop browser acceptance PASS after corrective commit `69ecd97`; migration `d4b7c9e2f1a6` upgrade/downgrade/upgrade CI regression committed at `ad3faad`. These local commits are not part of the reviewed remote head.
+5. PR-05 is only the next roadmap candidate and requires a separate task and authority.
 
 ## 7. Module ownership (future runtime)
 

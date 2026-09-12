@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-07-19 (S13-PR-003 closeout / S13-PR-004 assignment)
+**Last reconciled:** 2026-09-12 (PR #28 residual evidence closeout)
 **Applies to:** All agent-generated work in the Valora repository
 
 ## 1. Source of Truth
@@ -11,14 +11,14 @@ Domain behavior must come from this read order:
 ```text
 1. CODEX.md (this file) — live task gate and agent operating rules
 2. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
-3. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — conflict resolution and version relationship
-4. docs/VALORA_PROJECT_HANDOFF.md — verified implementation state and next authorized sequence
-5. Valora Design Book v1.2-final package — established domain foundation
-6. docs/design/VALORA_DESIGN_BOOK_V1_3_MVP_COMPLETION_ADDENDUM.md — Vietnamese UX, Astryx, MVP, AI provider architecture
-7. docs/design/VALORA_DESIGN_BOOK_V1_4_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_ADDENDUM.md — Adaptive Intake, two memories, dossiers, bounded-AI readiness
-8. Feature contracts under docs/design/ (including Excel staging contract §14–§15, frozen s12-pr-004-v1)
-9. docs/adr/* (including ADR 0028, 0029, 0030, 0031, 0032, 0033, 0034)
-10. docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md — active roadmap after S12
+3. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
+4. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
+5. The v2.3 addendum directly governing the assigned PR
+6. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
+7. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
+8. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
+9. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
+10. Feature contracts under docs/design/ and accepted docs/adr/* decisions
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
@@ -28,28 +28,34 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 ## 2. Current Engineering Phase
 
 ```text
-Engineering Phase / Sprint 13 — Column Mapping Memory
+Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 ```
 
 ### Live task gate (fetch origin/main before acting)
 
 ```text
-S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
-Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
-S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
-(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`;
-exact-head CI `29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
-(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`,
-tree `17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
-post-merge main CI `29676915010`, all PASS).
+Accepted code baseline: `origin/main` at
+`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
+Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
+`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
 
-Runtime assignment state: S13-PR-004 is owner-assigned from baseline
-`2af753520ab6b7885555adc5b7945a28d32ee311`; assigned branch name:
-`s13-pr-004-column-mapping-memory`. Its design/evidence gate must be frozen before runtime work.
-Scope is limited to Column Mapping Memory persistence and application services (G-03/G-06).
-S13-PR-005 mapping-confirmation API/UX and every later slice remain separately gated.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+PR-02 through PR-04 were implemented together by GitHub PR #28 from base
+`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
+`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
+PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
+PR #28 remains open and Draft; it is not merged, released or deployed.
+The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
+local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
+upgrade/downgrade/upgrade CI regression is committed at
+`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
+reviewed remote head above and do not change PR #28's Draft/unmerged status.
+The next roadmap candidate is PR-05 — M365 Integration Foundation. It requires a separate task and
+must not be started under the PR #28 closeout authority.
+Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
+The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
+owner-authorized UI/UX track.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.

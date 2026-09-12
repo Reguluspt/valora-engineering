@@ -30,7 +30,7 @@
     "gpt-tokenizer": "^2.9.0",
     "react-test-renderer": "^19.2.8",
     "vite": "^6.4.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "esbuild": "^0.25.0",

@@ -25,10 +25,11 @@ import { RbacLockNotice } from "../common/RbacLockNotice";
 
 interface WorkbenchLayoutProps {
   projectRef: string | null;
+  onNavigateOverview?: () => void;
   children?: React.ReactNode;
 }
 
-export function WorkbenchLayout({ projectRef, children }: WorkbenchLayoutProps) {
+export function WorkbenchLayout({ projectRef, onNavigateOverview, children }: WorkbenchLayoutProps) {
   const { projectId, displayName, state, error: resolveError, retry: retryResolve } = useResolvedProject(projectRef);
 
   if (state === "idle" && !projectRef) {
@@ -72,6 +73,7 @@ export function WorkbenchLayout({ projectRef, children }: WorkbenchLayoutProps) 
       key={projectId}
       projectId={projectId}
       displayName={displayName || "Hồ sơ"}
+      onNavigateOverview={onNavigateOverview}
       children={children}
     />
   );
@@ -80,10 +82,12 @@ export function WorkbenchLayout({ projectRef, children }: WorkbenchLayoutProps) 
 function WorkbenchLayoutInner({
   projectId,
   displayName,
+  onNavigateOverview,
   children
 }: {
   projectId: string;
   displayName: string;
+  onNavigateOverview?: () => void;
   children?: React.ReactNode;
 }) {
   const {
@@ -196,6 +200,7 @@ function WorkbenchLayoutInner({
     <div className="workbench-container">
       <WorkbenchHeader
         projectTitle={displayName}
+        onNavigateOverview={onNavigateOverview}
       />
 
       {(conflictError || syncConflict) && (

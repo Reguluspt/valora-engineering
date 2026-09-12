@@ -172,12 +172,20 @@ def revise_quote_batch(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("knowledge:update"))
 ):
-    batch = db.query(QuoteBatch).filter(QuoteBatch.id == quote_batch_id).first()
+    batch = (
+        db.query(QuoteBatch)
+        .filter(
+            QuoteBatch.id == quote_batch_id,
+            QuoteBatch.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
     if not batch:
         raise HTTPException(status_code=404, detail="QuoteBatch not found")
 
     # Revision creates a new quote batch linked to previous_quote_batch_id
     rev_batch = QuoteBatch(
+        organization_id=batch.organization_id,
         canonical_asset_id=batch.canonical_asset_id,
         asset_variant_id=batch.asset_variant_id,
         created_by=current_user.id,
@@ -192,8 +200,10 @@ def revise_quote_batch(
     # Copy quote lines under draft status
     for line in batch.quote_lines:
         rev_line = QuoteLine(
+            organization_id=line.organization_id,
             quote_batch_id=rev_batch.id,
             evidence_file_id=line.evidence_file_id,
+            supplier_id=line.supplier_id,
             supplier_name=line.supplier_name,
             quoted_unit_price=line.quoted_unit_price,
             currency=line.currency,

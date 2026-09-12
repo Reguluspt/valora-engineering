@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid, BigInteger, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin
@@ -510,6 +511,7 @@ class Supplier(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "tax_code", name="uq_supplier_tax_org"),
+        UniqueConstraint("organization_id", "id", name="uq_suppliers_tenant_id"),
     )
 
 
@@ -721,6 +723,7 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
             "id",
             name="uq_s13_pr004_project_tenant_customer_id",
         ),
+        UniqueConstraint("organization_id", "id", name="uq_projects_tenant_id"),
         CheckConstraint("fee_amount >= 0", name="chk_project_fee_positive"),
     )
 
@@ -851,6 +854,7 @@ class ProjectAssetLine(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
 
     __table_args__ = (
+        UniqueConstraint("project_id", "id", name="uq_project_asset_lines_project_id"),
         CheckConstraint("quantity >= 0", name="chk_asset_quantity_positive"),
         CheckConstraint("raw_price >= 0", name="chk_asset_raw_price_positive"),
         CheckConstraint("appraised_unit_price >= 0", name="chk_asset_appraised_price_positive"),
@@ -892,6 +896,380 @@ class ProjectFile(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     __table_args__ = (
         CheckConstraint("file_size >= 0", name="chk_file_size_positive"),
     )
+
+
+class PreliminaryResultArtifact(Base, UUIDMixin):
+    """Immutable, versioned preliminary-result file and source-snapshot lineage."""
+
+    __tablename__ = "preliminary_result_artifacts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), nullable=False
+    )
+    content_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    source_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    request_digest_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    lineage_manifest: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "version",
+            name="uq_preliminary_result_project_version",
+        ),
+        UniqueConstraint(
+            "storage_object_key", name="uq_preliminary_result_storage_object"
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "customer_id",
+            "project_id",
+            "id",
+            name="uq_preliminary_result_tenant_project_id",
+        ),
+        Index(
+            "uq_preliminary_result_idempotency",
+            "organization_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+            sqlite_where=text("idempotency_key IS NOT NULL"),
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_preliminary_result_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "created_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_preliminary_result_creator_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="chk_preliminary_result_version"),
+        CheckConstraint("file_size_bytes >= 0", name="chk_preliminary_result_size"),
+        CheckConstraint(
+            "length(content_checksum_sha256) = 64 "
+            "AND content_checksum_sha256 = lower(content_checksum_sha256) "
+            "AND content_checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_result_content_checksum",
+        ),
+        CheckConstraint(
+            "length(source_snapshot_sha256) = 64 "
+            "AND source_snapshot_sha256 = lower(source_snapshot_sha256) "
+            "AND source_snapshot_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_result_source_snapshot",
+        ),
+        CheckConstraint(
+            "idempotency_key IS NULL OR length(trim(idempotency_key)) > 0",
+            name="chk_preliminary_result_idempotency_trim",
+        ),
+        CheckConstraint(
+            "request_digest_sha256 IS NULL OR ("
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$')",
+            name="chk_preliminary_result_request_digest",
+        ),
+        CheckConstraint(
+            "(idempotency_key IS NULL) = (request_digest_sha256 IS NULL)",
+            name="chk_preliminary_result_request_pairing",
+        ),
+        Index("idx_preliminary_result_project", "organization_id", "project_id"),
+    )
+
+
+class ProjectOfficialIntakeCommit(Base, UUIDMixin):
+    """Append-only business fact for the official-intake commit boundary."""
+
+    __tablename__ = "project_official_intake_commits"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    preliminary_result_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    preliminary_result_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    preliminary_result_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_version_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    committed_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    committed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "project_id", name="uq_official_intake_project"
+        ),
+        UniqueConstraint(
+            "organization_id", "idempotency_key", name="uq_official_intake_idempotency"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_official_intake_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "customer_id",
+                "project_id",
+                "preliminary_result_artifact_id",
+            ],
+            [
+                "preliminary_result_artifacts.organization_id",
+                "preliminary_result_artifacts.customer_id",
+                "preliminary_result_artifacts.project_id",
+                "preliminary_result_artifacts.id",
+            ],
+            name="fk_official_intake_artifact_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "committed_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_official_intake_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "preliminary_result_version > 0", name="chk_official_intake_artifact_version"
+        ),
+        CheckConstraint(
+            "project_version_before > 0", name="chk_official_intake_project_version"
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0", name="chk_official_intake_idempotency"
+        ),
+        CheckConstraint(
+            "length(preliminary_result_sha256) = 64 "
+            "AND preliminary_result_sha256 = lower(preliminary_result_sha256) "
+            "AND preliminary_result_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_result_checksum",
+        ),
+        CheckConstraint(
+            "length(source_snapshot_sha256) = 64 "
+            "AND source_snapshot_sha256 = lower(source_snapshot_sha256) "
+            "AND source_snapshot_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_source_snapshot",
+        ),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_official_intake_request_digest",
+        ),
+        Index("idx_official_intake_project", "organization_id", "project_id"),
+    )
+
+
+class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
+    """Immutable, versioned authoritative fact for preliminary catalog/price analysis."""
+
+    __tablename__ = "preliminary_analysis_snapshots"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    structure_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    mapping_decision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    mapping_profile_usage_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_artifact_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    mapping_decision_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    profile_usage_mapping_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    line_manifest: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    line_manifest_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    finalized_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    finalized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "project_id",
+            "version",
+            name="uq_preliminary_analysis_project_version",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "idempotency_key",
+            name="uq_preliminary_analysis_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id", "project_id"],
+            ["projects.organization_id", "projects.customer_id", "projects.id"],
+            name="fk_preliminary_analysis_project_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_preliminary_analysis_batch_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+            ],
+            [
+                "import_source_artifacts.organization_id",
+                "import_source_artifacts.project_id",
+                "import_source_artifacts.import_batch_id",
+                "import_source_artifacts.id",
+            ],
+            name="fk_preliminary_analysis_artifact_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+            ],
+            [
+                "workbook_structure_snapshots.organization_id",
+                "workbook_structure_snapshots.project_id",
+                "workbook_structure_snapshots.import_batch_id",
+                "workbook_structure_snapshots.source_artifact_id",
+                "workbook_structure_snapshots.id",
+            ],
+            name="fk_preliminary_analysis_structure_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "customer_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+                "mapping_decision_id",
+            ],
+            [
+                "column_mapping_decisions.organization_id",
+                "column_mapping_decisions.customer_id",
+                "column_mapping_decisions.project_id",
+                "column_mapping_decisions.import_batch_id",
+                "column_mapping_decisions.source_artifact_id",
+                "column_mapping_decisions.structure_snapshot_id",
+                "column_mapping_decisions.id",
+            ],
+            name="fk_preliminary_analysis_decision_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            [
+                "organization_id",
+                "project_id",
+                "import_batch_id",
+                "source_artifact_id",
+                "structure_snapshot_id",
+                "mapping_profile_usage_id",
+            ],
+            [
+                "column_mapping_profile_usages.organization_id",
+                "column_mapping_profile_usages.project_id",
+                "column_mapping_profile_usages.import_batch_id",
+                "column_mapping_profile_usages.source_artifact_id",
+                "column_mapping_profile_usages.structure_snapshot_id",
+                "column_mapping_profile_usages.id",
+            ],
+            name="fk_preliminary_analysis_usage_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "finalized_by_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_preliminary_analysis_actor_tenant",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="chk_preliminary_analysis_version"),
+        CheckConstraint(
+            "source_artifact_generation > 0",
+            name="chk_preliminary_analysis_generation",
+        ),
+        CheckConstraint(
+            "length(mapping_decision_digest_sha256) = 64 "
+            "AND mapping_decision_digest_sha256 = lower(mapping_decision_digest_sha256) "
+            "AND mapping_decision_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_decision_digest",
+        ),
+        CheckConstraint(
+            "length(profile_usage_mapping_digest_sha256) = 64 "
+            "AND profile_usage_mapping_digest_sha256 = lower(profile_usage_mapping_digest_sha256) "
+            "AND profile_usage_mapping_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_usage_digest",
+        ),
+        CheckConstraint(
+            "length(line_manifest_digest_sha256) = 64 "
+            "AND line_manifest_digest_sha256 = lower(line_manifest_digest_sha256) "
+            "AND line_manifest_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_line_manifest_digest",
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0",
+            name="chk_preliminary_analysis_idempotency",
+        ),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_analysis_request_digest",
+        ),
+        Index("idx_preliminary_analysis_project", "organization_id", "project_id"),
+    )
+
 
 
 class AuditEvent(Base, UUIDMixin):
@@ -2130,6 +2508,11 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     """Aggregation folder for vendor/market pricing quotes relating to canonical assets or variants."""
     __tablename__ = "quote_batches"
 
+    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     canonical_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         ForeignKey("canonical_assets.id", ondelete="RESTRICT"),
         nullable=True
@@ -2162,6 +2545,7 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
     override_blocking_conflict_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
     canonical_asset: Mapped[Optional["CanonicalAsset"]] = relationship("CanonicalAsset")
     asset_variant: Mapped[Optional["AssetVariant"]] = relationship("AssetVariant")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
@@ -2169,10 +2553,19 @@ class QuoteBatch(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     previous_quote_batch: Mapped[Optional["QuoteBatch"]] = relationship("QuoteBatch", remote_side="QuoteBatch.id")
     quote_lines: Mapped[list["QuoteLine"]] = relationship("QuoteLine", back_populates="quote_batch")
 
+    __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_quote_batches_tenant_id"),
+    )
+
 
 class QuoteLine(Base, UUIDMixin, TimestampMixin):
     """Raw pricing detail entries extracted from evidence files or catalog sources."""
     __tablename__ = "quote_lines"
+
+    organization_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
 
     quote_batch_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("quote_batches.id", ondelete="RESTRICT"),
@@ -2181,6 +2574,10 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
     evidence_file_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         ForeignKey("evidence_files.id", ondelete="RESTRICT"),
         nullable=True
+    )
+    supplier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
     quoted_unit_price: Mapped[float] = mapped_column(nullable=False)
@@ -2198,8 +2595,14 @@ class QuoteLine(Base, UUIDMixin, TimestampMixin):
         default=QuoteLineStatus.DRAFT
     )
 
+    organization: Mapped[Optional["OrganizationProfile"]] = relationship("OrganizationProfile")
     quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", back_populates="quote_lines")
     evidence_file: Mapped[Optional["EvidenceFile"]] = relationship("EvidenceFile")
+    supplier: Mapped[Optional["Supplier"]] = relationship("Supplier")
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_quote_lines_tenant_id"),
+    )
 
 
 class AppraisedPriceDecisionStatus(str, enum.Enum):
@@ -3715,6 +4118,151 @@ class ProjectAssetImportStagingRow(Base, UUIDMixin, TimestampMixin):
         Index("idx_staging_row_project", "project_id"),
         Index("idx_staging_row_batch", "import_batch_id"),
         Index("idx_staging_row_validation", "validation_status"),
+    )
+
+
+class NccSelectionRevision(Base, UUIDMixin):
+    """Immutable revision of a confirmed NCC selection for a project asset line."""
+
+    __tablename__ = "ncc_selection_revisions"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    selection_revision: Mapped[int] = mapped_column(nullable=False)
+    quote_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    quote_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    supplier_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    evidence_file_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evidence_files.id", ondelete="RESTRICT"), nullable=False
+    )
+    supplier_name_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
+    quoted_unit_price_snapshot: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    currency_snapshot: Mapped[str] = mapped_column(String(10), nullable=False)
+    quantity_snapshot: Mapped[Optional[float]] = mapped_column(Numeric(15, 4), nullable=True)
+    unit_of_measure_snapshot: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    quote_date_snapshot: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    quote_batch_revision_number_snapshot: Mapped[int] = mapped_column(nullable=False)
+    current_unit_price_snapshot: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    current_unit_price_currency_id_snapshot: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("currencies.id", ondelete="RESTRICT"), nullable=True
+    )
+    difference_amount: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
+    difference_percent: Mapped[Optional[float]] = mapped_column(Numeric(15, 6), nullable=True)
+    warning_codes: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list
+    )
+    acknowledged_warning_codes: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    confirmed_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    project: Mapped["Project"] = relationship("Project", foreign_keys=[project_id])
+    asset_line: Mapped["ProjectAssetLine"] = relationship(
+        "ProjectAssetLine", foreign_keys=[project_asset_line_id]
+    )
+    quote_batch: Mapped["QuoteBatch"] = relationship("QuoteBatch", foreign_keys=[quote_batch_id])
+    quote_line: Mapped["QuoteLine"] = relationship("QuoteLine", foreign_keys=[quote_line_id])
+    supplier: Mapped["Supplier"] = relationship("Supplier", foreign_keys=[supplier_id])
+    evidence_file: Mapped["EvidenceFile"] = relationship("EvidenceFile", foreign_keys=[evidence_file_id])
+    current_unit_price_currency: Mapped[Optional["Currency"]] = relationship(
+        "Currency", foreign_keys=[current_unit_price_currency_id_snapshot]
+    )
+    confirmer: Mapped["User"] = relationship("User", foreign_keys=[confirmed_by_user_id])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "project_id", "project_asset_line_id", "selection_revision",
+            name="uq_ncc_selection_revision",
+        ),
+        UniqueConstraint("organization_id", "idempotency_key", name="uq_ncc_rev_idempotency_org"),
+        UniqueConstraint("organization_id", "id", name="uq_ncc_selection_revisions_tenant_id"),
+        Index("idx_ncc_rev_project_line", "organization_id", "project_id", "project_asset_line_id"),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"], ["projects.organization_id", "projects.id"],
+            name="fk_ncc_rev_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "project_asset_line_id"],
+            ["project_asset_lines.project_id", "project_asset_lines.id"],
+            name="fk_ncc_rev_asset_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "quote_batch_id"],
+            ["quote_batches.organization_id", "quote_batches.id"],
+            name="fk_ncc_rev_quote_batch_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "quote_line_id"],
+            ["quote_lines.organization_id", "quote_lines.id"],
+            name="fk_ncc_rev_quote_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "supplier_id"], ["suppliers.organization_id", "suppliers.id"],
+            name="fk_ncc_rev_supplier_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["current_unit_price_currency_id_snapshot"], ["currencies.id"],
+            name="fk_ncc_rev_current_currency", ondelete="RESTRICT",
+        ),
+        CheckConstraint("selection_revision > 0", name="chk_ncc_rev_selection_revision"),
+        CheckConstraint("length(trim(idempotency_key)) > 0", name="chk_ncc_rev_idempotency_trim"),
+        CheckConstraint(
+            "length(request_digest_sha256) = 64 "
+            "AND request_digest_sha256 = lower(request_digest_sha256) "
+            "AND request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_ncc_rev_request_digest",
+        ),
+    )
+
+
+class NccSelectionCurrentHead(Base):
+    """One current NCC selection head per project asset line."""
+
+    __tablename__ = "ncc_selection_current_heads"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False, primary_key=True
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, primary_key=True)
+    project_asset_line_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, primary_key=True)
+    current_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    selection_revision: Mapped[int] = mapped_column(nullable=False)
+
+    project: Mapped["Project"] = relationship("Project", foreign_keys=[project_id])
+    asset_line: Mapped["ProjectAssetLine"] = relationship(
+        "ProjectAssetLine", foreign_keys=[project_asset_line_id]
+    )
+    current_revision: Mapped["NccSelectionRevision"] = relationship(
+        "NccSelectionRevision", foreign_keys=[current_revision_id]
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"], ["projects.organization_id", "projects.id"],
+            name="fk_ncc_head_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "project_asset_line_id"],
+            ["project_asset_lines.project_id", "project_asset_lines.id"],
+            name="fk_ncc_head_asset_line_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "current_revision_id"],
+            ["ncc_selection_revisions.organization_id", "ncc_selection_revisions.id"],
+            name="fk_ncc_head_revision_tenant", ondelete="RESTRICT",
+        ),
+        CheckConstraint("selection_revision > 0", name="chk_ncc_head_selection_revision"),
     )
 
 

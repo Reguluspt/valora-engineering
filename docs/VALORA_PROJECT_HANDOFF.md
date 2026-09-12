@@ -1,28 +1,32 @@
-# Valora Project Handoff (Canonical)
+# Valora Project Handoff — Implementation Baseline Supplement
 
-**Status:** Canonical handoff for coding agents
-**Reconciled:** 2026-07-19 — S13-PR-003 closeout / S13-PR-004 assignment
-**Main evidence (not evergreen):** `2af753520ab6b7885555adc5b7945a28d32ee311` (S13-PR-003 PR #17)
-**Main CI evidence:** run `29676915010` PASS
+**Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
+**Reconciled:** 2026-09-12 — PR #28 residual evidence closeout
+**Accepted code baseline:** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
+**Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
 ### Live task gate
 
 ```text
-S12-PR-004 is MERGED and its engineering gate is CLOSED.
-S13-PR-001 design-authority gate is CLOSED. Gate 0b is SATISFIED.
-Gate 0c bounded-AI automation readiness is CLOSED / SATISFIED.
-S13-PR-002 is MERGED / CLOSED at main `137f8c527422b656974e569c924dafa8150b8b22`
-(PR #15; audited head `11bf7dd1332fcf6e5c0029f86d9665aa1d5107b5`; exact-head CI
-`29640226850`; post-merge main CI `29641452155`, all PASS).
-S13-PR-003 is MERGED / CLOSED at main `2af753520ab6b7885555adc5b7945a28d32ee311`
-(PR #17; audited head `ab88971fbfab4388481c579263a40fcd86f9831d`, tree
-`17b37703fb1e8993bf7dde63b0262d405a28222c`; exact-head CI `29658271166`;
-post-merge main CI `29676915010`, all PASS).
+Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
+`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`, then the directly relevant v2.3 addendum.
 
-Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application
-Services — with assigned branch name `s13-pr-004-column-mapping-memory` from accepted main
-`2af753520ab6b7885555adc5b7945a28d32ee311`. Its design/evidence gate must be frozen first.
-S13-PR-005 API/UX and later slices remain separately gated.
+PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
+PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
+PR-02 through PR-04 were implemented together by GitHub PR #28 from base
+`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
+`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
+PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
+PR #28 remains open and Draft; it is not merged, released or deployed.
+The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
+local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
+upgrade/downgrade/upgrade CI regression is committed at
+`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
+reviewed remote head above and do not change PR #28's Draft/unmerged status.
+PR-05 — M365 Integration Foundation is only the next roadmap candidate. It requires a separate task
+and authority and must not start under this closeout.
+Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
+or drive new UI. Earlier S13 sequencing below is historical context only.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -111,6 +115,17 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ## 8. Progress snapshot
 
+### Current UI/UX integration track
+
+| ID | Status | Evidence / next gate |
+|---|---|---|
+| PR-00 | COMPLETE / CLOSED locally | closeout `b176820` |
+| PR-01 / PR-01a | ACCEPTED FOUNDATION | PR-01 runtime closeout is the PR #28 base `5ed0922f50ae1ef3b31346f7245423aae9c01cd2` |
+| PR-02 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | reviewed remote head `51db33ec7fc7a82b9abba151e13f268b5e875fc4`; desktop/laptop browser acceptance PASS after corrective commit `69ecd97` |
+| PR-03 | IMPLEMENTED IN DRAFT PR #28; RESIDUAL EVIDENCE CLOSED LOCALLY | append-only tenant-safe NCC Selection persistence; committed PostgreSQL upgrade/downgrade/upgrade CI regression `ad3faad` |
+| PR-04 | IMPLEMENTED IN DRAFT PR #28 | API/UI slice included in the exact reviewed head; formal gate PASS with no P0/P1/P2 findings |
+| PR-05 | ROADMAP CANDIDATE / NOT STARTED | requires a separate task and authority after this closeout |
+
 ### Merged on main (do not re-open)
 
 | ID | Focus |
@@ -122,16 +137,16 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | **S13-PR-002** | Legacy Workbook Adapter and Immutable Source Artifact — **merged** PR #15 at `137f8c5…` |
 | **S13-PR-003** | Workbook Structure Discovery and Row Classification — **merged** PR #17 at `2af7535…` |
 
-### Runtime assignment state
+### Historical runtime assignment snapshot — superseded by v2.3
 
 ```text
-Active runtime assignment: S13-PR-004 — Column Mapping Memory Persistence and Application Services
+Historical assignment: S13-PR-004 — Column Mapping Memory Persistence and Application Services
 Assigned branch name: s13-pr-004-column-mapping-memory
 Baseline: 2af753520ab6b7885555adc5b7945a28d32ee311
 Gate: freeze task-specific design/evidence contract before runtime implementation
 ```
 
-### Next candidate after S13-PR-004 merge (requires separate owner assignment)
+### Historical next-candidate record — not a current execution gate
 
 ```text
 S13-PR-005 — Mapping Confirmation API and Astryx Vietnamese UX
@@ -160,7 +175,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart closed S13-PR-001/002/003 or Gate 0c. S13-PR-004 is the active assigned runtime task from accepted main `2af7535…`; freeze its design before runtime. Do not start S13-PR-005+ without a separate owner assignment.
+6. Do not restart closed S13 work. Follow the v2.3 PR-00 → PR-13 execution track and its dependency gates.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.
