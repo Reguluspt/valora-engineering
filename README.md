@@ -7,6 +7,9 @@
 `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 **PR-00 through PR-04:** **MERGED by PR #29**
 **PR-05 and PR-06:** **MERGED by PR #30 and PR #31; backend/provider slices only**
+**PR-00 alignment gate:** **CLOSED**
+**PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
+**PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
 **Active task:** **Operational frontend completion, then PR-07 contract/ADR before runtime**
 
 Agents must `git fetch origin` and verify live `origin/main`.

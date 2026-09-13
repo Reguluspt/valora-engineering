@@ -4,6 +4,7 @@
 **Reconciled:** 2026-09-12 — PR-00 through PR-06 merged; Software Completion required before Windows Preview
 **Accepted code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
 **Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
+**v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ### Live task gate
 

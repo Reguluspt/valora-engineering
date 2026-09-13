@@ -3,6 +3,7 @@
 **Created:** 2026-07-06
 **Last reconciled:** 2026-09-12 (PR-00 through PR-06 merged; Software Completion required before Windows Preview)
 **Applies to:** All agent-generated work in the Valora repository
+**v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Source of Truth
 

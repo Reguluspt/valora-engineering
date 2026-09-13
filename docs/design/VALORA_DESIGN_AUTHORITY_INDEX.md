@@ -3,6 +3,7 @@
 **Status:** Canonical reading order and conflict-resolution index
 **Reconciled:** 2026-09-12 (PR-00 through PR-06 merged; PR-07 contract/ADR is the next runtime gate)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
+**v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Read order
 

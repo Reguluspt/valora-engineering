@@ -69,11 +69,12 @@ journey to complete.
   backend tests, dependency audit, security/secret scan, frontend lint/build/unit/dependency audit,
   worker checks/tests/audit and committed-whitespace.
 
-## Current operational frontend entry gap
+## Operational frontend entry: merged baseline gap and unmerged candidate
 
-Backend capability is not the blocker for the basic session and project entry path: login, refresh,
-logout, `/me`, CSRF and project-list endpoints already exist. The production frontend does not call
-them as an operational flow.
+At the verified merged baseline, backend capability was not the blocker for the basic session and
+project entry path: login, refresh, logout, `/me`, CSRF and project-list endpoints existed, while the
+production frontend did not call them as an operational flow. The table below remains the historical
+baseline observation; it must not be read as the state of the later unmerged candidate.
 
 | Required entry capability | Current repository evidence | Verdict |
 |---|---|---|
@@ -92,12 +93,27 @@ static project-list placeholder. It must not add SharePoint, OneDrive for Busine
 sync/conflict behavior or preview-only bypasses. The M365 callback/connection-state and
 document/template-selection gaps require a small accepted contract before that part is implemented.
 
+### Unmerged operational candidate — 2026-09-13
+
+Branch `feat/operational-frontend-m365` on base `6af3c86` implements the bounded closure without a
+schema migration, Graph write or PR-07 runtime. This is candidate evidence only; it does not change
+the merged PR-05/PR-06 rows above.
+
+| Candidate capability | Current candidate evidence | Verdict |
+|---|---|---|
+| Login/session/logout and account context | Cookie/CSRF clients, boot-time `/me`, session gate, login and App Shell account/organization context | LOCAL PASS — UNMERGED |
+| Real project selection | API-backed project list with loading, empty, denied/error and navigation states | LOCAL PASS — UNMERGED |
+| OneDrive Personal callback/connection | Fixed allow-listed callback return, authoritative connection read model and permission-aware connect state | LOCAL PASS — UNMERGED |
+| Provision/adopt selection | Server-owned operational snapshot, bounded folder/DOCX listing, active template selection and canonical provision | LOCAL PASS — UNMERGED |
+| Return/revalidation/readiness | Callback and focus re-observation, five server classifications, `recovery_code`/`next_action` rendering and canonical document list | LOCAL PASS — UNMERGED |
+| Automated/browser evidence | Frontend unit/API tests, backend API/service/adapter tests and simulated-provider desktop/laptop browser closeout | LOCAL PASS — exact counts below |
+| Residual acceptance | Exact-head CI, isolated PostgreSQL rerun and live Entra/browser/provider callback on this candidate | NOT EVIDENCED ON CANDIDATE |
+
 ## Next bounded scopes and dependencies
 
-1. **Operational entry and OneDrive Personal frontend closure.** Implement login, boot-time session
-   restoration, logout, account/organization context and real project selection against existing
-   APIs. First contract the missing M365 callback return target, connection-state read model and
-   provision/adopt selection boundary; then connect PR-05/06 without Graph writes.
+1. **Operational entry and OneDrive Personal frontend closure.** The bounded implementation is a
+   local unmerged candidate. Preserve its no-Graph-write boundary and obtain exact-head CI plus any
+   required live callback/browser evidence before promoting it to merged acceptance.
 2. **PR-07 — contract/ADR first.** Define immutable protected value snapshots, normalized value
    identity, three-way comparison inputs, conflict-decision persistence, optimistic concurrency,
    idempotency, transaction/commit boundaries, uncertain-write recovery, Graph permission/write
@@ -126,7 +142,7 @@ operational frontend entry, PR-07 through PR-13 and Software Completion pass on 
 candidate SHA. The preview packages that accepted product for isolated Windows UAT; it does not
 provide a place to discover or complete business features.
 
-## Provider execution record and next plan
+## Provider execution record for the verified baseline audit
 
 - Gemini `gemini-3.1-pro-high`: unavailable in the current environment; the Gemini CLI and exact
   model were not available. No substitute Gemini, Claude or Kimi model was used.
@@ -136,6 +152,19 @@ provide a place to discover or complete business features.
 - Codex: sole writer and verifier for this audit. Before architecture-impacting runtime work, retry
   the exact Gemini challenge. If it remains unavailable, continue Codex-only under the Product
   Owner's stated fallback while retaining an explicit independent-review gap.
+
+### Operational candidate review record — 2026-09-13
+
+- Gemini `gemini-3.1-pro-high`: the first corrective attempt returned `INVALID REVIEW` and was
+  discarded. A fresh project run then proved branch/HEAD, the exact operational snapshot contract,
+  ADR status and frontend test count; it found no P0–P3 issue and returned `READY`.
+- DeepSeek `opencode-go/deepseek-v4.1-flash`: the first final review returned `BLOCKED` on a
+  read-only-user reconnect action and replay ordering. Both were corrected with regression tests.
+  The corrective review found no P0–P2 issue and returned `READY`; its three P3 hardening notes were
+  also closed by direct authorize denial, invalid callback-origin tests and `.env.example` config.
+- DeepSeek created an unintended local `diff.txt` while reviewing despite read-only instructions.
+  Codex inspected and removed that generated artifact; no provider-authored source change remains.
+- Codex remains the sole source/document writer. No Claude, Kimi or substitute model was used.
 
 ## Verification performed on the audited baseline
 
@@ -154,3 +183,26 @@ exact-main GitHub Actions run 34703818281                     PASS all jobs
 Local PostgreSQL suites were not rerun because no isolated local database was provisioned for this
 read-only audit. The exact-main CI backend job ran migration smoke, single-head and the full backend
 suite without skips; the PR task briefs retain their PostgreSQL and live OneDrive Personal evidence.
+
+### Verification performed on the unmerged operational candidate
+
+```text
+frontend: npm test                                          29 files / 137 tests PASS
+frontend: npm run lint                                      PASS
+frontend: npm run build                                     PASS; production marker assertion PASS
+frontend: npm audit --audit-level=high                      PASS; 0 vulnerabilities
+backend: operational/PR-05/PR-06 focused tests             72 passed
+backend: full pytest after runtime fixes                   1332 passed / 95 skipped / 23 warnings
+backend: python -m ruff check app tests                     PASS
+backend: python -m alembic heads                            a6d9e4c2b8f1 (single head)
+repository: git diff --check                                PASS
+repository: targeted secret and prohibited-write scans      PASS
+browser: simulated provider, 1440x900 and 1024x768         PASS; zero console warnings/errors
+Gemini architecture/security challenge                      READY; no P0-P3
+DeepSeek corrective implementation review                   READY; no P0-P2
+```
+
+The full backend run completed before three final test-only hardening cases were added; the runtime
+code did not change afterward and all three cases pass in the final focused run. The 95 local skips
+remain explicitly unverified PostgreSQL/MinIO gates. This candidate has no exact-head CI or new live
+OneDrive Personal browser/provider run.
