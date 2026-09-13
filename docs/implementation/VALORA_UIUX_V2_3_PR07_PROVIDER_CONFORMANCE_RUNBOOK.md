@@ -1,6 +1,6 @@
 # PR-07 OneDrive Personal conditional-commit conformance runbook
 
-**Task:** `VALORA-PR07-CONFORMANCE-001` **Status:** READY TO RUN — LIVE CREDENTIAL REQUIRED
+**Task:** `VALORA-PR07-CONFORMANCE-001` **Status:** BLOCKED — MANUAL CALLBACK HANDOFF REQUIRED
 **Date:** 2026-09-13 **Authority:** accepted ADR 0042 and PR-07 implementation contract
 
 ## Purpose
@@ -50,6 +50,19 @@ file upload, accept a create-session-only `412`, or begin runtime work on fake-p
 
 ## Current disposition
 
-The machine has no retained PR-05/PR-06 client secret, token or live item configuration. A live run
-therefore requires a new short-lived `Files.ReadWrite` consent/token. Runtime and migration work
-remain paused until the sanitized PASS evidence is captured and independently reviewed.
+On 2026-09-13, a bounded live attempt temporarily added delegated `Files.ReadWrite`, created a
+short-lived client secret and reached the Microsoft Personal consent screen. The consent screen
+showed OneDrive file access plus the normal profile/offline-access grants; no
+`Files.ReadWrite.All` or application permission was requested. After consent, the controlled
+browser blocked the registered `localhost` callback before the authorization code could be
+captured. The probe command did not run, no probe item was created and no OneDrive content was
+written.
+
+Cleanup was verified in Entra immediately afterward: the temporary PR-07 secret and delegated
+`Files.ReadWrite` grant were removed, delegated `Files.Read` remained, and the pre-existing PR-05
+secret was preserved. No secret, authorization code or token was retained.
+
+A live run now requires a user-controlled browser handoff to the registered local callback while
+the probe session is listening, followed by a new short-lived `Files.ReadWrite` consent/token.
+This attempt is neither provider PASS nor provider FAIL. Runtime and migration work remain paused
+until sanitized PASS evidence is captured and independently reviewed.
