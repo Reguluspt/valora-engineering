@@ -5,14 +5,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_correlation_id, get_current_session
 from app.core.config import get_settings
-from app.core.rbac import require_permission
+from app.core.rbac import get_current_user, require_permission
 from app.db import get_db
 from app.modules.m365_integration.application.connection_service import (
     begin_onedrive_authorization,
@@ -21,6 +23,12 @@ from app.modules.m365_integration.application.connection_service import (
 )
 from app.modules.m365_integration.application.provision_document_service import (
     provision_onedrive_document,
+)
+from app.modules.m365_integration.application.operational_entry_service import (
+    AdoptionOptions,
+    OperationalDocument,
+    get_adoption_options,
+    list_operational_documents,
 )
 from app.modules.m365_integration.application.revalidation_service import (
     RevalidationReadiness,
@@ -37,6 +45,7 @@ from app.modules.m365_integration.infrastructure.graph_adapter import MicrosoftG
 from app.modules.m365_integration.infrastructure.microsoft_oauth import (
     MicrosoftPersonalOAuthClient,
 )
+from app.modules.m365_integration.models import OneDriveConnection
 from app.modules.project_master_data.models import User, UserSession
 
 
@@ -47,10 +56,40 @@ class OneDriveAuthorizationResponse(BaseModel):
     authorization_url: str
 
 
-class OneDriveConnectionResponse(BaseModel):
-    connection_id: str
+class OneDriveConnectionStatusResponse(BaseModel):
+    connection_id: uuid.UUID | None
+    drive_id: str | None
+    status: Literal["not_connected", "active", "error", "revoked"]
+    last_verified_at: datetime | None
+
+
+class M365AdoptionTemplateResponse(BaseModel):
+    template_version_id: uuid.UUID
+    template_name: str
+    document_type: str
+    version_number: int
+
+
+class M365DriveEntryResponse(BaseModel):
+    drive_item_id: str
+    kind: Literal["folder", "docx"]
+    name: str
+    size_bytes: int | None
+    last_modified_at: datetime | None
+    web_url: str | None
+
+
+class M365AdoptionOptionsResponse(BaseModel):
+    project_id: uuid.UUID
+    project_code: str
+    project_name: str
+    connection_id: uuid.UUID
     drive_id: str
-    status: str
+    parent_item_id: str | None
+    data_snapshot: dict[str, object]
+    templates: list[M365AdoptionTemplateResponse]
+    items: list[M365DriveEntryResponse]
+    truncated: bool
 
 
 class M365RevalidationRequest(BaseModel):
@@ -131,6 +170,7 @@ class M365RevalidationReadinessResponse(BaseModel):
     file_path: str | None
     web_url: str
     baseline_eligible: bool
+    recovery_code: str | None
     classification: str | None
     completed_at: datetime | None
     affected_region_keys: list[str]
@@ -140,6 +180,13 @@ class M365RevalidationReadinessResponse(BaseModel):
     blocking_reason: str | None
     next_action: str | None
     retryable: bool
+
+
+class M365OperationalDocumentResponse(BaseModel):
+    document_id: uuid.UUID
+    title: str
+    document_type: str
+    readiness: M365RevalidationReadinessResponse
 
 
 def _components(db: Session):
@@ -189,25 +236,130 @@ def authorize_onedrive(
     return OneDriveAuthorizationResponse(authorization_url=authorization_url)
 
 
-@router.get("/oauth/callback", response_model=OneDriveConnectionResponse)
+def _frontend_return_uri(result: str, reason: str | None = None) -> str:
+    settings = get_settings()
+    target = urlsplit(settings.m365_frontend_return_uri)
+    if (
+        target.scheme not in {"http", "https"}
+        or not target.hostname
+        or target.username is not None
+        or target.password is not None
+    ):
+        raise RuntimeError("M365_FRONTEND_RETURN_URI is invalid.")
+    target_origin = f"{target.scheme}://{target.netloc}"
+    allowed_origins = {origin.rstrip("/") for origin in settings.parsed_cors_origins}
+    if target_origin not in allowed_origins:
+        raise RuntimeError("M365_FRONTEND_RETURN_URI origin is not allowed.")
+    parameters = {"m365": result}
+    if reason:
+        parameters["reason"] = reason
+    if target.fragment:
+        route, separator, existing_query = target.fragment.partition("?")
+        fragment_query = dict(parse_qsl(existing_query)) if separator else {}
+        fragment_query.update(parameters)
+        fragment = f"{route}?{urlencode(fragment_query)}"
+        return urlunsplit((target.scheme, target.netloc, target.path, target.query, fragment))
+    query = dict(parse_qsl(target.query))
+    query.update(parameters)
+    return urlunsplit((target.scheme, target.netloc, target.path, urlencode(query), ""))
+
+
+def _callback_reason(exc: HTTPException) -> str:
+    detail = exc.detail
+    if isinstance(detail, dict):
+        candidate = detail.get("error_code")
+        if isinstance(candidate, str) and candidate.startswith("onedrive_"):
+            return candidate[:64]
+    return "onedrive_callback_failed"
+
+
+@router.get("/oauth/callback", response_class=RedirectResponse)
 def onedrive_oauth_callback(
     request: Request,
     db: Session = Depends(get_db),
-) -> OneDriveConnectionResponse:
+) -> RedirectResponse:
+    success_location = _frontend_return_uri("connected")
     vault, oauth, graph = _components(db)
-    connection = complete_onedrive_authorization(
+    try:
+        complete_onedrive_authorization(
+            db,
+            auth_response=dict(request.query_params),
+            oauth_client=oauth,
+            graph_gateway=graph,
+            credential_vault=vault,
+            correlation_id=get_correlation_id(request),
+        )
+        location = success_location
+    except HTTPException as exc:
+        location = _frontend_return_uri("failed", _callback_reason(exc))
+    return RedirectResponse(location, status_code=303)
+
+
+@router.get("/connection", response_model=OneDriveConnectionStatusResponse)
+def read_onedrive_connection(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> OneDriveConnectionStatusResponse:
+    connection = (
+        db.query(OneDriveConnection)
+        .filter(
+            OneDriveConnection.organization_id == current_user.organization_id,
+            OneDriveConnection.user_id == current_user.id,
+        )
+        .first()
+    )
+    if connection is None:
+        return OneDriveConnectionStatusResponse(
+            connection_id=None,
+            drive_id=None,
+            status="not_connected",
+            last_verified_at=None,
+        )
+    return OneDriveConnectionStatusResponse(
+        connection_id=connection.id,
+        drive_id=connection.drive_id,
+        status=connection.status,
+        last_verified_at=connection.last_verified_at,
+    )
+
+
+def _adoption_options_response(options: AdoptionOptions) -> M365AdoptionOptionsResponse:
+    return M365AdoptionOptionsResponse(
+        project_id=options.project_id,
+        project_code=options.project_code,
+        project_name=options.project_name,
+        connection_id=options.connection_id,
+        drive_id=options.drive_id,
+        parent_item_id=options.parent_item_id,
+        data_snapshot=options.data_snapshot,
+        templates=[M365AdoptionTemplateResponse(**item.__dict__) for item in options.templates],
+        items=[M365DriveEntryResponse(**item.__dict__) for item in options.items],
+        truncated=options.truncated,
+    )
+
+
+@router.get(
+    "/projects/{project_id}/adoption-options",
+    response_model=M365AdoptionOptionsResponse,
+)
+def read_adoption_options(
+    project_id: uuid.UUID,
+    parent_item_id: str | None = Query(default=None, min_length=1, max_length=255),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365AdoptionOptionsResponse:
+    vault, oauth, graph = _components(db)
+    options = get_adoption_options(
         db,
-        auth_response=dict(request.query_params),
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        parent_item_id=parent_item_id,
         oauth_client=oauth,
         graph_gateway=graph,
         credential_vault=vault,
-        correlation_id=get_correlation_id(request),
     )
-    return OneDriveConnectionResponse(
-        connection_id=str(connection.id),
-        drive_id=connection.drive_id,
-        status=connection.status,
-    )
+    return _adoption_options_response(options)
 
 
 def _readiness_response(
@@ -224,6 +376,7 @@ def _readiness_response(
         file_path=readiness.file_path,
         web_url=readiness.web_url,
         baseline_eligible=readiness.baseline_eligible,
+        recovery_code=readiness.recovery_code,
         classification=readiness.classification,
         completed_at=readiness.completed_at,
         affected_region_keys=list(readiness.affected_region_keys),
@@ -234,6 +387,35 @@ def _readiness_response(
         next_action=readiness.next_action,
         retryable=readiness.retryable,
     )
+
+
+def _operational_document_response(
+    document: OperationalDocument,
+) -> M365OperationalDocumentResponse:
+    return M365OperationalDocumentResponse(
+        document_id=document.document_id,
+        title=document.title,
+        document_type=document.document_type,
+        readiness=_readiness_response(document.readiness),
+    )
+
+
+@router.get(
+    "/projects/{project_id}/documents",
+    response_model=list[M365OperationalDocumentResponse],
+)
+def read_operational_documents(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+) -> list[M365OperationalDocumentResponse]:
+    documents = list_operational_documents(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+    )
+    return [_operational_document_response(document) for document in documents]
 
 
 @router.post(

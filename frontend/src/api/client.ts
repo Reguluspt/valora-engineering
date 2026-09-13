@@ -79,8 +79,12 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
       }
 
       // Security: ensure cookies/secrets are never included in ApiError
-      const message = errBody?.detail?.message || errBody?.detail || errBody?.message || `HTTP error ${response.status}`;
-      const code = errBody?.code || errBody?.detail?.code;
+      const message = errBody?.detail?.message
+        || errBody?.detail?.detail
+        || (typeof errBody?.detail === "string" ? errBody.detail : null)
+        || errBody?.message
+        || `HTTP error ${response.status}`;
+      const code = errBody?.code || errBody?.detail?.code || errBody?.detail?.error_code;
       throw new ApiError(message, response.status, code, errBody);
     }
 
@@ -112,3 +116,5 @@ export async function getOpenApiSpec(): Promise<any> {
 
 export * from "./assetLines";
 export * from "./projects";
+export * from "./auth";
+export * from "./m365";

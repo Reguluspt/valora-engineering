@@ -100,6 +100,7 @@ class RevalidationReadiness:
     file_path: str | None
     web_url: str
     baseline_eligible: bool
+    recovery_code: str | None
     classification: str | None
     completed_at: datetime | None
     affected_region_keys: tuple[str, ...]
@@ -1142,6 +1143,7 @@ def get_revalidation_readiness(
             file_path=scope.binding_path,
             web_url=scope.binding_web_url,
             baseline_eligible=False,
+            recovery_code="baseline_required",
             classification=None,
             completed_at=None,
             affected_region_keys=(),
@@ -1180,6 +1182,7 @@ def get_revalidation_readiness(
             file_path=scope.binding_path,
             web_url=scope.binding_web_url,
             baseline_eligible=True,
+            recovery_code="revalidation_required",
             classification=None,
             completed_at=None,
             affected_region_keys=(),
@@ -1222,6 +1225,7 @@ def get_revalidation_readiness(
         ),
         web_url=latest.observed_web_url or scope.binding_web_url,
         baseline_eligible=True,
+        recovery_code=blocking,
         classification=latest.classification,
         completed_at=latest.completed_at,
         affected_region_keys=tuple(latest.affected_region_keys),

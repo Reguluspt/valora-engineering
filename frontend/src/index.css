@@ -282,3 +282,48 @@ body {
   margin-bottom: var(--space-sm);
   color: var(--accent-cyan);
 }
+
+.account-context {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.account-context span,
+.account-context small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-context span {
+  color: var(--accent-cyan);
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
+}
+
+.account-context strong {
+  overflow: hidden;
+  color: #f0f4f7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-context button {
+  width: max-content;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #aeb9c4;
+  cursor: pointer;
+  font: 600 12px/1.4 var(--font-family-primary);
+}
+
+.account-context button:hover {
+  color: var(--accent-cyan);
+}

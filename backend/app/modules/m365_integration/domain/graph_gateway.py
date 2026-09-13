@@ -48,6 +48,22 @@ class GraphDriveItem:
     web_url: str
 
 
+@dataclass(frozen=True)
+class GraphDriveEntry:
+    drive_item_id: str
+    kind: str
+    name: str
+    size_bytes: int | None
+    last_modified_at: datetime | None
+    web_url: str | None
+
+
+@dataclass(frozen=True)
+class GraphDriveChildren:
+    entries: tuple[GraphDriveEntry, ...]
+    truncated: bool
+
+
 class M365OAuthClient(Protocol):
     def begin(self) -> OAuthAuthorizationStart: ...
 
@@ -68,3 +84,12 @@ class M365GraphGateway(Protocol):
     def get_drive_item_content(
         self, *, access_token: str, drive_id: str, drive_item_id: str
     ) -> bytes: ...
+
+    def list_drive_children(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str | None,
+        limit: int,
+    ) -> GraphDriveChildren: ...

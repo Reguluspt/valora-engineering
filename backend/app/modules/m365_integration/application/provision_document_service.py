@@ -62,6 +62,7 @@ PROJECT_UPDATE_PERMISSION = "project:update"
 MAX_SNAPSHOT_BYTES = 1024 * 1024
 MAX_SNAPSHOT_DEPTH = 32
 MAX_SNAPSHOT_NODES = 10_000
+OPERATIONAL_ADOPTION_SNAPSHOT_CONTRACT = "valora-operational-adoption-v1"
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,27 @@ def _canonical_snapshot(value: dict[str, object]) -> tuple[dict[str, object], st
         raise ValueError("Data Snapshot is too large.")
     normalized = json.loads(encoded)
     return normalized, hashlib.sha256(encoded).hexdigest()
+
+
+def _validate_operational_adoption_snapshot(
+    db: Session, *, project: Project, snapshot: dict[str, object]
+) -> None:
+    if snapshot.get("contract_version") != OPERATIONAL_ADOPTION_SNAPSHOT_CONTRACT:
+        return
+    expected = {
+        "contract_version": OPERATIONAL_ADOPTION_SNAPSHOT_CONTRACT,
+        "project_id": str(project.id),
+        "project_code": project.code,
+        "project_name": project.name,
+        "project_row_version": project.row_version,
+    }
+    if snapshot != expected:
+        _abort(
+            db,
+            409,
+            "operational_adoption_snapshot_stale",
+            "Thông tin hồ sơ đã thay đổi. Vui lòng tải lại lựa chọn tài liệu.",
+        )
 
 
 def _request_digest(
@@ -253,6 +275,38 @@ def _replay(
     )
 
 
+def _existing_replay_manifest_digest(
+    db: Session, *, organization_id: uuid.UUID, idempotency_key: str
+) -> str | None:
+    """Load the sealed manifest needed to validate a replay without current authority."""
+    revision = (
+        db.query(DocumentRevision)
+        .filter(
+            DocumentRevision.organization_id == organization_id,
+            DocumentRevision.idempotency_key == idempotency_key,
+        )
+        .first()
+    )
+    if revision is None:
+        return None
+    baseline = (
+        db.query(M365ManagedContentBaseline)
+        .filter(
+            M365ManagedContentBaseline.organization_id == organization_id,
+            M365ManagedContentBaseline.document_revision_id == revision.id,
+        )
+        .first()
+    )
+    if baseline is None:
+        _abort(
+            db,
+            409,
+            "provision_lineage_incomplete",
+            "Lineage tài liệu hiện có không đầy đủ.",
+        )
+    return baseline.managed_region_manifest_digest_sha256
+
+
 def _load_authority(
     db: Session,
     *,
@@ -342,7 +396,33 @@ def provision_onedrive_document(
         actor_id=actor.id,
         permission=PROJECT_UPDATE_PERMISSION,
     )
-    _, template, _, definitions = _load_authority(
+    replay_manifest_digest = _existing_replay_manifest_digest(
+        db,
+        organization_id=organization_id,
+        idempotency_key=normalized_key,
+    )
+    if replay_manifest_digest is not None:
+        replay_digest = _request_digest(
+            actor_id=actor.id,
+            organization_id=organization_id,
+            project_id=project_id,
+            template_version_id=template_version_id,
+            connection_id=connection_id,
+            drive_item_id=normalized_item_id,
+            title=normalized_title,
+            data_snapshot_digest_sha256=snapshot_digest,
+            manifest_digest_sha256=replay_manifest_digest,
+        )
+        replay = _replay(
+            db,
+            organization_id=organization_id,
+            idempotency_key=normalized_key,
+            request_digest=replay_digest,
+        )
+        if replay is not None:
+            db.rollback()
+            return replay
+    project, template, _, definitions = _load_authority(
         db,
         organization_id=organization_id,
         project_id=project_id,
@@ -369,6 +449,9 @@ def provision_onedrive_document(
     if replay is not None:
         db.rollback()
         return replay
+    _validate_operational_adoption_snapshot(
+        db, project=project, snapshot=normalized_snapshot
+    )
 
     connection, access_token = _connection_access_token(
         db,
@@ -448,12 +531,15 @@ def provision_onedrive_document(
     )
     if organization is None:
         _abort(db, 403, "m365_revalidation_forbidden", "Không thể thực hiện thao tác này.")
-    _, current_template, _, current_definitions = _load_authority(
+    current_project, current_template, _, current_definitions = _load_authority(
         db,
         organization_id=organization_id,
         project_id=project_id,
         template_version_id=template_version_id,
         lock=True,
+    )
+    _validate_operational_adoption_snapshot(
+        db, project=current_project, snapshot=normalized_snapshot
     )
     if (
         current_template.document_type != template.document_type

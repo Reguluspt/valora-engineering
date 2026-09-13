@@ -7,17 +7,21 @@ import {
   projectOverviewPath,
   projectWorkbenchPath,
   projectNccSelectionPath,
+  projectDocumentsPath,
   splitProjectRoute,
 } from "../../contracts/valoraV23";
+import type { AccountContext } from "../../api/auth";
 import { t } from "../../i18n";
 
 interface AppShellProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   children: React.ReactNode;
+  account: AccountContext;
+  onLogout: () => void;
 }
 
-export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
+export function AppShell({ currentPath, onNavigate, account, onLogout, children }: AppShellProps) {
   const projectRoute = splitProjectRoute(currentPath);
   const getLinkActive = (path: string) => {
     return currentPath.startsWith(path);
@@ -51,6 +55,13 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
         )}
         {projectRoute && (
           <SideNavItem
+            isSelected={projectRoute.view === "documents"}
+            label="Tài liệu OneDrive"
+            onClick={() => onNavigate(projectDocumentsPath(projectRoute.projectRef))}
+          />
+        )}
+        {projectRoute && (
+          <SideNavItem
             isSelected={projectRoute.view === "ncc-selection"}
             label={t("nav.nccSelection")}
             onClick={() => onNavigate(projectNccSelectionPath(projectRoute.projectRef))}
@@ -67,6 +78,12 @@ export function AppShell({ currentPath, onNavigate, children }: AppShellProps) {
           onClick={() => onNavigate(APP_ROUTES.legacyValidationDashboard)}
         />
       </SideNavSection>
+      <div className="account-context">
+        <span>{account.organization_slug}</span>
+        <strong>{account.full_name || account.email}</strong>
+        <small>{account.email}</small>
+        <button onClick={onLogout} type="button">Đăng xuất</button>
+      </div>
     </SideNav>
   );
 

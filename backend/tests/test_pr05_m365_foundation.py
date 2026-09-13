@@ -31,6 +31,8 @@ from app.modules.m365_integration.application.connection_service import (
 )
 from app.modules.m365_integration.domain.graph_gateway import (
     GraphDrive,
+    GraphDriveChildren,
+    GraphDriveEntry,
     GraphDriveItem,
     OAuthAccessToken,
     OAuthAuthorizationResult,
@@ -142,6 +144,7 @@ class FakeGraphGateway:
     def __init__(self) -> None:
         self.drive = GraphDrive(drive_id="personal-drive-1", drive_type="personal")
         self.item_calls = 0
+        self.list_calls = 0
         self.item_name = "Bao-cao.docx"
         self.item_path = "/drive/root:/Ho-so/Bao-cao.docx"
 
@@ -165,6 +168,40 @@ class FakeGraphGateway:
             name=self.item_name,
             path=self.item_path,
             web_url="https://onedrive.live.com/example",
+        )
+
+    def list_drive_children(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str | None,
+        limit: int,
+    ) -> GraphDriveChildren:
+        assert access_token == "ephemeral-refreshed-access-token"
+        assert drive_id == self.drive.drive_id
+        assert limit <= 100
+        self.list_calls += 1
+        return GraphDriveChildren(
+            entries=(
+                GraphDriveEntry(
+                    drive_item_id="folder-1",
+                    kind="folder",
+                    name="Hồ sơ",
+                    size_bytes=None,
+                    last_modified_at=None,
+                    web_url=None,
+                ),
+                GraphDriveEntry(
+                    drive_item_id="docx-1",
+                    kind="docx",
+                    name="Báo cáo.docx",
+                    size_bytes=2048,
+                    last_modified_at=datetime(2026, 9, 12, 3, 0, tzinfo=timezone.utc),
+                    web_url="https://onedrive.live.com/document",
+                ),
+            ),
+            truncated=False,
         )
 
 
@@ -637,6 +674,83 @@ def test_graph_adapter_fails_closed_for_denied_and_incomplete_responses(
             drive_item_id="item-1",
         )
     assert str(incomplete.value) == "Microsoft Graph file metadata is incomplete."
+
+    def unsafe_url_get(*args, **kwargs):
+        del args, kwargs
+        return _GraphResponse(
+            200,
+            {
+                "id": "item-1",
+                "name": "File.docx",
+                "size": 1,
+                "eTag": "etag-1",
+                "lastModifiedDateTime": "2026-09-12T03:00:00Z",
+                "webUrl": "javascript:alert(1)",
+                "file": {},
+                "parentReference": {"driveId": "drive-1"},
+            },
+        )
+
+    monkeypatch.setattr("httpx.get", unsafe_url_get)
+    with pytest.raises(MicrosoftGraphError) as unsafe_url:
+        gateway.get_drive_item(
+            access_token="secret-access-token",
+            drive_id="drive-1",
+            drive_item_id="item-1",
+        )
+    assert unsafe_url.value.category == "invalid_provider_url"
+
+
+def test_graph_adapter_lists_only_folders_and_docx_without_exposing_next_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gateway = MicrosoftGraphGateway(timeout_seconds=0.1)
+
+    def folder_get(*args, **kwargs):
+        del args
+        assert kwargs["params"]["$top"] == "100"
+        return _GraphResponse(
+            200,
+            {
+                "@odata.nextLink": "https://graph.microsoft.com/secret-cursor",
+                "value": [
+                    {
+                        "id": "folder-1",
+                        "name": "Hồ sơ",
+                        "folder": {"childCount": 2},
+                        "parentReference": {"driveId": "drive-1"},
+                    },
+                    {
+                        "id": "docx-1",
+                        "name": "Báo cáo.docx",
+                        "size": 2048,
+                        "lastModifiedDateTime": "2026-09-12T03:00:00Z",
+                        "webUrl": "https://onedrive.live.com/document",
+                        "file": {"mimeType": "application/vnd.openxmlformats"},
+                        "parentReference": {"driveId": "drive-1"},
+                    },
+                    {
+                        "id": "pdf-1",
+                        "name": "Không hỗ trợ.pdf",
+                        "size": 1024,
+                        "file": {"mimeType": "application/pdf"},
+                        "parentReference": {"driveId": "drive-1"},
+                    },
+                ],
+            },
+        )
+
+    monkeypatch.setattr("httpx.get", folder_get)
+    children = gateway.list_drive_children(
+        access_token="secret-access-token",
+        drive_id="drive-1",
+        parent_item_id=None,
+        limit=999,
+    )
+
+    assert [entry.kind for entry in children.entries] == ["folder", "docx"]
+    assert children.truncated is True
+    assert "secret-cursor" not in str(children)
 
 
 def test_domain_rows_have_no_raw_oauth_secret_columns() -> None:

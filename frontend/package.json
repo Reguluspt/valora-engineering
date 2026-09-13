@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "vitest run --globals",
+    "browser:fixture": "node scripts/browser-acceptance-server.mjs",
     "astryx": "node node_modules/@astryxdesign/cli/bin/astryx.mjs"
   },
   "dependencies": {

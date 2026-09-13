@@ -48,6 +48,8 @@ export const APP_ROUTES = {
   projectDetailPrefix: "/workbench/projects/",
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
+  projectDocumentsSuffix: "/documents",
+  m365Return: "/workbench/m365/return",
   legacyReviewQueue: "/workbench/queue",
   legacyValidationDashboard: "/workbench/validation"
 } as const;
@@ -64,17 +66,24 @@ export function projectNccSelectionPath(projectRef: string): string {
   return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectNccSelectionSuffix}`;
 }
 
+export function projectDocumentsPath(projectRef: string): string {
+  return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectDocumentsSuffix}`;
+}
+
 export function splitProjectRoute(path: string): {
   projectRef: string;
-  view: "overview" | "workbench" | "ncc-selection";
+  view: "overview" | "workbench" | "ncc-selection" | "documents";
 } | null {
   const pathname = path.split("?", 1)[0];
   if (!pathname.startsWith(APP_ROUTES.projectDetailPrefix)) return null;
   const remainder = pathname.slice(APP_ROUTES.projectDetailPrefix.length);
   const isNccSelection = remainder.endsWith(APP_ROUTES.projectNccSelectionSuffix);
   const isOverview = remainder.endsWith(APP_ROUTES.projectOverviewSuffix);
+  const isDocuments = remainder.endsWith(APP_ROUTES.projectDocumentsSuffix);
   const encodedRef = isNccSelection
     ? remainder.slice(0, -APP_ROUTES.projectNccSelectionSuffix.length)
+    : isDocuments
+      ? remainder.slice(0, -APP_ROUTES.projectDocumentsSuffix.length)
     : isOverview
       ? remainder.slice(0, -APP_ROUTES.projectOverviewSuffix.length)
       : remainder;
@@ -82,7 +91,13 @@ export function splitProjectRoute(path: string): {
   try {
     return {
       projectRef: decodeURIComponent(encodedRef),
-      view: isNccSelection ? "ncc-selection" : isOverview ? "overview" : "workbench",
+      view: isNccSelection
+        ? "ncc-selection"
+        : isDocuments
+          ? "documents"
+          : isOverview
+            ? "overview"
+            : "workbench",
     };
   } catch {
     return null;

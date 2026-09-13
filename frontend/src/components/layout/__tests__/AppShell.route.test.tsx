@@ -15,12 +15,23 @@ vi.mock("@astryxdesign/core/SideNav", () => ({
 }));
 
 describe("AppShell routing", () => {
+  const account = {
+    id: "user-1",
+    email: "operator@example.com",
+    full_name: "Valora Operator",
+    organization_id: "org-1",
+    organization_slug: "gia-lai",
+    status: "active",
+    roles: ["operator"],
+    permissions: ["project:read", "project:update"],
+  };
+
   it("returns from project Overview to the same project's Workbench", () => {
     const nav = vi.fn();
     let root: any;
     act(() => {
       root = create(
-        React.createElement(AppShell, { currentPath: "/workbench/projects/hd-98-test/overview", onNavigate: nav, children: null })
+        React.createElement(AppShell, { account, currentPath: "/workbench/projects/hd-98-test/overview", onLogout: vi.fn(), onNavigate: nav, children: null })
       );
     });
     const btn = root!.root.findAllByProps({ "data-testid": "nav.workbench" })[0];
@@ -33,7 +44,7 @@ describe("AppShell routing", () => {
     let root: any;
     act(() => {
       root = create(
-        React.createElement(AppShell, { currentPath: "/workbench/projects/hd-98-test", onNavigate: nav, children: null })
+        React.createElement(AppShell, { account, currentPath: "/workbench/projects/hd-98-test", onLogout: vi.fn(), onNavigate: nav, children: null })
       );
     });
     const btn = root!.root.findAllByProps({ "data-testid": "nav.caseOverview" })[0];
@@ -46,11 +57,24 @@ describe("AppShell routing", () => {
     let root: any;
     act(() => {
       root = create(
-        React.createElement(AppShell, { currentPath: "/workbench/queue", onNavigate: nav, children: null })
+        React.createElement(AppShell, { account, currentPath: "/workbench/queue", onLogout: vi.fn(), onNavigate: nav, children: null })
       );
     });
     const btn = root!.root.findAllByProps({ "data-testid": "nav.workbench" })[0];
     act(() => { btn.props.onClick(); });
     expect(nav).toHaveBeenCalledWith("/workbench/projects");
+  });
+
+  it("opens OneDrive documents for the current project", () => {
+    const nav = vi.fn();
+    let root: any;
+    act(() => {
+      root = create(
+        React.createElement(AppShell, { account, currentPath: "/workbench/projects/hd-98-test", onLogout: vi.fn(), onNavigate: nav, children: null })
+      );
+    });
+    const btn = root!.root.findAllByProps({ "data-testid": "Tài liệu OneDrive" })[0];
+    act(() => { btn.props.onClick(); });
+    expect(nav).toHaveBeenCalledWith("/workbench/projects/hd-98-test/documents");
   });
 });

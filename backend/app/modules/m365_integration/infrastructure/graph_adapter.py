@@ -7,12 +7,35 @@ from urllib.parse import quote, urljoin, urlparse
 
 import httpx
 
-from app.modules.m365_integration.domain.graph_gateway import GraphDrive, GraphDriveItem
+from app.modules.m365_integration.domain.graph_gateway import (
+    GraphDrive,
+    GraphDriveChildren,
+    GraphDriveEntry,
+    GraphDriveItem,
+)
 
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 MAX_DOWNLOAD_REDIRECTS = 3
+
+
+def _validated_web_url(value: object) -> str:
+    if not isinstance(value, str) or not value:
+        raise MicrosoftGraphError("Microsoft Graph file metadata is incomplete.")
+    parsed = urlparse(value)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise MicrosoftGraphError(
+            "Microsoft Graph returned an unsafe file URL.",
+            category="invalid_provider_url",
+            retryable=False,
+        )
+    return value
 
 
 class MicrosoftGraphError(RuntimeError):
@@ -117,7 +140,7 @@ class MicrosoftGraphGateway:
             size_bytes = int(payload["size"])
             name = str(payload["name"])
             e_tag = str(payload["eTag"])
-            web_url = str(payload["webUrl"])
+            web_url = _validated_web_url(payload["webUrl"])
         except (KeyError, TypeError, ValueError) as exc:
             raise MicrosoftGraphError("Microsoft Graph file metadata is incomplete.") from exc
         if size_bytes < 0 or not name or not e_tag or not web_url:
@@ -134,6 +157,101 @@ class MicrosoftGraphGateway:
             name=name,
             path=parent.get("path"),
             web_url=web_url,
+        )
+
+    def list_drive_children(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str | None,
+        limit: int,
+    ) -> GraphDriveChildren:
+        """List one bounded folder level using delegated read permission only."""
+        bounded_limit = max(1, min(limit, 100))
+        safe_drive_id = quote(drive_id, safe="")
+        if parent_item_id is None:
+            path = f"/drives/{safe_drive_id}/root/children"
+        else:
+            safe_parent_id = quote(parent_item_id, safe="")
+            path = f"/drives/{safe_drive_id}/items/{safe_parent_id}/children"
+        payload = self._get(
+            access_token=access_token,
+            path=path,
+            params={
+                "$top": str(bounded_limit),
+                "$select": (
+                    "id,name,size,lastModifiedDateTime,webUrl,file,folder,parentReference"
+                ),
+            },
+        )
+        raw_entries = payload.get("value")
+        if not isinstance(raw_entries, list):
+            raise MicrosoftGraphError("Microsoft Graph folder response is invalid.")
+
+        entries: list[GraphDriveEntry] = []
+        for raw in raw_entries[:bounded_limit]:
+            if not isinstance(raw, dict):
+                continue
+            item_id = raw.get("id")
+            name = raw.get("name")
+            parent = raw.get("parentReference") or {}
+            if (
+                not isinstance(item_id, str)
+                or not item_id
+                or not isinstance(name, str)
+                or not name
+                or not isinstance(parent, dict)
+                or parent.get("driveId") != drive_id
+            ):
+                raise MicrosoftGraphError(
+                    "Microsoft Graph returned mismatched folder identity.",
+                    category="identity_mismatch",
+                    retryable=False,
+                )
+            is_folder = isinstance(raw.get("folder"), dict)
+            is_file = isinstance(raw.get("file"), dict)
+            if not is_folder and not (is_file and name.lower().endswith(".docx")):
+                continue
+            modified_at: datetime | None = None
+            if raw.get("lastModifiedDateTime") is not None:
+                try:
+                    modified_at = datetime.fromisoformat(
+                        str(raw["lastModifiedDateTime"]).replace("Z", "+00:00")
+                    )
+                except ValueError as exc:
+                    raise MicrosoftGraphError(
+                        "Microsoft Graph folder metadata is incomplete."
+                    ) from exc
+            size_bytes: int | None = None
+            if is_file:
+                try:
+                    size_bytes = int(raw["size"])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise MicrosoftGraphError(
+                        "Microsoft Graph file metadata is incomplete."
+                    ) from exc
+                if size_bytes < 0:
+                    raise MicrosoftGraphError(
+                        "Microsoft Graph file metadata is incomplete."
+                    )
+            web_url = _validated_web_url(raw.get("webUrl")) if is_file else None
+            entries.append(
+                GraphDriveEntry(
+                    drive_item_id=item_id,
+                    kind="folder" if is_folder else "docx",
+                    name=name,
+                    size_bytes=size_bytes,
+                    last_modified_at=modified_at,
+                    web_url=web_url,
+                )
+            )
+        return GraphDriveChildren(
+            entries=tuple(entries),
+            truncated=(
+                isinstance(payload.get("@odata.nextLink"), str)
+                or len(raw_entries) > bounded_limit
+            ),
         )
 
     def get_drive_item_content(

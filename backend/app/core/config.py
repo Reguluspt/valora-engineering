@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     m365_client_id: str = ""
     m365_client_secret: SecretStr = SecretStr("")
     m365_redirect_uri: str = ""
+    m365_frontend_return_uri: str = "http://localhost:5173/#/workbench/m365/return"
     m365_vault_keys_json: SecretStr = SecretStr("")
     m365_vault_active_key_version: str = ""
 
