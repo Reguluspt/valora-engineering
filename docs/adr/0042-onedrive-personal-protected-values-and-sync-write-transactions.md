@@ -1,6 +1,6 @@
 # ADR 0042 — OneDrive Personal protected values and recoverable sync writes
 
-**Status:** PROPOSED — AWAITING PRODUCT OWNER ACCEPTANCE **Date:** 2026-09-13 **Task:** `VALORA-PR07-CONTRACT-001`
+**Status:** ACCEPTED BY PRODUCT OWNER **Date:** 2026-09-13 **Task:** `VALORA-PR07-CONTRACT-001`
 
 ## Context
 
@@ -25,7 +25,7 @@ A database transaction cannot include a Microsoft Graph commit. Treating a succe
 as an atomic document revision would therefore leave an unrecoverable gap when Graph commits but the
 response or subsequent database commit is lost.
 
-## Proposed decision
+## Decision
 
 ### D1. Persist protected, typed Managed Region values
 
@@ -225,8 +225,9 @@ Rejected by design authority. Every true conflict requires an explicit, auditabl
 
 ## Owner decision
 
-Pending. This proposal does not authorize schema migration, runtime code, delegated write consent,
-Microsoft Graph writes, PR-08 work, commit, push, pull request publication, deployment or release.
+Accepted explicitly by the Product Owner on 2026-09-13. Acceptance authorizes the bounded PR-07
+schema/runtime/UI work and separate delegated OneDrive Personal writer-consent path described here.
+It does not authorize scope beyond PR-07, push, pull request publication, merge, deployment or release.
 
 ## References
 

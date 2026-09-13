@@ -1,12 +1,12 @@
 # VALORA UI/UX v2.3 — PR-07 Sync/Conflict Implementation Contract
 
-**Task:** `VALORA-PR07-CONTRACT-001` **Status:** PROPOSED — AWAITING PRODUCT OWNER ACCEPTANCE **Date:** 2026-09-13 **Authority:** proposed ADR 0042, accepted ADRs 0040–0041, and UI/UX v2.3 Document Sync Version plus Bulk Sync Preview/Conflict/Confirm/Result addenda
+**Task:** `VALORA-PR07-CONTRACT-001` **Status:** ACCEPTED BY PRODUCT OWNER **Date:** 2026-09-13 **Authority:** accepted ADR 0042, accepted ADRs 0040–0041, and UI/UX v2.3 Document Sync Version plus Bulk Sync Preview/Conflict/Confirm/Result addenda
 
 ## Authorization gate
 
-This document is a proposed implementation boundary only. Until the Product Owner explicitly accepts
-both ADR 0042 and this contract, PR-07 runtime, migrations, consent changes, Graph writes and PR-08
-work are prohibited.
+The Product Owner explicitly accepted ADR 0042 and this contract on 2026-09-13. Bounded PR-07
+runtime, migrations, UI and separate writer-consent work are authorized. PR-08 work remains gated
+until PR-07 acceptance closes; push, merge, deployment and release remain unauthorized.
 
 ## Scope
 
@@ -339,7 +339,6 @@ Stop runtime implementation if any of these is unresolved:
 
 ## Acceptance gate
 
-The Product Owner must explicitly accept ADR 0042 and this contract. Acceptance authorizes only the
-bounded PR-07 implementation and migrations described here; it does not authorize commit, push, pull
-request publication, merge, deployment, release publishing, PR-08 work or any widened Microsoft 365
-scope.
+Closed by explicit Product Owner acceptance on 2026-09-13. The authorization remains bounded to the
+PR-07 implementation and migrations described here; it does not authorize push, pull request
+publication, merge, deployment, release publishing, PR-08 work or widened Microsoft 365 scope.
