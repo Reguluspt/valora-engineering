@@ -12,9 +12,11 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urljoin, urlparse
 
@@ -23,14 +25,228 @@ import httpx
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 TOKEN_ENVIRONMENT_VARIABLE = "VALORA_PR07_GRAPH_ACCESS_TOKEN"
+ATTEMPT_ID_ENVIRONMENT_VARIABLE = "VALORA_PR07_ATTEMPT_ID"
+EVENT_JOURNAL_ENVIRONMENT_VARIABLE = "VALORA_PR07_EVENT_JOURNAL"
 TEST_ITEM_PREFIX = "VALORA-PR07-IF-MATCH-"
 PROBE_PAYLOAD_BYTES = 320 * 1024
 MAX_DOWNLOAD_BYTES = PROBE_PAYLOAD_BYTES * 2
 MAX_DOWNLOAD_REDIRECTS = 3
+SAFE_PROVIDER_ERROR_CODE = re.compile(r"[A-Za-z][A-Za-z0-9._-]{0,63}")
+SAFE_ATTEMPT_ID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+PROGRESS_STAGES = {
+    "CONCURRENT_WRITE_REQUEST_STARTED",
+    "CONTENT_DOWNLOAD_REQUEST_STARTED",
+    "DRIVE_VERIFY_REQUEST_STARTED",
+    "FRESH_FINAL_COMMIT_REQUEST_STARTED",
+    "FRESH_ITEM_VERIFY_REQUEST_STARTED",
+    "FRESH_UPLOAD_SESSION_REQUEST_STARTED",
+    "INITIAL_ITEM_VERIFY_REQUEST_STARTED",
+    "ITEM_CREATE_REQUEST_STARTED",
+    "PROBE_SELF_TEST_STARTED",
+    "PROBE_STARTED",
+    "STALE_FINAL_COMMIT_REQUEST_STARTED",
+    "STALE_ITEM_VERIFY_REQUEST_STARTED",
+    "STALE_UPLOAD_SESSION_REQUEST_STARTED",
+    "TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED",
+    "TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED",
+    "TEST_ITEM_DELETE_REQUEST_COMPLETED",
+    "TEST_ITEM_DELETE_REQUEST_STARTED",
+    "UPLOAD_SESSION_CANCEL_REQUEST_COMPLETED",
+    "UPLOAD_SESSION_CANCEL_REQUEST_STARTED",
+    "UPLOAD_STAGE_REQUEST_STARTED",
+}
+SAFE_FAILURE_REPORT_KEYS = {
+    "cleanup",
+    "http_status",
+    "provider_error_code",
+    "reason",
+    "status",
+}
+SAFE_SUCCESS_REPORT_KEYS = {
+    "checked_at",
+    "cleanup",
+    "concurrent_bytes_preserved",
+    "drive_type",
+    "fresh_conditional_commit",
+    "isolated_item_created",
+    "item_identity_preserved",
+    "provider",
+    "stale_commit_http_status",
+    "stale_conditional_commit",
+    "status",
+}
+SAFE_CLEANUP_STATES = {
+    "ABSENT_OR_DELETED_TO_RECYCLE_BIN",
+    "DELETED_TO_RECYCLE_BIN",
+    "FAILED",
+    "NOT_ATTEMPTED",
+}
+SELF_TEST_REPORT = {
+    "dependency_import": "PASS",
+    "environment": "PRESENT",
+    "interpreter": "PASS",
+    "mode": "SELF_TEST",
+    "network": "NOT_ATTEMPTED",
+    "package_resolution": "PASS",
+    "status": "PASS",
+    "working_directory": "BACKEND",
+}
 
 
 class ProbeFailure(RuntimeError):
     """Sanitized failure that must not contain provider response bodies or secrets."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        http_status: int | None = None,
+        provider_error_code: str | None = None,
+        cleanup: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.provider_error_code = provider_error_code
+        self.cleanup = cleanup
+
+    def with_cleanup(self, cleanup: str) -> ProbeFailure:
+        return ProbeFailure(
+            str(self),
+            http_status=self.http_status,
+            provider_error_code=self.provider_error_code,
+            cleanup=cleanup,
+        )
+
+    def as_report(self) -> dict[str, str | int]:
+        report: dict[str, str | int] = {"status": "FAIL", "reason": str(self)}
+        if self.http_status is not None:
+            report["http_status"] = self.http_status
+        if self.provider_error_code is not None:
+            report["provider_error_code"] = self.provider_error_code
+        if self.cleanup is not None:
+            report["cleanup"] = self.cleanup
+        return report
+
+
+def _diagnostic_journal() -> tuple[str, Path] | None:
+    attempt_id = os.environ.get(ATTEMPT_ID_ENVIRONMENT_VARIABLE, "")
+    journal_value = os.environ.get(EVENT_JOURNAL_ENVIRONMENT_VARIABLE, "")
+    if not attempt_id and not journal_value:
+        return None
+    journal_path = Path(journal_value)
+    if (
+        not SAFE_ATTEMPT_ID.fullmatch(attempt_id)
+        or not journal_path.is_absolute()
+        or not journal_path.is_file()
+        or not journal_path.name.endswith(".events.jsonl")
+    ):
+        raise ProbeFailure("Diagnostic evidence is unavailable.")
+    return attempt_id, journal_path
+
+
+def _append_journal_entry(entry: dict[str, Any]) -> None:
+    diagnostic = _diagnostic_journal()
+    if diagnostic is None:
+        return
+    attempt_id, journal_path = diagnostic
+    bounded_entry = {"at": datetime.now(UTC).isoformat(), "attempt_id": attempt_id, **entry}
+    try:
+        with journal_path.open("a", encoding="utf-8", newline="\n") as journal:
+            journal.write(
+                f"{json.dumps(bounded_entry, ensure_ascii=True, sort_keys=True)}\n"
+            )
+            journal.flush()
+            os.fsync(journal.fileno())
+    except OSError as exc:
+        raise ProbeFailure("Diagnostic evidence is unavailable.") from exc
+
+
+def _record_progress(stage: str) -> None:
+    if stage not in PROGRESS_STAGES:
+        raise ProbeFailure("Diagnostic progress stage is invalid.")
+    _append_journal_entry({"record_type": "PROBE_STAGE", "stage": stage})
+
+
+def _best_effort_record_progress(stage: str) -> bool:
+    try:
+        _record_progress(stage)
+    except ProbeFailure:
+        return False
+    return True
+
+
+def _valid_diagnostic_report(report: Any, exit_code: int) -> bool:
+    if not isinstance(report, dict) or isinstance(exit_code, bool):
+        return False
+    if report == SELF_TEST_REPORT:
+        return exit_code == 0
+    if report.get("status") == "PASS":
+        return (
+            exit_code == 0
+            and set(report) == SAFE_SUCCESS_REPORT_KEYS
+            and report.get("cleanup") == "DELETED_TO_RECYCLE_BIN"
+            and report.get("fresh_conditional_commit") == "PASS"
+            and report.get("stale_conditional_commit") == "HTTP_412_PASS"
+            and report.get("stale_commit_http_status") == 412
+            and report.get("item_identity_preserved") is True
+            and report.get("concurrent_bytes_preserved") is True
+            and report.get("isolated_item_created") is True
+            and report.get("drive_type") == "personal"
+            and report.get("provider") == "Microsoft Graph v1.0"
+            and isinstance(report.get("checked_at"), str)
+        )
+    if (
+        exit_code == 0
+        or report.get("status") != "FAIL"
+        or not set(report).issubset(SAFE_FAILURE_REPORT_KEYS)
+    ):
+        return False
+    reason = report.get("reason")
+    if (
+        not isinstance(reason, str)
+        or not reason
+        or len(reason) > 512
+        or "\n" in reason
+        or "\r" in reason
+    ):
+        return False
+    if "cleanup" in report and report["cleanup"] not in SAFE_CLEANUP_STATES:
+        return False
+    if "http_status" in report and not (
+        isinstance(report["http_status"], int)
+        and not isinstance(report["http_status"], bool)
+        and 100 <= report["http_status"] <= 599
+    ):
+        return False
+    provider_code = report.get("provider_error_code")
+    if provider_code is not None and not (
+        isinstance(provider_code, str)
+        and SAFE_PROVIDER_ERROR_CODE.fullmatch(provider_code)
+    ):
+        return False
+    return True
+
+
+def _record_probe_result(report: dict[str, Any], exit_code: int) -> None:
+    token = os.environ.get(TOKEN_ENVIRONMENT_VARIABLE, "")
+    serialized = json.dumps(report, ensure_ascii=True, sort_keys=True)
+    if not _valid_diagnostic_report(report, exit_code) or (token and token in serialized):
+        raise ProbeFailure("Diagnostic evidence was rejected.")
+    _append_journal_entry(
+        {
+            "exit_code": exit_code,
+            "record_type": "PROBE_FINISHED",
+            "report": report,
+            "status": report.get("status"),
+        }
+    )
+
+
+def _best_effort_record_probe_result(report: dict[str, Any], exit_code: int) -> None:
+    try:
+        _record_probe_result(report, exit_code)
+    except ProbeFailure:
+        pass
 
 
 @dataclass(frozen=True)
@@ -63,6 +279,13 @@ def _payload(label: bytes) -> bytes:
 
 def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def _test_item_name() -> str:
+    attempt_id = os.environ.get(ATTEMPT_ID_ENVIRONMENT_VARIABLE, "")
+    if SAFE_ATTEMPT_ID.fullmatch(attempt_id):
+        return f"{TEST_ITEM_PREFIX}{attempt_id}.bin"
+    return f"{TEST_ITEM_PREFIX}{secrets.token_hex(8)}.bin"
 
 
 def _require_https_without_credentials(url: str) -> str:
@@ -114,11 +337,34 @@ class OneDrivePersonalIfMatchProbe:
             raise ProbeFailure("Microsoft Graph is unavailable.") from exc
 
     @staticmethod
+    def _provider_error_code(response: httpx.Response) -> str | None:
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        error = payload.get("error")
+        if not isinstance(error, dict):
+            return None
+        candidate = error.get("code")
+        if isinstance(candidate, str) and SAFE_PROVIDER_ERROR_CODE.fullmatch(candidate):
+            return candidate
+        return None
+
+    @staticmethod
     def _json_object(response: httpx.Response, *, operation: str) -> dict[str, Any]:
         if response.status_code in {401, 403}:
-            raise ProbeFailure(f"{operation} was denied; delegated Files.ReadWrite is required.")
+            raise ProbeFailure(
+                f"{operation} was denied; delegated Files.ReadWrite is required.",
+                http_status=response.status_code,
+            )
         if response.status_code >= 400:
-            raise ProbeFailure(f"{operation} failed with HTTP {response.status_code}.")
+            raise ProbeFailure(
+                f"{operation} failed with HTTP {response.status_code}.",
+                http_status=response.status_code,
+                provider_error_code=OneDrivePersonalIfMatchProbe._provider_error_code(response),
+            )
         try:
             payload = response.json()
         except ValueError as exc:
@@ -215,7 +461,6 @@ class OneDrivePersonalIfMatchProbe:
         drive_id: str,
         item_id: str,
         e_tag: str,
-        size: int,
     ) -> str:
         safe_drive = quote(drive_id, safe="")
         safe_item = quote(item_id, safe="")
@@ -223,13 +468,7 @@ class OneDrivePersonalIfMatchProbe:
             "POST",
             f"/drives/{safe_drive}/items/{safe_item}/createUploadSession",
             headers={"Content-Type": "application/json", "If-Match": e_tag},
-            json={
-                "item": {
-                    "@microsoft.graph.conflictBehavior": "fail",
-                    "fileSize": size,
-                },
-                "deferCommit": True,
-            },
+            json={"deferCommit": True},
         )
         payload = self._json_object(response, operation="Upload-session creation")
         upload_url = payload.get("uploadUrl")
@@ -272,10 +511,8 @@ class OneDrivePersonalIfMatchProbe:
             "PUT",
             f"/drives/{safe_drive}/items/{safe_item}",
             headers={"Content-Type": "application/json", "If-Match": e_tag},
-            json={
-                "@microsoft.graph.conflictBehavior": "fail",
-                "@microsoft.graph.sourceUrl": upload_url,
-            },
+            params={"@microsoft.graph.conflictBehavior": "fail"},
+            json={"@microsoft.graph.sourceUrl": upload_url},
         )
 
     def _overwrite(
@@ -311,7 +548,7 @@ class OneDrivePersonalIfMatchProbe:
         safe_drive = quote(drive_id, safe="")
         safe_item = quote(item_id, safe="")
         response = self._graph_request("DELETE", f"/drives/{safe_drive}/items/{safe_item}")
-        if response.status_code not in {204, 404}:
+        if response.status_code != 204:
             raise ProbeFailure(f"Test item cleanup failed with HTTP {response.status_code}.")
 
     def _delete_item_by_name(self, *, drive_id: str, name: str) -> None:
@@ -322,12 +559,14 @@ class OneDrivePersonalIfMatchProbe:
             raise ProbeFailure(f"Test item cleanup failed with HTTP {response.status_code}.")
 
     def run(self) -> ProbeReport:
+        _record_progress("PROBE_STARTED")
+        _record_progress("DRIVE_VERIFY_REQUEST_STARTED")
         drive_id = self._drive()
         original = _payload(b"original")
         fresh_candidate = _payload(b"fresh-candidate")
         stale_candidate = _payload(b"stale-candidate")
         concurrent = _payload(b"concurrent")
-        name = f"{TEST_ITEM_PREFIX}{secrets.token_hex(8)}.bin"
+        name = _test_item_name()
         item: ItemState | None = None
         open_session: str | None = None
         report: ProbeReport | None = None
@@ -337,16 +576,20 @@ class OneDrivePersonalIfMatchProbe:
         cleanup_failures: list[str] = []
         try:
             creation_attempted = True
+            _record_progress("ITEM_CREATE_REQUEST_STARTED")
             item = self._create_item(drive_id=drive_id, name=name, content=original)
 
+            _record_progress("FRESH_UPLOAD_SESSION_REQUEST_STARTED")
             open_session = self._create_upload_session(
                 drive_id=drive_id,
                 item_id=item.item_id,
                 e_tag=item.e_tag,
-                size=len(fresh_candidate),
             )
+            _record_progress("UPLOAD_STAGE_REQUEST_STARTED")
             self._stage(upload_url=open_session, content=fresh_candidate)
+            _record_progress("INITIAL_ITEM_VERIFY_REQUEST_STARTED")
             staged_state = self._get_item(drive_id=drive_id, item_id=item.item_id)
+            _record_progress("CONTENT_DOWNLOAD_REQUEST_STARTED")
             if (
                 staged_state.item_id != item.item_id
                 or staged_state.e_tag != item.e_tag
@@ -354,6 +597,7 @@ class OneDrivePersonalIfMatchProbe:
                 != _sha256(original)
             ):
                 raise ProbeFailure("deferCommit changed the destination before final commit.")
+            _record_progress("FRESH_FINAL_COMMIT_REQUEST_STARTED")
             fresh_response = self._commit(
                 drive_id=drive_id,
                 item_id=item.item_id,
@@ -363,10 +607,14 @@ class OneDrivePersonalIfMatchProbe:
             if fresh_response.status_code not in {200, 201}:
                 raise ProbeFailure(
                     "Fresh conditional final commit failed with "
-                    f"HTTP {fresh_response.status_code}."
+                    f"HTTP {fresh_response.status_code}.",
+                    http_status=fresh_response.status_code,
+                    provider_error_code=self._provider_error_code(fresh_response),
                 )
             open_session = None
+            _record_progress("FRESH_ITEM_VERIFY_REQUEST_STARTED")
             fresh_state = self._get_item(drive_id=drive_id, item_id=item.item_id)
+            _record_progress("CONTENT_DOWNLOAD_REQUEST_STARTED")
             if fresh_state.item_id != item.item_id or _sha256(
                 self._download(drive_id=drive_id, item_id=item.item_id)
             ) != _sha256(fresh_candidate):
@@ -374,13 +622,15 @@ class OneDrivePersonalIfMatchProbe:
                     "Fresh final commit did not preserve exact-item identity and bytes."
                 )
 
+            _record_progress("STALE_UPLOAD_SESSION_REQUEST_STARTED")
             open_session = self._create_upload_session(
                 drive_id=drive_id,
                 item_id=item.item_id,
                 e_tag=fresh_state.e_tag,
-                size=len(stale_candidate),
             )
+            _record_progress("UPLOAD_STAGE_REQUEST_STARTED")
             self._stage(upload_url=open_session, content=stale_candidate)
+            _record_progress("CONCURRENT_WRITE_REQUEST_STARTED")
             concurrent_state = self._overwrite(
                 drive_id=drive_id,
                 item_id=item.item_id,
@@ -389,6 +639,7 @@ class OneDrivePersonalIfMatchProbe:
             )
             if concurrent_state.e_tag == fresh_state.e_tag:
                 raise ProbeFailure("The concurrent test write did not advance the item eTag.")
+            _record_progress("STALE_FINAL_COMMIT_REQUEST_STARTED")
             stale_response = self._commit(
                 drive_id=drive_id,
                 item_id=item.item_id,
@@ -398,9 +649,13 @@ class OneDrivePersonalIfMatchProbe:
             if stale_response.status_code != 412:
                 raise ProbeFailure(
                     "Stale conditional final commit was not rejected with HTTP 412 "
-                    f"(received HTTP {stale_response.status_code})."
+                    f"(received HTTP {stale_response.status_code}).",
+                    http_status=stale_response.status_code,
+                    provider_error_code=self._provider_error_code(stale_response),
                 )
+            _record_progress("STALE_ITEM_VERIFY_REQUEST_STARTED")
             final_state = self._get_item(drive_id=drive_id, item_id=item.item_id)
+            _record_progress("CONTENT_DOWNLOAD_REQUEST_STARTED")
             identity_preserved = final_state.item_id == item.item_id
             concurrent_preserved = _sha256(
                 self._download(drive_id=drive_id, item_id=item.item_id)
@@ -422,28 +677,60 @@ class OneDrivePersonalIfMatchProbe:
             )
         except ProbeFailure as exc:
             primary_failure = exc
+        except Exception:
+            primary_failure = ProbeFailure("Unexpected sanitized probe failure.")
         finally:
+            cleanup_evidence_failed = False
             if open_session is not None:
                 try:
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "UPLOAD_SESSION_CANCEL_REQUEST_STARTED"
+                    )
                     self._cancel_session(open_session)
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "UPLOAD_SESSION_CANCEL_REQUEST_COMPLETED"
+                    )
                 except ProbeFailure as exc:
                     cleanup_failures.append(str(exc))
+                except Exception:
+                    cleanup_failures.append("Upload-session cleanup failed unexpectedly.")
             try:
                 if item is not None:
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "TEST_ITEM_DELETE_REQUEST_STARTED"
+                    )
                     self._delete_item(drive_id=drive_id, item_id=item.item_id)
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "TEST_ITEM_DELETE_REQUEST_COMPLETED"
+                    )
                     cleanup = "DELETED_TO_RECYCLE_BIN"
                 elif creation_attempted:
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED"
+                    )
                     self._delete_item_by_name(drive_id=drive_id, name=name)
+                    cleanup_evidence_failed |= not _best_effort_record_progress(
+                        "TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED"
+                    )
                     cleanup = "ABSENT_OR_DELETED_TO_RECYCLE_BIN"
             except ProbeFailure as exc:
                 cleanup_failures.append(str(exc))
+            except Exception:
+                cleanup_failures.append("Test item cleanup failed unexpectedly.")
+            if cleanup_evidence_failed:
+                cleanup_failures.append("Diagnostic cleanup evidence is unavailable.")
         if cleanup_failures:
             cleanup_message = " ".join(cleanup_failures)
             if primary_failure is not None:
-                raise ProbeFailure(f"{primary_failure} Cleanup also failed: {cleanup_message}")
-            raise ProbeFailure(cleanup_message)
+                raise ProbeFailure(
+                    f"{primary_failure} Cleanup also failed: {cleanup_message}",
+                    http_status=primary_failure.http_status,
+                    provider_error_code=primary_failure.provider_error_code,
+                    cleanup="FAILED",
+                )
+            raise ProbeFailure(cleanup_message, cleanup="FAILED")
         if primary_failure is not None:
-            raise primary_failure from None
+            raise primary_failure.with_cleanup(cleanup) from None
         if report is None:
             raise ProbeFailure("The conformance probe did not produce a result.")
         return replace(report, cleanup=cleanup)
@@ -451,6 +738,11 @@ class OneDrivePersonalIfMatchProbe:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Verify the local module launch surface without constructing a client.",
+    )
     parser.add_argument(
         "--allow-live-write",
         action="store_true",
@@ -464,17 +756,39 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _run_self_test() -> int:
+    if not os.environ.get(TOKEN_ENVIRONMENT_VARIABLE, "").strip():
+        raise ProbeFailure(
+            f"{TOKEN_ENVIRONMENT_VARIABLE} is required for self-test."
+        )
+    if Path.cwd().resolve() != Path(__file__).resolve().parents[1]:
+        raise ProbeFailure("Self-test must be run from the backend directory.")
+    _record_progress("PROBE_SELF_TEST_STARTED")
+    report = SELF_TEST_REPORT.copy()
+    _best_effort_record_probe_result(report, 0)
+    print(json.dumps(report, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.self_test and (args.allow_live_write or args.cleanup_test_item):
+        raise ProbeFailure("Self-test cannot be combined with live-write flags.")
+    if args.self_test:
+        return _run_self_test()
     if not args.allow_live_write or not args.cleanup_test_item:
         raise ProbeFailure(
             "Both --allow-live-write and --cleanup-test-item are required before network access."
         )
+    if _diagnostic_journal() is None:
+        raise ProbeFailure("Live execution requires controller diagnostic evidence.")
     access_token = os.environ.get(TOKEN_ENVIRONMENT_VARIABLE, "")
     probe = OneDrivePersonalIfMatchProbe(access_token=access_token)
     try:
         report = probe.run()
-        print(json.dumps(asdict(report), sort_keys=True))
+        serialized_report = asdict(report)
+        _best_effort_record_probe_result(serialized_report, 0)
+        print(json.dumps(serialized_report, sort_keys=True))
         return 0
     finally:
         probe.close()
@@ -484,13 +798,12 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except ProbeFailure as exc:
-        print(json.dumps({"status": "FAIL", "reason": str(exc)}, sort_keys=True))
+        report = exc.as_report()
+        _best_effort_record_probe_result(report, 1)
+        print(json.dumps(report, sort_keys=True))
         raise SystemExit(1) from None
     except Exception:
-        print(
-            json.dumps(
-                {"status": "FAIL", "reason": "Unexpected sanitized probe failure."},
-                sort_keys=True,
-            )
-        )
+        report = {"status": "FAIL", "reason": "Unexpected sanitized probe failure."}
+        _best_effort_record_probe_result(report, 1)
+        print(json.dumps(report, sort_keys=True))
         raise SystemExit(1) from None
