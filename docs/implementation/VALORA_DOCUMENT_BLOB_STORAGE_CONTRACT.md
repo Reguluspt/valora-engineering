@@ -327,6 +327,18 @@ The fake must allow deterministic injection before/after create, during observat
 verification and before/after database commit. It must model `ABSENT`, exact `PRESENT`, mismatched
 `PRESENT`, unavailable and lost-response outcomes independently.
 
+### 8.1 Local fake acceptance evidence
+
+`VALORA-STORAGE-FAKE-001` completed on 2026-09-19 at commit
+`2641e41939a04c4278709f6dc072e06bf52a68dc`. GitHub CI run `293` passed all jobs with `1542`
+backend tests. The deterministic fake suite passed `19/19`; PostgreSQL passed `4/4`, covering T8,
+T9, T14 and the migration roundtrip. DeepSeek v4.1 Flash and Gemini 3.1 Pro High independently
+reviewed the corrected PostgreSQL harness as `STATIC READY`.
+
+This evidence accepts only the provider-neutral local fake and persistence/CAS model. Production
+provider, residency, encryption operations, backup/restore and recovery objectives remain
+unverified future gates.
+
 ## 9. Security and operational constraints
 
 - Provider calls run server-side with a workload identity or secret-manager-held credential.
@@ -364,5 +376,6 @@ Stop and return to architecture review if:
 - [ADR 0043](../adr/0043-app-owned-immutable-document-storage.md)
 - [Provider comparison](../research/valora-storage-provider-selection.md)
 - [Completed architecture plan](../plan/done/valora-storage-arch-001.md)
+- [Completed local fake plan](../plan/done/valora-storage-fake-001.md)
 - [Existing document models](../../backend/app/modules/document_workspace/models.py)
 - [Existing M365 models](../../backend/app/modules/m365_integration/models.py)

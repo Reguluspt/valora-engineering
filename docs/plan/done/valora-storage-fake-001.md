@@ -1,6 +1,6 @@
 # VALORA-STORAGE-FAKE-001 — Provider-neutral immutable storage proof
 
-**Status:** ACTIVE — LOCAL IMPLEMENTATION ONLY
+**Status:** COMPLETE — LOCAL FAKE ACCEPTED; PRODUCTION PROVIDER UNSELECTED
 **Date:** 2026-09-19
 **Authority:** ADR 0043 and accepted Document Blob Storage contract
 
@@ -145,9 +145,35 @@ Stop rather than weaken the invariant if:
 - independent review record and verification report;
 - next-gate recommendation without opening the S3 spike.
 
+## Closeout evidence
+
+- Implementation commits: `e9d87ad` (port, persistence, migration and service) and `101e60e`
+  (T1–T14 tests).
+- CI compatibility correction: `2641e41` updates the older prior-head parity fixture to drop the
+  new storage tables before their document parents.
+- GitHub CI run `293` on `2641e41939a04c4278709f6dc072e06bf52a68dc`: all jobs passed.
+- Backend evidence: `1542 passed`; the deterministic fake suite passed `19/19` and the PostgreSQL
+  suite passed `4/4`, including concurrent T8, CAS-loss T9, finalize replay T14 and Alembic
+  upgrade/downgrade/upgrade.
+- Static and operational gates passed: Ruff, committed-whitespace, Alembic upgrade, single migration
+  head, dependency vulnerability scan, security policy scan, worker and frontend jobs.
+- Independent review: DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `STATIC READY` on
+  the corrected scalar-ID PostgreSQL test harness; DeepSeek also returned `READY` on the parity
+  drop-order correction.
+
+The proof is deliberately local/provider-neutral. It does not select a production provider or
+residency region, validate SSE-KMS/customer-managed keys, prove `RPO <= 15 minutes` or `RTO <= 4
+hours`, authorize production rollout, or open the isolated S3 spike.
+
+## Next gate
+
+Await an explicit Product Owner decision before opening any provider-specific spike. The next gate,
+if authorized, is the isolated AWS S3 create-only/checksum experiment already bounded by ADR 0043;
+it remains separate from production-provider and residency selection.
+
 ## References
 
-- [ADR 0043](../adr/0043-app-owned-immutable-document-storage.md)
-- [Storage contract](../implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md)
-- [Storage policy decision](../research/pr07-storage-fallback-options-2.md)
-- [Completed architecture task](done/valora-storage-arch-001.md)
+- [ADR 0043](../../adr/0043-app-owned-immutable-document-storage.md)
+- [Storage contract](../../implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md)
+- [Storage policy decision](../../research/pr07-storage-fallback-options-2.md)
+- [Completed architecture task](valora-storage-arch-001.md)
