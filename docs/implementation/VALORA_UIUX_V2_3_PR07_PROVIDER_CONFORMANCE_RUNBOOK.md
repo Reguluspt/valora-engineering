@@ -1,14 +1,16 @@
 # PR-07 OneDrive Personal conditional-commit conformance runbook
 
-**Task:** `VALORA-PR07-CONFORMANCE-001` **Status:** BLOCKED — AUTHORIZED LIVE ATTEMPT STOPPED AT `OAUTH_TOKEN_REJECTED`; NO SANITIZED PROVIDER PROBE REPORT; NEW FRESH LIVE AUTHORITY REQUIRED
-**Date:** 2026-09-18 **Authority:** accepted ADR 0042 and PR-07 implementation contract
+**Task:** `VALORA-PR07-CONFORMANCE-001` **Status:** G3 OPTION A APPROVED; G4 CLOSED
+**Date:** 2026-09-19 **Authority:** accepted ADR 0042 and PR-07 implementation contract
 
 ## Purpose
 
-Close PR-07 stop condition 332 before any schema or runtime implementation begins. The probe must
-show that Microsoft Graph v1.0 on OneDrive Personal accepts a fresh exact-item final commit carrying
-`If-Match`, rejects the equivalent stale final commit with HTTP `412`, and leaves a concurrent write
-unchanged.
+Document the bounded C2 research sequence without opening PR-07 runtime: the finalized
+`C2_AUTO_V1` probe, its schema-v3 `C2_AUTO_V2` correction and each separately authorized live
+observation. The probe tests whether an exact-item upload session created with frozen `If-Match`
+and body `{}` protects a concurrent write when its second fragment automatically completes the
+upload. A local PASS is only harness evidence; only a separately authorized live run can observe
+provider behavior.
 
 Microsoft documents the item-ID route for updating an existing file, a `412` response when the
 upload-session `If-Match` is stale, and `fail` as the default upload conflict policy. It also
@@ -33,7 +35,7 @@ The repository-owned controller is the only accepted operator entry point. Its e
 surface can be exercised from any working directory without OAuth, Entra or Graph access:
 
 ```powershell
-python backend/tools/pr07_onedrive_personal_live_controller.py --self-test
+python backend/tools/pr07_onedrive_personal_live_controller.py --self-test --candidate C2_AUTO_V1
 ```
 
 Do not invoke the probe directly for a future live attempt. A live controller invocation requires
@@ -44,9 +46,9 @@ repository-owned Node launcher exactly once without retry. Live mode rejects an 
 `--evidence-directory`; its unresolved-attempt guard always uses the canonical Git-ignored
 `local-artifacts/pr07/` ledger. Self-test mode may redirect evidence for isolated testing.
 
-The only acceptable result has `status: PASS`, `fresh_conditional_commit: PASS`,
-`stale_conditional_commit: HTTP_412_PASS`, both preservation booleans `true`, and cleanup
-`DELETED_TO_RECYCLE_BIN`.
+The only acceptable C2 observation has `candidate: C2_AUTO_V1`, `runtime_gate: BLOCKED`, fresh final
+HTTP `200/201`, stale final HTTP `412`, all seven preservation/setup checks `true`,
+`stale_candidate_observed: false`, cleanup `DELETED_TO_RECYCLE_BIN` and cleanup issue `NONE`.
 
 ## Required evidence
 
@@ -436,6 +438,236 @@ Owner separately confirmed that the temporary Entra secret was deleted and confi
 Entra lifecycle confirmation is external to the controller artifact. Do not retry. Diagnose the
 token rejection without claiming provider evidence, and require a new explicit action-time Product
 Owner approval before any later live attempt. PR-07 runtime/migrations and PR-08 remain gated.
+
+### Local OAuth diagnostics and C2 automatic-completion candidate — 2026-09-18
+
+The Product Owner approved G1/WP0–WP7 only. The repository now binds the explicit candidate
+`C2_AUTO_V1` through controller, Node launcher and probe; current evidence uses schema version `2`
+and rejects C1-shaped or candidate-mismatched output. Historical schema-less C1 journals remain
+read-only compatible, while mixed or unresolved evidence continues to block before OAuth.
+
+OAuth failures are separated into authorization-response, state/flow-validation and token-redemption
+phases. Persisted diagnostics have one bounded allowlisted object containing only phase, OAuth error
+enum, at most eight integer AADSTS codes and a canonical correlation UUID. Raw callback values,
+descriptions, claims, codes, PKCE material and provider messages remain excluded. The callback page
+now confirms only that an authorization response was received; it does not imply token success.
+
+The C2 probe creates an isolated `655360`-byte fixture and sends two `327680`-byte fragments for
+both fresh and stale branches. Session creation uses the exact item ID, frozen `If-Match` and body
+`{}`. The final fragment is the only completion operation: there is no `deferCommit`, `sourceUrl`,
+final-fragment `If-Match`, retry, polling or fallback. Every dispatched partial/final outcome is
+followed by a bounded metadata-content-metadata coherent read. Classification depends on observed
+destination bytes and eTag, so a stale overwrite is `UNSAFE_STALE_OVERWRITE` even when the response
+is `412` or lost; alternate rejection, third-state data and incomplete reads remain inconclusive.
+
+Session-role journal events distinguish fresh and stale lifecycle state. Durable mutation markers
+precede requests; session completion must be proven or cancellation must complete before exact-item
+deletion can resolve a v2 ledger. Cancellation/evidence failure does not suppress best-effort item
+deletion and cannot convert an observed unsafe result into inconclusive or PASS.
+
+Local verification on 2026-09-18 passed `45/45` focused tests, Ruff, Python compilation, Node syntax
+and `git diff --check`. The real controller → Node → Python self-test passed from the repository with
+`network=NOT_ATTEMPTED`, candidate `C2_AUTO_V1`, schema `2`, `shell=false` and no provider/OAuth/Entra
+access. Component SHA-256 values at that checkpoint were controller
+`b64840590069be8b8167275457b90c0ccf0f1cd7867b5768d55c0a105200ae2a`, launcher
+`e0ce3685e4cc2734349e91a4f3a30a5a3e097b23a9212e0af4f3765d5b857d3f`, and probe
+`ff4b2980f4d94b8d615e093c5aab9bb2d4a4c3dbffca49d8175ec94c83f46d5b`.
+
+This is local harness evidence only. It is not a Microsoft Graph observation, does not amend ADR
+0042/D6, does not open PR-07 runtime or PR-08, and does not authorize G2. The independent-review
+result belongs to the implementation-task closeout against the exact final diff/hashes; this
+runbook does not self-certify that review.
+
+### C2 local correction checkpoint — 2026-09-18
+
+The first independent implementation review found six P2 issues and no P0/P1/P3 issue. The
+Product Owner approved one local correction plus a new independent review for exactly those six
+findings. The corrected probe no longer treats observed stale bytes as proof that an upload session
+closed: only a validated `200/201` completion response for the same item can close it; `412`, lost
+response or invalid completion identity leaves the session eligible for cancellation. Journal
+marker failure after a dispatched fragment is recorded as `EVIDENCE_INCOMPLETE` but cannot suppress
+the mandatory coherent post-state read or erase an observed unsafe overwrite.
+
+The corrected v2 resolver requires item creation to precede the session lifecycle, forbids any
+interleaved probe stage while cancellation is pending, and accepts bounded delete-by-name cleanup
+only when no session or item-identity evidence exists. Controller, probe and Node validators now
+share the same safe-observation/PASS predicate. OAuth tests use a state-aware MSAL double with a
+separate redemption-transport counter: wrong or missing state and a valid authorization-error
+callback all prove zero token-redemption transport calls.
+
+The focused probe/controller suites pass `52/52`; Ruff, Python compilation, Node syntax and
+`git diff --check` pass. The wider backend gate reached `870 passed, 50 skipped` and then stopped at
+the pre-existing local-infrastructure boundary because MinIO was unavailable at `localhost:9000`;
+no PR-07 test failed before that point. Corrected component SHA-256 values are controller
+`bb3ff05235e9af4bbdae0976e5b02e9103259da4b3f06a14a6e2cc094296ba5a`, launcher
+`e0ce3685e4cc2734349e91a4f3a30a5a3e097b23a9212e0af4f3765d5b857d3f`, and probe
+`c6f3f22807c509417bd0b07ae070366f474bddb5a77aba5ae7b28e39170aa850`. A new independent review of
+the exact corrected snapshot remains the final G1 gate. No OAuth, Entra or Microsoft Graph action
+occurred in this correction; G2–G4 remain closed.
+
+### C2 `checked_at` validator parity correction — 2026-09-18
+
+The subsequent independent review verified all nine supplied source hashes and found one additional
+P2: controller and probe validators required an ISO timestamp with timezone, while the Node
+launcher accepted date-only and timezone-naive timestamps through `Date.parse()`. The Product Owner
+approved one correction and a new independent review for exactly this finding.
+
+The correction adds shared regression vectors for `2026-09-18` and
+`2026-09-18T00:00:00`. Both Python validators already reject those values. The Node boundary now
+also requires an explicit `Z` or `±HH:MM` timezone suffix before applying `Date.parse()`. The Python
+validators were not relaxed and no adjacent validation or provider behavior was refactored.
+
+Focused tests pass `54/54`; Ruff, Python compilation, Node syntax and `git diff --check` pass. The
+real controller → Node → Python self-test passes with `network=NOT_ATTEMPTED`, candidate
+`C2_AUTO_V1` and schema `2`. Component SHA-256 values are controller
+`bb3ff05235e9af4bbdae0976e5b02e9103259da4b3f06a14a6e2cc094296ba5a`, launcher
+`3be52c56e60fb407c4a18081db3c5bdcd8a3473cea5bf228ad19c04667656602`, and probe
+`c6f3f22807c509417bd0b07ae070366f474bddb5a77aba5ae7b28e39170aa850`. The wider backend gate was
+not rerun for this Node/test-only correction; its prior `870 passed, 50 skipped` result remains the
+earlier checkpoint and still stopped at unavailable local MinIO.
+
+DeepSeek V4.1 Flash independently verified branch/HEAD and all `9/9` supplied SHA-256 values, read
+the three validators, adversarial timestamp vectors, tests and doc claims, and returned `READY`
+with no P0–P3 finding. The reviewer changed no file and ran no OAuth, Entra, Microsoft Graph,
+provider, live or repository-network action. At that checkpoint this closed G1 local review only;
+the later G2 observation is recorded below.
+
+### Bounded C2 live attempt and closeout — 2026-09-18
+
+The Product Owner approved the C2 research exception and exactly one action-time invocation of
+`C2_AUTO_V1` on the reviewed snapshot. Temporary delegated Microsoft Graph `Files.ReadWrite` and
+exactly one temporary client secret named `PR07 C2_AUTO_V1 2026-09-18` were added without changing
+the PR-05 baseline. The controller was invoked once with both live-write and cleanup acknowledgements;
+there was no retry.
+
+Attempt `af114cc0-4a10-46eb-ba60-108facc7daa0` ran at HEAD
+`46e0792b3ae697158f0fe38db8100fbd4afdc6fc`. Its controller, launcher and probe hashes matched the
+reviewed values `bb3ff05235e9af4bbdae0976e5b02e9103259da4b3f06a14a6e2cc094296ba5a`,
+`3be52c56e60fb407c4a18081db3c5bdcd8a3473cea5bf228ad19c04667656602` and
+`c6f3f22807c509417bd0b07ae070366f474bddb5a77aba5ae7b28e39170aa850`. OAuth passed, the Personal
+drive was verified, an isolated fixture was created and a fresh exact-item upload session became
+available.
+
+The first `327680`-byte fragment was dispatched. Its response did not satisfy the exact accepted
+partial predicate: HTTP `202` with `nextExpectedRanges` equal to `["327680-"]`. The required coherent
+post-read completed and proved that the destination item bytes and eTag were unchanged, so
+`fresh_partial_preserved=true`. The probe therefore failed closed before dispatching the fresh final
+fragment; no concurrent write or stale branch ran. The sanitized terminal report records
+`checked_at=2026-09-18T15:32:18.893562+00:00`, `outcome=INCONCLUSIVE`,
+`reason_code=FINAL_NOT_COMPLETED`, `fresh_final_http_status=null`, `runtime_gate=BLOCKED` and
+controller `failure_code=PROBE_REPORTED_FAILURE`.
+
+Cleanup completed without retry: the open fresh session was cancelled and the fixture was deleted
+to the OneDrive recycle bin (`cleanup=DELETED_TO_RECYCLE_BIN`, `cleanup_issue=NONE`). The controller
+cleared sensitive environment state and the clipboard; no callback listener remained on port 8000.
+The Product Owner then removed the temporary secret and delegated `Files.ReadWrite`. Supplied images
+and a read-only Entra verification confirmed the restored baseline of exactly one PR-05 secret and
+delegated `Files.Read` only.
+
+This observation does not prove or disprove stale-write protection because the final-fragment and
+stale branches were never reached. It does not amend ADR 0042/D6 or open PR-07 runtime, migrations,
+G3, G4 or PR-08. Any next step is separate provider research/architecture authority, not a retry of
+this live attempt.
+
+### C2_AUTO_V2 partial-response local correction — 2026-09-19
+
+Provider research found that the `C2_AUTO_V1` exact equality predicate for
+`nextExpectedRanges=["327680-"]` was stricter than the published response contract. Under separate
+local authority, the probe, launcher and controller now use `C2_AUTO_V2` with schema version `3`.
+The bounded parser accepts documented open or finite range forms only when the remaining tail begins
+at byte `327680` and is fully covered by the existing final fragment. Evidence retains only HTTP
+status and a bounded range class; it never persists raw response bodies or raw range strings.
+
+The controller keeps explicit read-only readers for legacy C1 and finalized
+`C2_AUTO_V1`/schema-v2 evidence. Current v3 report and journal validation is exact-key and
+fail-closed. Every dispatched fragment requires its own coherent post-read; the final post-read
+cannot be substituted before final dispatch. Session completion requires an observed, role-matched
+final HTTP `200/201`; transport-unknown and stale `412` paths require successful cancellation.
+Non-`202` partial responses are classified without parsing their body, and no polling, session
+status GET, retry, resend, fallback or replacement session was added.
+
+Focused tests passed `89/89`, with 13 existing Pydantic deprecation warnings outside this scope.
+Ruff, Python compilation, Node syntax and `git diff --check` passed. The real controller → Node →
+probe self-test returned `PASS` with `network=NOT_ATTEMPTED`; the canonical ledger check returned
+`CANONICAL_LEDGER_UNRESOLVED=False`.
+
+Final SHA-256 values are controller
+`64af797e46d4f1a548ed6fc9268f1880ad8387a8c6e2e0b9f0a04a3fa5b9ff8d`, launcher
+`50940a6146f1209299deb28216dd24ca31afcd4ca57818c7d7a50689c304e0c0`, probe
+`9840ed3014c1434f99a5ac9d933b14d486b4493dfff8e049b89d9b750e6fba0f`, controller tests
+`7bcdb25f6bd6c6407fb3cc904d6af8695e5824e06b312827f6211a3ad2ce6cd5` and probe tests
+`be9026485bd14a0ec746e41a9ad400f28e06c56bea5ffbd0f99012801ddc1dc9`.
+Independent review matched all five and returned `READY` with no unresolved P0–P3 finding and zero
+reviewer file changes.
+
+This closes the local correction/review gate only. No OAuth, Entra, Microsoft Graph, OneDrive or
+other network action occurred; no second live attempt was made. The historical
+`C2_AUTO_V1` attempt remains `INCONCLUSIVE`, ADR 0042/D6 is unchanged, and `runtime_gate=BLOCKED`,
+G3–G4, PR-07 runtime/migrations and PR-08 remain closed.
+
+### Bounded C2_AUTO_V2 live attempt and closeout — 2026-09-19
+
+The Product Owner separately approved the research exception and exactly one live invocation of
+`C2_AUTO_V2` on the independently reviewed five-file snapshot. Temporary delegated Microsoft Graph
+`Files.ReadWrite` and exactly one temporary client secret named `PR07 C2_AUTO_V2 2026-09-19` were
+added for that attempt. The controller was invoked once with the live-write and recycle-cleanup
+acknowledgements; there was no retry.
+
+Attempt `2a06438c-5ad2-46f1-8da2-b60776647f86` ran at HEAD
+`46e0792b3ae697158f0fe38db8100fbd4afdc6fc`. The controller, launcher, probe and both focused test
+file hashes matched the reviewed snapshot recorded above. OAuth passed. The fresh first fragment
+returned HTTP `202` with range class `EXPECTED_START`; its coherent post-read proved the partial
+write preserved the destination. The fresh final fragment completed with HTTP `200`, and the next
+coherent post-read proved the fresh commit, item identity and final bytes.
+
+The stale session then accepted its first fragment with HTTP `202` and range class
+`EXPECTED_START`. After the concurrent write, the stale final fragment returned HTTP `404` with
+provider code `itemNotFound`, rather than the candidate HTTP `412`. Coherent post-read proved the
+concurrent bytes and eTag were preserved, and the stale partial-write preservation check also
+passed. Because the expected stale candidate was not observed, the sanitized terminal report records
+`checked_at=2026-09-19T10:43:18.932461+07:00`, `outcome=INCONCLUSIVE`,
+`reason_code=ALTERNATE_REJECTION`, `stale_candidate_observed=false`, `runtime_gate=BLOCKED` and
+controller `failure_code=PROBE_REPORTED_FAILURE`.
+
+Cleanup completed without retry: the stale session cancellation completed and the fixture was
+deleted to the OneDrive recycle bin (`cleanup=DELETED_TO_RECYCLE_BIN`, `cleanup_issue=NONE`). The
+canonical ledger is resolved; port `8000`, the clipboard and both credential environment variables
+are clean. The Product Owner removed the temporary secret and delegated `Files.ReadWrite`.
+Read-only Entra verification then confirmed the restored baseline: exactly one existing PR-05
+client secret and exactly one delegated Microsoft Graph permission, `Files.Read`.
+
+This observation proves fresh completion and preservation of the concurrent destination state under
+the provider's alternate stale-session rejection. It does not establish the D6-required HTTP `412`
+classification, amend ADR 0042/D6 or open PR-07 runtime, migrations, G3, G4 or PR-08. The single
+`C2_AUTO_V2` live authority is consumed; any further provider experiment requires a new bounded
+research decision and new action-time authority.
+
+### G3 Option A architecture closeout — 2026-09-19
+
+The Product Owner approved Option A: retain ADR 0042/D6, close `C2_AUTO_V2` as research and reject it
+as a production adapter mechanism. The safe `404 itemNotFound` observation does not become an
+accepted stale-plan status because Microsoft documentation does not bind that ambiguous response to
+the frozen eTag through final commit. `runtime_gate=BLOCKED`; PR-07 provider-write runtime,
+migrations, G4 and PR-08 remain closed.
+
+The only authorized continuation is read-only provider clarification against official Microsoft
+documentation or support material. It does not authorize an external message, another Graph/Entra
+mutation, another live attempt or implementation. The architecture decision may reopen only on a
+documented provider guarantee or a separately reviewed supported exact-item conditional-commit
+mechanism.
+
+### Read-only public-source clarification closeout — 2026-09-19
+
+The approved public-source pass checked current Microsoft Learn documentation, its Microsoft-owned
+source, the upload-session resource, the OneDrive error catalogue and relevant public issue history.
+Creation-time `If-Match` is documented, but eTag binding through final session commit, concurrent-
+write invalidation and `404 itemNotFound` stale causality remain undocumented. The documented
+`sourceUrl` recovery example uses parent/path metadata and does not establish D6's exact-item-ID
+boundary.
+
+The reopen trigger is not met. Public research stops at `UNDOCUMENTED`; a sanitized question packet
+exists locally but has not been sent. Sending it to Microsoft requires separate authority at send
+time. D6, `runtime_gate=BLOCKED` and all G4/runtime/migration/PR-08 closures remain unchanged.
 
 ## Research handoff
 

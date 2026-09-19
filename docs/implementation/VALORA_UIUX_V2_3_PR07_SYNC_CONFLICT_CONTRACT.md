@@ -8,6 +8,12 @@ The Product Owner explicitly accepted ADR 0042 and this contract on 2026-09-13. 
 runtime, migrations, UI and separate writer-consent work are authorized. PR-08 work remains gated
 until PR-07 acceptance closes; push, merge, deployment and release remain unauthorized.
 
+On 2026-09-19 the Product Owner approved G3 Option A after the bounded C2 research sequence. This
+does not retract the product contract, but it keeps the provider-write implementation gate closed:
+ADR 0042/D6 is unchanged, `C2_AUTO_V2` is not an accepted production mechanism, and PR-07 runtime,
+migrations, G4 and PR-08 must not start from that evidence. Only read-only provider clarification is
+authorized until the documented reopen trigger is met.
+
 ## Scope
 
 After acceptance, implement the minimum OneDrive Personal sync/conflict slice that:

@@ -47,13 +47,84 @@ journey to complete.
 | PR-04 NCC Selection API + UI | PASS — A0/A2 and PR-04 contract | PASS — read aggregate and explicit confirmation command | PASS — Vietnamese table/drawer, stale/conflict states and explicit confirmation | PASS — real read/confirm API client | N/A — reuses PR-03 | PASS — API/client/hook/component suites | NOT EVIDENCED — implementation review/build is not a pixel-level browser artifact | NOT EVIDENCED | MERGED through PR #29 / `2775cb9` | `projects.py` NCC routes; `nccSelection.ts`; `components/ncc-selection/**`; PR-04 audit; exact-head CI | Formal desktop/laptop browser acceptance and north-star journey are absent | Add browser acceptance when this surface changes or at PR-13 E2E |
 | PR-05 OneDrive Personal foundation | PASS — A3, ADR 0040 and PR-05 contract | PASS — delegated OAuth, tenant/user connection, encrypted credential vault, Graph adapter and document binding primitives | NOT IMPLEMENTED | PARTIAL — authorize/callback exist; no frontend caller and no user-facing connection-status/return flow | PASS — `f4c8d2a1b7e9` | PASS — fake-provider, PostgreSQL and live-account acceptance | NOT EVIDENCED | NOT EVIDENCED | MERGED by PR #30 / `42a87fc` | `m365_integration/**`; `api/m365.py`; `test_pr05_m365_*`; PR #30 CI | Operational connect UI, callback return target, connection-state surface and bind/adopt journey are absent | Contract the operational M365 entry gaps, then implement OneDrive Personal UI only |
 | PR-06 OneDrive Personal return/revalidation | PASS — A4, ADR 0041 and PR-06 contract | PASS — canonical provision, immutable baseline, five-way classification and computed readiness | NOT IMPLEMENTED | PARTIAL — provision, baseline, readiness and revalidate endpoints exist; no frontend caller | PASS — `a6d9e4c2b8f1`; single Alembic head | PASS — service/API/provision/PostgreSQL and live OneDrive Personal acceptance | NOT EVIDENCED | NOT EVIDENCED | MERGED by PR #31 / `27d1cc6` | `provision_document_service.py`; `revalidation_service.py`; `api/m365.py`; `test_pr06_m365_*`; PR #31 and exact-main CI | No UI for provision/adopt, return/focus revalidation, five outcomes or readiness; no protected value snapshot for PR-07 | Complete operational M365 frontend; accept PR-07 snapshot/sync ADR before writes |
-| PR-07 Sync / Conflict | PASS — A4/A5 + accepted ADR 0042 and PR-07 contract | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | PROBE/CONTROLLER LOCAL PASS — C1 `68/68`; EXACT CONTROLLER→NODE→PYTHON NO-NETWORK PASS; AUTHORIZED LIVE STOPPED AT `OAUTH_TOKEN_REJECTED`; C1 PROVIDER PROBE NOT RUN | NOT IMPLEMENTED | NOT IMPLEMENTED | BLOCKED — LIVE STOPPED AT `OAUTH_TOKEN_REJECTED`; NEW FRESH LIVE AUTHORITY REQUIRED | The accepted C1 candidate retains the exact item-ID route and frozen `If-Match`, moves conflict `fail` to one query parameter, and keeps a sourceUrl-only body. The 2026-09-16 authorized attempt completed OAuth but failed before provider at `LAUNCHER_VALIDATION` because the transient controller transferred an unavailable Python path; no retry occurred and cleanup restored the Entra baseline. That transient path is now replaced by a repository-owned controller that uses `sys.executable`, argv-array invocation and `shell=False`, invokes the launcher once, rejects direct unjournaled live probe execution and alternate live evidence directories, and blocks unresolved prior live attempts before OAuth/network. `ATTEMPT_FINISHED` alone is insufficient after provider mutation: only consistent allowlisted cancel/delete completion plus matching probe/controller terminal cleanup resolves the attempt; `PROBE_FINISHED` uses the exact producer schema, is mandatory after mutation, must precede no later probe stage and is reconciled before every resolution path. Each session-dependent stage requires its applicable session to be active at that position; closed-session reuse, probe activity while cancellation is pending, and empty journals remain blocked. Every cleanup pair that appears must be complete and ordered even when another path supplies the accepted deletion. The controller terminal uses an exact producer schema, deletion must follow the final mutation, Boolean exit codes are rejected, and malformed, contradictory, missing, failed or unknown cleanup stays blocked without automatic recovery. The controller uses a bounded OAuth `form_post` callback and writes sanitized durable snapshot/append-only journal evidence. The exact no-network controller-to-Node-to-Python path and failure branches pass locally without OAuth/Entra/Graph. Independent review passed on 2026-09-18 with no P0-P3 finding. The separately authorized attempt `fe63fa6a-c477-4566-a720-f56c74be2ea0` then received the bounded OAuth callback but failed closed at `OAUTH_TOKEN_REJECTED`; launcher, probe and provider mutation did not run, and no retry occurred. Local closeout is clean, and the Product Owner separately confirmed removal of the temporary secret and delegated `Files.ReadWrite` while preserving the PR-05 secret and delegated `Files.Read`. Entra secret/permission lifecycle remains evidence outside the controller. See PR-07 provider conformance runbook | Exact-item OneDrive Personal fresh final commit, stale `412`, identity/concurrent-byte preservation and probe-item cleanup remain unproven for C1; the provider was not invoked | Keep D6 unchanged; diagnose `OAUTH_TOKEN_REJECTED` without retry, then require new fresh action-time approval for any later live attempt; keep PR-07 runtime/migrations and PR-08 gated |
+| PR-07 Sync / Conflict | PASS — A4/A5 + accepted ADR 0042 and PR-07 contract | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | `C2_AUTO_V2` LOCAL PASS — `89/89`; EXACT CONTROLLER→NODE→PYTHON NO-NETWORK PASS; INDEPENDENT REVIEW READY; TWO AUTHORIZED G2 LIVE ATTEMPTS, LATEST `INCONCLUSIVE` / `ALTERNATE_REJECTION`; G3 OPTION A APPROVED | NOT IMPLEMENTED | NOT IMPLEMENTED | BLOCKED — G3 OPTION A APPROVED; G4 CLOSED | The reviewed `C2_AUTO_V2` schema-v3 correction uses bounded partial-response classification, exact report/journal validation, mandatory post-dispatch reads, role-matched `200/201` completion proof and explicit read-only compatibility for finalized `C2_AUTO_V1`. Its single authorized live attempt `2a06438c-5ad2-46f1-8da2-b60776647f86` passed OAuth; fresh partial/final operations returned `202`/`200` and proved the fresh commit. After a verified concurrent write, the stale partial returned `202` and the stale final returned `404 itemNotFound`, not candidate `412`; coherent post-read proved item identity plus concurrent bytes/eTag were preserved. The result is `INCONCLUSIVE` / `ALTERNATE_REJECTION`; no retry occurred. Stale-session cancellation, recycle-bin fixture cleanup and local sensitive-state cleanup succeeded. Entra was verified back at exactly the PR-05 secret plus delegated `Files.Read` baseline. The Product Owner approved G3 Option A: retain D6 and close C2 research without accepting the candidate for production. The completed public-source clarification found the exact-item commit guarantee undocumented. Historical C1 and `C2_AUTO_V1` attempts remain in the provider runbook | Required stale HTTP `412` remains unobserved; provider conformance to D6 is not proven | Stop at `UNDOCUMENTED`; external Microsoft clarification requires new send-time authority; keep PR-07 runtime/migrations, G4 and PR-08 gated |
 | PR-08 Release Domain Foundation | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No release aggregate/model/service/API/UI found; publishing names occur only in v2.3 constants/presentation | Release aggregate, exceptions, manifest inputs, revision locking and authorization semantics are absent | Contract/ADR release aggregate and exception/readiness invariants after PR-07 |
 | PR-09 Publishing Commit / Success | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No `Release`, `ReleaseManifest`, publish command or post-publish runtime found | Atomic commit, immutable manifest/locked revisions, uncertain-commit recovery and success projection are absent | Implement only after PR-08 foundation; prove atomicity/idempotency and immutable success read model |
 | PR-10 Audit / Lineage Wiring | PASS — A7 plus domain authorities | PARTIAL — reusable audit, document, knowledge and NCC lineage primitives exist; no unified context-first projection | PARTIAL — isolated lineage panel/history affordances exist; no canonical five-entry-point wiring | NOT IMPLEMENTED for canonical deep-link context | N/A until contract decides whether persistence changes | PARTIAL — legacy primitive tests only; no PR-10 contract suite | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | Existing `AuditEvent`, document workspace, knowledge and NCC history primitives; no canonical `context_type/context_id/return_target` integration | Capability-specific entry points, missing-link semantics, deep-link/return target and cross-domain lineage tests are absent | Contract the projection/reference boundary; require ADR only if persistence or primitive semantics change |
 | PR-11 Cross-product State Sweep | PASS — A0 | PARTIAL — domain errors/states exist unevenly | PARTIAL — shared loading/error/empty components and PR-02/04 local states exist; no product-wide sweep | PARTIAL — no uniform retry/uncertain-mutation behavior | N/A unless a discovered backend fact is missing | PARTIAL — component-local tests only | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | `components/common/**`; PR-02 and PR-04 state tests; repository still contains legacy placeholders | All production surfaces have not proven the 17-state contract, one recovery CTA, offline and partial-success behavior | Inventory every production route/API, close gaps per domain, then browser-test representative states |
 | PR-12 Template Fidelity | PASS — A8 | PARTIAL — legacy template/document-engine primitives exist, not the v2.3 product flow | NOT IMPLEMENTED for v2.3 workspace/template flow | NOT IMPLEMENTED end to end | PARTIAL — historical document/template schema only; no PR-12 migration | PARTIAL — historical backend primitives only | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | `document_workspace/**`, document engine/intelligence APIs and models exist; frontend has no document/template surface | Workspace, template upload/mapping/test-fill/review/save, managed-region fidelity and report/certificate flows are absent | Freeze a bounded fidelity contract against real templates; implement after PR-11 and required PR-07 sync semantics |
 | PR-13 North-star E2E | PASS — A0/A9 and all governing addenda | NOT IMPLEMENTED as a complete journey | NOT IMPLEMENTED as a complete journey | NOT IMPLEMENTED as a complete journey | N/A except defects discovered by the journey | NOT IMPLEMENTED for the journey | NOT IMPLEMENTED for the journey | NOT IMPLEMENTED — no Playwright/Cypress/Selenium harness found | NOT STARTED | Repository file search finds no E2E framework/config/spec; only unit/integration suites exist | No exact-SHA proof from authentication through the final supported published outcome | Add deterministic E2E harness and fixtures after PR-07–12; pass North-star, failure/retry, tenant and immutability journeys |
+
+### PR-07 current C2 addendum — 2026-09-18
+
+The PR-07 row's C1 history remains valid historical evidence; this addendum supersedes its current
+gate wording. The reviewed candidate is `C2_AUTO_V1`. G1 implemented bounded OAuth phase diagnostics, candidate/schema-v2 propagation,
+two-fragment automatic completion, coherent post-state classification, session-role journaling and
+legacy-ledger compatibility. A first independent review found six P2 issues; the approved local
+correction added regression coverage and fail-closed handling for all six. Focused tests now pass
+`52/52`. The next independent review found one additional P2: Node accepted date-only and
+timezone-naive `checked_at` values that both Python validators rejected. The Product Owner approved
+one correction and a new review for that finding. Shared regression vectors now cover both forms,
+and Node requires an explicit timezone suffix without relaxing Python. Focused tests now pass
+`54/54`; Ruff, Python compilation, Node syntax, `git diff --check` and the real controller → Node →
+probe no-network self-test pass. DeepSeek V4.1 Flash verified branch/HEAD and `9/9` exact snapshot
+hashes, found no P0–P3 issue and returned `READY`; G1 local review is closed.
+
+The separately approved single G2 invocation, attempt
+`af114cc0-4a10-46eb-ba60-108facc7daa0`, passed OAuth, created an isolated fixture and fresh
+exact-item upload session, and dispatched the first fragment. The partial response did not satisfy
+the exact `202` plus `nextExpectedRanges=["327680-"]` predicate. Coherent post-read proved the
+destination unchanged, but the probe stopped before final fragment, concurrent write or stale
+branch with `INCONCLUSIVE` / `FINAL_NOT_COMPLETED`; no retry occurred. Session and fixture cleanup
+completed, local secret/listener/clipboard state is clean, and Entra was verified back at the PR-05
+baseline of one existing secret plus delegated `Files.Read` only. Provider conformance remains
+unproven, ADR 0042/D6 is unchanged, backend/frontend/API/migration remain `NOT IMPLEMENTED`, and
+G3–G4 plus PR-08 remain blocked.
+
+### PR-07 C2_AUTO_V2 local correction addendum — 2026-09-19
+
+The separately approved local-only correction is complete. `C2_AUTO_V2` uses schema version `3`
+and retains only a bounded partial HTTP status/range class. It accepts documented open and finite
+remaining-range forms only when the second fragment covers the full tail, preserves mandatory
+coherent post-reads and adds no polling, session-status GET, retry, resend or fallback. Legacy C1
+and finalized `C2_AUTO_V1`/schema-v2 evidence remain explicit read-only paths.
+
+Focused tests pass `89/89`; Ruff, Python compilation, Node syntax and `git diff --check` pass. The
+real controller → Node → probe self-test returned `network=NOT_ATTEMPTED`, and the canonical ledger
+remains resolved. Independent review matched all five final SHA-256 values, changed no file and
+returned `READY` with no P0–P3 finding after adversarial coverage closed read-order and false
+session-completion paths.
+
+This addendum does not alter the historical G2 result or provide live authority. No OAuth, Entra,
+Graph, OneDrive or other network action occurred. ADR 0042/D6 remains unchanged; PR-07
+backend/frontend/API/migration remain `NOT IMPLEMENTED`, and G3–G4 plus PR-08 remain blocked.
+
+### PR-07 C2_AUTO_V2 live closeout addendum — 2026-09-19
+
+Under separate action-time authority, exactly one `C2_AUTO_V2` live invocation ran on the reviewed
+snapshot as attempt `2a06438c-5ad2-46f1-8da2-b60776647f86`; there was no retry. Fresh partial and
+final responses were HTTP `202` and `200`, and coherent reads proved the fresh commit. After the
+concurrent write, the stale partial response was HTTP `202`; the stale final response was HTTP `404`
+with `itemNotFound`, not the candidate `412`. Item identity and the concurrent bytes/eTag were
+preserved. The terminal result is `INCONCLUSIVE` / `ALTERNATE_REJECTION`, with
+`runtime_gate=BLOCKED`.
+
+The stale session was cancelled, the fixture was deleted to the recycle bin, and the canonical
+ledger, callback listener, clipboard and credential environment state are clean. The Product Owner
+removed the temporary secret and delegated `Files.ReadWrite`; read-only Entra verification confirmed
+exactly one PR-05 secret and delegated `Files.Read` only. The live authority is consumed. ADR
+0042/D6 remains unchanged, and PR-07 runtime/migrations, G3–G4 and PR-08 remain closed.
+
+### PR-07 G3 Option A closeout addendum — 2026-09-19
+
+The Product Owner approved G3 Option A: preserve ADR 0042/D6, close `C2_AUTO_V2` research and do not
+accept the candidate as a production write mechanism. `runtime_gate=BLOCKED`; PR-07 runtime,
+migrations, G4 and PR-08 remain closed. Only read-only provider clarification may continue, with no
+external message, Graph/Entra mutation or new live invocation authorized by this decision.
+
+The subsequent public-source clarification completed with the required exact-item session guarantee
+still `UNDOCUMENTED`. A sanitized Microsoft question packet was prepared locally and not sent.
+External clarification now requires new authority at send time; all runtime gates remain closed.
 
 ## Merge and CI evidence
 

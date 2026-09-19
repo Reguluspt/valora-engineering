@@ -229,6 +229,14 @@ Accepted explicitly by the Product Owner on 2026-09-13. Acceptance authorizes th
 schema/runtime/UI work and separate delegated OneDrive Personal writer-consent path described here.
 It does not authorize scope beyond PR-07, push, pull request publication, merge, deployment or release.
 
+### G3 provider-conformance closeout — 2026-09-19
+
+The Product Owner approved G3 Option A after the bounded `C2_AUTO_V2` observation returned a safe
+but undocumented HTTP `404 itemNotFound` stale-session result. D6 remains unchanged. The research
+candidate is closed and is not an accepted production write mechanism; PR-07 provider-write runtime,
+migrations, G4 and PR-08 remain blocked. Only read-only provider clarification may continue. Reopen
+this decision only on a documented Microsoft guarantee or a separately reviewed supported mechanism.
+
 ## References
 
 - `docs/adr/0040-onedrive-delegated-integration-and-file-binding.md`

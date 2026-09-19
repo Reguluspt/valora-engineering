@@ -1,5 +1,7 @@
 # PR-07 OneDrive Personal provider-conformance research handoff
 
+Status: amended 2026-09-19
+
 ## Start time
 
 2026-09-18, Asia/Saigon.
@@ -170,3 +172,32 @@ Claims about the provider's undocumented exact-item completion behavior remain u
 ## Decision
 
 **Follow-up research:** request provider and OAuth recommendations against the seven questions above. Do not run another live attempt from this report. Any code correction requires its own local verification and independent review; any later live attempt requires fresh, explicit action-time Product Owner approval.
+
+## Amendments
+
+- 2026-09-18 · §§ Checklist, Result, Trial chronology, Local candidate verification and Decision:
+  a separately approved single `C2_AUTO_V1` live attempt
+  (`af114cc0-4a10-46eb-ba60-108facc7daa0`) passed OAuth, created the isolated fixture and fresh
+  exact-item session, and dispatched the first fragment. Its response did not satisfy the exact
+  accepted partial predicate (`202` plus `nextExpectedRanges=["327680-"]`), while coherent post-read
+  proved destination bytes/eTag unchanged. The probe stopped before final fragment, concurrent
+  write or stale branch and reported `INCONCLUSIVE` / `FINAL_NOT_COMPLETED`; no retry occurred.
+  Session cancellation, recycle-bin fixture cleanup and local secret/listener/clipboard cleanup
+  succeeded. The Product Owner removed the temporary secret and delegated `Files.ReadWrite`; images
+  plus read-only Entra verification confirmed only the PR-05 secret and delegated `Files.Read`
+  remain. Current reviewed hashes are controller
+  `bb3ff05235e9af4bbdae0976e5b02e9103259da4b3f06a14a6e2cc094296ba5a`, launcher
+  `3be52c56e60fb407c4a18081db3c5bdcd8a3473cea5bf228ad19c04667656602` and probe
+  `c6f3f22807c509417bd0b07ae070366f474bddb5a77aba5ae7b28e39170aa850`. The Decision remains
+  follow-up provider research; this amendment authorizes neither a retry nor an ADR/runtime change.
+- 2026-09-19 · § Decision: after the separately recorded `C2_AUTO_V2` live observation returned
+  safe but undocumented `404 itemNotFound`, the Product Owner approved G3 Option A. ADR 0042/D6
+  remains unchanged; C2 research is closed and neither candidate is accepted for production.
+  `runtime_gate=BLOCKED`; PR-07 runtime/migrations, G4 and PR-08 remain closed. Only read-only
+  provider clarification may continue, and this amendment authorizes no external message, Graph or
+  Entra mutation, or new live invocation.
+- 2026-09-19 · §§ Result, Verification and Decision: the approved read-only public-source pass
+  found no normative Microsoft guarantee that creation-time `If-Match` remains bound through exact-
+  item session commit or that `404 itemNotFound` is a stable stale-write rejection. The reopen
+  trigger remains unmet. Public research stops at `UNDOCUMENTED`; the sanitized question packet was
+  prepared locally but not sent, and any external message requires new send-time authority.
