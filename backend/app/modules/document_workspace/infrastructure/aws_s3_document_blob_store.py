@@ -38,6 +38,9 @@ from app.modules.document_workspace.domain.document_blob_store import (
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_KMS_KEY_ARN_RE = re.compile(
+    r"^arn:(?:aws|aws-us-gov|aws-cn):kms:[a-z0-9-]+:\d{12}:key/[A-Za-z0-9-]+$"
+)
 _SAFE_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:/+=-]{1,255}$")
 _READ_CHUNK = 64 * 1024
 _MIN_MULTIPART_PART_SIZE = 5 * 1024 * 1024
@@ -118,6 +121,7 @@ class AwsS3DocumentBlobStore:
         bucket: str,
         key_prefix: str,
         region_name: str,
+        kms_key_arn: str,
         client: Any | None = None,
         multipart_threshold: int = _DEFAULT_MULTIPART_SIZE,
         multipart_part_size: int = _DEFAULT_MULTIPART_SIZE,
@@ -125,14 +129,21 @@ class AwsS3DocumentBlobStore:
         normalized_bucket = bucket.strip()
         normalized_region = region_name.strip()
         normalized_prefix = key_prefix.strip().strip("/")
-        if not normalized_bucket or not normalized_region or not normalized_prefix:
-            raise ValueError("S3 bucket, region, and dedicated key prefix are required")
+        normalized_kms_key_arn = kms_key_arn.strip()
+        if (
+            not normalized_bucket
+            or not normalized_region
+            or not normalized_prefix
+            or not _KMS_KEY_ARN_RE.fullmatch(normalized_kms_key_arn)
+        ):
+            raise ValueError("S3 bucket, region, prefix, and customer-managed KMS key are required")
         if multipart_part_size < _MIN_MULTIPART_PART_SIZE:
             raise ValueError("S3 multipart parts must be at least 5 MiB")
         if multipart_threshold < multipart_part_size:
             raise ValueError("S3 multipart threshold cannot be smaller than the part size")
         self._bucket = normalized_bucket
         self._key_prefix = f"{normalized_prefix}/"
+        self._kms_key_arn = normalized_kms_key_arn
         self._multipart_threshold = multipart_threshold
         self._multipart_part_size = multipart_part_size
         if client is None:
@@ -222,6 +233,8 @@ class AwsS3DocumentBlobStore:
                 ChecksumAlgorithm="SHA256",
                 ChecksumSHA256=checksum,
                 IfNoneMatch="*",
+                ServerSideEncryption="aws:kms",
+                SSEKMSKeyId=self._kms_key_arn,
             )
         except Exception as exc:
             return self._classify_final_write_error(exc)
@@ -241,6 +254,8 @@ class AwsS3DocumentBlobStore:
                 Key=object_key,
                 ChecksumAlgorithm="SHA256",
                 ChecksumType="COMPOSITE",
+                ServerSideEncryption="aws:kms",
+                SSEKMSKeyId=self._kms_key_arn,
             )
         except Exception as exc:
             return self._classify_staging_write_error(exc)

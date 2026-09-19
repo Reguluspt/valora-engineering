@@ -1,0 +1,28 @@
+{
+  "schema_version": "valora-s3-g5-cleanup-v1",
+  "run_id": "s3-g5-20260919-001",
+  "prefix": "valora-spike/s3-g5-20260919-001/",
+  "fixture_sha256": {
+    "FIXTURE_A": "0cf110c493ab86b092c293078e3c7742c4bc2874f253c90253baec3c6719226e",
+    "FIXTURE_B": "57a2d94c0f5364d022b1a2deae4ba36c7c473335a575dc1da2ab4b63cec3d7fe",
+    "FIXTURE_M": "bc6c5ce6422b75c18018933169b7847661a094ab9b635143fcdd529e6921aedf"
+  },
+  "expected_object_keys": [
+    "valora-spike/s3-g5-20260919-001/small-primary.bin",
+    "valora-spike/s3-g5-20260919-001/multipart-primary.bin",
+    "valora-spike/s3-g5-20260919-001/multipart-race.bin",
+    "valora-spike/s3-g5-20260919-001/lost-put.bin",
+    "valora-spike/s3-g5-20260919-001/lost-complete.bin",
+    "valora-spike/s3-g5-20260919-001/unbound.bin",
+    "valora-spike/s3-g5-20260919-001/policy-put-denied.bin",
+    "valora-spike/s3-g5-20260919-001/policy-complete-denied.bin",
+    "valora-spike/s3-g5-20260919-001/incomplete.bin"
+  ],
+  "maximum_committed_object_count": 6,
+  "maximum_multipart_upload_count": 5,
+  "runtime_upload_id_evidence": "append sanitized SHA-256 references only after exact-prefix inventory",
+  "cleanup_owner": "Product-Owner-appointed G5 operator",
+  "cleanup_policy": "delete only synthetic unbound manifest keys; abort only exact-prefix inventoried upload IDs; reject every out-of-manifest result",
+  "versioning": "DISABLED_NEVER_ENABLED",
+  "secrets": "NONE"
+}

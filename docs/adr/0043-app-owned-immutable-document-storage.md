@@ -1,6 +1,6 @@
 # ADR 0043 — App-owned immutable document storage
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 ADAPTER LOCAL READY; LIVE AWS CLOSED
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 PREFLIGHT PREPARED; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 
@@ -234,7 +234,7 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 | Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
 | Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
-| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; CI run `35448475149` green; all live rows `UNSET` and AWS closed |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; G4 intended boundary/harness prepared for static review; G5/G6 and AWS remain closed |
 | Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
 
 ## Owner decision record
@@ -259,7 +259,8 @@ production rollout/migration, PR-08, deployment or release.
   conditional single/multipart final creation, one-attempt SDK behavior, streamed SHA-256/length
   verification and bounded cleanup. DeepSeek and Gemini returned `READY` on the exact code hashes.
   Commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f` was pushed and GitHub CI run `35448475149`
-  passed on attempt 2. This remains non-live evidence; every live preflight value is still `UNSET`.
+  passed on attempt 2. G4 later froze an intended boundary and action-time checks without contacting
+  AWS; this remains non-live evidence and does not authorize G5.
 
 ## References
 

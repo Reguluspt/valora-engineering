@@ -1,6 +1,6 @@
 # VALORA-STORAGE-S3-SPIKE-001 — Isolated AWS S3 create-only/checksum spike
 
-**Status:** OPEN — G2/G3 COMPLETE; LIVE AWS ACTIVITY CLOSED
+**Status:** OPEN — G4 PREFLIGHT PREPARED; STATIC REVIEW PENDING; LIVE AWS ACTIVITY CLOSED
 **Opened:** 2026-09-19, Asia/Saigon
 **Authority:** ADR 0043/D11 and Product Owner instruction on 2026-09-19
 
@@ -18,7 +18,9 @@ authority covers:
 - this bounded plan and documentation synchronization;
 - a server-side AWS S3 adapter behind the existing four-operation port;
 - deterministic local/unit tests and request-shape capture with no AWS endpoint;
-- independent review of the exact local implementation snapshot.
+- independent review of the exact local implementation snapshot;
+- G4-only boundary freeze, policy templates, no-network harness preparation and action-time
+  checklist. This preparation does not open G5 or authorize an AWS request.
 
 It does **not** authorize:
 
@@ -61,26 +63,28 @@ signed URLs and raw policy credentials must not be committed.
 
 | Input | Required live value | Current state |
 |---|---|---|
-| Reviewed commit | Exact Git SHA and clean relevant diff | UNSET |
-| AWS boundary | Dedicated non-production account alias plus privately verified account ID | UNSET |
-| Region | One explicit permitted AWS region | UNSET |
-| Bucket | Dedicated general-purpose spike bucket; no production/shared data | UNSET |
-| Public access | All S3 Block Public Access controls enabled | UNSET |
-| Ownership | Bucket-owner-enforced object ownership; ACLs disabled | UNSET |
-| Versioning | Explicitly enabled or disabled, with matching cleanup procedure | UNSET |
-| Encryption | Exact non-production server-side encryption mode and key boundary | UNSET |
-| Lifecycle | Prefix-scoped incomplete-multipart abort rule and observed configuration | UNSET |
-| Identity | Temporary workload/session identity; no long-lived key in repo or shell history | UNSET |
-| IAM/bucket policy | Exact least-privilege policy and conditional-write enforcement reviewed | UNSET |
-| SDK | G2-evidenced Python, boto3 and botocore versions plus retry configuration | UNSET |
-| Key namespace | Dedicated opaque `valora-spike/<run-id>/...` prefix | UNSET |
-| Fixtures | Deterministic synthetic bytes, SHA-256 and sizes | UNSET |
-| Limits | One run, maximum object/part count, byte volume, duration and cost ceiling | UNSET |
-| Fault method | Exact transport cut used to lose one response without dispatching a second write | UNSET |
-| Cleanup owner | Named operator and verified delete/abort permissions for only the spike scope | UNSET |
+| Reviewed commit | Exact Git SHA and clean relevant diff | BLOCKED — assigned only after the G4 implementation commit and same-snapshot reviews |
+| AWS boundary | Dedicated non-production account alias plus privately verified account ID | REQUIRES ACTION-TIME VERIFICATION — alias `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`; account ID stays private |
+| Region | One explicit permitted AWS region | FROZEN — `ap-southeast-1` |
+| Bucket | Dedicated general-purpose spike bucket; no production/shared data | REQUIRES ACTION-TIME VERIFICATION — exact name `valora-storage-spike-2c2a9f17-20260919-001` and empty dedicated state |
+| Public access | All S3 Block Public Access controls enabled | REQUIRES ACTION-TIME VERIFICATION — all four controls frozen `true` |
+| Ownership | Bucket-owner-enforced object ownership; ACLs disabled | REQUIRES ACTION-TIME VERIFICATION — `BucketOwnerEnforced` |
+| Versioning | Explicitly enabled or disabled, with matching cleanup procedure | REQUIRES ACTION-TIME VERIFICATION — never enabled; Object Lock absent |
+| Encryption | Exact non-production server-side encryption mode and key boundary | REQUIRES ACTION-TIME VERIFICATION — SSE-KMS, one customer-managed key, bucket key enabled |
+| Lifecycle | Prefix-scoped incomplete-multipart abort rule and observed configuration | REQUIRES ACTION-TIME VERIFICATION — incomplete multipart abort after one day |
+| Identity | Temporary workload/session identity; no long-lived key in repo or shell history | REQUIRES ACTION-TIME VERIFICATION — one private role ARN and explicit temporary session token |
+| IAM/bucket policy | Exact least-privilege policy and conditional-write enforcement reviewed | REQUIRES ACTION-TIME VERIFICATION — render only approved placeholders and match canonical hashes |
+| SDK | G2-evidenced Python, boto3 and botocore versions plus retry configuration | FROZEN — Python `3.14.7`, boto3/botocore `1.43.89`, SigV4, `total_max_attempts=1` |
+| Key namespace | Dedicated opaque `valora-spike/<run-id>/...` prefix | FROZEN — `valora-spike/s3-g5-20260919-001/` |
+| Fixtures | Deterministic synthetic bytes, SHA-256 and sizes | FROZEN — fixtures A/B 4,096 bytes; M 8,392,704 bytes; hashes in packet/manifest |
+| Limits | One run, maximum object/part count, byte volume, duration and cost ceiling | FROZEN — limits in packet; 20 minutes and USD 0.10 variable-cost ceiling |
+| Fault method | Exact transport cut used to lose one response without dispatching a second write | FROZEN — one delegated HTTP send, response suppressed, second dispatch blocked |
+| Cleanup owner | Named operator and verified delete/abort permissions for only the spike scope | REQUIRES ACTION-TIME VERIFICATION — private operator ID and exact-prefix permissions |
 
-The live gate stays closed while any row is `UNSET` or while the exact account/bucket state differs
-from the reviewed table.
+The canonical 17-row rationale, evidence source, action-time verification and cleanup implications
+are in the [G4 preflight packet](../implementation/VALORA_STORAGE_S3_G4_PREFLIGHT_PACKET.md). G5 stays
+closed while a row is `BLOCKED`, an action-time check is incomplete, or actual state differs from
+the reviewed boundary.
 
 ## Local implementation slices
 
@@ -154,8 +158,8 @@ the script. Any further provider mutation requires a new reviewed snapshot and n
 
 Cleanup is part of the single approved run, not evidence that unsafe writes were acceptable:
 
-1. inventory the exact run prefix, object versions/delete markers when applicable, and active
-   multipart uploads returned for that exact prefix;
+1. inventory the exact run prefix and active multipart uploads returned for that exact prefix; stop
+   if versioning history or Object Lock exists because this frozen bucket must never have either;
 2. reject out-of-prefix entries, record the bounded key/upload-ID inventory, then abort only those
    incomplete multipart uploads;
 3. delete only synthetic unbound committed spike objects identified in the manifest;
@@ -191,7 +195,9 @@ Failure returns to architecture review. It does not silently switch to Azure or 
 3. **G3 — independent review: COMPLETE FOR THE LOCAL CODE SNAPSHOT.** DeepSeek v4.1 Flash and
    Gemini 3.1 Pro High both returned `READY` with no P0–P2 finding on the exact six-file hash
    manifest below.
-4. **G4 — live preflight: CLOSED.** Every row remains `UNSET`; no live boundary is approved.
+4. **G4 — live preflight: IN PROGRESS.** The 17-row intended boundary, no-network harness, policy
+   templates, cleanup manifest/runbook and action-time checklist are prepared. Independent static
+   review of the exact snapshot is pending. No live boundary or AWS request is approved.
 5. **G5 — action-time approval:** explicit authorization for one invocation only, no retry.
 6. **G6 — evidence and closure:** sanitized AWS observations, complete cleanup proof, regression
    results and a recommendation. Production-provider selection remains a separate decision.

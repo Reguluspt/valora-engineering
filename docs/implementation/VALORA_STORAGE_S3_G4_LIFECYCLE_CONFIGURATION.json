@@ -1,0 +1,14 @@
+{
+  "Rules": [
+    {
+      "ID": "valora-s3-g5-20260919-001-abort-incomplete",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "valora-spike/s3-g5-20260919-001/"
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "Sid": "AllowExactHarnessRoleOnlyThroughS3ForExactPrefix",
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "${HARNESS_ROLE_ARN}"
+  },
+  "Action": [
+    "kms:Decrypt",
+    "kms:GenerateDataKey"
+  ],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "kms:ViaService": "s3.ap-southeast-1.amazonaws.com",
+      "kms:CallerAccount": "${EXPECTED_ACCOUNT_ID}"
+    },
+    "StringLike": {
+      "kms:EncryptionContext:aws:s3:arn": [
+        "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001",
+        "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*"
+      ]
+    }
+  }
+}

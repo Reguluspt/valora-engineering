@@ -1,6 +1,6 @@
 # VALORA Document Blob Storage contract
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 ADAPTER LOCAL READY; LIVE AWS CLOSED
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 PREFLIGHT PREPARED; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 **Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
@@ -360,7 +360,9 @@ local skips. DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY` w
 on the corrected exact code hashes. Pushed commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f`
 passed GitHub CI run `35448475149` on attempt 2; backend passed `1565` tests with PostgreSQL and
 MinIO available. No AWS credential, endpoint or live request was used. Production provider,
-residency, encryption operations and every live preflight value remain unselected or `UNSET`.
+residency and production encryption operations remain unselected. The G4 packet freezes only the
+isolated spike's intended non-production boundary; every actual AWS value still requires the
+documented action-time verification and G5 approval.
 
 ## 9. Security and operational constraints
 

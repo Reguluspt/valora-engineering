@@ -36,6 +36,7 @@ MIB = 1024 * 1024
 BUCKET = "valora-local-test"
 PREFIX = "valora-spike/unit-run"
 KEY = f"{PREFIX}/document.docx"
+KMS_KEY_ARN = "arn:aws:kms:us-east-1:111122223333:key/12345678-1234-1234-1234-123456789012"
 
 
 def _response(*, request_id: str = "request-1", **values: Any) -> dict[str, Any]:
@@ -163,6 +164,7 @@ def _store(client: _RecordingS3Client, **kwargs: Any) -> AwsS3DocumentBlobStore:
         bucket=BUCKET,
         key_prefix=PREFIX,
         region_name="us-east-1",
+        kms_key_arn=KMS_KEY_ARN,
         client=client,
         **kwargs,
     )
@@ -208,6 +210,7 @@ def test_client_configuration_disables_all_sdk_retries(monkeypatch: pytest.Monke
         bucket=BUCKET,
         key_prefix=PREFIX,
         region_name="us-east-1",
+        kms_key_arn=KMS_KEY_ARN,
     )
     assert store._client is sentinel
     assert captured["service"] == "s3"
@@ -227,6 +230,8 @@ def test_single_part_dispatches_one_conditional_put_with_full_sha256() -> None:
     assert puts[0]["ChecksumAlgorithm"] == "SHA256"
     assert puts[0]["ChecksumSHA256"] == base64.b64encode(hashlib.sha256(data).digest()).decode()
     assert puts[0]["ContentLength"] == len(data)
+    assert puts[0]["ServerSideEncryption"] == "aws:kms"
+    assert puts[0]["SSEKMSKeyId"] == KMS_KEY_ARN
     assert puts[0]["BodyBytes"] == data
 
 
@@ -246,6 +251,8 @@ def test_botocore_stubber_accepts_exact_single_part_request_shape() -> None:
                 "ChecksumAlgorithm": "SHA256",
                 "ChecksumSHA256": base64.b64encode(digest).decode(),
                 "IfNoneMatch": "*",
+                "ServerSideEncryption": "aws:kms",
+                "SSEKMSKeyId": KMS_KEY_ARN,
             },
         )
         result = _create(_store(client), data)
@@ -289,6 +296,8 @@ def test_botocore_stubber_accepts_conditional_multipart_completion_shape() -> No
                 "Key": KEY,
                 "ChecksumAlgorithm": "SHA256",
                 "ChecksumType": "COMPOSITE",
+                "ServerSideEncryption": "aws:kms",
+                "SSEKMSKeyId": KMS_KEY_ARN,
             },
         )
         for part_number, (part, checksum) in enumerate(zip((first, second), checksums), start=1):
