@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-00 through PR-06 merged; Software Completion required before Windows Preview)
+**Last reconciled:** 2026-09-19 (project AI execution policy persisted; storage G4 remains task-gated)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -177,3 +177,141 @@ Fail closed on missing identity, inactive user/org, cross-tenant access.
 Frontend visibility is not security.
 No production secrets in repository content or fixtures.
 ```
+
+## 10. Project AI Execution Policy
+
+This section is the canonical reusable execution policy for AI-assisted VALORA work. Task-specific
+instructions may narrow or override routing only when they are explicit, documented and consistent
+with accepted architecture and security authority. A task override never grants cloud, credential,
+merge, deploy or release authority that the task does not already have.
+
+### 10.1 Roles and current implementations
+
+```text
+Lead / Architect / Product Owner
+  -> Codex: writer, orchestrator, authority interpreter and final gate owner
+  -> MECHANICAL_WORKER: Gemini 3.8 Flash High through Antigravity CLI
+  -> Codex verification
+  -> INDEPENDENT_REVIEWER_A: DeepSeek v4.1 Flash through OpenCode CLI
+  +  INDEPENDENT_REVIEWER_B: Gemini 3.1 Pro High through Antigravity CLI
+  -> Codex final gate, commit and push
+```
+
+Role semantics are stable; model IDs and CLIs are current implementations and may change. At the
+start of a delegated run, query the CLI-supported model list and use the exact current ID rather
+than inventing or assuming one. Current implementations on 2026-09-19 are:
+
+| Role | Current implementation | Authority |
+|---|---|---|
+| Writer/orchestrator/final gate | Codex | Interprets authority, plans, writes, verifies, accepts/rejects findings, commits and pushes when authorized |
+| `MECHANICAL_WORKER` | `gemini-3.8-flash-high` via `agy` | May edit only exact bounded files in its task packet; never commits or pushes |
+| `INDEPENDENT_REVIEWER_A` | `opencode-go/deepseek-v4.1-flash` via `opencode` | Read-only independent review |
+| `INDEPENDENT_REVIEWER_B` | `gemini-3.1-pro-high` via `agy` | Read-only independent review |
+
+Only Codex may commit or push delegated output unless the Product Owner explicitly changes this
+policy. A worker must never merge, change PR state, deploy, release, use cloud credentials, mutate a
+live provider, broaden scope or reinterpret accepted ADR semantics.
+
+### 10.2 Routing rule
+
+```text
+HIGH MECHANICAL LOAD + LOW ARCHITECTURE AMBIGUITY
+  -> delegate to MECHANICAL_WORKER
+
+LOW CODE VOLUME + HIGH DECISION IMPACT
+  -> Codex retains the work
+```
+
+Delegate boilerplate, repetitive tests from a locked matrix, fixtures, DTO/request plumbing,
+deterministic transformations, documentation synchronization, mechanical refactors, renames,
+lint/import/type corrections and targeted test execution. Codex retains architecture, ADR meaning,
+security boundaries, transaction and concurrency semantics, idempotency, lost-response recovery,
+authorization, storage authority, IAM/KMS policy, migration strategy and production gates.
+
+For `VALORA-STORAGE-S3-SPIKE-001` G4, the task-specific instruction that Codex is the sole writer
+overrides mechanical-worker write authority. DeepSeek and Gemini remain read-only reviewers.
+
+### 10.3 Required worker task packet
+
+Every delegated implementation uses a bounded packet with all of these fields:
+
+```text
+TASK ID
+GOAL
+AUTHORITY
+CONTEXT
+ALLOWED FILES
+FORBIDDEN FILES
+IMPLEMENTATION INSTRUCTIONS
+INVARIANTS
+TESTS TO RUN
+STOP CONDITIONS
+OUTPUT FORMAT
+```
+
+The packet must name exact files, invariants, tests and stop conditions. Prompts such as `fix
+project`, `complete everything` or `solve all issues` are prohibited. The default workspace is
+`F:\Project Valora\valora-operational-frontend`.
+
+After worker execution, Codex must inspect the actual `git diff`; a worker summary is not acceptance
+evidence. Codex then runs relevant tests and static gates before seeking independent review.
+
+### 10.4 Review independence and snapshot discipline
+
+Worker self-checks are labeled `WORKER SELF-CHECK`. If Gemini 3.8 Flash High implemented a change,
+its own self-review is not independent acceptance evidence for that change. Independent acceptance
+uses both configured reviewers unless a task explicitly defines another accepted gate.
+
+DeepSeek and Gemini 3.1 Pro High are read-only. They must not modify/create files, apply patches,
+commit, push, use credentials, run cloud commands, mutate networks/resources or decide a Product
+Owner gate. Codex verifies every finding before applying it and classifies findings as `VALID`,
+`INVALID`, `DUPLICATE`, `OUT_OF_SCOPE` or `ADVISORY`.
+
+Both reviewers must receive the same frozen snapshot: Git HEAD, relevant-file manifest, SHA-256
+hashes and governing docs/code. If any reviewed file changes, both reviews are invalid and must be
+rerun on a new manifest. Do not report Codex review or worker self-review as independent evidence.
+If a required provider is unavailable, record `INDEPENDENT REVIEW INCOMPLETE`; never fabricate or
+substitute a verdict.
+
+### 10.5 Stop and escalation rules
+
+A worker stops on conflicting authority, undefined contract, architecture or security ambiguity,
+persistence-semantic change, cloud credential/live-provider requirement, production migration or
+unexpected blast radius. It must not work around the conflict. Codex escalates to the Lead/Architect
+when a decision exceeds accepted authority.
+
+The normal sequence is:
+
+```text
+Codex plans
+  -> bounded worker implementation when routing permits
+  -> Codex inspects diff and verifies/tests
+  -> both independent reviewers inspect one exact snapshot
+  -> Codex resolves verified findings and reruns invalidated reviews
+  -> Codex commits
+  -> Codex pushes only when authorized
+```
+
+### 10.6 Current provider command forms
+
+DeepSeek read-only reviewer:
+
+```text
+opencode run -m opencode-go/deepseek-v4.1-flash "<strict read-only review prompt>"
+```
+
+Gemini read-only reviewer:
+
+```text
+agy -p "<strict read-only review prompt>" --mode plan --model gemini-3.1-pro-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
+```
+
+Gemini mechanical worker, after `agy models` confirms the exact ID:
+
+```text
+agy -p "<bounded worker task packet>" --mode accept-edits --model gemini-3.8-flash-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
+```
+
+If Antigravity headless read permissions block a reviewer, `--dangerously-skip-permissions` may be
+used only to bypass the read gate with the same strict read-only prompt. It never grants repository,
+credential, network or cloud mutation authority.

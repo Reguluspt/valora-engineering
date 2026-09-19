@@ -5,6 +5,8 @@ Navigation index; this file does not replace design authority or acceptance evid
 ## Authority and implementation status
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
+- [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
+  delegated mechanical-worker, independent-review and commit-ownership rules.
 - [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) and [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md).
 - [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md).
 
