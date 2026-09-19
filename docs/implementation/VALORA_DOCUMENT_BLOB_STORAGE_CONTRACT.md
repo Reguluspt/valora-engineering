@@ -1,9 +1,9 @@
 # VALORA Document Blob Storage contract
 
-**Status:** ACCEPTED FOR `VALORA-STORAGE-FAKE-001` — NO CLOUD OR PRODUCTION AUTHORITY
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 ADAPTER LOCAL PREPARATION ONLY
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
-**Authority:** ADR 0043 direction; no runtime or migration authority
+**Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
 
 ## 1. Purpose and boundary
 
@@ -12,8 +12,8 @@ DOCX object per finalized `DocumentRevision`. It preserves the existing append-o
 makes `DocumentRevisionCurrentHead` the only authority for the current version and incorporates the
 accepted Model A and storage-governance baseline.
 
-The names below are proposals. No `DocumentBlobStore`, storage intent, candidate, event/state or
-binding model described here exists in production code at the time of this draft.
+At the time of the initial draft, the names below were proposals. The current implementation state
+is recorded in the table and §8.1; the isolated S3 plan does not make the runtime production-ready.
 
 ## 2. Implemented versus proposed
 
@@ -22,9 +22,10 @@ binding model described here exists in production code at the time of this draft
 | `DocumentRecord`, `DocumentRevision`, `DocumentRevisionCurrentHead` | Implemented |
 | `M365RevisionBinding`, Managed Content/Region baselines, revalidation observations | Implemented |
 | PR-05/PR-06 OneDrive read/bind/revalidation foundation | Implemented |
-| `DocumentBlobStore` port and cloud adapter | Proposed |
-| Durable document-storage execution intent/state/events | Proposed |
-| Candidate object and `StorageObjectBinding` persistence | Proposed |
+| `DocumentBlobStore` port and deterministic fake | Implemented and accepted locally |
+| AWS S3 adapter | Local preparation authorized; not implemented or live-proven |
+| Durable document-storage execution intent/state/events | Implemented and accepted locally |
+| Candidate object and `StorageObjectBinding` persistence | Implemented and accepted locally |
 | PR-07 protected values, conflict/write runtime and migrations | Not implemented; blocked |
 
 ## 3. Domain invariants
@@ -132,7 +133,7 @@ It must never delete a finalized revision's object. Finalized objects have no or
 path; after the minimum retention period, physical purge remains an explicit, authorized, audited and
 policy-driven production operation outside this four-primitive fake contract.
 
-## 5. Proposed persistence model
+## 5. Persistence model
 
 All query-critical values are typed columns. Provider secrets, access tokens, upload URLs and raw
 DOCX bytes are forbidden in these tables and in audit/event payloads.

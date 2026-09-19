@@ -1,6 +1,6 @@
 # ADR 0043 — App-owned immutable document storage
 
-**Status:** ACCEPTED BY PRODUCT OWNER — LOCAL FAKE VALIDATION AUTHORIZED
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; ISOLATED S3 PLAN OPEN; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 
@@ -22,14 +22,17 @@ The repository already contains these relevant capabilities:
 - immutable `M365RevisionBinding`, Managed Content/Region baselines and revalidation observations;
 - checksum and tenant-safe lineage primitives.
 
-It does not yet contain `DocumentBlobStore`, storage execution-intent persistence,
-`StorageObjectBinding`, a storage provider adapter or PR-07 write/conflict runtime.
+At this ADR's initial acceptance, the repository did not yet contain `DocumentBlobStore`, storage
+execution-intent persistence, `StorageObjectBinding`, a storage provider adapter or PR-07
+write/conflict runtime. The current implementation/authority state is recorded in the gate record
+and dated amendment below.
 
 ## Decision
 
-The following decisions are the accepted architecture and policy baseline. Only the bounded,
-provider-neutral fake implementation is authorized. Production runtime, cloud adapters, migration of
-existing documents and live-provider activity remain closed.
+The following decisions are the accepted architecture and policy baseline. Initial authority covered
+only the bounded provider-neutral fake; the dated amendment below now opens local S3 adapter
+preparation. Production runtime, migration of existing documents and live-provider activity remain
+closed.
 
 ### D1. VALORA database owns current-version authority
 
@@ -229,9 +232,9 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 | Finalized-revision deletion | Product Owner | ACCEPTED — no ordinary hard delete; audited policy purge only |
 | Encryption/key ownership | Product Owner | ACCEPTED TARGET — server-side, VALORA-controlled customer-managed key |
 | Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
-| Provider-neutral fake T1–T14 | Engineering | OPEN AND AUTHORIZED — no cloud calls |
+| Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
-| S3 isolated-spike plan and account boundary | Product Owner/Engineering | CLOSED until fake + independent review pass |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | OPEN — local preparation only; live AWS closed |
 | Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
 
 ## Owner decision record
@@ -242,6 +245,15 @@ authorized `VALORA-STORAGE-FAKE-001`. This authority covers only the smallest lo
 provider-neutral fake and T1–T14 validation needed to prove the contract. It does not authorize AWS
 credentials or requests, a production provider or residency decision, real customer data, a
 production rollout/migration, PR-08, deployment or release.
+
+## Amendments
+
+- 2026-09-19 · D11 / Gate record: the provider-neutral fake, PostgreSQL CAS tests, T1–T14 and
+  independent review passed. The Product Owner then opened the separate bounded
+  `VALORA-STORAGE-S3-SPIKE-001` plan. Local adapter preparation is authorized; credentials,
+  AWS resources/requests/cost, real customer data and production-provider or residency selection
+  remain closed. A live invocation requires the exact reviewed commit, a frozen non-production
+  account/bucket/identity boundary, a cleanup manifest and separate action-time approval.
 
 ## References
 

@@ -1,7 +1,7 @@
 # VALORA immutable document-storage provider selection
 
 **Start time:** 2026-09-19, Asia/Saigon
-**Status:** amended 2026-09-19 — architecture comparison complete; spike not authorized or run
+**Status:** amended 2026-09-19 — isolated S3 plan open; live AWS run not authorized
 **Task:** `VALORA-STORAGE-ARCH-001`
 
 ## Initial purpose
@@ -202,3 +202,9 @@ Cross-references:
   boundaries, `RPO <= 15 minutes` and `RTO <= 4 hours`. AWS S3 remains only the future isolated-spike
   target. Production provider and residency are not selected, and no live spike or real customer data
   is authorized by this amendment.
+- 2026-09-19 · § Decision: after the provider-neutral fake, PostgreSQL CAS evidence, T1–T14 and
+  independent review passed, the Product Owner opened `VALORA-STORAGE-S3-SPIKE-001`. The authority
+  currently covers the separate bounded plan and local adapter preparation only. AWS credentials,
+  account/bucket/IAM/KMS/lifecycle changes, live requests and costs remain closed until the exact
+  reviewed snapshot, account boundary and cleanup manifest receive action-time approval. Production
+  provider/residency selection and real customer data remain outside the spike.
