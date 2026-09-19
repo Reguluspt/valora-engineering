@@ -237,6 +237,16 @@ candidate is closed and is not an accepted production write mechanism; PR-07 pro
 migrations, G4 and PR-08 remain blocked. Only read-only provider clarification may continue. Reopen
 this decision only on a documented Microsoft guarantee or a separately reviewed supported mechanism.
 
+### App-owned storage successor direction — 2026-09-19
+
+The Product Owner subsequently approved app-owned immutable document storage as the primary roadmap
+for authoritative DOCX bytes and revision history. [ADR 0043](0043-app-owned-immutable-document-storage.md)
+records the accepted Model A and storage policy baseline. This note does not amend D6: any future
+proposal to replace an existing OneDrive item directly must still satisfy D6 independently. The
+original OneDrive provider-write runtime remains blocked. ADR 0043 authorizes only provider-neutral
+local fake validation; it authorizes no cloud adapter, production migration, live provider call,
+PR-08, deployment or release.
+
 ## References
 
 - `docs/adr/0040-onedrive-delegated-integration-and-file-binding.md`

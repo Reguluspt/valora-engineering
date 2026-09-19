@@ -8,7 +8,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) and [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md).
 - [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md).
 
-## PR-07 — provider conformance gate
+## PR-07 — provider conformance and storage successor
 
 - [OAuth diagnostics and C2 implementation plan](plan/pr07-oauth-c2-implementation.md) — G1 and the first bounded G2 attempt are historical; G4 remains closed.
 - [C2 partial-response semantics research](research/pr07-c2-partial-response-semantics.md) — the v1 predicate correction plus the amended single v2 live observation.
@@ -18,7 +18,11 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Completed read-only provider clarification plan](plan/done/pr07-provider-clarification-read-only.md) — public sources remain undocumented; no provider mutation occurred.
 - [Provider clarification public-source result](research/pr07-provider-clarification-public-sources.md) — six-question status table and unmet reopen trigger.
 - [Sanitized Microsoft clarification packet](ref/pr07-provider-clarification-question-packet.md) — submitted to public Microsoft Q&A on 2026-09-19; response pending.
-- [Storage fallback research](research/pr07-storage-fallback-options.md) — initial provider/architecture comparison; app-owned immutable revisions are the preferred validation target and no architecture change is authorized.
+- [Accepted ADR 0043 storage successor](adr/0043-app-owned-immutable-document-storage.md) — Model A, ten-year retention, policy purge, customer-managed encryption and recovery targets; only local fake validation is authorized.
+- [Document Blob Storage contract](implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md) — accepted narrow provider port, normalized persistence, DB CAS and T1–T14 recovery matrix for the local fake task.
+- [Completed storage architecture task](plan/done/valora-storage-arch-001.md) — accepted policy baseline and the bounded next gate.
+- [Provider selection and economics](research/valora-storage-provider-selection.md) — AWS S3 selected only for a later isolated spike; production provider remains open.
+- [Storage policy decision](research/pr07-storage-fallback-options-2.md) — Model A and the accepted retention, deletion, encryption and recovery baseline; links the superseded initial fallback research.
 - [Accepted ADR 0042](adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md) and [accepted sync/conflict contract](implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md).
 - [Provider-conformance runbook](implementation/VALORA_UIUX_V2_3_PR07_PROVIDER_CONFORMANCE_RUNBOOK.md) — historical/current execution evidence; PR-07 runtime remains blocked.
 - [Research handoff](research/pr07-onedrive-conformance-handoff.md) — C1 chronology plus the amended C2 observation and remaining provider questions.

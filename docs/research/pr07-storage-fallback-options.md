@@ -1,7 +1,7 @@
 # PR-07 storage fallback options if OneDrive write integration remains unavailable
 
 **Start time:** 2026-09-19, Asia/Saigon
-**Status:** initial research complete — follow-up validation requires a separate architecture decision
+**Status:** superseded by [pr07-storage-fallback-options-2.md](pr07-storage-fallback-options-2.md)
 **Scope:** read-only provider and architecture research; no credential, live API, runtime, migration or ADR change
 
 ## Initial purpose
@@ -187,4 +187,7 @@ Cross-references:
 - [Public Microsoft clarification result](pr07-provider-clarification-public-sources.md)
 - [Sanitized Microsoft question packet](../ref/pr07-provider-clarification-question-packet.md)
 - [ADR 0042](../adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md)
+- [ADR 0043](../adr/0043-app-owned-immutable-document-storage.md)
+- [Document Blob Storage contract](../implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md)
+- [Provider selection](valora-storage-provider-selection.md)
 - [PR-07 sync/conflict contract](../implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md)

@@ -1,0 +1,254 @@
+# ADR 0043 — App-owned immutable document storage
+
+**Status:** ACCEPTED BY PRODUCT OWNER — LOCAL FAKE VALIDATION AUTHORIZED
+**Date:** 2026-09-19
+**Task:** `VALORA-STORAGE-ARCH-001`
+
+## Context
+
+PR-05 and PR-06 implemented a OneDrive Personal read/bind/revalidation foundation. PR-07 then
+investigated direct replacement of the bound OneDrive file. The bounded `C2_AUTO_V2` observation
+preserved concurrent bytes but returned an undocumented `404 itemNotFound` at the stale final
+fragment. It did not prove the final-commit compare-and-set guarantee required by ADR 0042/D6.
+
+The Product Owner has approved a new direction: VALORA will own the authoritative DOCX bytes for
+each document revision in immutable object storage. OneDrive remains an external integration for
+import, read, revalidation, a user working copy and export. This direction does not turn the proposed
+storage runtime into an implemented capability and does not reopen the original OneDrive write path.
+
+The repository already contains these relevant capabilities:
+
+- append-only `DocumentRevision` records and an explicit `DocumentRevisionCurrentHead`;
+- immutable `M365RevisionBinding`, Managed Content/Region baselines and revalidation observations;
+- checksum and tenant-safe lineage primitives.
+
+It does not yet contain `DocumentBlobStore`, storage execution-intent persistence,
+`StorageObjectBinding`, a storage provider adapter or PR-07 write/conflict runtime.
+
+## Decision
+
+The following decisions are the accepted architecture and policy baseline. Only the bounded,
+provider-neutral fake implementation is authorized. Production runtime, cloud adapters, migration of
+existing documents and live-provider activity remain closed.
+
+### D1. VALORA database owns current-version authority
+
+`DocumentRecord`, append-only `DocumentRevision` and `DocumentRevisionCurrentHead` are the business
+source of truth. An object-store listing, filename, modification time, provider version or OneDrive
+state must never select the current VALORA revision.
+
+### D2. One immutable object stores the exact bytes of each finalized revision
+
+Every successfully finalized content change creates a new object. A finalized revision's object is
+never overwritten in place. The object is verified against the expected full-content SHA-256 before
+the database may publish the revision as current.
+
+Object keys are opaque, server-owned identifiers derived from stable tenant/document/intent inputs.
+They are not user-authored paths or mutable filenames. The exact physical key layout is an adapter
+detail and must not become a business identifier.
+
+### D3. Use one narrow `DocumentBlobStore` port
+
+The first implementation exposes only the required primitives:
+
+- `create_immutable`;
+- `observe`;
+- `verify_checksum`;
+- `delete_uncommitted_or_expire`.
+
+This is a domain port for the selected provider, not a generic bring-your-own-storage framework.
+Provider-specific identity, checksum and conditional-create results remain explicit at the adapter
+boundary.
+
+### D4. Persist a durable execution intent before external I/O
+
+An immutable intent freezes the tenant, document, expected current revision, idempotency key,
+request/decision digests and actor. Deterministic DOCX generation records one candidate object key,
+full checksum and byte length for that intent. State transitions are append-only events with a
+queryable current-state projection.
+
+One execution intent may finalize at most one `DocumentRevision`. Retrying recovery uses the same
+intent and object key; it never invents a new write after an ambiguous response.
+
+### D5. External object creation and database publication are separate phases
+
+The target flow is:
+
+```text
+preview and validate
+  -> persist intent
+  -> generate deterministic DOCX and SHA-256
+  -> create immutable object
+  -> observe and verify the exact bytes
+  -> short database compare-and-set transaction
+  -> insert DocumentRevision N+1 and StorageObjectBinding
+  -> move CurrentHead from N to N+1
+  -> seal baseline and audit
+  -> FINALIZED
+```
+
+No database lock is held during generation, upload, observation or checksum verification. The final
+database transaction may hold a short row lock while it checks and changes the current-head pointer.
+
+### D6. Current-head compare-and-set decides concurrency
+
+Finalization requires the current head to equal the revision frozen by the intent. Two competing
+executions may create different candidate objects, but only one can advance that pointer. A losing
+transaction creates no published revision or binding; its candidate object is retained temporarily
+as an uncommitted orphan and is then removed or expired under policy.
+
+There is no silent conflict winner and no provider object becomes authoritative merely because it
+was uploaded first.
+
+### D7. Lost responses are reconciled without blind retry
+
+After an unknown create outcome, VALORA observes the same immutable key:
+
+| Observation | Required action |
+|---|---|
+| Object absent | A recovery command may repeat create with the same intent/key. |
+| Object present with exact checksum and size | Continue verification/finalization idempotently. |
+| Object present with different checksum or unverifiable identity | Fail closed as `RECONCILIATION_REQUIRED`. |
+| Provider unavailable or observation ambiguous | Keep the intent recoverable; do not write again. |
+
+An eTag is opaque metadata and is not full-content SHA-256 proof unless the selected provider
+explicitly documents that equivalence for the exact upload mode.
+
+### D8. OneDrive is an external integration, not the authoritative mutable store
+
+The PR-05/PR-06 `Files.Read` foundation remains useful for import, read, baseline and revalidation.
+The accepted interaction is **Model A — export-only**. An exported OneDrive file is a derived
+artifact/external working copy. Edits to it do not automatically change VALORA CurrentHead, create a
+`DocumentRevision` or start implicit bidirectional sync. Explicit import/revalidation of an external
+edit is a future capability outside this task. Microsoft clarification may still be monitored, but
+the storage roadmap does not depend on it.
+
+ADR 0042/D6 remains unchanged. It continues to govern any future proposal to replace an existing
+OneDrive item directly. This ADR succeeds the direct-write path as the primary PR-07 roadmap; it
+does not reinterpret the inconclusive C2 observation as provider conformance.
+
+### D9. Retention, deletion and legal hold are policy-driven
+
+Finalized document revisions for valuation records have a minimum retention period of ten years from
+the applicable record/release business milestone. The governing retention policy supplies that
+milestone; object creation time does not invent it.
+
+Finalized revisions have no ordinary hard-delete path. A physical purge after retention must be
+explicit, authorized, audited and policy-driven, and an active legal hold prevents it. Temporary
+staged or orphan candidate objects use a separate lifecycle policy because they were never
+finalized. The architecture must not encode every object as “keep forever.”
+
+### D10. Encryption and recovery targets are production requirements
+
+Production storage uses server-side encryption with customer-managed keys under VALORA-controlled
+key ownership. The AWS reference shape is SSE-KMS with a customer-managed KMS key. Production and
+non-production use separate storage and key boundaries; per-tenant keys are not required by this
+task.
+
+The architecture targets `RPO <= 15 minutes` and `RTO <= 4 hours`. The local fake task must not claim
+that these targets are operationally met; backup, replication and restore evidence belong to later
+production-provider and operations gates.
+
+Production provider and permitted residency region are not selected. No real customer document or
+valuation record may be uploaded during local fake validation or an isolated technical spike.
+
+### D11. Validate one provider before broad abstraction
+
+The initial architecture comparison selects AWS S3 for an isolated spike because its official
+contract explicitly supports create-only `If-None-Match: *` on both `PutObject` and
+`CompleteMultipartUpload`, including defined concurrent outcomes and enforceable bucket policy.
+This is a future technical-spike selection, not a production-provider or residency decision. The
+spike remains closed until the provider-neutral T1–T14 matrix and independent review pass.
+
+Azure Blob Storage remains the second candidate because `Put Block List` provides a staged final
+commit, conditional headers and strong managed-identity integration. Production selection remains
+blocked on residency, operations, account ownership, cost and spike evidence; the accepted
+encryption and recovery targets constrain whichever provider is later selected.
+
+## Export policy
+
+The Product Owner selected Model A. A user may later perform an explicit import through a separately
+accepted intake flow, but this ADR authorizes no export-to-re-import workflow and no automatic sync.
+
+## Required architecture validation
+
+The fake provider and service model must pass all fourteen scenarios before provider selection can
+advance:
+
+`T1` normal create; `T2` duplicate/same checksum; `T3` duplicate/different checksum; `T4` lost
+success response; `T5` crash before create; `T6` crash after create; `T7` database finalization
+failure; `T8` competing execution; `T9` current-head CAS loss; `T10` checksum mismatch; `T11`
+temporary storage outage; `T12` orphan cleanup; `T13` idempotent recovery; `T14` no duplicate
+`DocumentRevision`.
+
+Passing the fake does not authorize a live provider spike. The spike requires a separate bounded
+plan, credentials/account boundary, cleanup plan and action-time approval.
+
+## Safe degraded mode
+
+While this ADR remains at draft/detail-gate status, VALORA may retain OneDrive `Files.Read` and the
+implemented import/read/baseline/revalidation capabilities. A manual download-and-replace workflow
+may be researched, but it must not be described as implemented until its UI/runtime exists.
+
+## Consequences
+
+- Authoritative concurrency moves from undocumented OneDrive final-commit behavior to a VALORA
+  database compare-and-set.
+- The application assumes custody obligations for official DOCX bytes, retention and recovery.
+- Storage can accumulate uncommitted candidates; lifecycle and audit make that state explicit.
+- Export preserves Microsoft ecosystem interoperability without making a mutable copy authoritative.
+- Existing OneDrive research and ADR 0042 remain valid historical evidence.
+
+## Rejected alternatives
+
+### Continue searching for OneDrive Personal write workarounds
+
+Rejected as the roadmap. It does not provide the contractual production invariant and would keep the
+core release path dependent on unresolved provider behavior.
+
+### Treat the observed `404 itemNotFound` as equivalent to `412`
+
+Rejected by G3 Option A. The tested run was safe, but the response has no documented stale-commit
+meaning for the exact flow.
+
+### Build a generic multi-cloud or BYO storage framework now
+
+Rejected for this task. It multiplies credential, recovery and conformance surfaces before one
+adapter has proved the domain contract.
+
+### Hold a database transaction open during upload
+
+Rejected. It cannot roll back an external object and creates unnecessary lock contention.
+
+## Gate record
+
+| Gate | Owner | Current state |
+|---|---|---|
+| Exported-copy semantics | Product Owner | ACCEPTED — Model A export-only |
+| Retention and legal hold | Product Owner | ACCEPTED — minimum ten years plus legal hold |
+| Finalized-revision deletion | Product Owner | ACCEPTED — no ordinary hard delete; audited policy purge only |
+| Encryption/key ownership | Product Owner | ACCEPTED TARGET — server-side, VALORA-controlled customer-managed key |
+| Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
+| Provider-neutral fake T1–T14 | Engineering | OPEN AND AUTHORIZED — no cloud calls |
+| Production residency and provider | Architecture/Product Owner | OPEN; not selected |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | CLOSED until fake + independent review pass |
+| Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
+
+## Owner decision record
+
+On 2026-09-19, the Product Owner approved the app-owned immutable-storage direction. The Product
+Owner then accepted Model A, the retention/deletion/encryption baseline and the RPO/RTO targets, and
+authorized `VALORA-STORAGE-FAKE-001`. This authority covers only the smallest local persistence,
+provider-neutral fake and T1–T14 validation needed to prove the contract. It does not authorize AWS
+credentials or requests, a production provider or residency decision, real customer data, a
+production rollout/migration, PR-08, deployment or release.
+
+## References
+
+- [ADR 0040](0040-onedrive-delegated-integration-and-file-binding.md)
+- [ADR 0041](0041-onedrive-personal-return-revalidation-observations.md)
+- [ADR 0042](0042-onedrive-personal-protected-values-and-sync-write-transactions.md)
+- [Storage contract](../implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md)
+- [Provider comparison](../research/valora-storage-provider-selection.md)
+- [Completed architecture task](../plan/done/valora-storage-arch-001.md)
+- [PR-07 storage policy decision](../research/pr07-storage-fallback-options-2.md)
