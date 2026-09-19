@@ -161,13 +161,14 @@ The bounded AWS S3 adapter is locally implemented behind the unchanged four-oper
 request-model tests prove `IfNoneMatch="*"` on `PutObject` and `CompleteMultipartUpload`, one total
 SDK attempt, explicit ambiguous-outcome mapping and streamed full-content SHA-256 plus byte-length
 verification. Adapter plus T1–T14 passed `42/42`; the affected storage/document/M365 selection
-passed `145` with `11` PostgreSQL-only local skips pending CI. DeepSeek v4.1 Flash and Gemini 3.1 Pro
+passed `145` with `11` PostgreSQL-only local skips. DeepSeek v4.1 Flash and Gemini 3.1 Pro
 High both returned `READY` with no P0–P2 finding on the corrected exact code hashes.
 
 This is local preparation evidence only. No AWS credential, endpoint, account, resource, request,
-real customer data or cost was used. Remote CI is pending. PR-07 runtime, production
-provider/residency, G4 live preflight, PR-08, deployment and release remain closed; every live
-preflight row remains `UNSET`.
+real customer data or cost was used. Pushed commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f`
+passed GitHub CI run `35448475149` on attempt 2, including `1565` backend tests with PostgreSQL and
+MinIO available. PR-07 runtime, production provider/residency, G4 live preflight, PR-08, deployment
+and release remain closed; every live preflight row remains `UNSET`.
 
 ## Merge and CI evidence
 

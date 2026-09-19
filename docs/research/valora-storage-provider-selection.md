@@ -208,7 +208,8 @@ Cross-references:
   account/bucket/IAM/KMS/lifecycle changes, live requests and costs remain closed until the exact
   reviewed snapshot, account boundary and cleanup manifest receive action-time approval. Production
   provider/residency selection and real customer data remain outside the spike.
-- 2026-09-19 · § Result / Decision: G2/G3 local adapter preparation and independent code review are
-  ready on Python `3.14.7`, boto3 `1.43.89` and botocore `1.43.89`; remote CI remains pending. This
-  evidence does not alter the decision: AWS is still only the isolated-spike target, every live
-  preflight value is `UNSET`, and production provider/residency selection remains open.
+- 2026-09-19 · § Result / Decision: G2/G3 adapter preparation and independent code review completed
+  on Python `3.14.7`, boto3 `1.43.89` and botocore `1.43.89`. Pushed commit `5f3ab7f` passed GitHub
+  CI run `35448475149` on attempt 2, including PostgreSQL and MinIO gates. This evidence does not
+  alter the decision: AWS is still only the isolated-spike target, every live preflight value is
+  `UNSET`, and production provider/residency selection remains open.

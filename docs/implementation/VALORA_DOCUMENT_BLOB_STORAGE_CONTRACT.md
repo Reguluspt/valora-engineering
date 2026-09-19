@@ -356,10 +356,11 @@ schema, `provider_kind` constraint or production service wiring. The adapter:
 
 Local evidence used Python `3.14.7`, boto3 `1.43.89` and botocore `1.43.89`. Adapter plus T1–T14
 passed `42/42`; the affected storage/document/M365 selection passed `145` with `11` PostgreSQL-only
-skips that remain pending CI. DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY` with
-no P0–P2 finding on the corrected exact code hashes. No AWS credential, endpoint or live request was
-used. Production provider, residency, encryption operations and every live preflight value remain
-unselected or `UNSET`.
+local skips. DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY` with no P0–P2 finding
+on the corrected exact code hashes. Pushed commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f`
+passed GitHub CI run `35448475149` on attempt 2; backend passed `1565` tests with PostgreSQL and
+MinIO available. No AWS credential, endpoint or live request was used. Production provider,
+residency, encryption operations and every live preflight value remain unselected or `UNSET`.
 
 ## 9. Security and operational constraints
 

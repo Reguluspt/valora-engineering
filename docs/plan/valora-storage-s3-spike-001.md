@@ -1,6 +1,6 @@
 # VALORA-STORAGE-S3-SPIKE-001 — Isolated AWS S3 create-only/checksum spike
 
-**Status:** OPEN — G2/G3 LOCAL READY; PUSH/CI PENDING; LIVE AWS ACTIVITY CLOSED
+**Status:** OPEN — G2/G3 COMPLETE; LIVE AWS ACTIVITY CLOSED
 **Opened:** 2026-09-19, Asia/Saigon
 **Authority:** ADR 0043/D11 and Product Owner instruction on 2026-09-19
 
@@ -185,8 +185,9 @@ Failure returns to architecture review. It does not silently switch to Azure or 
 
 1. **G1 — plan open: COMPLETE.** This document, ADR/research/index synchronization and
    documentation checks passed at commit `2162f71078a1e980c0129fa8e9fbe2d8d36e43d3`.
-2. **G2 — local adapter: LOCAL READY; PUSH/CI PENDING.** The isolated adapter and deterministic
-   request/failure tests pass locally. No runtime wiring, migration or provider request was added.
+2. **G2 — local adapter: COMPLETE.** The isolated adapter and deterministic request/failure tests
+   pass locally and at pushed commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f`. No runtime wiring,
+   migration or provider request was added.
 3. **G3 — independent review: COMPLETE FOR THE LOCAL CODE SNAPSHOT.** DeepSeek v4.1 Flash and
    Gemini 3.1 Pro High both returned `READY` with no P0–P2 finding on the exact six-file hash
    manifest below.
@@ -209,6 +210,11 @@ Failure returns to architecture review. It does not silently switch to Azure or 
   environment-gated PostgreSQL and MinIO proofs; a configured but unavailable local MinIO endpoint
   was diagnosed separately, then omitted from the isolated pytest process so those proofs skipped
   explicitly instead of being misreported as adapter regressions.
+- Pushed implementation commit: `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f`. GitHub CI run
+  `35448475149`, attempt 2, passed all four jobs; backend passed `1565` tests with `29` warnings,
+  including PostgreSQL and MinIO gates. Attempt 1's only failure was the unrelated pre-existing
+  PR-01 concurrent replay race; the base SHA had passed the same test, so the failed job was rerun
+  once after diagnosis and no code was changed to mask it.
 - Static checks: focused Ruff, Python compilation and `git diff --check` pass.
 - Reviewer snapshot hashes:
   - adapter: `9bf7552fbaa322b91a7251132719fd17ed41a96b660a05706cad3487e0b685d9`;

@@ -234,7 +234,7 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 | Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
 | Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
-| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 LOCAL READY — push/CI pending; all live rows `UNSET` and AWS closed |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; CI run `35448475149` green; all live rows `UNSET` and AWS closed |
 | Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
 
 ## Owner decision record
@@ -258,7 +258,8 @@ production rollout/migration, PR-08, deployment or release.
   four-operation port. Deterministic boto3/botocore request-shape and failure tests prove
   conditional single/multipart final creation, one-attempt SDK behavior, streamed SHA-256/length
   verification and bounded cleanup. DeepSeek and Gemini returned `READY` on the exact code hashes.
-  This is local evidence only; remote CI is pending and every live preflight value remains `UNSET`.
+  Commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f` was pushed and GitHub CI run `35448475149`
+  passed on attempt 2. This remains non-live evidence; every live preflight value is still `UNSET`.
 
 ## References
 
