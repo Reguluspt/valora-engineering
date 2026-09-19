@@ -63,7 +63,7 @@ signed URLs and raw policy credentials must not be committed.
 
 | Input | Required live value | Current state |
 |---|---|---|
-| Reviewed commit | Exact Git SHA and clean relevant diff | BLOCKED — assigned only after the G4 implementation commit and same-snapshot reviews |
+| Reviewed commit | Exact Git SHA and clean relevant diff | FROZEN — executable commit `8f05040628361feb6d64b7bb714f397ef33c0f9c`; same-snapshot reviews pending |
 | AWS boundary | Dedicated non-production account alias plus privately verified account ID | REQUIRES ACTION-TIME VERIFICATION — alias `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`; account ID stays private |
 | Region | One explicit permitted AWS region | FROZEN — `ap-southeast-1` |
 | Bucket | Dedicated general-purpose spike bucket; no production/shared data | REQUIRES ACTION-TIME VERIFICATION — exact name `valora-storage-spike-2c2a9f17-20260919-001` and empty dedicated state |

@@ -29,8 +29,8 @@ Evidence vocabulary is strict:
 | G2 reviewed implementation commit | `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f` |
 | G2/G3 docs HEAD before G4 | `aa32ee57a82f9510eb04451adf24e44243787921` |
 | Project AI policy commit | `50db35c` |
-| G4 executable commit | PENDING BOUNDED G4 IMPLEMENTATION COMMIT |
-| G4 review HEAD | PENDING G4 REVIEW FREEZE |
+| G4 executable commit | `8f05040628361feb6d64b7bb714f397ef33c0f9c` |
+| G4 review HEAD | Commit containing `VALORA_STORAGE_S3_G4_REVIEW_MANIFEST.json`; exact SHA recorded after freeze |
 | Python | `3.14.7` |
 | boto3 | `1.43.89` |
 | botocore | `1.43.89` |

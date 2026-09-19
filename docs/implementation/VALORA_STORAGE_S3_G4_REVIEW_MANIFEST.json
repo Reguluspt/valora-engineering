@@ -1,0 +1,98 @@
+{
+  "schema_version": "valora-s3-g4-review-v1",
+  "task": "VALORA-STORAGE-S3-SPIKE-001",
+  "gate": "G4",
+  "executable_commit": "8f05040628361feb6d64b7bb714f397ef33c0f9c",
+  "review_snapshot_parent": "8f05040628361feb6d64b7bb714f397ef33c0f9c",
+  "review_head_definition": "the commit containing this manifest; reviewers must record the exact git HEAD supplied in the review prompt",
+  "live_aws_state": "NOT_RUN",
+  "runtime": {
+    "python": "3.14.7",
+    "boto3": "1.43.89",
+    "botocore": "1.43.89",
+    "signature_version": "s3v4",
+    "total_max_attempts": 1
+  },
+  "files": [
+    {
+      "path": "CODEX.md",
+      "sha256": "e4846d11db5924232388ba247434428acd5b4f5598af9a9d85e5a2ed379bb796"
+    },
+    {
+      "path": "ENGINEERING_GUARDRAILS.md",
+      "sha256": "5970826c586c1bcc205b52d1968f0d55c93659e8a1e94761972a746d256e1ab1"
+    },
+    {
+      "path": "PR_RULES.md",
+      "sha256": "ce10e088eef3a59e84fdd9f334680caa03b87eb7861a83e17e5fc998082bce03"
+    },
+    {
+      "path": "backend/app/modules/document_workspace/infrastructure/aws_s3_document_blob_store.py",
+      "sha256": "9f3398350fc26dd46a34b286ee562a62d094fb05263c188857961c1e1066570f"
+    },
+    {
+      "path": "backend/tests/test_document_blob_store_s3.py",
+      "sha256": "8863482416b8588a496028bbb8e3a3cba40755594157d2d0084c73fb752b8279"
+    },
+    {
+      "path": "backend/tests/test_valora_storage_s3_live_harness.py",
+      "sha256": "7641496dc4ae42a1e6d2a05e86a126147faf898edb5f81f3c18df9776f746196"
+    },
+    {
+      "path": "backend/tools/valora_storage_s3_live_harness.py",
+      "sha256": "d2a029dee7871c2e3511f593a33df6eda9a82c07bc2269fc39a92b5d97489f65"
+    },
+    {
+      "path": "docs/adr/0043-app-owned-immutable-document-storage.md",
+      "sha256": "7ae724a318bb53480d10e3f3124e9a6ea7ff5911a449cf221d7d140e18a56643"
+    },
+    {
+      "path": "docs/implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md",
+      "sha256": "52c4b0242868703b2731b61a26d9bdc909c6fce6f70a831268a881f04702c26d"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_ACTION_TIME_CHECKLIST.md",
+      "sha256": "db2ed690f2805fbba829705ae8a9c2f11da09f43d959d6c83d34a03e7fc8dd56"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_BUCKET_POLICY.json",
+      "sha256": "48f9ae52060bce628a6317b7739c11fa2a53c86accf33d740285f55b75107be9"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_CLEANUP_MANIFEST.json",
+      "sha256": "ca2ee3f424610738895f50c7c0e304b5bedfde3e44997cb452058b3de419e5a4"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_IAM_POLICY.json",
+      "sha256": "33e919833125e34d5babe638fc25d4286f6e4d86b0e440ed6ea5a6c2044e78f5"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_KMS_KEY_POLICY_FRAGMENT.json",
+      "sha256": "222fcb539ee163dc49e97f0294d7d4e18aafe676f71e1e0cca45fb968542b5ba"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_LIFECYCLE_CONFIGURATION.json",
+      "sha256": "302348c84474e3a2ff8157e47519b6ebd06d92a427771f3cf4a5b98de8e209be"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_LIVE_MANIFEST.template.json",
+      "sha256": "3b17ed837031d7eea762842c153ccacb9ffc67b09e26104dcacfecf410c0629c"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_PREFLIGHT_PACKET.md",
+      "sha256": "51a6da65f1e45608101791ddd2bf22ba1c9083c77329dc0d8ef2d9ba31af9de7"
+    },
+    {
+      "path": "docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md",
+      "sha256": "bc034a7acef88efc029f48646b76fbbccdc76a3237001a09b4ad5383cf81c209"
+    },
+    {
+      "path": "docs/plan/valora-storage-s3-spike-001.md",
+      "sha256": "625fb1180ac617a6d0ecd94ff9886450769e683267378cfdd9e7812df3505dfc"
+    },
+    {
+      "path": "docs/research/valora-storage-provider-selection.md",
+      "sha256": "68444922cd5aff94bb95fd44156b47eb1c10a9cf7094c20a7084be6b41d842e0"
+    }
+  ]
+}
