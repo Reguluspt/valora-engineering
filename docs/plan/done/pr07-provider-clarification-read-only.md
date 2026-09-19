@@ -1,7 +1,7 @@
 # PR-07 — provider clarification read-only plan
 
-**Status:** COMPLETE — PUBLIC SOURCES UNDOCUMENTED  
-**Date:** 2026-09-19  
+**Status:** COMPLETE — PUBLIC SOURCES UNDOCUMENTED
+**Date:** 2026-09-19
 **Authority:** G3 Option A approved by Product Owner
 
 ## Goal

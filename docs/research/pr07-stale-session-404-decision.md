@@ -1,6 +1,6 @@
 # PR-07 stale upload-session `404` architecture evaluation
 
-**Start time:** 2026-09-19, Asia/Saigon  
+**Start time:** 2026-09-19, Asia/Saigon
 **Status:** amended 2026-09-19 — recommended Option A accepted by Product Owner
 
 ## Initial purpose

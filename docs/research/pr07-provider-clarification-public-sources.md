@@ -1,6 +1,6 @@
 # PR-07 provider clarification from public Microsoft sources
 
-**Start time:** 2026-09-19, Asia/Saigon  
+**Start time:** 2026-09-19, Asia/Saigon
 **Status:** complete — exact-item session commit guarantee remains undocumented
 
 ## Initial purpose

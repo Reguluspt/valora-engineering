@@ -1,7 +1,7 @@
 # PR-07 — G3 architecture decision plan
 
-**Status:** COMPLETE — OPTION A APPROVED BY PRODUCT OWNER  
-**Date:** 2026-09-19  
+**Status:** COMPLETE — OPTION A APPROVED BY PRODUCT OWNER
+**Date:** 2026-09-19
 **Scope:** architecture authority only; no provider mutation, runtime, migration, PR-08, commit or push
 
 ## Goal

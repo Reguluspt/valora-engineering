@@ -1,7 +1,7 @@
 # PR-07 OneDrive Personal conditional-commit clarification packet
 
 **Submission status:** submitted with Product Owner authorization to public Microsoft Q&A on
-2026-09-19; provider response pending.  
+2026-09-19; provider response pending.
 **Public thread:** [OneDrive Personal upload session: does If-Match remain a commit precondition?](https://learn.microsoft.com/en-us/answers/questions/6008198/onedrive-personal-upload-session-does-if-match-rem)
 
 The submitted packet contains no tenant, account, application, drive/item ID, upload URL, token,

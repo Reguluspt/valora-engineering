@@ -1,7 +1,7 @@
 # PR-07 storage fallback options if OneDrive write integration remains unavailable
 
-**Start time:** 2026-09-19, Asia/Saigon  
-**Status:** initial research complete — follow-up validation requires a separate architecture decision  
+**Start time:** 2026-09-19, Asia/Saigon
+**Status:** initial research complete — follow-up validation requires a separate architecture decision
 **Scope:** read-only provider and architecture research; no credential, live API, runtime, migration or ADR change
 
 ## Initial purpose
