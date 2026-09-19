@@ -1,6 +1,6 @@
 # VALORA-STORAGE-S3-SPIKE-001 — Isolated AWS S3 create-only/checksum spike
 
-**Status:** OPEN — G4 PREFLIGHT PREPARED; STATIC REVIEW PENDING; LIVE AWS ACTIVITY CLOSED
+**Status:** OPEN — G4 STATIC REVIEW READY; LIVE AWS ACTIVITY CLOSED
 **Opened:** 2026-09-19, Asia/Saigon
 **Authority:** ADR 0043/D11 and Product Owner instruction on 2026-09-19
 
@@ -63,7 +63,7 @@ signed URLs and raw policy credentials must not be committed.
 
 | Input | Required live value | Current state |
 |---|---|---|
-| Reviewed commit | Exact Git SHA and clean relevant diff | FROZEN — exact executable commit is recorded by the review manifest; same-snapshot re-review pending after corrections |
+| Reviewed commit | Exact Git SHA and clean relevant diff | FROZEN — exact executable/review commits and 21-file hashes recorded by the review manifest; corrected same-snapshot review passed |
 | AWS boundary | Dedicated non-production account alias plus privately verified account ID | REQUIRES ACTION-TIME VERIFICATION — alias `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`; account ID stays private |
 | Region | One explicit permitted AWS region | FROZEN — `ap-southeast-1` |
 | Bucket | Dedicated general-purpose spike bucket; no production/shared data | REQUIRES ACTION-TIME VERIFICATION — exact name `valora-storage-spike-2c2a9f17-20260919-001` and empty dedicated state |
@@ -195,9 +195,10 @@ Failure returns to architecture review. It does not silently switch to Azure or 
 3. **G3 — independent review: COMPLETE FOR THE LOCAL CODE SNAPSHOT.** DeepSeek v4.1 Flash and
    Gemini 3.1 Pro High both returned `READY` with no P0–P2 finding on the exact six-file hash
    manifest below.
-4. **G4 — live preflight: IN PROGRESS.** The 17-row intended boundary, no-network harness, policy
-   templates, cleanup manifest/runbook and action-time checklist are prepared. Independent static
-   review of the exact snapshot is pending. No live boundary or AWS request is approved.
+4. **G4 — live preflight: COMPLETE (STATIC ONLY).** The 17-row intended boundary, no-network
+   harness, policy templates, cleanup manifest/runbook and action-time checklist are frozen. On the
+   corrected 21-file snapshot, DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY`
+   with no P0–P3 finding. No live boundary or AWS request is approved.
 5. **G5 — action-time approval:** explicit authorization for one invocation only, no retry.
 6. **G6 — evidence and closure:** sanitized AWS observations, complete cleanup proof, regression
    results and a recommendation. Production-provider selection remains a separate decision.

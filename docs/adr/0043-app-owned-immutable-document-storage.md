@@ -1,6 +1,6 @@
 # ADR 0043 — App-owned immutable document storage
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 PREFLIGHT PREPARED; LIVE AWS CLOSED
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 STATIC REVIEW READY; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 
@@ -234,7 +234,7 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 | Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
 | Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
-| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; G4 intended boundary/harness prepared for static review; G5/G6 and AWS remain closed |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; G4 corrected boundary/harness passed both static reviewers; G5/G6 and AWS remain closed |
 | Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
 
 ## Owner decision record

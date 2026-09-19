@@ -2,7 +2,7 @@
 
 **Task:** `VALORA-STORAGE-S3-SPIKE-001`
 **Gate:** G4 — LIVE PREFLIGHT / BOUNDARY FREEZE
-**Status:** STATIC REVIEW PENDING — LIVE AWS NOT RUN
+**Status:** STATIC REVIEW READY — LIVE AWS NOT RUN
 **Prepared:** 2026-09-19, Asia/Saigon
 **Production provider:** NOT SELECTED
 **Production residency:** NOT SELECTED
@@ -582,8 +582,8 @@ the SHA-256 review manifest.
 
 | Reviewer | Required model | State | P0 | P1 | P2 |
 |---|---|---|---:|---:|---:|
-| DeepSeek reviewer A | `opencode-go/deepseek-v4.1-flash` | PENDING | — | — | — |
-| Gemini reviewer B | `gemini-3.1-pro-high` | PENDING | — | — | — |
+| DeepSeek reviewer A | `opencode-go/deepseek-v4.1-flash` | READY at corrected HEAD `40590a8` | 0 | 0 | 0 |
+| Gemini reviewer B | `gemini-3.1-pro-high` | READY at corrected HEAD `40590a8` | 0 | 0 | 0 |
 
 Reviewer output is static/plan-readiness evidence, never AWS conformance evidence. Any valid P0/P1/P2
 requires correction, new hashes and both reviews rerun. Provider outage yields
@@ -595,6 +595,13 @@ returned `NOT READY` with one valid P1: the manifest expected an IAM role ARN wh
 verdict cannot preserve an invalidated snapshot. The correction requires the exact session ARN,
 realistic full-preflight coverage, explicit operator-attestation wording, concrete operational
 references, complete manifest scope and a same-snapshot rerun by both reviewers.
+
+The corrected rerun used HEAD `40590a8d64d92ab06f5accbc0f2220ce059c3ec2`, executable commit
+`7fc2f9ddc59095016d5b15e98e69796168098730`, review-manifest SHA-256
+`e3f4532f6e13e7b7188c9bf59d73d53b39fb4a6c264cb25c04941283324be9fb` and 21/21 matching file
+hashes. Both required reviewers returned `READY`, closed all six prior findings and reported no new
+P0–P3. The final closeout metadata is re-frozen and re-reviewed so this status update cannot create
+snapshot drift.
 
 ## 16. Known limitations and stop conditions
 
@@ -611,7 +618,7 @@ references, complete manifest scope and a same-snapshot rerun by both reviewers.
 
 ## 17. G5 readiness
 
-Current state: `STATIC REVIEW PENDING`; G5 is `CLOSED`; AWS live is `NOT RUN`.
+Current state: `READY FOR PRODUCT OWNER REVIEW`; G5 is `CLOSED`; AWS live is `NOT RUN`.
 
 G4 may become `READY FOR PRODUCT OWNER REVIEW` only after the implementation commit and file hashes
 are frozen, all local gates pass, both independent reviewers return `READY`, and Codex verifies no

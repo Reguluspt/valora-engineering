@@ -1,6 +1,6 @@
 # VALORA Document Blob Storage contract
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 PREFLIGHT PREPARED; LIVE AWS CLOSED
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 STATIC REVIEW READY; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 **Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
