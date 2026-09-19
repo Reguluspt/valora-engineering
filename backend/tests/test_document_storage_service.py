@@ -167,6 +167,11 @@ def test_t1_normal_create_verifies_exact_checksum_and_publishes_one_revision(sto
     assert binding.object_created_at is not None and binding.verified_at is not None
     assert binding.retention_policy_code == "official-document-10y"
     assert binding.minimum_retain_until.replace(tzinfo=timezone.utc) == RETENTION_UNTIL
+    observed = storage_context["db"].query(DocumentStorageExecutionEvent).filter_by(
+        execution_intent_id=intent.id,
+        event_code="OBJECT_OBSERVED",
+    ).one()
+    assert observed.provider_request_id == "fake-observe-1"
     assert storage_context["db"].query(DocumentRevision).count() == 2
     assert _head(storage_context).current_revision_id == binding.document_revision_id
     assert _head(storage_context).document_revision == 2

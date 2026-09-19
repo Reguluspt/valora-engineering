@@ -492,6 +492,7 @@ async def create_or_recover_storage_object(
             intent=intent,
             next_state="OBJECT_OBSERVED",
             event_code="OBJECT_OBSERVED",
+            provider_request_id=observation.provider_request_id,
             observed_object_version=observation.provider_object_version,
             observed_etag=observation.observed_etag,
             observed_object_created_at=observation.object_created_at,

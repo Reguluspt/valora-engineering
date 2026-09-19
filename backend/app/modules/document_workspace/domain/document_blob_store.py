@@ -57,6 +57,7 @@ class ObjectObservation:
     provider_object_version: str | None = None
     observed_etag: str | None = None
     object_created_at: datetime | None = None
+    provider_request_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +189,7 @@ class InMemoryDocumentBlobStore:
             provider_object_version=stored.version,
             observed_etag=f"fake-{stored.version}",
             object_created_at=stored.created_at,
+            provider_request_id=f"fake-observe-{stored.version}",
         )
 
     async def verify_checksum(

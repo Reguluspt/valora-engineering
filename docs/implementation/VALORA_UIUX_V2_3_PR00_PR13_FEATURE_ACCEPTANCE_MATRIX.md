@@ -154,6 +154,21 @@ requests and costs, real customer data and production provider/residency selecti
 A live invocation requires a reviewed exact commit, frozen non-production boundary, cleanup plan and
 separate action-time approval.
 
+### PR-07 isolated S3 G2/G3 local preparation addendum — 2026-09-19
+
+The bounded AWS S3 adapter is locally implemented behind the unchanged four-operation
+`DocumentBlobStore` port and is not wired into production persistence or configuration. Botocore
+request-model tests prove `IfNoneMatch="*"` on `PutObject` and `CompleteMultipartUpload`, one total
+SDK attempt, explicit ambiguous-outcome mapping and streamed full-content SHA-256 plus byte-length
+verification. Adapter plus T1–T14 passed `42/42`; the affected storage/document/M365 selection
+passed `145` with `11` PostgreSQL-only local skips pending CI. DeepSeek v4.1 Flash and Gemini 3.1 Pro
+High both returned `READY` with no P0–P2 finding on the corrected exact code hashes.
+
+This is local preparation evidence only. No AWS credential, endpoint, account, resource, request,
+real customer data or cost was used. Remote CI is pending. PR-07 runtime, production
+provider/residency, G4 live preflight, PR-08, deployment and release remain closed; every live
+preflight row remains `UNSET`.
+
 ## Merge and CI evidence
 
 - PR #28 merged on 2026-09-12 into the PR-01 integration branch at `8c7544d6`; its feature content,

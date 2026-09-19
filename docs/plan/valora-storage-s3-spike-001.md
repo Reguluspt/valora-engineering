@@ -1,6 +1,6 @@
 # VALORA-STORAGE-S3-SPIKE-001 — Isolated AWS S3 create-only/checksum spike
 
-**Status:** OPEN — PLAN AND LOCAL PREPARATION AUTHORIZED; LIVE AWS ACTIVITY CLOSED
+**Status:** OPEN — G2/G3 LOCAL READY; PUSH/CI PENDING; LIVE AWS ACTIVITY CLOSED
 **Opened:** 2026-09-19, Asia/Saigon
 **Authority:** ADR 0043/D11 and Product Owner instruction on 2026-09-19
 
@@ -183,17 +183,40 @@ Failure returns to architecture review. It does not silently switch to Azure or 
 
 ## Gates and deliverables
 
-1. **G1 — plan open:** this document, ADR/research/index synchronization and documentation checks.
-2. **G2 — local adapter:** surgical implementation plus deterministic request/failure tests; T1–T14
-   and affected backend checks green. Record exact Python/boto3/botocore versions and exclude the
-   unrelated untracked `scratch/` directory from every commit and evidence snapshot.
-3. **G3 — independent review:** DeepSeek v4.1 Flash and Gemini 3.1 Pro High review the exact diff and
-   hashes; all valid findings resolved.
-4. **G4 — live preflight:** every boundary row frozen, cleanup dry-reviewed and exact commit hash
-   presented to the Product Owner.
+1. **G1 — plan open: COMPLETE.** This document, ADR/research/index synchronization and
+   documentation checks passed at commit `2162f71078a1e980c0129fa8e9fbe2d8d36e43d3`.
+2. **G2 — local adapter: LOCAL READY; PUSH/CI PENDING.** The isolated adapter and deterministic
+   request/failure tests pass locally. No runtime wiring, migration or provider request was added.
+3. **G3 — independent review: COMPLETE FOR THE LOCAL CODE SNAPSHOT.** DeepSeek v4.1 Flash and
+   Gemini 3.1 Pro High both returned `READY` with no P0–P2 finding on the exact six-file hash
+   manifest below.
+4. **G4 — live preflight: CLOSED.** Every row remains `UNSET`; no live boundary is approved.
 5. **G5 — action-time approval:** explicit authorization for one invocation only, no retry.
 6. **G6 — evidence and closure:** sanitized AWS observations, complete cleanup proof, regression
    results and a recommendation. Production-provider selection remains a separate decision.
+
+## G2/G3 local evidence
+
+- Base branch/HEAD: `feat/operational-frontend-m365` at
+  `2162f71078a1e980c0129fa8e9fbe2d8d36e43d3` before the G2 commit.
+- Resolved local runtime: Python `3.14.7`, boto3 `1.43.89`, botocore `1.43.89`.
+- Retry configuration: botocore `Config(retries={"total_max_attempts": 1}, ...)`; request-shape
+  tests validate the installed botocore model with `Stubber` and capture one final SDK dispatch.
+- Local tests: adapter plus T1–T14 `42 passed`; affected storage/document/M365 selection
+  `145 passed, 11 skipped`. The skips are PostgreSQL-only because no local PostgreSQL URL or Docker
+  daemon was available; they are not counted as pass and remain for CI.
+- Full local backend suite: `1466 passed, 99 skipped, 23 warnings`. The skips are the repository's
+  environment-gated PostgreSQL and MinIO proofs; a configured but unavailable local MinIO endpoint
+  was diagnosed separately, then omitted from the isolated pytest process so those proofs skipped
+  explicitly instead of being misreported as adapter regressions.
+- Static checks: focused Ruff, Python compilation and `git diff --check` pass.
+- Reviewer snapshot hashes:
+  - adapter: `9bf7552fbaa322b91a7251132719fd17ed41a96b660a05706cad3487e0b685d9`;
+  - adapter tests: `4e3b77bcddfeb96c8c50cedd2501e309f429e7ef8aff9ca1f56963a5f1bce78b`;
+  - complete six-file manifest verified independently by both reviewers; DeepSeek and Gemini both
+    returned `READY — no P0/P1/P2 findings`.
+- No AWS credential, endpoint, account, bucket, IAM, KMS, lifecycle, live request, real customer
+  data or cloud cost was used. The unrelated untracked `scratch/` directory remains excluded.
 
 ## References
 

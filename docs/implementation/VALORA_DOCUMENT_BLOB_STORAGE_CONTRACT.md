@@ -1,6 +1,6 @@
 # VALORA Document Blob Storage contract
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 ADAPTER LOCAL PREPARATION ONLY
+**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 ADAPTER LOCAL READY; LIVE AWS CLOSED
 **Date:** 2026-09-19
 **Task:** `VALORA-STORAGE-ARCH-001`
 **Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
@@ -23,7 +23,7 @@ is recorded in the table and §8.1; the isolated S3 plan does not make the runti
 | `M365RevisionBinding`, Managed Content/Region baselines, revalidation observations | Implemented |
 | PR-05/PR-06 OneDrive read/bind/revalidation foundation | Implemented |
 | `DocumentBlobStore` port and deterministic fake | Implemented and accepted locally |
-| AWS S3 adapter | Local preparation authorized; not implemented or live-proven |
+| AWS S3 adapter | Implemented and independently reviewed for local preparation; not wired or live-proven |
 | Durable document-storage execution intent/state/events | Implemented and accepted locally |
 | Candidate object and `StorageObjectBinding` persistence | Implemented and accepted locally |
 | PR-07 protected values, conflict/write runtime and migrations | Not implemented; blocked |
@@ -339,6 +339,27 @@ reviewed the corrected PostgreSQL harness as `STATIC READY`.
 This evidence accepts only the provider-neutral local fake and persistence/CAS model. Production
 provider, residency, encryption operations, backup/restore and recovery objectives remain
 unverified future gates.
+
+### 8.2 Local AWS S3 adapter evidence
+
+`VALORA-STORAGE-S3-SPIKE-001` G2/G3 prepared one isolated adapter without changing the database
+schema, `provider_kind` constraint or production service wiring. The adapter:
+
+- sends `IfNoneMatch="*"` on `PutObject` and `CompleteMultipartUpload`;
+- constructs botocore with `total_max_attempts = 1` and has no caller write retry;
+- maps `412` to existing-object observation and maps `409` or unreadable/lost responses to an
+  unknown outcome;
+- treats ETag as opaque and verifies both upload modes by streamed `GetObject`, local SHA-256 and
+  exact byte length;
+- rejects out-of-prefix or checksum-mismatched cleanup and relies on the application service's
+  existing finalized-binding guard.
+
+Local evidence used Python `3.14.7`, boto3 `1.43.89` and botocore `1.43.89`. Adapter plus T1–T14
+passed `42/42`; the affected storage/document/M365 selection passed `145` with `11` PostgreSQL-only
+skips that remain pending CI. DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY` with
+no P0–P2 finding on the corrected exact code hashes. No AWS credential, endpoint or live request was
+used. Production provider, residency, encryption operations and every live preflight value remain
+unselected or `UNSET`.
 
 ## 9. Security and operational constraints
 

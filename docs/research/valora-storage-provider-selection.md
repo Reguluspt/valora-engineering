@@ -1,7 +1,7 @@
 # VALORA immutable document-storage provider selection
 
 **Start time:** 2026-09-19, Asia/Saigon
-**Status:** amended 2026-09-19 — isolated S3 plan open; live AWS run not authorized
+**Status:** amended 2026-09-19 — S3 adapter locally ready; live AWS run not authorized
 **Task:** `VALORA-STORAGE-ARCH-001`
 
 ## Initial purpose
@@ -208,3 +208,7 @@ Cross-references:
   account/bucket/IAM/KMS/lifecycle changes, live requests and costs remain closed until the exact
   reviewed snapshot, account boundary and cleanup manifest receive action-time approval. Production
   provider/residency selection and real customer data remain outside the spike.
+- 2026-09-19 · § Result / Decision: G2/G3 local adapter preparation and independent code review are
+  ready on Python `3.14.7`, boto3 `1.43.89` and botocore `1.43.89`; remote CI remains pending. This
+  evidence does not alter the decision: AWS is still only the isolated-spike target, every live
+  preflight value is `UNSET`, and production provider/residency selection remains open.
