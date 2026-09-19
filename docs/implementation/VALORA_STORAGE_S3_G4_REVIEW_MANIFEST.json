@@ -2,8 +2,8 @@
   "schema_version": "valora-s3-g4-review-v1",
   "task": "VALORA-STORAGE-S3-SPIKE-001",
   "gate": "G4",
-  "executable_commit": "7fc2f9ddc59095016d5b15e98e69796168098730",
-  "review_snapshot_parent": "7fc2f9ddc59095016d5b15e98e69796168098730",
+  "executable_commit": "0f15c4acb98e05bdb918f151f5e1c68025253d6e",
+  "review_snapshot_parent": "0f15c4acb98e05bdb918f151f5e1c68025253d6e",
   "review_head_definition": "the commit containing this manifest; reviewers must record the exact git HEAD supplied in the review prompt",
   "live_aws_state": "NOT_RUN",
   "runtime": {
@@ -44,11 +44,11 @@
     },
     {
       "path": "docs/adr/0043-app-owned-immutable-document-storage.md",
-      "sha256": "7ae724a318bb53480d10e3f3124e9a6ea7ff5911a449cf221d7d140e18a56643"
+      "sha256": "b5a4547ea7d9c1226259957eb511280ef0ec66e13c7f934a52b270ad4b4c872a"
     },
     {
       "path": "docs/implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md",
-      "sha256": "52c4b0242868703b2731b61a26d9bdc909c6fce6f70a831268a881f04702c26d"
+      "sha256": "6507039f1ce3518138b04f3bccef41436803d390245acb36db7206eb4abbd81e"
     },
     {
       "path": "docs/implementation/VALORA_STORAGE_S3_G4_ACTION_TIME_CHECKLIST.md",
@@ -80,19 +80,19 @@
     },
     {
       "path": "docs/implementation/VALORA_STORAGE_S3_G4_PREFLIGHT_PACKET.md",
-      "sha256": "257281073cb36f72878dfc334de2b22045e86e846d3f7774ed4d9d49499a7140"
+      "sha256": "113809025a89a44d66532a96b17a3257fac344a4afa57a6de82881e00ef68928"
     },
     {
       "path": "docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md",
-      "sha256": "bc034a7acef88efc029f48646b76fbbccdc76a3237001a09b4ad5383cf81c209"
+      "sha256": "5fd93e0534dd7bc3277e9c85e4d545a17e757a31774e1aa842bbac21b4bc84cf"
     },
     {
       "path": "docs/index.md",
-      "sha256": "518fab02db2dc8399df091755add799bf2819926a8287cf03d894440e18aba66"
+      "sha256": "cf08c8e584100c65420081ed0473ed821043318b962cce3671632818a56e105e"
     },
     {
       "path": "docs/plan/valora-storage-s3-spike-001.md",
-      "sha256": "d39cd3c1481e2246e58a1bdac783fe5637d5d062c2766e44bd73132adf479aa0"
+      "sha256": "5ef9b2e7cab127dda976a076fc66ebc9cf756164d2fe29f0a565238c3a96f814"
     },
     {
       "path": "docs/research/valora-storage-provider-selection.md",
