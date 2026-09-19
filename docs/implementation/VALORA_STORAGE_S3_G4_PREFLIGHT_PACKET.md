@@ -29,8 +29,8 @@ Evidence vocabulary is strict:
 | G2 reviewed implementation commit | `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f` |
 | G2/G3 docs HEAD before G4 | `aa32ee57a82f9510eb04451adf24e44243787921` |
 | Project AI policy commit | `50db35c` |
-| G4 executable commit | `8f05040628361feb6d64b7bb714f397ef33c0f9c` |
-| G4 review HEAD | Commit containing `VALORA_STORAGE_S3_G4_REVIEW_MANIFEST.json`; exact SHA recorded after freeze |
+| G4 executable commit | Exact SHA recorded in `VALORA_STORAGE_S3_G4_REVIEW_MANIFEST.json` after correction freeze |
+| G4 review HEAD | Commit containing the corrected review manifest; exact SHA supplied identically to both reviewers |
 | Python | `3.14.7` |
 | boto3 | `1.43.89` |
 | botocore | `1.43.89` |
@@ -86,10 +86,11 @@ G5 stops; G4 authority does not permit creating or changing them.
 - Intended value: dedicated non-production account `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`.
 - Rationale: isolate the spike from production, customer and personal workloads.
 - Evidence source: private approval packet plus action-time `sts:GetCallerIdentity`.
-- Verification: exact account ID and role ARN must match before any S3 mutation.
+- Verification: exact account ID and STS assumed-role session ARN must match before any S3 mutation;
+  the policy role ARN is verified separately in the private checklist.
 - Owner: Product Owner-appointed account owner and G5 operator.
 - Cleanup implication: expire/revoke the temporary session; retain sanitized account reference only.
-- Classification: account label `REPO SAFE`; account ID and role ARN `PRIVATE OPERATIONAL`;
+- Classification: account label `REPO SAFE`; account ID, role ARN and session ARN `PRIVATE OPERATIONAL`;
   session credentials `SECRET`.
 
 ### Row 3 — region
@@ -183,7 +184,8 @@ inside a policy attached to that one KMS key; it does not mean every KMS key.
   credential values present; `AWS_PROFILE` forbidden.
 - Rationale: no implicit default chain, personal key or reusable credential.
 - Evidence source: private session issuance record and `GetCallerIdentity`.
-- Verification: harness compares account and full role ARN before S3 mutation.
+- Verification: harness compares account and the exact `GetCallerIdentity` assumed-role session ARN
+  before S3 mutation; the rendered bucket/IAM/KMS policies use the separately checked IAM role ARN.
 - Owner: account operator issues; G5 operator runs; harness never acquires credentials.
 - Cleanup implication: session expires or is revoked; environment and process memory are cleared.
 - Classification: role/account `PRIVATE OPERATIONAL`; credential values `SECRET`.
@@ -248,7 +250,10 @@ the documented `s3:ObjectCreationOperation=false` exception; final commit is not
 - Intended value: exact ceilings in §10.
 - Rationale: a tiny bounded request/byte/cost envelope.
 - Evidence source: committed constants, manifest and metered request journal.
-- Verification: request proxy stops before any operation that would exceed a ceiling.
+- Verification: request proxy stops before exceeding request, byte, multipart-upload, part,
+  list/delete or time ceilings. The committed-object ceiling is verified against the exact-prefix
+  cleanup inventory because a deliberately lost response can commit while the client receives an
+  exception.
 - Owner: Codex freezes; harness enforces; Product Owner approves.
 - Cleanup implication: cleanup has reserved request/delete/list capacity within the ceiling.
 - Classification: `PUBLIC SAFE`.
@@ -295,9 +300,10 @@ Runtime:  Python 3.14.7 / boto3 1.43.89 / botocore 1.43.89
 Retry:    total_max_attempts=1; no caller final-write retry
 ```
 
-The actual account ID, role ARN and KMS key ARN are private action-time values. They must be present
-in the private approved manifest and must match one another. Sanitization does not permit choosing a
-different account, role or key after approval.
+The actual account ID, IAM role ARN, STS assumed-role session ARN and KMS key ARN are private
+action-time values. They must be present in the private approved manifest/checklist and must match
+one another. Sanitization does not permit choosing a different account, role, session or key after
+approval.
 
 ## 6. Policy artifacts
 
@@ -310,6 +316,12 @@ The setup operator renders only `${HARNESS_ROLE_ARN}`, `${EXPECTED_ACCOUNT_ID}` 
 `${KMS_KEY_ARN}`, canonicalizes JSON and records SHA-256 in the private approval packet. No other
 substitution is allowed. The bucket policy grants nothing; it adds explicit denies. The IAM policy
 grants only boundary reads, exact-prefix object/multipart operations and exact-key KMS use.
+
+The harness reads back and hashes the S3 bucket policy and lifecycle configuration. It cannot read
+IAM policy state without widening the data-plane identity into IAM control-plane reads, so the
+rendered IAM-policy hash and completed-checklist hash are explicit Product Owner/operator
+attestations: the harness validates their SHA-256 shape, journals their approved references, and the
+action-time checklist must link the independent private evidence used to recompute them.
 
 ## 7. Runtime and retry boundary
 
@@ -544,7 +556,9 @@ and escalation for new authority.
 `VALORA_STORAGE_S3_G4_ACTION_TIME_CHECKLIST.md` is intentionally blank in G4. Rows requiring AWS
 reads or private values must remain blank until G5. The private runtime manifest is derived from the
 committed template only after Product Owner approval. It contains the exact account ID, role/KMS
-ARNs and rendered-policy/checklist hashes; it is never committed.
+ARNs, exact STS session ARN and rendered-policy/checklist hashes; it is never committed. The IAM and
+checklist hashes are operator-attested approval inputs rather than AWS read-back performed by the
+harness; their private evidence references are mandatory.
 
 ## 14. Secret classification
 
@@ -552,7 +566,7 @@ ARNs and rendered-policy/checklist hashes; it is never committed.
 |---|---|---|
 | Region, run ID, prefix, fixture IDs/hashes/sizes, limits, policy templates | PUBLIC SAFE / REPO SAFE | May commit |
 | Bucket name and sanitized account/role/key references | REPO SAFE in this packet | May commit |
-| Actual account ID, role ARN, KMS key ARN, rendered private policy hashes, operator identity | PRIVATE OPERATIONAL | Private manifest/checklist only |
+| Actual account ID, IAM role ARN, STS assumed-role session ARN, KMS key ARN, rendered private policy hashes, operator identity | PRIVATE OPERATIONAL | Private manifest/checklist only |
 | Access key, secret key, session token, credential-process output, Authorization/signature headers | SECRET | Never commit or journal |
 | Presigned URL, payload bytes, customer data, real valuation document, KMS key material | SECRET / PROHIBITED | Never accept, commit or journal |
 | Safe AWS request ID, relative key, classified result, sequence/timestamp | REPO SAFE after review | Sanitized evidence only |
@@ -574,6 +588,13 @@ the SHA-256 review manifest.
 Reviewer output is static/plan-readiness evidence, never AWS conformance evidence. Any valid P0/P1/P2
 requires correction, new hashes and both reviews rerun. Provider outage yields
 `INDEPENDENT REVIEW INCOMPLETE`, not a substituted verdict.
+
+The first frozen attempt at `df5e002e75c58af85521293c3a13eb99378f456e` was invalidated. DeepSeek
+returned `NOT READY` with one valid P1: the manifest expected an IAM role ARN while
+`GetCallerIdentity` returns an STS assumed-role session ARN. Gemini returned `READY`, but one ready
+verdict cannot preserve an invalidated snapshot. The correction requires the exact session ARN,
+realistic full-preflight coverage, explicit operator-attestation wording, concrete operational
+references, complete manifest scope and a same-snapshot rerun by both reviewers.
 
 ## 16. Known limitations and stop conditions
 

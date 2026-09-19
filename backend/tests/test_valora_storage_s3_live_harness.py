@@ -6,14 +6,16 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import boto3
 import pytest
+from botocore.client import Config
 from botocore.exceptions import ClientError, ReadTimeoutError
 
 import tools.valora_storage_s3_live_harness as harness
 
 
 KMS_ARN = "arn:aws:kms:ap-southeast-1:111122223333:key/12345678-1234-1234-1234-123456789012"
-ROLE_ARN = "arn:aws:iam::111122223333:role/valora-s3-g5-harness"
+SESSION_ARN = "arn:aws:sts::111122223333:assumed-role/valora-s3-g5-harness/g5-run-001"
 
 
 def _manifest() -> dict[str, Any]:
@@ -28,7 +30,7 @@ def _manifest() -> dict[str, Any]:
         "approved_review_manifest_sha256": "b" * 64,
         "approval_reference": "PO-G5-APPROVAL-001",
         "expected_account_id": "111122223333",
-        "expected_principal_arn": ROLE_ARN,
+        "expected_principal_arn": SESSION_ARN,
         "kms_key_arn": KMS_ARN,
         "bucket_policy_sha256": "c" * 64,
         "iam_policy_sha256": "d" * 64,
@@ -136,7 +138,7 @@ def test_runtime_manifest_accepts_only_the_frozen_exact_shape(tmp_path: Path) ->
     path.write_text(json.dumps(_manifest()), encoding="utf-8")
     loaded = harness.RuntimeManifest.load(path)
     assert loaded.expected_account_id == "111122223333"
-    assert loaded.expected_principal_arn == ROLE_ARN
+    assert loaded.expected_principal_arn == SESSION_ARN
     assert loaded.kms_key_arn == KMS_ARN
 
 
@@ -145,7 +147,10 @@ def test_runtime_manifest_accepts_only_the_frozen_exact_shape(tmp_path: Path) ->
     [
         ("region", "us-east-1"),
         ("expected_account_id", "REPLACE_AT_G5"),
-        ("expected_principal_arn", "arn:aws:iam::999900001111:role/wrong-account"),
+        (
+            "expected_principal_arn",
+            "arn:aws:sts::999900001111:assumed-role/valora-s3-g5-harness/wrong-account",
+        ),
         ("kms_key_arn", "arn:aws:kms:us-east-1:111122223333:key/wrong-region"),
         ("approved_executable_commit", "latest"),
     ],
@@ -194,6 +199,111 @@ def test_lost_response_transport_suppresses_only_after_one_completed_dispatch() 
                 "http_status": 200,
             },
         ),
+    ]
+
+
+def test_lost_response_seam_matches_frozen_botocore_event_and_transport() -> None:
+    client = boto3.client(
+        "s3",
+        region_name=harness.REGION,
+        endpoint_url="https://s3.invalid",
+        aws_access_key_id="synthetic-access-key",
+        aws_secret_access_key="synthetic-secret-key",
+        aws_session_token="synthetic-session-token",
+        config=Config(signature_version="s3v4", retries={"total_max_attempts": 1}),
+    )
+    session = _Session()
+    client._endpoint.http_session = session
+    journal = _Journal()
+    with harness._lose_exactly_one_response(client, "PutObject", journal) as fault:
+        with pytest.raises(ReadTimeoutError):
+            client.put_object(
+                Bucket=harness.BUCKET,
+                Key=harness.PREFIX + "transport-seam.bin",
+                Body=b"x",
+                ContentLength=1,
+                IfNoneMatch="*",
+            )
+    assert session.requests == 1
+    assert fault.dispatch_count == 1
+    assert fault.response_received is True
+
+
+@pytest.mark.parametrize("field", ["approval_reference", "cleanup_owner"])
+def test_runtime_manifest_rejects_placeholder_operational_references(
+    tmp_path: Path,
+    field: str,
+) -> None:
+    manifest = _manifest()
+    manifest[field] = "REPLACE_AT_G5"
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(harness.HarnessFailure):
+        harness.RuntimeManifest.load(path)
+
+
+def test_full_preflight_accepts_exact_assumed_role_and_frozen_boundary(tmp_path: Path) -> None:
+    lifecycle = {"Rules": [{"ID": "abort-incomplete", "Status": "Enabled"}]}
+    bucket_policy = {"Version": "2012-10-17", "Statement": []}
+    raw = _manifest()
+    raw["lifecycle_configuration_sha256"] = harness._sha256_json(lifecycle)
+    raw["bucket_policy_sha256"] = harness._sha256_json(bucket_policy)
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    manifest = harness.RuntimeManifest.load(path)
+
+    def object_lock_absent(**kwargs: Any) -> None:
+        assert kwargs == {"Bucket": harness.BUCKET}
+        raise ClientError(
+            {"Error": {"Code": "ObjectLockConfigurationNotFoundError", "Message": "absent"}},
+            "GetObjectLockConfiguration",
+        )
+
+    sts = SimpleNamespace(
+        get_caller_identity=lambda: {
+            "Account": "111122223333",
+            "Arn": SESSION_ARN,
+            "UserId": "AROATEST:g5-run-001",
+        }
+    )
+    s3 = SimpleNamespace(
+        get_bucket_location=lambda **kwargs: {"LocationConstraint": harness.REGION},
+        get_public_access_block=lambda **kwargs: {
+            "PublicAccessBlockConfiguration": {
+                "BlockPublicAcls": True,
+                "IgnorePublicAcls": True,
+                "BlockPublicPolicy": True,
+                "RestrictPublicBuckets": True,
+            }
+        },
+        get_bucket_ownership_controls=lambda **kwargs: {
+            "OwnershipControls": {"Rules": [{"ObjectOwnership": "BucketOwnerEnforced"}]}
+        },
+        get_bucket_versioning=lambda **kwargs: {},
+        get_object_lock_configuration=object_lock_absent,
+        get_bucket_encryption=lambda **kwargs: {
+            "ServerSideEncryptionConfiguration": {
+                "Rules": [
+                    {
+                        "ApplyServerSideEncryptionByDefault": {
+                            "SSEAlgorithm": "aws:kms",
+                            "KMSMasterKeyID": KMS_ARN,
+                        },
+                        "BucketKeyEnabled": True,
+                    }
+                ]
+            }
+        },
+        get_bucket_lifecycle_configuration=lambda **kwargs: dict(lifecycle),
+        get_bucket_policy=lambda **kwargs: {"Policy": json.dumps(bucket_policy)},
+        list_objects_v2=lambda **kwargs: {},
+        list_multipart_uploads=lambda **kwargs: {},
+    )
+    journal = _Journal()
+    harness._assert_preflight(sts, s3, manifest, journal)
+    assert [event for event, _ in journal.entries] == [
+        "ACCOUNT_GUARD_PASS",
+        "AWS_BOUNDARY_GUARDS_PASS",
     ]
 
 

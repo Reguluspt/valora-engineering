@@ -63,7 +63,7 @@ signed URLs and raw policy credentials must not be committed.
 
 | Input | Required live value | Current state |
 |---|---|---|
-| Reviewed commit | Exact Git SHA and clean relevant diff | FROZEN — executable commit `8f05040628361feb6d64b7bb714f397ef33c0f9c`; same-snapshot reviews pending |
+| Reviewed commit | Exact Git SHA and clean relevant diff | FROZEN — exact executable commit is recorded by the review manifest; same-snapshot re-review pending after corrections |
 | AWS boundary | Dedicated non-production account alias plus privately verified account ID | REQUIRES ACTION-TIME VERIFICATION — alias `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`; account ID stays private |
 | Region | One explicit permitted AWS region | FROZEN — `ap-southeast-1` |
 | Bucket | Dedicated general-purpose spike bucket; no production/shared data | REQUIRES ACTION-TIME VERIFICATION — exact name `valora-storage-spike-2c2a9f17-20260919-001` and empty dedicated state |
@@ -72,7 +72,7 @@ signed URLs and raw policy credentials must not be committed.
 | Versioning | Explicitly enabled or disabled, with matching cleanup procedure | REQUIRES ACTION-TIME VERIFICATION — never enabled; Object Lock absent |
 | Encryption | Exact non-production server-side encryption mode and key boundary | REQUIRES ACTION-TIME VERIFICATION — SSE-KMS, one customer-managed key, bucket key enabled |
 | Lifecycle | Prefix-scoped incomplete-multipart abort rule and observed configuration | REQUIRES ACTION-TIME VERIFICATION — incomplete multipart abort after one day |
-| Identity | Temporary workload/session identity; no long-lived key in repo or shell history | REQUIRES ACTION-TIME VERIFICATION — one private role ARN and explicit temporary session token |
+| Identity | Temporary workload/session identity; no long-lived key in repo or shell history | REQUIRES ACTION-TIME VERIFICATION — one exact private STS assumed-role session ARN and explicit temporary session token |
 | IAM/bucket policy | Exact least-privilege policy and conditional-write enforcement reviewed | REQUIRES ACTION-TIME VERIFICATION — render only approved placeholders and match canonical hashes |
 | SDK | G2-evidenced Python, boto3 and botocore versions plus retry configuration | FROZEN — Python `3.14.7`, boto3/botocore `1.43.89`, SigV4, `total_max_attempts=1` |
 | Key namespace | Dedicated opaque `valora-spike/<run-id>/...` prefix | FROZEN — `valora-spike/s3-g5-20260919-001/` |

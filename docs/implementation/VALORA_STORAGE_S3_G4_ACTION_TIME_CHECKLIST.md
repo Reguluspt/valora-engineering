@@ -15,7 +15,7 @@ or SHA-256 only. A blank cell is not approval and is not evidence.
 | Executable commit | G4-reviewed 40-character SHA in the private runtime manifest |  |  |  |  |  |
 | Review manifest | Exact approved SHA-256 in the private runtime manifest |  |  |  |  |  |
 | AWS account | `VALORA-NONPROD-AWS-STORAGE-SPIKE-01`; exact 12-digit ID is `PRIVATE OPERATIONAL` |  |  |  |  |  |
-| AWS principal | Exact temporary G5 harness role ARN in the same frozen account |  |  |  |  |  |
+| AWS principal | Exact temporary STS assumed-role session ARN in the same frozen account; policy role ARN separately verified |  |  |  |  |  |
 | Temporary session | All three explicit session variables present; session token required; no `AWS_PROFILE` |  |  |  |  |  |
 | Session expiry | Long enough for one 20-minute invocation plus cleanup; no renewal during the run |  |  |  |  |  |
 | Region | `ap-southeast-1` |  |  |  |  |  |

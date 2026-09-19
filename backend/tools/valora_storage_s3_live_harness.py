@@ -68,7 +68,9 @@ _SAFE_REF_RE = re.compile(r"^[A-Za-z0-9._:/=-]{1,255}$")
 _KMS_ARN_RE = re.compile(
     r"^arn:aws:kms:ap-southeast-1:(\d{12}):key/[A-Za-z0-9-]+$"
 )
-_ROLE_ARN_RE = re.compile(r"^arn:aws:iam::(\d{12}):role/[A-Za-z0-9+=,.@_/-]+$")
+_ASSUMED_ROLE_ARN_RE = re.compile(
+    r"^arn:aws:sts::(\d{12}):assumed-role/[A-Za-z0-9+=,.@_-]+/[A-Za-z0-9+=,.@_-]+$"
+)
 _FINAL_OPERATIONS = {"PutObject", "CompleteMultipartUpload"}
 _FIXTURE_LAYOUT = {
     "FIXTURE_A": SMALL_FIXTURE_SIZE,
@@ -207,10 +209,12 @@ class RuntimeManifest:
         kms_key_arn = raw["kms_key_arn"]
         if not isinstance(account_id, str) or not _ACCOUNT_RE.fullmatch(account_id):
             raise HarnessFailure("Expected account ID must be the approved private 12-digit value.")
-        role_match = _ROLE_ARN_RE.fullmatch(str(principal_arn))
+        role_match = _ASSUMED_ROLE_ARN_RE.fullmatch(str(principal_arn))
         kms_match = _KMS_ARN_RE.fullmatch(str(kms_key_arn))
         if not role_match or role_match.group(1) != account_id:
-            raise HarnessFailure("Expected principal is not the approved role in the frozen account.")
+            raise HarnessFailure(
+                "Expected principal is not the approved assumed-role session in the frozen account."
+            )
         if not kms_match or kms_match.group(1) != account_id:
             raise HarnessFailure("KMS key is not a customer-managed key in the frozen account/region.")
         commit = raw["approved_executable_commit"]
@@ -227,9 +231,18 @@ class RuntimeManifest:
             raise HarnessFailure("An approved evidence hash is missing or invalid.")
         approval_reference = raw["approval_reference"]
         cleanup_owner = raw["cleanup_owner"]
-        if not isinstance(approval_reference, str) or not _SAFE_REF_RE.fullmatch(approval_reference):
+        placeholder_tokens = ("REPLACE", "PENDING", "UNSET", "TBD")
+        if (
+            not isinstance(approval_reference, str)
+            or not _SAFE_REF_RE.fullmatch(approval_reference)
+            or any(token in approval_reference.upper() for token in placeholder_tokens)
+        ):
             raise HarnessFailure("Approval reference is not repository-safe metadata.")
-        if not isinstance(cleanup_owner, str) or not _SAFE_REF_RE.fullmatch(cleanup_owner):
+        if (
+            not isinstance(cleanup_owner, str)
+            or not _SAFE_REF_RE.fullmatch(cleanup_owner)
+            or any(token in cleanup_owner.upper() for token in placeholder_tokens)
+        ):
             raise HarnessFailure("Cleanup owner is not repository-safe metadata.")
         return cls(
             approved_executable_commit=commit,
