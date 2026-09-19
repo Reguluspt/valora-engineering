@@ -21,6 +21,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Accepted ADR 0043 storage successor](adr/0043-app-owned-immutable-document-storage.md) — Model A, ten-year retention, policy purge, customer-managed encryption and recovery targets; only local fake validation is authorized.
 - [Document Blob Storage contract](implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md) — accepted narrow provider port, normalized persistence, DB CAS and T1–T14 recovery matrix for the local fake task.
 - [Completed storage architecture task](plan/done/valora-storage-arch-001.md) — accepted policy baseline and the bounded next gate.
+- [Active storage fake task](plan/valora-storage-fake-001.md) — provider-neutral persistence, deterministic fake, DB CAS and T1–T14 proof with no cloud calls.
 - [Provider selection and economics](research/valora-storage-provider-selection.md) — AWS S3 selected only for a later isolated spike; production provider remains open.
 - [Storage policy decision](research/pr07-storage-fallback-options-2.md) — Model A and the accepted retention, deletion, encryption and recovery baseline; links the superseded initial fallback research.
 - [Accepted ADR 0042](adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md) and [accepted sync/conflict contract](implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md).
