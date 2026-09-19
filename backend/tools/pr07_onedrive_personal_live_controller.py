@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
 import webbrowser
 
 import msal
@@ -45,6 +45,32 @@ CALLBACK_TIMEOUT_SECONDS = 300
 MAX_CALLBACK_BODY_BYTES = 16 * 1024
 GRAPH_SCOPES = ["Files.ReadWrite"]
 SELF_TEST_SENTINEL = "valora-pr07-controller-self-test-sentinel"
+V2_CANDIDATE = "C2_AUTO_V1"
+V2_SCHEMA_VERSION = 2
+C2_CANDIDATE = "C2_AUTO_V2"
+C2_SCHEMA_VERSION = 3
+OAUTH_ERROR_ALLOWLIST = {
+    "access_denied",
+    "consent_required",
+    "interaction_required",
+    "invalid_client",
+    "invalid_grant",
+    "invalid_request",
+    "invalid_scope",
+    "login_required",
+    "server_error",
+    "temporarily_unavailable",
+    "unauthorized_client",
+    "unsupported_grant_type",
+}
+OAUTH_PHASES = {
+    "AUTHORIZATION_RESPONSE",
+    "CALLBACK_VALIDATION",
+    "FLOW_VALIDATION",
+    "RESULT_VALIDATION",
+    "TOKEN_REDEMPTION",
+    "UNKNOWN",
+}
 
 CONTROLLER_PATH = Path(__file__).resolve()
 BACKEND_DIRECTORY = CONTROLLER_PATH.parents[1]
@@ -53,7 +79,7 @@ LAUNCHER_PATH = BACKEND_DIRECTORY / "tools" / "pr07_onedrive_personal_if_match_l
 PROBE_PATH = BACKEND_DIRECTORY / "tools" / "pr07_onedrive_personal_if_match_probe.py"
 DEFAULT_EVIDENCE_DIRECTORY = REPOSITORY_DIRECTORY / "local-artifacts" / "pr07"
 
-SELF_TEST_REPORT = {
+LEGACY_SELF_TEST_REPORT = {
     "dependency_import": "PASS",
     "environment": "PRESENT",
     "interpreter": "PASS",
@@ -62,6 +88,110 @@ SELF_TEST_REPORT = {
     "package_resolution": "PASS",
     "status": "PASS",
     "working_directory": "BACKEND",
+}
+SELF_TEST_REPORT = {
+    "candidate": C2_CANDIDATE,
+    "dependency_import": "PASS",
+    "environment": "PRESENT",
+    "interpreter": "PASS",
+    "mode": "SELF_TEST",
+    "network": "NOT_ATTEMPTED",
+    "package_resolution": "PASS",
+    "runtime_gate": "BLOCKED",
+    "schema_version": C2_SCHEMA_VERSION,
+    "status": "PASS",
+    "working_directory": "BACKEND",
+}
+C2_REPORT_KEYS = {
+    "candidate",
+    "checked_at",
+    "checks",
+    "cleanup",
+    "cleanup_issue",
+    "fresh_final_http_status",
+    "outcome",
+    "phase",
+    "partial_observations",
+    "provider_error_code",
+    "reason_code",
+    "runtime_gate",
+    "schema_version",
+    "stale_final_http_status",
+    "status",
+}
+V2_REPORT_KEYS = C2_REPORT_KEYS - {"partial_observations"}
+C2_CHECK_KEYS = {
+    "concurrent_bytes_preserved",
+    "concurrent_etag_preserved",
+    "concurrent_write_verified",
+    "fresh_commit_verified",
+    "fresh_partial_preserved",
+    "item_identity_preserved",
+    "stale_candidate_observed",
+    "stale_partial_preserved",
+}
+C2_OUTCOMES = {
+    "INCONCLUSIVE",
+    "OBSERVED_SAFE_STALE_REJECTION",
+    "SAFETY_VIOLATION",
+    "UNSAFE_STALE_OVERWRITE",
+}
+C2_REASON_CODES = {
+    "ALTERNATE_REJECTION",
+    "FINAL_NOT_COMPLETED",
+    "FIXTURE_FAILED",
+    "FRESH_CONTROL_FAILED",
+    "IDENTITY_CHANGED",
+    "NONFINAL_MUTATION",
+    "POST_STATE_INCONSISTENT",
+    "POST_STATE_UNAVAILABLE",
+    "RACE_SETUP_FAILED",
+    "RESPONSE_IDENTITY_MISMATCH",
+    "SAFE_412",
+    "SESSION_CREATION_FAILED",
+    "STALE_BYTES_OVERWROTE_CONCURRENT",
+    "THIRD_STATE",
+    "TRANSPORT_UNKNOWN",
+    "UNEXPECTED_SANITIZED_FAILURE",
+    "PARTIAL_HTTP_UNEXPECTED",
+    "PARTIAL_RANGE_MALFORMED",
+    "PARTIAL_RANGE_MISSING",
+    "PARTIAL_RANGE_UNEXPECTED",
+}
+V2_REASON_CODES = C2_REASON_CODES - {
+    "PARTIAL_HTTP_UNEXPECTED",
+    "PARTIAL_RANGE_MALFORMED",
+    "PARTIAL_RANGE_MISSING",
+    "PARTIAL_RANGE_UNEXPECTED",
+}
+C2_PHASES = {"COMPLETE", "FIXTURE", "FRESH", "STALE"}
+C2_PROVIDER_ERROR_CODES = {
+    "accessDenied",
+    "generalException",
+    "invalidRange",
+    "invalidRequest",
+    "itemNotFound",
+    "nameAlreadyExists",
+    "quotaLimitReached",
+    "resourceModified",
+    "tooManyRequests",
+    "unknown",
+}
+C2_CLEANUP_ISSUES = {
+    "CANCEL_FAILED",
+    "EVIDENCE_INCOMPLETE",
+    "ITEM_DELETE_FAILED",
+    "MULTIPLE",
+    "NONE",
+    "SESSION_UNKNOWN",
+}
+PARTIAL_RANGE_CLASSES = {
+    "EXPECTED_START",
+    "MALFORMED",
+    "MISSING",
+    "NOT_APPLICABLE",
+    "NOT_OBSERVED",
+    "UNEXPECTED_START",
 }
 SAFE_FAILURE_KEYS = {
     "child_exit_code",
@@ -126,6 +256,50 @@ SAFE_PROBE_PROGRESS_STAGES = {
     "UPLOAD_SESSION_CANCEL_REQUEST_STARTED",
     "UPLOAD_STAGE_REQUEST_STARTED",
 }
+V2_PROBE_PROGRESS_STAGES = {
+    "CONCURRENT_WRITE_REQUEST_STARTED",
+    "CONTENT_DOWNLOAD_REQUEST_STARTED",
+    "DRIVE_VERIFY_REQUEST_STARTED",
+    "FINAL_FRAGMENT_REQUEST_STARTED",
+    "FINAL_FRAGMENT_RESPONSE_OBSERVED",
+    "ITEM_CREATE_REQUEST_STARTED",
+    "PARTIAL_DESTINATION_VERIFY_COMPLETED",
+    "PARTIAL_FRAGMENT_REQUEST_STARTED",
+    "PARTIAL_FRAGMENT_RESPONSE_VALIDATED",
+    "POST_STATE_READ_STARTED",
+    "POST_STATE_VERIFY_COMPLETED",
+    "PROBE_SELF_TEST_STARTED",
+    "PROBE_STARTED",
+    "SESSION_AVAILABLE",
+    "SESSION_CANCEL_REQUEST_COMPLETED",
+    "SESSION_CANCEL_REQUEST_STARTED",
+    "SESSION_COMPLETION_PROVEN",
+    "SESSION_CREATE_REQUEST_STARTED",
+    "TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED",
+    "TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED",
+    "TEST_ITEM_DELETE_REQUEST_COMPLETED",
+    "TEST_ITEM_DELETE_REQUEST_STARTED",
+}
+V2_SESSION_STAGES = {
+    "FINAL_FRAGMENT_REQUEST_STARTED",
+    "FINAL_FRAGMENT_RESPONSE_OBSERVED",
+    "PARTIAL_DESTINATION_VERIFY_COMPLETED",
+    "PARTIAL_FRAGMENT_REQUEST_STARTED",
+    "PARTIAL_FRAGMENT_RESPONSE_VALIDATED",
+    "POST_STATE_READ_STARTED",
+    "POST_STATE_VERIFY_COMPLETED",
+    "SESSION_AVAILABLE",
+    "SESSION_CANCEL_REQUEST_COMPLETED",
+    "SESSION_CANCEL_REQUEST_STARTED",
+    "SESSION_COMPLETION_PROVEN",
+    "SESSION_CREATE_REQUEST_STARTED",
+}
+V3_PROBE_PROGRESS_STAGES = V2_PROBE_PROGRESS_STAGES | {
+    "PARTIAL_FRAGMENT_RESPONSE_OBSERVED",
+}
+V3_SESSION_STAGES = V2_SESSION_STAGES | {
+    "PARTIAL_FRAGMENT_RESPONSE_OBSERVED",
+}
 SAFE_JOURNAL_RECORD_TYPES = {
     "ATTEMPT_FINISHED",
     "ATTEMPT_STARTED",
@@ -159,6 +333,11 @@ PROVIDER_MUTATION_STAGES = {
     "UPLOAD_SESSION_CANCEL_REQUEST_COMPLETED",
     "UPLOAD_SESSION_CANCEL_REQUEST_STARTED",
     "UPLOAD_STAGE_REQUEST_STARTED",
+    "FINAL_FRAGMENT_REQUEST_STARTED",
+    "PARTIAL_FRAGMENT_REQUEST_STARTED",
+    "SESSION_CANCEL_REQUEST_COMPLETED",
+    "SESSION_CANCEL_REQUEST_STARTED",
+    "SESSION_CREATE_REQUEST_STARTED",
 }
 ITEM_ID_EVIDENCE_STAGES = {
     "CONCURRENT_WRITE_REQUEST_STARTED",
@@ -190,6 +369,83 @@ class ControllerFailure(RuntimeError):
         self.code = code
         self.stage = stage
         self.details = details
+
+
+def _normalize_oauth_diagnostics(*, phase: str, payload: object) -> dict[str, Any]:
+    source = payload if isinstance(payload, dict) else {}
+    error = source.get("error")
+    if error is not None and (
+        not isinstance(error, str) or error not in OAUTH_ERROR_ALLOWLIST
+    ):
+        error = "unknown"
+    raw_codes = source.get("error_codes")
+    codes = (
+        sorted(
+            {
+                code
+                for code in raw_codes
+                if type(code) is int and 0 <= code <= 2_147_483_647
+            }
+        )
+        if isinstance(raw_codes, list) and len(raw_codes) <= 8
+        else []
+    )
+    correlation = source.get("correlation_id")
+    if isinstance(correlation, str) and re.fullmatch(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+        r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        correlation,
+    ):
+        correlation = str(UUID(correlation))
+    else:
+        correlation = None
+    return {
+        "oauth": {
+            "phase": phase if phase in OAUTH_PHASES else "UNKNOWN",
+            "oauth_error": error,
+            "aadsts_codes": codes,
+            "correlation_id": correlation,
+        }
+    }
+
+
+def _valid_failure_details(value: Any) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, dict):
+        return False
+    try:
+        if len(json.dumps(value, ensure_ascii=True, sort_keys=True).encode("utf-8")) > 1024:
+            return False
+    except (TypeError, ValueError):
+        return False
+    if "oauth" not in value:
+        return True
+    if set(value) != {"oauth"} or not isinstance(value["oauth"], dict):
+        return False
+    oauth = value["oauth"]
+    if set(oauth) != {"phase", "oauth_error", "aadsts_codes", "correlation_id"}:
+        return False
+    if oauth["phase"] not in OAUTH_PHASES:
+        return False
+    if oauth["oauth_error"] not in OAUTH_ERROR_ALLOWLIST | {"unknown", None}:
+        return False
+    codes = oauth["aadsts_codes"]
+    if (
+        not isinstance(codes, list)
+        or len(codes) > 8
+        or any(type(code) is not int or not 0 <= code <= 2_147_483_647 for code in codes)
+        or codes != sorted(set(codes))
+    ):
+        return False
+    correlation = oauth["correlation_id"]
+    if correlation is not None:
+        try:
+            if str(UUID(correlation)) != correlation:
+                return False
+        except (TypeError, ValueError):
+            return False
+    return True
 
 
 def _utc_now() -> str:
@@ -280,15 +536,13 @@ def _dependency_versions() -> dict[str, str]:
     return versions
 
 
-def _validate_probe_report(report: Any, *, exit_code: Any, self_test: bool) -> bool:
+def _validate_legacy_probe_report(report: Any, *, exit_code: Any) -> bool:
     if (
         not isinstance(report, dict)
         or not isinstance(exit_code, int)
         or isinstance(exit_code, bool)
     ):
         return False
-    if self_test:
-        return report == SELF_TEST_REPORT and exit_code == 0
     if report.get("status") == "PASS":
         return (
             exit_code == 0
@@ -339,9 +593,210 @@ def _validate_probe_report(report: Any, *, exit_code: Any, self_test: bool) -> b
     return True
 
 
+def _valid_optional_http_status(value: Any) -> bool:
+    return value is None or (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and 100 <= value <= 599
+    )
+
+
+def _valid_checked_at(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) > 64:
+        return False
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
+def _valid_partial_observations(value: Any) -> bool:
+    if not isinstance(value, dict) or set(value) != {"fresh", "stale"}:
+        return False
+    for observation in value.values():
+        if not isinstance(observation, dict) or set(observation) != {
+            "http_status",
+            "range_class",
+        }:
+            return False
+        http_status = observation.get("http_status")
+        range_class = observation.get("range_class")
+        if not _valid_optional_http_status(http_status) or range_class not in PARTIAL_RANGE_CLASSES:
+            return False
+        if range_class == "NOT_OBSERVED" and http_status is not None:
+            return False
+        if range_class == "NOT_APPLICABLE" and (
+            http_status is None or http_status == 202
+        ):
+            return False
+        if range_class not in {"NOT_OBSERVED", "NOT_APPLICABLE"} and http_status != 202:
+            return False
+    return True
+
+
+def _validate_c2_probe_report_version(
+    report: Any,
+    *,
+    exit_code: Any,
+    expected_candidate: str,
+    schema_version: int,
+    candidate: str,
+    report_keys: set[str],
+    reason_codes: set[str],
+    require_partial_observations: bool,
+) -> bool:
+    if (
+        not isinstance(report, dict)
+        or set(report) != report_keys
+        or not isinstance(exit_code, int)
+        or isinstance(exit_code, bool)
+        or report.get("schema_version") != schema_version
+        or isinstance(report.get("schema_version"), bool)
+        or report.get("candidate") != expected_candidate
+        or expected_candidate != candidate
+        or report.get("runtime_gate") != "BLOCKED"
+        or report.get("status") not in {"PASS", "FAIL"}
+        or (exit_code == 0) != (report.get("status") == "PASS")
+        or report.get("outcome") not in C2_OUTCOMES
+        or report.get("reason_code") not in reason_codes
+        or report.get("phase") not in C2_PHASES
+        or not _valid_optional_http_status(report.get("fresh_final_http_status"))
+        or not _valid_optional_http_status(report.get("stale_final_http_status"))
+        or report.get("cleanup") not in SAFE_CLEANUP_STATES
+        or report.get("cleanup_issue") not in C2_CLEANUP_ISSUES
+        or not _valid_checked_at(report.get("checked_at"))
+    ):
+        return False
+    provider_code = report.get("provider_error_code")
+    if provider_code is not None and provider_code not in C2_PROVIDER_ERROR_CODES:
+        return False
+    checks = report.get("checks")
+    if not isinstance(checks, dict) or set(checks) != C2_CHECK_KEYS:
+        return False
+    if any(value is not None and type(value) is not bool for value in checks.values()):
+        return False
+    partial_observations = report.get("partial_observations")
+    if require_partial_observations and not _valid_partial_observations(partial_observations):
+        return False
+    partial_reason_class = {
+        "PARTIAL_HTTP_UNEXPECTED": "NOT_APPLICABLE",
+        "PARTIAL_RANGE_MALFORMED": "MALFORMED",
+        "PARTIAL_RANGE_MISSING": "MISSING",
+        "PARTIAL_RANGE_UNEXPECTED": "UNEXPECTED_START",
+    }.get(report.get("reason_code"))
+    if require_partial_observations and partial_reason_class is not None and (
+        report.get("phase") not in {"FRESH", "STALE"}
+        or partial_observations[report["phase"].lower()]["range_class"]
+        != partial_reason_class
+    ):
+        return False
+    expected_partials = not require_partial_observations or all(
+        partial_observations[role] == {
+            "http_status": 202,
+            "range_class": "EXPECTED_START",
+        }
+        for role in ("fresh", "stale")
+    )
+    safe = (
+        report.get("outcome") == "OBSERVED_SAFE_STALE_REJECTION"
+        and report.get("phase") == "COMPLETE"
+        and checks["fresh_partial_preserved"] is True
+        and checks["fresh_commit_verified"] is True
+        and checks["stale_partial_preserved"] is True
+        and checks["concurrent_write_verified"] is True
+        and checks["item_identity_preserved"] is True
+        and checks["concurrent_bytes_preserved"] is True
+        and checks["concurrent_etag_preserved"] is True
+        and checks["stale_candidate_observed"] is False
+        and report.get("fresh_final_http_status") in {200, 201}
+        and report.get("stale_final_http_status") == 412
+        and report.get("reason_code") == "SAFE_412"
+        and expected_partials
+    )
+    unsafe = (
+        report.get("outcome") == "UNSAFE_STALE_OVERWRITE"
+        and report.get("reason_code") == "STALE_BYTES_OVERWROTE_CONCURRENT"
+        and checks["fresh_commit_verified"] is True
+        and checks["concurrent_write_verified"] is True
+        and checks["item_identity_preserved"] is True
+        and checks["concurrent_bytes_preserved"] is False
+        and checks["stale_candidate_observed"] is True
+        and expected_partials
+    )
+    if report.get("outcome") == "OBSERVED_SAFE_STALE_REJECTION" and not safe:
+        return False
+    if report.get("outcome") == "UNSAFE_STALE_OVERWRITE" and not unsafe:
+        return False
+    expected_pass = (
+        safe
+        and report.get("cleanup") == "DELETED_TO_RECYCLE_BIN"
+        and report.get("cleanup_issue") == "NONE"
+    )
+    return (
+        (report.get("status") == "PASS") == expected_pass
+        and (exit_code == 0) == expected_pass
+    )
+
+
+def _validate_c2_probe_report(
+    report: Any,
+    *,
+    exit_code: Any,
+    expected_candidate: str,
+) -> bool:
+    return _validate_c2_probe_report_version(
+        report,
+        exit_code=exit_code,
+        expected_candidate=expected_candidate,
+        schema_version=C2_SCHEMA_VERSION,
+        candidate=C2_CANDIDATE,
+        report_keys=C2_REPORT_KEYS,
+        reason_codes=C2_REASON_CODES,
+        require_partial_observations=True,
+    )
+
+
+def _validate_v2_c2_probe_report(
+    report: Any,
+    *,
+    exit_code: Any,
+    expected_candidate: str,
+) -> bool:
+    return _validate_c2_probe_report_version(
+        report,
+        exit_code=exit_code,
+        expected_candidate=expected_candidate,
+        schema_version=V2_SCHEMA_VERSION,
+        candidate=V2_CANDIDATE,
+        report_keys=V2_REPORT_KEYS,
+        reason_codes=V2_REASON_CODES,
+        require_partial_observations=False,
+    )
+
+
+def _validate_probe_report(
+    report: Any,
+    *,
+    exit_code: Any,
+    self_test: bool,
+    expected_candidate: str,
+) -> bool:
+    if self_test:
+        return report == SELF_TEST_REPORT and exit_code == 0
+    return _validate_c2_probe_report(
+        report,
+        exit_code=exit_code,
+        expected_candidate=expected_candidate,
+    )
+
+
 def _terminal_reports_are_consistent(
     terminal: dict[str, Any],
     probe_terminal: dict[str, Any] | None,
+    *,
+    schema_version: int | None = None,
+    expected_candidate: str | None = None,
 ) -> bool:
     launcher = terminal.get("launcher")
     if launcher is None:
@@ -350,12 +805,24 @@ def _terminal_reports_are_consistent(
         return False
     launcher_report = launcher.get("report")
     launcher_exit_code = launcher.get("exit_code")
-    if (
-        not validate_launcher_report(
+    if schema_version == C2_SCHEMA_VERSION:
+        report_valid = _validate_c2_probe_report(
             launcher_report,
-            self_test=False,
-            forbidden=set(),
+            exit_code=launcher_exit_code,
+            expected_candidate=expected_candidate or "",
         )
+    elif schema_version == V2_SCHEMA_VERSION:
+        report_valid = _validate_v2_c2_probe_report(
+            launcher_report,
+            exit_code=launcher_exit_code,
+            expected_candidate=expected_candidate or "",
+        )
+    else:
+        report_valid = _validate_legacy_launcher_report(
+            launcher_report, self_test=False, forbidden=set()
+        )
+    if (
+        not report_valid
         or not isinstance(launcher_exit_code, int)
         or isinstance(launcher_exit_code, bool)
         or (launcher_exit_code == 0) != (launcher_report.get("status") == "PASS")
@@ -384,6 +851,9 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
         probe_terminal: dict[str, Any] | None = None
         malformed = False
         probe_stages: list[str] = []
+        probe_events: list[dict[str, Any]] = []
+        schema_version: int | None = None
+        expected_candidate: str | None = None
         try:
             if journal_path.stat().st_size > 1024 * 1024:
                 return True
@@ -415,6 +885,20 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
                             continue
                         attempt_id = candidate
                         live_started = entry.get("mode") == "LIVE"
+                        if "schema_version" in entry or "candidate" in entry:
+                            version_candidate = (
+                                entry.get("schema_version"), entry.get("candidate")
+                            )
+                            if set(entry) != {
+                                "at", "attempt_id", "candidate", "mode",
+                                "record_type", "schema_version",
+                            } or version_candidate not in {
+                                (V2_SCHEMA_VERSION, V2_CANDIDATE),
+                                (C2_SCHEMA_VERSION, C2_CANDIDATE),
+                            }:
+                                malformed = True
+                                continue
+                            schema_version, expected_candidate = version_candidate
                         continue
                     if attempt_id is None or entry.get("attempt_id") != attempt_id:
                         malformed = True
@@ -424,6 +908,57 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
                         continue
                     if record_type == "PROBE_STAGE":
                         stage = entry.get("stage")
+                        if schema_version in {V2_SCHEMA_VERSION, C2_SCHEMA_VERSION}:
+                            progress_stages = (
+                                V3_PROBE_PROGRESS_STAGES
+                                if schema_version == C2_SCHEMA_VERSION
+                                else V2_PROBE_PROGRESS_STAGES
+                            )
+                            session_stages = (
+                                V3_SESSION_STAGES
+                                if schema_version == C2_SCHEMA_VERSION
+                                else V2_SESSION_STAGES
+                            )
+                            expected_keys = {"at", "attempt_id", "record_type", "stage"}
+                            if stage in session_stages:
+                                expected_keys.add("session_role")
+                            if (
+                                schema_version == C2_SCHEMA_VERSION
+                                and stage == "PARTIAL_FRAGMENT_RESPONSE_OBSERVED"
+                            ):
+                                expected_keys.update({"http_status", "range_class"})
+                            if (
+                                probe_terminal is not None
+                                or set(entry) != expected_keys
+                                or stage not in progress_stages
+                                or not isinstance(entry.get("at"), str)
+                                or (
+                                    stage in session_stages
+                                    and entry.get("session_role") not in {"FRESH", "STALE"}
+                                )
+                                or (
+                                    stage == "PARTIAL_FRAGMENT_RESPONSE_OBSERVED"
+                                    and (
+                                        not _valid_optional_http_status(entry.get("http_status"))
+                                        or entry.get("http_status") is None
+                                        or entry.get("range_class")
+                                        not in PARTIAL_RANGE_CLASSES - {"NOT_OBSERVED"}
+                                        or (
+                                            entry.get("range_class") == "NOT_APPLICABLE"
+                                            and entry.get("http_status") == 202
+                                        )
+                                        or (
+                                            entry.get("range_class") != "NOT_APPLICABLE"
+                                            and entry.get("http_status") != 202
+                                        )
+                                    )
+                                )
+                            ):
+                                malformed = True
+                                continue
+                            probe_stages.append(stage)
+                            probe_events.append(entry)
+                            continue
                         if (
                             probe_terminal is not None
                             or set(entry) != {"at", "attempt_id", "record_type", "stage"}
@@ -473,11 +1008,32 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
                         ):
                             malformed = True
                             continue
-                        if not _validate_probe_report(
-                            probe_report,
-                            exit_code=probe_exit_code,
-                            self_test=not live_started,
-                        ):
+                        if schema_version == C2_SCHEMA_VERSION:
+                            report_valid = (
+                                _validate_probe_report(
+                                    probe_report,
+                                    exit_code=probe_exit_code,
+                                    self_test=not live_started,
+                                    expected_candidate=expected_candidate or "",
+                                )
+                            )
+                        elif schema_version == V2_SCHEMA_VERSION:
+                            report_valid = _validate_v2_c2_probe_report(
+                                probe_report,
+                                exit_code=probe_exit_code,
+                                expected_candidate=expected_candidate or "",
+                            )
+                        else:
+                            report_valid = (
+                                _validate_legacy_probe_report(
+                                    probe_report,
+                                    exit_code=probe_exit_code,
+                                )
+                                if live_started
+                                else probe_report == LEGACY_SELF_TEST_REPORT
+                                and probe_exit_code == 0
+                            )
+                        if not report_valid:
                             malformed = True
                             continue
                         probe_terminal = entry
@@ -498,7 +1054,7 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
                             or entry.get("failure_code") is not None
                             and not isinstance(entry.get("failure_code"), str)
                             or entry.get("failure_details") is not None
-                            and not isinstance(entry.get("failure_details"), dict)
+                            and not _valid_failure_details(entry.get("failure_details"))
                             or entry.get("launcher") is not None
                             and not isinstance(entry.get("launcher"), dict)
                             or entry.get("status") == "PASS"
@@ -519,7 +1075,12 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
             continue
         if terminal is None:
             return True
-        if not _terminal_reports_are_consistent(terminal, probe_terminal):
+        if not _terminal_reports_are_consistent(
+            terminal,
+            probe_terminal,
+            schema_version=schema_version,
+            expected_candidate=expected_candidate,
+        ):
             return True
         mutation_started = any(stage in PROVIDER_MUTATION_STAGES for stage in probe_stages)
         if not mutation_started:
@@ -534,7 +1095,13 @@ def _has_unresolved_prior_live_attempt(evidence_directory: Path) -> bool:
             continue
         if probe_terminal is None:
             return True
-        if not _journal_cleanup_is_resolved(probe_stages, terminal, probe_terminal):
+        if schema_version == C2_SCHEMA_VERSION:
+            if not _v3_journal_cleanup_is_resolved(probe_events, terminal, probe_terminal):
+                return True
+        elif schema_version == V2_SCHEMA_VERSION:
+            if not _v2_journal_cleanup_is_resolved(probe_events, terminal, probe_terminal):
+                return True
+        elif not _journal_cleanup_is_resolved(probe_stages, terminal, probe_terminal):
             return True
     return False
 
@@ -644,7 +1211,7 @@ def _journal_cleanup_is_resolved(
     if not isinstance(launcher, dict) or set(launcher) != {"exit_code", "report", "stderr"}:
         return False
     report = launcher.get("report")
-    if not validate_launcher_report(report, self_test=False, forbidden=set()):
+    if not _validate_legacy_launcher_report(report, self_test=False, forbidden=set()):
         return False
     if terminal.get("status") != report.get("status"):
         return False
@@ -736,6 +1303,321 @@ def _journal_cleanup_is_resolved(
     return active_session is None and cancel_started_for is None
 
 
+def _c2_journal_cleanup_is_resolved(
+    probe_events: list[dict[str, Any]],
+    terminal: dict[str, Any],
+    probe_terminal: dict[str, Any] | None,
+    *,
+    schema_version: int,
+) -> bool:
+    stages = [event["stage"] for event in probe_events]
+    session_stages = (
+        V3_SESSION_STAGES
+        if schema_version == C2_SCHEMA_VERSION
+        else V2_SESSION_STAGES
+    )
+    if stages.count("ITEM_CREATE_REQUEST_STARTED") != 1:
+        return False
+    creation_index = stages.index("ITEM_CREATE_REQUEST_STARTED")
+    if any(
+        index < creation_index
+        for index, stage in enumerate(stages)
+        if stage in PROVIDER_MUTATION_STAGES or stage in session_stages
+    ):
+        return False
+    exact_delete = (
+        stages.count("TEST_ITEM_DELETE_REQUEST_STARTED") == 1
+        and stages.count("TEST_ITEM_DELETE_REQUEST_COMPLETED") == 1
+    )
+    name_delete = (
+        stages.count("TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED") == 1
+        and stages.count("TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED") == 1
+    )
+    if exact_delete == name_delete:
+        return False
+    if any(
+        stages.count(stage) != 0
+        for stage in (
+            {"TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED", "TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED"}
+            if exact_delete
+            else {"TEST_ITEM_DELETE_REQUEST_STARTED", "TEST_ITEM_DELETE_REQUEST_COMPLETED"}
+        )
+    ):
+        return False
+    delete_start_stage = (
+        "TEST_ITEM_DELETE_REQUEST_STARTED"
+        if exact_delete
+        else "TEST_ITEM_DELETE_BY_NAME_REQUEST_STARTED"
+    )
+    delete_complete_stage = (
+        "TEST_ITEM_DELETE_REQUEST_COMPLETED"
+        if exact_delete
+        else "TEST_ITEM_DELETE_BY_NAME_REQUEST_COMPLETED"
+    )
+    delete_start = stages.index(delete_start_stage)
+    delete_complete = stages.index(delete_complete_stage)
+    if delete_start >= delete_complete:
+        return False
+    if any(
+        index >= delete_start
+        for index, stage in enumerate(stages)
+        if stage in PROVIDER_MUTATION_STAGES
+        and stage not in {delete_start_stage, delete_complete_stage}
+    ):
+        return False
+    if delete_complete != len(stages) - 1:
+        return False
+
+    launcher = terminal.get("launcher")
+    if not isinstance(launcher, dict) or set(launcher) != {"exit_code", "report", "stderr"}:
+        return False
+    report = launcher.get("report")
+    exit_code = launcher.get("exit_code")
+    report_valid = (
+        _validate_c2_probe_report(
+            report,
+            exit_code=exit_code,
+            expected_candidate=C2_CANDIDATE,
+        )
+        if schema_version == C2_SCHEMA_VERSION
+        else _validate_v2_c2_probe_report(
+            report,
+            exit_code=exit_code,
+            expected_candidate=V2_CANDIDATE,
+        )
+    )
+    if not report_valid:
+        return False
+    expected_cleanup = (
+        "DELETED_TO_RECYCLE_BIN"
+        if exact_delete
+        else "ABSENT_OR_DELETED_TO_RECYCLE_BIN"
+    )
+    if report.get("cleanup") != expected_cleanup or report.get("cleanup_issue") != "NONE":
+        return False
+    if terminal.get("status") != report.get("status") or launcher.get("stderr") != "EMPTY":
+        return False
+    if probe_terminal is None or (
+        probe_terminal.get("status") != terminal.get("status")
+        or probe_terminal.get("exit_code") != exit_code
+        or probe_terminal.get("report") != report
+    ):
+        return False
+    if name_delete:
+        return not any(
+            stage in session_stages or stage in ITEM_ID_EVIDENCE_STAGES
+            for stage in stages
+        )
+
+    state = {"FRESH": "NONE", "STALE": "NONE"}
+    final_started = {"FRESH": False, "STALE": False}
+    final_observed = {"FRESH": False, "STALE": False}
+    cancel_started = {"FRESH": False, "STALE": False}
+    partial_started = {"FRESH": False, "STALE": False}
+    partial_observed: dict[str, dict[str, Any] | None] = {
+        "FRESH": None,
+        "STALE": None,
+    }
+    partial_validated = {"FRESH": False, "STALE": False}
+    destination_verified = {"FRESH": False, "STALE": False}
+    post_read_count = {"FRESH": 0, "STALE": 0}
+    post_verify_count = {"FRESH": 0, "STALE": 0}
+    for event in probe_events:
+        stage = event["stage"]
+        role = event.get("session_role")
+        pending_cancellations = [
+            pending_role
+            for pending_role in ("FRESH", "STALE")
+            if cancel_started[pending_role] and state[pending_role] == "OPEN"
+        ]
+        if pending_cancellations and not (
+            len(pending_cancellations) == 1
+            and stage == "SESSION_CANCEL_REQUEST_COMPLETED"
+            and role == pending_cancellations[0]
+        ):
+            return False
+        if stage == "SESSION_CREATE_REQUEST_STARTED":
+            if state[role] != "NONE" or (role == "STALE" and state["FRESH"] != "CLOSED"):
+                return False
+            state[role] = "UNKNOWN"
+        elif stage == "SESSION_AVAILABLE":
+            if state[role] != "UNKNOWN":
+                return False
+            state[role] = "OPEN"
+        elif stage == "PARTIAL_FRAGMENT_REQUEST_STARTED":
+            if state[role] != "OPEN" or partial_started[role]:
+                return False
+            partial_started[role] = True
+        elif stage == "PARTIAL_FRAGMENT_RESPONSE_OBSERVED":
+            if (
+                schema_version != C2_SCHEMA_VERSION
+                or not partial_started[role]
+                or partial_observed[role] is not None
+                or post_read_count[role] != 0
+            ):
+                return False
+            partial_observed[role] = {
+                "http_status": event["http_status"],
+                "range_class": event["range_class"],
+            }
+        elif stage == "PARTIAL_FRAGMENT_RESPONSE_VALIDATED":
+            if (
+                not partial_started[role]
+                or partial_validated[role]
+                or (
+                    schema_version == C2_SCHEMA_VERSION
+                    and partial_observed[role]
+                    != {"http_status": 202, "range_class": "EXPECTED_START"}
+                )
+            ):
+                return False
+            partial_validated[role] = True
+        elif stage == "PARTIAL_DESTINATION_VERIFY_COMPLETED":
+            if (
+                not partial_started[role]
+                or destination_verified[role]
+                or post_verify_count[role] != 1
+            ):
+                return False
+            destination_verified[role] = True
+        elif stage == "FINAL_FRAGMENT_REQUEST_STARTED":
+            if (
+                state[role] != "OPEN"
+                or final_started[role]
+                or not partial_validated[role]
+                or not destination_verified[role]
+                or post_read_count[role] != 1
+                or post_verify_count[role] != 1
+            ):
+                return False
+            final_started[role] = True
+        elif stage == "FINAL_FRAGMENT_RESPONSE_OBSERVED":
+            if (
+                not final_started[role]
+                or final_observed[role]
+                or post_read_count[role] != 1
+            ):
+                return False
+            final_observed[role] = True
+        elif stage == "POST_STATE_READ_STARTED":
+            if (
+                not partial_started[role]
+                or post_read_count[role] != post_verify_count[role]
+                or post_read_count[role] >= 2
+                or (post_read_count[role] == 0 and final_started[role])
+                or (post_read_count[role] == 1 and not final_started[role])
+            ):
+                return False
+            post_read_count[role] += 1
+        elif stage == "POST_STATE_VERIFY_COMPLETED":
+            if post_read_count[role] != post_verify_count[role] + 1:
+                return False
+            post_verify_count[role] += 1
+        elif stage == "SESSION_COMPLETION_PROVEN":
+            if (
+                state[role] != "OPEN"
+                or not final_started[role]
+                or not final_observed[role]
+                or report.get(f"{role.lower()}_final_http_status") not in {200, 201}
+                or post_verify_count[role] != 2
+            ):
+                return False
+            state[role] = "CLOSED"
+        elif stage == "SESSION_CANCEL_REQUEST_STARTED":
+            if state[role] != "OPEN" or cancel_started[role]:
+                return False
+            cancel_started[role] = True
+        elif stage == "SESSION_CANCEL_REQUEST_COMPLETED":
+            if state[role] != "OPEN" or not cancel_started[role]:
+                return False
+            state[role] = "CLOSED"
+    if not all(value in {"NONE", "CLOSED"} for value in state.values()):
+        return False
+    if any(
+        post_read_count[role]
+        != int(partial_started[role]) + int(final_started[role])
+        for role in ("FRESH", "STALE")
+    ):
+        return False
+    if any(
+        final_observed[role]
+        != (report.get(f"{role.lower()}_final_http_status") is not None)
+        for role in ("FRESH", "STALE")
+    ):
+        return False
+    if schema_version == C2_SCHEMA_VERSION:
+        report_observations = report.get("partial_observations")
+        if any(
+            report_observations[role.lower()]
+            != (
+                partial_observed[role]
+                or {"http_status": None, "range_class": "NOT_OBSERVED"}
+            )
+            for role in ("FRESH", "STALE")
+        ):
+            return False
+    if report.get("outcome") in {
+        "OBSERVED_SAFE_STALE_REJECTION",
+        "UNSAFE_STALE_OVERWRITE",
+    }:
+        if not all(
+            partial_validated[role]
+            and destination_verified[role]
+            and final_started[role]
+            and post_verify_count[role] == 2
+            for role in ("FRESH", "STALE")
+        ):
+            return False
+        concurrent_indices = [
+            index
+            for index, stage in enumerate(stages)
+            if stage == "CONCURRENT_WRITE_REQUEST_STARTED"
+        ]
+        if len(concurrent_indices) != 1:
+            return False
+        stale_partial_index = next(
+            index
+            for index, event in enumerate(probe_events)
+            if event.get("stage") == "PARTIAL_DESTINATION_VERIFY_COMPLETED"
+            and event.get("session_role") == "STALE"
+        )
+        stale_final_index = next(
+            index
+            for index, event in enumerate(probe_events)
+            if event.get("stage") == "FINAL_FRAGMENT_REQUEST_STARTED"
+            and event.get("session_role") == "STALE"
+        )
+        if not stale_partial_index < concurrent_indices[0] < stale_final_index:
+            return False
+    return True
+
+
+def _v2_journal_cleanup_is_resolved(
+    probe_events: list[dict[str, Any]],
+    terminal: dict[str, Any],
+    probe_terminal: dict[str, Any] | None,
+) -> bool:
+    return _c2_journal_cleanup_is_resolved(
+        probe_events,
+        terminal,
+        probe_terminal,
+        schema_version=V2_SCHEMA_VERSION,
+    )
+
+
+def _v3_journal_cleanup_is_resolved(
+    probe_events: list[dict[str, Any]],
+    terminal: dict[str, Any],
+    probe_terminal: dict[str, Any] | None,
+) -> bool:
+    return _c2_journal_cleanup_is_resolved(
+        probe_events,
+        terminal,
+        probe_terminal,
+        schema_version=C2_SCHEMA_VERSION,
+    )
+
+
 def _python_fingerprint(python_executable: Path) -> dict[str, Any]:
     encoded_path = str(python_executable).encode("utf-8")
     return {
@@ -759,9 +1641,11 @@ class AttemptRecorder:
         mode: str,
         evidence_directory: Path,
         forbidden: set[str],
+        candidate: str,
     ) -> None:
         self.attempt_id = attempt_id
         self.mode = mode
+        self.candidate = candidate
         self._forbidden = {value for value in forbidden if value}
         evidence_directory.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
@@ -770,6 +1654,7 @@ class AttemptRecorder:
         python_executable = Path(sys.executable).resolve()
         self._record: dict[str, Any] = {
             "attempt_id": self.attempt_id,
+            "candidate": self.candidate,
             "components": {
                 "controller_sha256": _sha256_file_or_unavailable(CONTROLLER_PATH),
                 "launcher_sha256": _sha256_file_or_unavailable(LAUNCHER_PATH),
@@ -788,7 +1673,7 @@ class AttemptRecorder:
                 "platform": sys.platform,
                 "python": _python_fingerprint(python_executable),
             },
-            "schema_version": 1,
+            "schema_version": C2_SCHEMA_VERSION,
             "stages": [],
             "started_at": _utc_now(),
             "status": "RUNNING",
@@ -797,8 +1682,10 @@ class AttemptRecorder:
             {
                 "at": self._record["started_at"],
                 "attempt_id": self.attempt_id,
+                "candidate": self.candidate,
                 "mode": mode,
                 "record_type": "ATTEMPT_STARTED",
+                "schema_version": C2_SCHEMA_VERSION,
             }
         )
         self._write()
@@ -851,6 +1738,8 @@ class AttemptRecorder:
         launcher_stderr: str | None = None,
         failure_details: dict[str, Any] | None = None,
     ) -> None:
+        if not _valid_failure_details(failure_details):
+            raise ControllerFailure("EVIDENCE_DETAILS_REJECTED", "EVIDENCE")
         self._capture_probe_stages()
         self._record["finished_at"] = _utc_now()
         self._record["status"] = status
@@ -904,7 +1793,7 @@ class AttemptRecorder:
             os.fsync(journal.fileno())
 
     def _capture_probe_stages(self) -> None:
-        captured: list[dict[str, str]] = []
+        captured: list[dict[str, Any]] = []
         try:
             lines = self.journal_path.read_text(encoding="utf-8").splitlines()
         except OSError:
@@ -919,10 +1808,16 @@ class AttemptRecorder:
                 isinstance(entry, dict)
                 and entry.get("attempt_id") == self.attempt_id
                 and entry.get("record_type") == "PROBE_STAGE"
-                and entry.get("stage") in SAFE_PROBE_PROGRESS_STAGES
+                and entry.get("stage") in V3_PROBE_PROGRESS_STAGES
                 and isinstance(entry.get("at"), str)
             ):
-                captured.append({"at": entry["at"], "stage": entry["stage"]})
+                captured_entry = {"at": entry["at"], "stage": entry["stage"]}
+                if entry.get("session_role") in {"FRESH", "STALE"}:
+                    captured_entry["session_role"] = entry["session_role"]
+                if entry.get("stage") == "PARTIAL_FRAGMENT_RESPONSE_OBSERVED":
+                    captured_entry["http_status"] = entry.get("http_status")
+                    captured_entry["range_class"] = entry.get("range_class")
+                captured.append(captured_entry)
         self._record["probe_stages"] = captured
 
 
@@ -931,12 +1826,15 @@ def build_launcher_command(
     node_executable: str,
     python_executable: str,
     self_test: bool,
+    candidate: str,
 ) -> list[str]:
     command = [
         node_executable,
         str(LAUNCHER_PATH),
         "--python-executable",
         python_executable,
+        "--candidate",
+        candidate,
     ]
     if self_test:
         command.append("--self-test")
@@ -955,7 +1853,7 @@ def _contains_forbidden(value: Any, forbidden: set[str]) -> bool:
     return False
 
 
-def validate_launcher_report(
+def _validate_legacy_launcher_report(
     report: Any,
     *,
     self_test: bool,
@@ -1022,6 +1920,31 @@ def validate_launcher_report(
     return True
 
 
+def validate_launcher_report(
+    report: Any,
+    *,
+    self_test: bool,
+    forbidden: set[str],
+    expected_candidate: str,
+) -> bool:
+    if not isinstance(report, dict) or _contains_forbidden(report, forbidden):
+        return False
+    if self_test:
+        return report == SELF_TEST_REPORT and expected_candidate == C2_CANDIDATE
+    if report.get("schema_version") == C2_SCHEMA_VERSION:
+        inferred_exit_code = 0 if report.get("status") == "PASS" else 1
+        return _validate_c2_probe_report(
+            report,
+            exit_code=inferred_exit_code,
+            expected_candidate=expected_candidate,
+        )
+    return _validate_legacy_launcher_report(
+        report,
+        self_test=False,
+        forbidden=forbidden,
+    ) and report.get("status") == "FAIL"
+
+
 def _resolve_node_executable() -> str:
     candidate = shutil.which("node")
     if not candidate:
@@ -1032,7 +1955,7 @@ def _resolve_node_executable() -> str:
     return str(resolved)
 
 
-def _prepare_launcher(self_test: bool) -> tuple[list[str], dict[str, Any]]:
+def _prepare_launcher(self_test: bool, candidate: str) -> tuple[list[str], dict[str, Any]]:
     if not LAUNCHER_PATH.is_file() or not PROBE_PATH.is_file():
         raise ControllerFailure("PROBE_COMPONENT_UNAVAILABLE", "CONTROLLER_VALIDATION")
     python_executable = Path(sys.executable).resolve()
@@ -1058,6 +1981,7 @@ def _prepare_launcher(self_test: bool) -> tuple[list[str], dict[str, Any]]:
         node_executable=node_executable,
         python_executable=str(python_executable),
         self_test=self_test,
+        candidate=candidate,
     )
     fingerprint = {
         "argv_count": len(command),
@@ -1066,6 +1990,8 @@ def _prepare_launcher(self_test: bool) -> tuple[list[str], dict[str, Any]]:
             "LAUNCHER_PATH",
             "--python-executable",
             "PYTHON_EXECUTABLE",
+            "--candidate",
+            C2_CANDIDATE,
             "--self-test" if self_test else "--allow-live-write",
             *([] if self_test else ["--cleanup-test-item"]),
         ],
@@ -1090,6 +2016,7 @@ def _run_launcher(
     event_journal: Path,
     self_test: bool,
     forbidden: set[str],
+    candidate: str,
 ) -> tuple[int, dict[str, Any], str]:
     child_environment = os.environ.copy()
     child_environment.pop(CLIENT_SECRET_ENVIRONMENT_VARIABLE, None)
@@ -1142,7 +2069,12 @@ def _run_launcher(
             "LAUNCHER",
             details=process_details,
         ) from exc
-    if not validate_launcher_report(report, self_test=self_test, forbidden=forbidden):
+    if not validate_launcher_report(
+        report,
+        self_test=self_test,
+        forbidden=forbidden,
+        expected_candidate=candidate,
+    ):
         raise ControllerFailure(
             "LAUNCHER_OUTPUT_REJECTED",
             "LAUNCHER",
@@ -1209,7 +2141,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
             if isinstance(candidates[0], str)
         }
         body = (
-            b"<!doctype html><html><body><h1>Authorization received</h1>"
+            b"<!doctype html><html><body><h1>Authorization response received</h1>"
             b"<p>You can return to Codex. Do not refresh this page.</p></body></html>"
         )
         self.send_response(200)
@@ -1234,6 +2166,7 @@ def _wait_for_callback(server: HTTPServer) -> dict[str, str]:
 
 
 def _acquire_live_access_token(*, client_id: str, client_secret: str) -> str:
+    callback_response: dict[str, str] | None = None
     try:
         application = msal.ConfidentialClientApplication(
             client_id,
@@ -1254,7 +2187,53 @@ def _acquire_live_access_token(*, client_id: str, client_secret: str) -> str:
                 raise ControllerFailure("OAUTH_BROWSER_OPEN_FAILED", "OAUTH_START")
             callback_response = _wait_for_callback(server)
         try:
-            result = application.acquire_token_by_auth_code_flow(flow, callback_response)
+            has_code = isinstance(callback_response.get("code"), str) and bool(
+                callback_response["code"]
+            )
+            has_error = isinstance(callback_response.get("error"), str) and bool(
+                callback_response["error"]
+            )
+            if has_code == has_error:
+                raise ControllerFailure(
+                    "OAUTH_RESPONSE_MALFORMED",
+                    "OAUTH_CALLBACK",
+                    details=_normalize_oauth_diagnostics(
+                        phase="CALLBACK_VALIDATION",
+                        payload={},
+                    ),
+                )
+            try:
+                result = application.acquire_token_by_auth_code_flow(flow, callback_response)
+            except ValueError as exc:
+                raise ControllerFailure(
+                    "OAUTH_FLOW_VALIDATION_FAILED",
+                    "OAUTH",
+                    details=_normalize_oauth_diagnostics(
+                        phase="FLOW_VALIDATION",
+                        payload={},
+                    ),
+                ) from exc
+            if not isinstance(result, dict):
+                raise ControllerFailure(
+                    "OAUTH_RESULT_MALFORMED",
+                    "TOKEN_VALIDATION",
+                    details=_normalize_oauth_diagnostics(
+                        phase="RESULT_VALIDATION",
+                        payload={},
+                    ),
+                )
+            if "error" in result:
+                phase = "AUTHORIZATION_RESPONSE" if has_error else "TOKEN_REDEMPTION"
+                code = (
+                    "OAUTH_AUTHORIZATION_REJECTED"
+                    if has_error
+                    else "OAUTH_TOKEN_REDEMPTION_REJECTED"
+                )
+                raise ControllerFailure(
+                    code,
+                    "OAUTH" if has_error else "TOKEN_VALIDATION",
+                    details=_normalize_oauth_diagnostics(phase=phase, payload=result),
+                )
         finally:
             callback_response.clear()
             _CallbackHandler.callback_response = None
@@ -1263,8 +2242,6 @@ def _acquire_live_access_token(*, client_id: str, client_secret: str) -> str:
     except Exception as exc:
         raise ControllerFailure("OAUTH_FLOW_FAILED", "OAUTH") from exc
 
-    if not isinstance(result, dict) or "error" in result:
-        raise ControllerFailure("OAUTH_TOKEN_REJECTED", "TOKEN_VALIDATION")
     claims = result.get("id_token_claims") or {}
     subject = claims.get("sub")
     if (
@@ -1289,6 +2266,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--live", action="store_true")
     parser.add_argument("--allow-live-write", action="store_true")
     parser.add_argument("--cleanup-test-item", action="store_true")
+    parser.add_argument("--candidate", choices=[C2_CANDIDATE], required=True)
     parser.add_argument(
         "--evidence-directory",
         type=Path,
@@ -1354,6 +2332,7 @@ def run(argv: list[str] | None = None) -> int:
             mode=mode,
             evidence_directory=evidence_directory,
             forbidden=sensitive_environment_values,
+            candidate=args.candidate,
         )
     except (ControllerFailure, OSError):
         os.environ.pop(TOKEN_ENVIRONMENT_VARIABLE, None)
@@ -1383,7 +2362,10 @@ def run(argv: list[str] | None = None) -> int:
             raise ControllerFailure("SELF_TEST_FLAGS_REJECTED", "CONTROLLER_VALIDATION")
         if args.live and not (args.allow_live_write and args.cleanup_test_item):
             raise ControllerFailure("LIVE_ACKNOWLEDGEMENTS_REQUIRED", "CONTROLLER_VALIDATION")
-        launcher_command, launcher_fingerprint = _prepare_launcher(args.self_test)
+        launcher_command, launcher_fingerprint = _prepare_launcher(
+            args.self_test,
+            args.candidate,
+        )
         recorder.set_launcher_invocation(launcher_fingerprint)
         recorder.event("CONTROLLER_VALIDATION", "PASS")
 
@@ -1413,6 +2395,7 @@ def run(argv: list[str] | None = None) -> int:
             event_journal=recorder.journal_path,
             self_test=args.self_test,
             forbidden={access_token},
+            candidate=args.candidate,
         )
         launcher_status = "PASS" if launcher_report["status"] == "PASS" else "FAIL"
         recorder.event("LAUNCHER", launcher_status)
