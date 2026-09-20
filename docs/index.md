@@ -32,6 +32,8 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Accepted ADR 0044 Exchange v1](adr/0044-onedrive-personal-exchange-v1.md) — explicit
   DOCX/XLSX import/re-import, AppFolder capability, create-new Working/Export and provider-unknown
   reconciliation while OneDrive remains non-authoritative.
+- [Working Change Observation / Change Candidate / Human Commit Design Authority](design/VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md) — automatic Working-copy detection/revalidation and recommendation with no automatic business commit or Revision creation.
+- [Accepted ADR 0045](adr/0045-working-copy-change-observation-and-human-confirmed-document-revision.md) — folder-level change signal + delta/exact revalidation + non-authoritative Change Candidate + explicit human-confirmed Revision N+1 boundary.
 - [OneDrive Exchange v1 implementation contract](implementation/VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md)
   and [active G8 plan](plan/valora-onedrive-exchange-001.md) — frozen offline schema/port/state-machine,
   UI boundary and E1–E30 acceptance matrix; live Microsoft activity remains closed.
