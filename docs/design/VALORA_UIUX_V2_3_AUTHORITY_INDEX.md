@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3
-**Consolidation:** 01/09/2026 — `Audit & Lineage Entry-point Pattern Board — Iteration 1`.
+**Consolidation:** 21/09/2026 — `Working Change Observation / Change Candidate / Human Commit Contract v1`.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
