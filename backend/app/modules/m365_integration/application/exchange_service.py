@@ -319,10 +319,30 @@ def execute_exchange_create(
     excel_import_batch_id: uuid.UUID | None = None,
     excel_source_artifact_id: uuid.UUID | None = None,
 ) -> M365ExchangeArtifact | None:
-    operation = db.query(M365ExchangeOperation).filter(
-        M365ExchangeOperation.organization_id == organization_id,
-        M365ExchangeOperation.id == operation_id,
-    ).first()
+    def replay_winner() -> M365ExchangeArtifact | None:
+        return execute_exchange_create(
+            db,
+            organization_id=organization_id,
+            operation_id=operation_id,
+            content=content,
+            graph_gateway=graph_gateway,
+            access_token=access_token,
+            source_authority_type=source_authority_type,
+            document_id=document_id,
+            document_revision_id=document_revision_id,
+            excel_import_batch_id=excel_import_batch_id,
+            excel_source_artifact_id=excel_source_artifact_id,
+        )
+
+    operation = (
+        db.query(M365ExchangeOperation)
+        .filter(
+            M365ExchangeOperation.organization_id == organization_id,
+            M365ExchangeOperation.id == operation_id,
+        )
+        .populate_existing()
+        .first()
+    )
     if operation is None:
         _abort(db, 404, "exchange_operation_not_found", "Không tìm thấy yêu cầu Exchange.")
     if hashlib.sha256(content).hexdigest() != operation.pre_sha256 or len(content) != operation.pre_byte_length:
@@ -344,6 +364,17 @@ def execute_exchange_create(
         return artifact
     if operation.state == "FAILED_ACTION_REQUIRED":
         return None
+    db.commit()
+
+    # Re-evaluate the persisted capability immediately before any provider
+    # mutation or recovery. Preparing an operation is not durable authority to
+    # write after a grant is revoked.
+    _require_write_connection(
+        db,
+        organization_id=organization_id,
+        project_id=operation.project_id,
+        connection_id=operation.connection_id,
+    )
     db.commit()
 
     # Resolve the authorized App Folder namespace again at the actual
@@ -380,19 +411,55 @@ def execute_exchange_create(
         if result.status == GraphMutationStatus.CREATED:
             item = result.item
         elif result.status in {GraphMutationStatus.OUTCOME_UNKNOWN, GraphMutationStatus.COLLISION}:
-            persisted = db.get(M365ExchangeOperation, operation_id)
-            persisted.state = "PROVIDER_UNKNOWN"
-            persisted.provider_request_id = result.provider_request_id
+            transitioned = (
+                db.query(M365ExchangeOperation)
+                .filter(
+                    M365ExchangeOperation.organization_id == organization_id,
+                    M365ExchangeOperation.id == operation_id,
+                    M365ExchangeOperation.state == "PREPARED",
+                )
+                .update(
+                    {
+                        M365ExchangeOperation.state: "PROVIDER_UNKNOWN",
+                        M365ExchangeOperation.provider_request_id: result.provider_request_id,
+                    },
+                    synchronize_session=False,
+                )
+            )
             db.commit()
+            if transitioned == 0:
+                return replay_winner()
         elif result.status == GraphMutationStatus.UNAVAILABLE:
             return None
         else:
-            persisted = db.get(M365ExchangeOperation, operation_id)
-            persisted.state = "FAILED_ACTION_REQUIRED"
-            persisted.failure_code = result.status.value
+            transitioned = (
+                db.query(M365ExchangeOperation)
+                .filter(
+                    M365ExchangeOperation.organization_id == organization_id,
+                    M365ExchangeOperation.id == operation_id,
+                    M365ExchangeOperation.state == "PREPARED",
+                )
+                .update(
+                    {
+                        M365ExchangeOperation.state: "FAILED_ACTION_REQUIRED",
+                        M365ExchangeOperation.failure_code: result.status.value,
+                    },
+                    synchronize_session=False,
+                )
+            )
             db.commit()
+            if transitioned == 0:
+                return replay_winner()
             return None
-    operation = db.get(M365ExchangeOperation, operation_id)
+    operation = (
+        db.query(M365ExchangeOperation)
+        .filter(
+            M365ExchangeOperation.organization_id == organization_id,
+            M365ExchangeOperation.id == operation_id,
+        )
+        .populate_existing()
+        .first()
+    )
     try:
         item = _reconcile_created_item(
             graph_gateway=graph_gateway,
@@ -401,9 +468,24 @@ def execute_exchange_create(
             content=content,
         )
     except HTTPException:
-        operation.state = "FAILED_ACTION_REQUIRED"
-        operation.failure_code = "provider_ambiguous_or_mismatch"
+        transitioned = (
+            db.query(M365ExchangeOperation)
+            .filter(
+                M365ExchangeOperation.organization_id == organization_id,
+                M365ExchangeOperation.id == operation_id,
+                M365ExchangeOperation.state.in_(("PREPARED", "PROVIDER_UNKNOWN")),
+            )
+            .update(
+                {
+                    M365ExchangeOperation.state: "FAILED_ACTION_REQUIRED",
+                    M365ExchangeOperation.failure_code: "provider_ambiguous_or_mismatch",
+                },
+                synchronize_session=False,
+            )
+        )
         db.commit()
+        if transitioned == 0:
+            return replay_winner()
         raise
     if item is None:
         return None

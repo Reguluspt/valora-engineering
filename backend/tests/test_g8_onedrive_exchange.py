@@ -822,6 +822,23 @@ def test_e20_provider_event_never_directly_mutates_authority(exchange_context):
 def test_e21_files_read_only_connection_cannot_write(exchange_context):
     ctx = exchange_context
     revision, _, _ = _initial_docx(ctx, key="e21-initial")
+    namespace = provision_exchange_namespace(
+        graph_gateway=ctx["graph"], access_token="offline-token"
+    )
+    prepared = prepare_exchange_create(
+        ctx["db"],
+        organization_id=ctx["seeded"]["organization"].id,
+        project_id=ctx["seeded"]["project"].id,
+        connection_id=ctx["connection"].id,
+        idempotency_key="e21-prepared-before-revocation",
+        operation_kind="CREATE_WORKING",
+        target_role="working",
+        media="docx",
+        drive_id=ctx["connection"].drive_id,
+        destination_parent_item_id=namespace.working_item_id,
+        destination_name="Revoked-after-prepare.docx",
+        content=b"revoked-after-prepare",
+    )
     cap = ctx["db"].query(M365ConnectionCapability).filter_by(
         organization_id=ctx["seeded"]["organization"].id,
         connection_id=ctx["connection"].id,
@@ -831,6 +848,19 @@ def test_e21_files_read_only_connection_cannot_write(exchange_context):
     cap.evidence_scope = None
     ctx["db"].commit()
     ensure_calls = ctx["graph"].ensure_calls
+    create_calls = ctx["graph"].create_calls
+    with pytest.raises(HTTPException) as exc:
+        execute_exchange_create(
+            ctx["db"],
+            organization_id=ctx["seeded"]["organization"].id,
+            operation_id=prepared.id,
+            content=b"revoked-after-prepare",
+            graph_gateway=ctx["graph"],
+            access_token="offline-token",
+            source_authority_type="PROVIDER_TRANSPORT",
+        )
+    _assert_code(exc, "exchange_reconsent_required")
+    assert ctx["graph"].create_calls == create_calls
     with pytest.raises(HTTPException) as exc:
         _run(
             create_docx_working_copy(

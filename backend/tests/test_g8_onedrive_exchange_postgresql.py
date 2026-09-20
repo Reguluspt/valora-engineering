@@ -304,6 +304,89 @@ def test_exchange_execute_replay_race_returns_one_artifact(
         engine.dispose()
 
 
+def test_exchange_late_collision_cannot_clobber_finalized_operation(
+    postgres_exchange_database: URL, monkeypatch
+):
+    engine, sessions, graph, namespace, ids = _context(postgres_exchange_database)
+    content = b"execute-late-collision-postgres"
+    setup = sessions()
+    operation = _prepare(setup, ids, namespace, key="late-collision", content=content)
+    operation_id = operation.id
+    setup.close()
+
+    original_create = graph.create_file
+    create_barrier = threading.Barrier(2, timeout=30)
+    provider_created = threading.Event()
+    winner_finalized = threading.Event()
+    call_lock = threading.Lock()
+    create_calls = 0
+    winner_thread_id: int | None = None
+
+    def staged_create(**kwargs):
+        nonlocal create_calls, winner_thread_id
+        create_barrier.wait(timeout=30)
+        with call_lock:
+            create_calls += 1
+            call_number = create_calls
+            if call_number == 1:
+                winner_thread_id = threading.get_ident()
+        if call_number == 2:
+            assert provider_created.wait(timeout=30), "provider winner was not created"
+        result = original_create(**kwargs)
+        if call_number == 1:
+            provider_created.set()
+        elif call_number == 2:
+            assert winner_finalized.wait(timeout=30), "winner did not finalize"
+        return result
+
+    monkeypatch.setattr(graph, "create_file", staged_create)
+    artifact_ids: list[uuid.UUID] = []
+    errors: list[BaseException] = []
+
+    def run() -> None:
+        db = sessions()
+        try:
+            artifact = execute_exchange_create(
+                db,
+                organization_id=ids["organization_id"],
+                operation_id=operation_id,
+                content=content,
+                graph_gateway=graph,
+                access_token="offline-token",
+                source_authority_type="PROVIDER_TRANSPORT",
+            )
+            assert artifact is not None
+            artifact_ids.append(artifact.id)
+            if threading.get_ident() == winner_thread_id:
+                winner_finalized.set()
+        except BaseException as exc:
+            errors.append(exc)
+            if threading.get_ident() == winner_thread_id:
+                winner_finalized.set()
+        finally:
+            db.close()
+
+    threads = [threading.Thread(target=run, daemon=True) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=60)
+
+    verify = sessions()
+    try:
+        assert all(not thread.is_alive() for thread in threads)
+        assert not errors
+        assert create_calls == 2
+        assert len(artifact_ids) == 2 and len(set(artifact_ids)) == 1
+        assert verify.query(M365ExchangeArtifact).count() == 1
+        persisted = verify.get(M365ExchangeOperation, operation_id)
+        assert persisted.state == "FINALIZED"
+        assert persisted.artifact_id == artifact_ids[0]
+    finally:
+        verify.close()
+        engine.dispose()
+
+
 def test_provider_unknown_recovery_after_new_session(postgres_exchange_database: URL):
     engine, sessions, graph, namespace, ids = _context(postgres_exchange_database)
     content = b"provider-unknown-postgres"
