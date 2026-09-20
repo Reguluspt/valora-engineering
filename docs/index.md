@@ -29,6 +29,12 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Local provider task awaiting G6](plan/valora-storage-local-001.md) — Linux atomic create-only adapter passed T1-T14/L1-L17 and awaits two independent reviews; Exchange and Backup remain later separate gates.
 - [Superseded provider-spike selection](research/valora-storage-provider-selection.md) — historical AWS/Azure comparison and AWS G1-G4 preparation rationale.
 - [Storage policy decision](research/pr07-storage-fallback-options-2.md) — Model A and the accepted retention, deletion, encryption and recovery baseline; links the superseded initial fallback research.
+- [Accepted ADR 0044 Exchange v1](adr/0044-onedrive-personal-exchange-v1.md) — explicit
+  DOCX/XLSX import/re-import, AppFolder capability, create-new Working/Export and provider-unknown
+  reconciliation while OneDrive remains non-authoritative.
+- [OneDrive Exchange v1 implementation contract](implementation/VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md)
+  and [active G8 plan](plan/valora-onedrive-exchange-001.md) — frozen offline schema/port/state-machine,
+  UI boundary and E1–E30 acceptance matrix; live Microsoft activity remains closed.
 - [Accepted ADR 0042](adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md) and [accepted sync/conflict contract](implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md).
 - [Provider-conformance runbook](implementation/VALORA_UIUX_V2_3_PR07_PROVIDER_CONFORMANCE_RUNBOOK.md) — historical/current execution evidence; PR-07 runtime remains blocked.
 - [Research handoff](research/pr07-onedrive-conformance-handoff.md) — C1 chronology plus the amended C2 observation and remaining provider questions.
