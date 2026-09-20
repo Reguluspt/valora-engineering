@@ -52,6 +52,8 @@ from app.modules.m365_integration.infrastructure.access_log_redaction import (
     REDACTED_QUERY_STRING,
 )
 from app.modules.m365_integration.models import (
+    M365ConnectionCapability,
+    M365ConnectionGrantedScope,
     M365EncryptedCredential,
     M365OAuthState,
     M365RevisionBinding,
@@ -93,6 +95,8 @@ TABLES = [
     DocumentRevisionCurrentHead.__table__,
     M365EncryptedCredential.__table__,
     OneDriveConnection.__table__,
+    M365ConnectionGrantedScope.__table__,
+    M365ConnectionCapability.__table__,
     M365OAuthState.__table__,
     M365RevisionBinding.__table__,
 ]
@@ -169,7 +173,6 @@ class FakeGraphGateway:
             path=self.item_path,
             web_url="https://onedrive.live.com/example",
         )
-
     def list_drive_children(
         self,
         *,
@@ -203,6 +206,12 @@ class FakeGraphGateway:
             ),
             truncated=False,
         )
+
+
+class MissingAppFolderOAuthClient(FakeOAuthClient):
+    def begin(self, *, scope_profile: str = "read_only") -> OAuthAuthorizationStart:
+        assert scope_profile == "exchange_write"
+        return super().begin()
 
 
 @pytest.fixture
@@ -347,6 +356,30 @@ def _document(db: Session, seeded: dict[str, object]) -> DocumentRevision:
 def _assert_error(exc: pytest.ExceptionInfo[HTTPException], status: int, code: str) -> None:
     assert exc.value.status_code == status
     assert exc.value.detail["error_code"] == code
+
+
+def test_exchange_reconsent_fails_closed_when_appfolder_scope_is_missing(db: Session) -> None:
+    seeded = _seed(db, suffix="missing-appfolder")
+    oauth = MissingAppFolderOAuthClient()
+    vault = _vault(db)
+    begin_onedrive_authorization(
+        db,
+        actor=seeded["actor"],
+        user_session=seeded["session"],
+        oauth_client=oauth,
+        credential_vault=vault,
+        scope_profile="exchange_write",
+    )
+    with pytest.raises(HTTPException) as exc:
+        complete_onedrive_authorization(
+            db,
+            auth_response={"state": oauth.state, "code": "authorization-code"},
+            oauth_client=oauth,
+            graph_gateway=FakeGraphGateway(),
+            credential_vault=vault,
+        )
+    _assert_error(exc, 409, "onedrive_required_scope_missing")
+    assert db.query(OneDriveConnection).count() == 0
 
 
 def test_vault_encrypts_binds_owner_and_rotates_without_plaintext(db: Session) -> None:

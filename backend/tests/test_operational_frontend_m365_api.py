@@ -102,6 +102,9 @@ def test_connection_status_and_tenant_safe_adoption_options(operational_api) -> 
         "drive_id": "personal-drive-1",
         "status": "active",
         "last_verified_at": connection.json()["last_verified_at"],
+        "capability_state": "read-only",
+        "read_available": True,
+        "appfolder_write_available": False,
     }
 
     url = (
@@ -220,6 +223,9 @@ def test_absent_connection_is_a_safe_authenticated_read(
         "drive_id": None,
         "status": "not_connected",
         "last_verified_at": None,
+        "capability_state": "reconsent-required",
+        "read_available": False,
+        "appfolder_write_available": False,
     }
 
 
