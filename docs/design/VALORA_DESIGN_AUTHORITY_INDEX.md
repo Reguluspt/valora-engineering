@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-12 (PR-00 through PR-06 merged; PR-07 contract/ADR is the next runtime gate)
+**Reconciled:** 2026-09-21 (G8 offline Exchange complete on Draft PR #32; ADR 0045 + Working Change Observation design authority accepted)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -37,6 +37,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
 | ADR 0036 | Computed Global Case State projection | Accepted foundation; PR-01 computed-on-read runtime is implemented and accepted; resume persistence remains deferred |
 | ADR 0037 | Durable Official Intake commit | Accepted foundation; the durable official-intake fact and command feed the implemented PR-01 provider |
+| ADR 0045 | Working-copy change observation and human-confirmed document revision | Automatic notification/delta/revalidation may create Change Candidates and recommendations; authoritative business mutation and Revision N+1 require explicit human-confirmed commit. Supersedes ADR 0044 only for immediate DOCX Working re-import promotion semantics. |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
