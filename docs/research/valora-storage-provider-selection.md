@@ -1,7 +1,7 @@
 # VALORA immutable document-storage provider selection
 
 **Start time:** 2026-09-19, Asia/Saigon
-**Status:** amended 2026-09-19 — S3 adapter locally ready; live AWS run not authorized
+**Status:** superseded by [valora-storage-provider-selection-2.md](valora-storage-provider-selection-2.md)
 **Task:** `VALORA-STORAGE-ARCH-001`
 
 ## Initial purpose

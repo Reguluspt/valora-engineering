@@ -1,8 +1,20 @@
 # VALORA-STORAGE-S3-SPIKE-001 — Isolated AWS S3 create-only/checksum spike
 
-**Status:** OPEN — G4 STATIC REVIEW READY; LIVE AWS ACTIVITY CLOSED
+**Status:** CLOSED/DEFERRED BY PRODUCT OWNER BEFORE LIVE G5 INVOCATION
 **Opened:** 2026-09-19, Asia/Saigon
 **Authority:** ADR 0043/D11 and Product Owner instruction on 2026-09-19
+
+## Product Owner closure — 2026-09-20
+
+G1, G2 and G3 are complete. G4 static review is complete and all implementation/evidence is
+retained. G5 live AWS was **NOT RUN** and G6 production/provider selection was **NOT RUN** because
+the Product Owner selected a different deployment path for the current phase.
+
+No AWS account/resource was created, no AWS credential was used and no STS/S3/IAM/KMS call was
+made. No live AWS provider claim was established. AWS remains an available future adapter/reference;
+it was not rejected or found incompatible, and it is not selected as the current production
+provider. The current pilot path is recorded in
+[the successor decision](../research/valora-storage-provider-selection-2.md).
 
 ## Goal
 
@@ -199,9 +211,9 @@ Failure returns to architecture review. It does not silently switch to Azure or 
    harness, policy templates, cleanup manifest/runbook and action-time checklist are frozen. On the
    corrected 21-file snapshot, DeepSeek v4.1 Flash and Gemini 3.1 Pro High both returned `READY`
    with no P0–P3 finding. No live boundary or AWS request is approved.
-5. **G5 — action-time approval:** explicit authorization for one invocation only, no retry.
-6. **G6 — evidence and closure:** sanitized AWS observations, complete cleanup proof, regression
-   results and a recommendation. Production-provider selection remains a separate decision.
+5. **G5 — action-time approval/live invocation: NOT RUN; CLOSED/DEFERRED BY PRODUCT OWNER.**
+6. **G6 — live evidence/provider selection: NOT RUN.** No AWS production/provider conclusion was
+   reached; the G1-G4 static implementation and evidence remain available for a future decision.
 
 ## G2/G3 local evidence
 

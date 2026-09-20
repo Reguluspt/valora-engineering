@@ -20,12 +20,14 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Completed read-only provider clarification plan](plan/done/pr07-provider-clarification-read-only.md) — public sources remain undocumented; no provider mutation occurred.
 - [Provider clarification public-source result](research/pr07-provider-clarification-public-sources.md) — six-question status table and unmet reopen trigger.
 - [Sanitized Microsoft clarification packet](ref/pr07-provider-clarification-question-packet.md) — submitted to public Microsoft Q&A on 2026-09-19; response pending.
-- [Accepted ADR 0043 storage successor](adr/0043-app-owned-immutable-document-storage.md) — Model A, ten-year retention, policy purge, customer-managed encryption and recovery targets; the local fake is accepted and the isolated S3 plan is open while live AWS remains closed.
+- [Accepted ADR 0043 storage successor](adr/0043-app-owned-immutable-document-storage.md) — DB/CurrentHead authority, immutable blob invariants and the current local-VPS pilot amendment; long-term production encryption/recovery targets remain unproven.
 - [Document Blob Storage contract](implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md) — accepted narrow provider port, normalized persistence, DB CAS and T1–T14 recovery matrix for the local fake task.
 - [Completed storage architecture task](plan/done/valora-storage-arch-001.md) — accepted policy baseline and the bounded next gate.
 - [Completed storage fake task](plan/done/valora-storage-fake-001.md) — provider-neutral persistence, deterministic fake, PostgreSQL DB CAS and T1–T14 proof accepted with no cloud calls.
-- [Active isolated S3 spike](plan/valora-storage-s3-spike-001.md) — G2/G3 are complete; the [G4 preflight packet](implementation/VALORA_STORAGE_S3_G4_PREFLIGHT_PACKET.md) freezes the independently reviewed no-network harness and intended live boundary. G4 is static-ready; G5/G6, credentials, AWS requests and cloud cost remain closed.
-- [Provider selection and economics](research/valora-storage-provider-selection.md) — AWS S3 selected only for the isolated spike; production provider remains open.
+- [Deferred isolated S3 spike](plan/valora-storage-s3-spike-001.md) — G1-G4 static evidence is retained; G5 live AWS and G6 provider selection were not run after the Product Owner changed the current deployment path.
+- [Current pilot storage/OneDrive decision](research/valora-storage-provider-selection-2.md) — local authoritative immutable blobs plus independent non-authoritative OneDrive Exchange and encrypted Backup roles.
+- [Local provider task awaiting G6](plan/valora-storage-local-001.md) — Linux atomic create-only adapter passed T1-T14/L1-L17 and awaits two independent reviews; Exchange and Backup remain later separate gates.
+- [Superseded provider-spike selection](research/valora-storage-provider-selection.md) — historical AWS/Azure comparison and AWS G1-G4 preparation rationale.
 - [Storage policy decision](research/pr07-storage-fallback-options-2.md) — Model A and the accepted retention, deletion, encryption and recovery baseline; links the superseded initial fallback research.
 - [Accepted ADR 0042](adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md) and [accepted sync/conflict contract](implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md).
 - [Provider-conformance runbook](implementation/VALORA_UIUX_V2_3_PR07_PROVIDER_CONFORMANCE_RUNBOOK.md) — historical/current execution evidence; PR-07 runtime remains blocked.

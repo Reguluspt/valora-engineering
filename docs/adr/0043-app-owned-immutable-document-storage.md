@@ -1,7 +1,7 @@
 # ADR 0043 — App-owned immutable document storage
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 STATIC REVIEW READY; LIVE AWS CLOSED
-**Date:** 2026-09-19
+**Status:** AMENDED — LOCAL VPS G5 PROVED; INDEPENDENT G6 REVIEW PENDING
+**Date:** 2026-09-20
 **Task:** `VALORA-STORAGE-ARCH-001`
 
 ## Context
@@ -168,10 +168,38 @@ commit, conditional headers and strong managed-identity integration. Production 
 blocked on residency, operations, account ownership, cost and spike evidence; the accepted
 encryption and recovery targets constrain whichever provider is later selected.
 
-## Export policy
+### D12. Current-phase VPS storage and two independent OneDrive roles
 
-The Product Owner selected Model A. A user may later perform an explicit import through a separately
-accepted intake flow, but this ADR authorizes no export-to-re-import workflow and no automatic sync.
+For development, test, pilot and the current small single-user deployment phase, the Product Owner
+selected app-owned local immutable blob storage on the VALORA VPS. PostgreSQL remains authoritative
+for revisions, CurrentHead and storage execution/binding state; the local provider holds the exact
+authoritative revision bytes behind the unchanged `DocumentBlobStore` port.
+
+OneDrive Personal is never authoritative and is not a required dependency for verified local reads.
+It has two independent, explicitly separated roles:
+
+- **Exchange:** `VALORA/Exchange/Inbox`, `Working` and `Exports` hold mutable external files for
+  explicit import, Word/Excel editing and export. A Save changes only the OneDrive file. Creating a
+  new `DocumentRevision` requires an explicit VALORA import/re-import command that stores exact bytes
+  in the app-owned blob store and wins the existing CurrentHead CAS.
+- **Backup:** `VALORA/Backup/<deployment-id>` receives only encrypted repository data covering valid
+  PostgreSQL dumps and authoritative blobs. Backup content is not browsed as working documents and
+  Exchange content is not evidence of backup.
+
+Exchange or Backup authentication/transport failure must not break authoritative reads or unrelated
+VALORA business transactions.
+
+This phase does not satisfy or replace D10's future production encryption/recovery requirements. A
+single VPS is one failure domain and local filesystem immutability is not hardware WORM. The AWS
+adapter and G1-G4 static evidence remain future references, but AWS G5/G6 are deferred and provide no
+live provider or production-selection claim.
+
+## Exchange policy
+
+The Product Owner retains Model A authority semantics while authorizing a separately gated Exchange
+workflow. Inbox import and Working re-import are explicit VALORA mutations; Export and Word/Excel
+Save are not. OneDrive rename, move, edit or deletion cannot mutate authoritative bytes or
+CurrentHead. No automatic sync or save-triggered revision is authorized.
 
 ## Required architecture validation
 
@@ -227,15 +255,18 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 
 | Gate | Owner | Current state |
 |---|---|---|
-| Exported-copy semantics | Product Owner | ACCEPTED — Model A export-only |
+| Exchange semantics | Product Owner | ACCEPTED — Inbox/Working/Exports are non-authoritative; import/re-import is explicit |
 | Retention and legal hold | Product Owner | ACCEPTED — minimum ten years plus legal hold |
 | Finalized-revision deletion | Product Owner | ACCEPTED — no ordinary hard delete; audited policy purge only |
 | Encryption/key ownership | Product Owner | ACCEPTED TARGET — server-side, VALORA-controlled customer-managed key |
 | Recovery objectives | Product Owner | ACCEPTED TARGET — RPO <= 15 minutes; RTO <= 4 hours |
 | Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
-| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G2/G3 COMPLETE at `5f3ab7f`; G4 corrected boundary/harness passed both static reviewers; G5/G6 and AWS remain closed |
-| Production provider selection | Architecture/Product Owner | OPEN after fake + spike evidence |
+| S3 isolated-spike plan and account boundary | Product Owner/Engineering | G1-G4 complete/static evidence retained; G5 live AWS NOT RUN; closed/deferred by Product Owner before invocation |
+| Current pilot provider | Product Owner/Engineering | LOCAL FILESYSTEM selected; G5 local proof passed, independent G6 review pending |
+| OneDrive Exchange | Product Owner/Engineering | Separately gated; existing read/adopt/revalidation is partial and live OAuth/write activity is not authorized |
+| Off-site backup transport | Product Owner/Engineering | Separate encrypted Backup namespace selected; implementation/live OAuth not yet accepted |
+| Production provider selection | Architecture/Product Owner | NOT RUN; no AWS production-provider claim |
 
 ## Owner decision record
 
@@ -245,6 +276,12 @@ authorized `VALORA-STORAGE-FAKE-001`. This authority covers only the smallest lo
 provider-neutral fake and T1–T14 validation needed to prove the contract. It does not authorize AWS
 credentials or requests, a production provider or residency decision, real customer data, a
 production rollout/migration, PR-08, deployment or release.
+
+On 2026-09-20, the Product Owner selected the current VPS pilot path: local authoritative immutable
+blobs plus two separate non-authoritative OneDrive Personal roles, Exchange and encrypted Backup.
+The decision closed/deferred AWS before G5, retained all G1-G4 evidence and opened
+`VALORA-STORAGE-LOCAL-001`; Exchange and Backup remain later independent gates. It does not authorize
+live OneDrive OAuth, deployment or production claims.
 
 ## Amendments
 
@@ -261,6 +298,13 @@ production rollout/migration, PR-08, deployment or release.
   Commit `5f3ab7f6e159aec9cc84aaa24ed04445cbb1215f` was pushed and GitHub CI run `35448475149`
   passed on attempt 2. G4 later froze an intended boundary and action-time checks without contacting
   AWS; this remains non-live evidence and does not authorize G5.
+- 2026-09-20 · D10-D12 / Gate record: the Product Owner changed the current deployment path before
+  any live AWS invocation. G1-G4 static/provider preparation evidence is retained; G5 and G6 were
+  not run, no live AWS conformance or provider-selection claim exists, and AWS remains a future
+  adapter/reference. The current pilot path is app-owned local immutable blobs on the VPS, with
+  separately gated OneDrive Exchange and encrypted Backup roles. Neither role is authoritative and
+  neither may be confused with the other. The single VPS is not HA/WORM and the long-term RPO/RTO
+  targets remain unproven.
 
 ## References
 

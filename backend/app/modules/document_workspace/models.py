@@ -298,7 +298,9 @@ class DocumentStorageCandidate(Base, UUIDMixin):
             name="fk_storage_candidate_intent_tenant",
             ondelete="RESTRICT",
         ),
-        CheckConstraint("provider_kind IN ('fake')", name="chk_storage_candidate_provider"),
+        CheckConstraint(
+            "provider_kind IN ('fake', 'local')", name="chk_storage_candidate_provider"
+        ),
         CheckConstraint("byte_length >= 0", name="chk_storage_candidate_size"),
         CheckConstraint(
             "length(trim(storage_profile_id)) > 0 AND length(trim(container_name)) > 0 "
@@ -461,7 +463,9 @@ class StorageObjectBinding(Base, UUIDMixin):
             name="fk_storage_binding_candidate_integrity",
             ondelete="RESTRICT",
         ),
-        CheckConstraint("provider_kind IN ('fake')", name="chk_storage_binding_provider"),
+        CheckConstraint(
+            "provider_kind IN ('fake', 'local')", name="chk_storage_binding_provider"
+        ),
         CheckConstraint("checksum_algorithm = 'SHA256'", name="chk_storage_binding_checksum_algorithm"),
         CheckConstraint("byte_length >= 0", name="chk_storage_binding_size"),
         CheckConstraint(

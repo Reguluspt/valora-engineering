@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-19 (project AI execution policy persisted; storage G4 remains task-gated)
+**Last reconciled:** 2026-09-20 (local authority plus separate OneDrive Exchange/Backup paths)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -49,6 +49,14 @@ PR-07 through PR-13 — NOT IMPLEMENTED. PR-07 runtime is blocked on an accepted
 Software Completion — all authorized backend and frontend runtime through PR-13, operational entry, connected production surfaces and North-star E2E must pass on an exact merged candidate SHA before any Windows Preview runtime work begins.
 Windows Preview — `VALORA-WIN-PREVIEW-001` follows Software Completion and precedes cloud staging. It packages the already-complete product for isolated Windows/Docker Desktop UAT and must not be used to discover or fill missing product implementation.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
+Storage current gate — `VALORA-STORAGE-S3-SPIKE-001` G1-G4 evidence is retained, but AWS G5/G6 were
+not run and AWS is not the selected current provider. `VALORA-STORAGE-LOCAL-001` has passed its local
+G5 proof and awaits independent G6 review. OneDrive Personal has two separately gated,
+non-authoritative roles: explicit document
+Exchange under `VALORA/Exchange/{Inbox,Working,Exports}` and encrypted off-site Backup under
+`VALORA/Backup/<deployment-id>`. Exchange is not backup, Backup is not a working-document surface,
+and Word/Excel Save never creates a VALORA revision. No AWS activity, live OneDrive OAuth, merge,
+deployment or production release is authorized by this gate.
 The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
 owner-authorized UI/UX track.
 ```

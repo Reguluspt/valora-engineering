@@ -99,10 +99,18 @@ def _prepare(ctx: dict[str, Any], *, key: str = "storage-intent-1") -> DocumentS
     )
 
 
-def _candidate(ctx: dict[str, Any], intent: DocumentStorageExecutionIntent, *, label: str = "A", object_key: str | None = None):
+def _candidate(
+    ctx: dict[str, Any],
+    intent: DocumentStorageExecutionIntent,
+    *,
+    label: str = "A",
+    object_key: str | None = None,
+    provider_kind: str = "fake",
+):
     content, checksum = _content(label)
     candidate = record_storage_candidate(
         ctx["db"], organization_id=intent.organization_id, intent_id=intent.id, content=content,
+        provider_kind=provider_kind,
         storage_profile_id="fake-local", container_name="valora-test",
         object_key=object_key or f"tenant/{intent.organization_id}/intent/{intent.id}",
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -385,6 +393,23 @@ def test_t12_cleanup_policy_and_legal_hold_block_provider_delete(storage_context
         assert storage_context["provider"].object_bytes(object_key=candidate.object_key) == content
 
 
+def test_t12_cleanup_rejects_configured_provider_mismatch(storage_context):
+    intent = _prepare(storage_context, key="cleanup-provider-mismatch")
+    content, candidate = _candidate(storage_context, intent)
+    _verify(storage_context, intent, content)
+    _state(storage_context, intent.id).current_state = "SUPERSEDED"
+    storage_context["db"].commit()
+    storage_context["provider"].provider_kind = "local"
+
+    with pytest.raises(HTTPException) as exc:
+        _cleanup(storage_context, intent)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail["error_code"] == "storage_provider_mismatch"
+    assert storage_context["provider"].calls["cleanup"] == 0
+    assert storage_context["provider"].object_bytes(object_key=candidate.object_key) == content
+
+
 def test_t13_repeated_recovery_is_idempotent_and_audit_transition_sequence_is_append_only(storage_context):
     intent = _prepare(storage_context, key="recovery-replay")
     content, _ = _candidate(storage_context, intent)
@@ -410,3 +435,34 @@ def test_t14_replayed_finalize_cannot_create_duplicate_document_revision(storage
     assert replay.id == first.id
     assert storage_context["db"].query(DocumentRevision).count() == 2
     assert _head(storage_context).current_revision_id == first.document_revision_id
+
+
+def test_local_provider_kind_persists_to_binding_and_replay_cannot_change_provider(
+    storage_context,
+):
+    intent = _prepare(storage_context, key="local-provider-kind")
+    content, candidate = _candidate(storage_context, intent, provider_kind="local")
+    assert candidate.provider_kind == "local"
+    with pytest.raises(HTTPException) as exc:
+        record_storage_candidate(
+            storage_context["db"],
+            organization_id=intent.organization_id,
+            intent_id=intent.id,
+            content=content,
+            provider_kind="fake",
+            storage_profile_id="fake-local",
+            container_name="valora-test",
+            object_key=candidate.object_key,
+            media_type=candidate.media_type,
+            generator_version=candidate.generator_version,
+        )
+    assert exc.value.status_code == 409
+    with pytest.raises(HTTPException) as provider_exc:
+        _verify(storage_context, intent, content)
+    assert provider_exc.value.status_code == 409
+    assert provider_exc.value.detail["error_code"] == "storage_provider_mismatch"
+
+    storage_context["provider"].provider_kind = "local"
+    _verify(storage_context, intent, content)
+    binding = _finalize(storage_context, intent)
+    assert binding.provider_kind == "local"

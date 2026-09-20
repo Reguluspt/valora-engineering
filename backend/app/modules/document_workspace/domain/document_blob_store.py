@@ -85,6 +85,8 @@ _FAKE_EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
 class DocumentBlobStore(Protocol):
     """The four operations required by the immutable-object contract."""
 
+    provider_kind: str
+
     async def create_immutable(
         self,
         *,
@@ -111,6 +113,8 @@ class DocumentBlobStore(Protocol):
 
 class InMemoryDocumentBlobStore:
     """Deterministic fake; faults are explicit and never infer provider success."""
+
+    provider_kind = "fake"
 
     def __init__(self) -> None:
         self._objects: dict[str, _FakeObject] = {}

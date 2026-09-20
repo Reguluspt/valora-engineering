@@ -1,7 +1,7 @@
 # VALORA Document Blob Storage contract
 
-**Status:** AMENDED — LOCAL FAKE ACCEPTED; S3 G4 STATIC REVIEW READY; LIVE AWS CLOSED
-**Date:** 2026-09-19
+**Status:** AMENDED — LOCAL VPS G5 PROVED; INDEPENDENT G6 REVIEW PENDING
+**Date:** 2026-09-20
 **Task:** `VALORA-STORAGE-ARCH-001`
 **Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
 
@@ -24,6 +24,9 @@ is recorded in the table and §8.1; the isolated S3 plan does not make the runti
 | PR-05/PR-06 OneDrive read/bind/revalidation foundation | Implemented |
 | `DocumentBlobStore` port and deterministic fake | Implemented and accepted locally |
 | AWS S3 adapter | Implemented and independently reviewed for local preparation; not wired or live-proven |
+| Linux local filesystem adapter | Implemented; T1-T14 and L1-L17 pass on Linux, independent G6 review pending |
+| OneDrive Personal Exchange | Existing read/adopt/revalidation foundation only; explicit authoritative import/re-import, Working and Export remain separately gated |
+| Encrypted OneDrive Personal backup | Not implemented; independent namespace and later gate |
 | Durable document-storage execution intent/state/events | Implemented and accepted locally |
 | Candidate object and `StorageObjectBinding` persistence | Implemented and accepted locally |
 | PR-07 protected values, conflict/write runtime and migrations | Not implemented; blocked |
@@ -104,8 +107,9 @@ preauthenticated URL or expose provider credentials to a client.
 - `UNAVAILABLE`;
 - `UNVERIFIABLE`.
 
-The adapter must not translate opaque/multipart eTags into SHA-256. It may return the eTag for
-diagnostics and conditional provider calls, but the domain accepts success only on `MATCH`.
+The adapter must not translate opaque/multipart eTags, filenames, paths, inode metadata or mtimes
+into SHA-256. It may return provider identity metadata for diagnostics and conditional provider
+calls, but the domain accepts success only on `MATCH`.
 
 ### 4.2 Create-only behavior
 
@@ -363,6 +367,31 @@ MinIO available. No AWS credential, endpoint or live request was used. Productio
 residency and production encryption operations remain unselected. The G4 packet freezes only the
 isolated spike's intended non-production boundary; every actual AWS value still requires the
 documented action-time verification and G5 approval.
+
+### 8.3 Product Owner deployment-path change
+
+On 2026-09-20 the Product Owner closed/deferred `VALORA-STORAGE-S3-SPIKE-001` before G5. G1-G4
+static/provider preparation evidence is retained, G5 live AWS was not run and G6 production/provider
+selection was not run. No live AWS conformance claim exists; AWS is neither rejected nor selected as
+the current production provider.
+
+The current development/test/pilot path opens a Linux local-filesystem adapter behind this unchanged
+port. It must prove atomic no-replace final publication, full streamed SHA-256/length verification,
+root/path/symlink containment, bounded orphan cleanup and L1-L17 while preserving T1-T14 and the DB
+CurrentHead CAS. The selected adapter exposes an immutable `provider_kind`; application create,
+recovery and cleanup reject a persisted-candidate mismatch before provider I/O.
+
+Local staging-orphan handling is deliberately operator-bounded. The adapter inventories only exact
+regular staging tokens without following links and deletes only an explicitly selected exact token.
+No business-request path performs an automatic sweep; pilot operations must run cleanup only while
+writers are quiescent or after a separately accepted age/ownership policy.
+
+OneDrive Personal remains outside this port and has two separately gated non-authoritative roles.
+Exchange uses `VALORA/Exchange/{Inbox,Working,Exports}` and can create authority only through an
+explicit VALORA import/re-import command that stores bytes through this port and wins CurrentHead
+CAS. Backup uses `VALORA/Backup/<deployment-id>` for encrypted repository data only. OneDrive Save,
+Export, rename, move or delete never directly updates CurrentHead; Exchange is not backup, and Backup
+is not a working-document surface.
 
 ## 9. Security and operational constraints
 

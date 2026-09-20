@@ -58,7 +58,9 @@ def _postgres_url() -> URL:
     return source
 
 
-def _run_alembic(database_url: URL, *arguments: str) -> None:
+def _alembic_result(
+    database_url: URL, *arguments: str
+) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment.update(
         {
@@ -70,7 +72,7 @@ def _run_alembic(database_url: URL, *arguments: str) -> None:
             "POSTGRES_PASSWORD": database_url.password or "",
         }
     )
-    result = subprocess.run(
+    return subprocess.run(
         [sys.executable, "-m", "alembic", *arguments],
         cwd=Path(__file__).parents[1],
         env=environment,
@@ -78,6 +80,10 @@ def _run_alembic(database_url: URL, *arguments: str) -> None:
         text=True,
         check=False,
     )
+
+
+def _run_alembic(database_url: URL, *arguments: str) -> None:
+    result = _alembic_result(database_url, *arguments)
     if result.returncode != 0:
         pytest.fail(f"Alembic {' '.join(arguments)} failed:\n{result.stdout}\n{result.stderr}")
 
@@ -136,6 +142,7 @@ def _candidate_and_verify(
     content, checksum = _content(label)
     candidate = record_storage_candidate(
         db, organization_id=ctx["organization_id"], intent_id=intent_id, content=content,
+        provider_kind="fake",
         storage_profile_id="fake-local", container_name="valora-test",
         object_key=f"tenant/{ctx['organization_id']}/intent/{intent_id}",
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -267,33 +274,93 @@ def test_s5_storage_migration_roundtrip_restores_tables_and_checksum_constraint(
         "storage_object_bindings",
     }
 
-    def artifacts() -> tuple[set[str], set[str]]:
+    def artifacts() -> tuple[set[str], set[str], dict[str, str]]:
         engine = create_engine(postgres_storage_database, connect_args={"connect_timeout": 5})
         try:
             with engine.connect() as connection:
                 inspector = inspect(connection)
+                tables = set(inspector.get_table_names())
                 return (
-                    set(inspector.get_table_names()),
+                    tables,
                     {
                         constraint["name"]
                         for constraint in inspector.get_unique_constraints("document_revisions")
                     },
+                    (
+                        {
+                            constraint["name"]: constraint["sqltext"]
+                            for constraint in inspector.get_check_constraints(
+                                "document_storage_candidates"
+                            )
+                        }
+                        if "document_storage_candidates" in tables
+                        else {}
+                    ),
                 )
         finally:
             engine.dispose()
 
     _run_alembic(postgres_storage_database, "upgrade", "b7c8d9e0f1a2")
     _run_alembic(postgres_storage_database, "upgrade", "head")
-    tables, constraints = artifacts()
+    tables, constraints, checks = artifacts()
     assert storage_tables <= tables
     assert "uq_document_revision_content_checksum" in constraints
+    assert "'local'" in checks["chk_storage_candidate_provider"]
 
     _run_alembic(postgres_storage_database, "downgrade", "a6d9e4c2b8f1")
-    tables, constraints = artifacts()
+    tables, constraints, _ = artifacts()
     assert storage_tables.isdisjoint(tables)
     assert "uq_document_revision_content_checksum" not in constraints
 
     _run_alembic(postgres_storage_database, "upgrade", "head")
-    tables, constraints = artifacts()
+    tables, constraints, checks = artifacts()
     assert storage_tables <= tables
     assert "uq_document_revision_content_checksum" in constraints
+    assert "'local'" in checks["chk_storage_candidate_provider"]
+
+
+def test_local_provider_migration_refuses_downgrade_while_local_rows_exist(
+    postgres_storage_database: URL,
+) -> None:
+    _run_alembic(postgres_storage_database, "upgrade", "head")
+    engine = create_engine(postgres_storage_database, connect_args={"connect_timeout": 5})
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("SET LOCAL session_replication_role = replica"))
+            connection.execute(
+                text(
+                    "INSERT INTO document_storage_candidates "
+                    "(id, organization_id, execution_intent_id, storage_profile_id, "
+                    "provider_kind, container_name, object_key, content_sha256, byte_length, "
+                    "media_type, generator_version) VALUES "
+                    "(:id, :organization_id, :intent_id, 'local-test', 'local', "
+                    "'local', 'tenant/test', :checksum, 0, 'application/octet-stream', 'test')"
+                ),
+                {
+                    "id": uuid.uuid4(),
+                    "organization_id": uuid.uuid4(),
+                    "intent_id": uuid.uuid4(),
+                    "checksum": "0" * 64,
+                },
+            )
+
+        result = _alembic_result(
+            postgres_storage_database, "downgrade", "b7c8d9e0f1a2"
+        )
+        output = f"{result.stdout}\n{result.stderr}"
+        assert result.returncode != 0
+        assert "cannot downgrade while local document blob rows exist" in output
+
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
+                "b8d9e0f1a2b3"
+            )
+            checks = {
+                constraint["name"]: constraint["sqltext"]
+                for constraint in inspect(connection).get_check_constraints(
+                    "document_storage_candidates"
+                )
+            }
+        assert "'local'" in checks["chk_storage_candidate_provider"]
+    finally:
+        engine.dispose()

@@ -115,6 +115,8 @@ def _read_digest(body: Any) -> tuple[str, int]:
 class AwsS3DocumentBlobStore:
     """Narrow AWS S3 implementation of the four-operation document blob port."""
 
+    provider_kind = "aws"
+
     def __init__(
         self,
         *,

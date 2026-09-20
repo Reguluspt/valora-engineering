@@ -6,6 +6,7 @@ import re
 import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime
+from typing import Literal
 
 from fastapi import HTTPException
 from sqlalchemy import update
@@ -86,6 +87,21 @@ def _require_sha256(db: Session, value: str, field: str) -> str:
     if not _SHA256_RE.fullmatch(value):
         _abort(db, 422, "invalid_sha256", f"{field} is invalid.")
     return value
+
+
+def _require_matching_provider(
+    db: Session,
+    *,
+    candidate: DocumentStorageCandidate,
+    blob_store: DocumentBlobStore,
+) -> None:
+    if blob_store.provider_kind != candidate.provider_kind:
+        _abort(
+            db,
+            409,
+            "storage_provider_mismatch",
+            "Configured storage provider does not match the persisted candidate.",
+        )
 
 
 def _intent_by_key(
@@ -284,6 +300,7 @@ def record_storage_candidate(
     organization_id: uuid.UUID,
     intent_id: uuid.UUID,
     content: bytes,
+    provider_kind: Literal["fake", "local"],
     storage_profile_id: str,
     container_name: str,
     object_key: str,
@@ -294,6 +311,8 @@ def record_storage_candidate(
     intent = db.get(DocumentStorageExecutionIntent, intent_id)
     if intent is None or intent.organization_id != organization_id:
         _abort(db, 404, "storage_intent_not_found", "Storage intent was not found.")
+    if provider_kind not in {"fake", "local"}:
+        _abort(db, 422, "storage_candidate_invalid", "Storage provider is invalid.")
     content_sha256 = hashlib.sha256(content).hexdigest()
     normalized_fields = tuple(
         value.strip()
@@ -314,6 +333,7 @@ def record_storage_candidate(
     )
     if existing is not None:
         persisted_identity = (
+            existing.provider_kind,
             existing.storage_profile_id,
             existing.container_name,
             existing.object_key,
@@ -323,7 +343,7 @@ def record_storage_candidate(
         if (
             existing.content_sha256 != content_sha256
             or existing.byte_length != len(content)
-            or persisted_identity != normalized_fields
+            or persisted_identity != (provider_kind, *normalized_fields)
         ):
             _abort(db, 409, "storage_candidate_conflict", "Storage candidate differs from replay.")
         db.commit()
@@ -335,7 +355,7 @@ def record_storage_candidate(
         organization_id=organization_id,
         execution_intent_id=intent_id,
         storage_profile_id=normalized_profile,
-        provider_kind="fake",
+        provider_kind=provider_kind,
         container_name=normalized_container,
         object_key=normalized_key,
         content_sha256=content_sha256,
@@ -411,6 +431,7 @@ async def create_or_recover_storage_object(
     )
     if intent is None or candidate is None or intent.organization_id != organization_id:
         _abort(db, 404, "storage_candidate_not_found", "Storage candidate was not found.")
+    _require_matching_provider(db, candidate=candidate, blob_store=blob_store)
     object_key = candidate.object_key
     content_sha256 = candidate.content_sha256
     byte_length = candidate.byte_length
@@ -735,6 +756,8 @@ async def cleanup_uncommitted_candidate(
         .filter_by(organization_id=organization_id, execution_intent_id=intent_id)
         .first()
     )
+    if candidate is not None:
+        _require_matching_provider(db, candidate=candidate, blob_store=blob_store)
     state = _state(db, intent=intent, lock=False)
     bound = (
         db.query(StorageObjectBinding.id)
