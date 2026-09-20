@@ -189,6 +189,16 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
     }
   };
 
+  const upgradeExchange = async () => {
+    setSectionError(null);
+    try {
+      const authorizationUrl = await beginOneDriveAuthorization("exchange_write");
+      window.location.assign(authorizationUrl);
+    } catch {
+      setSectionError("Chưa thể bắt đầu cấp quyền Exchange. Vui lòng thử lại.");
+    }
+  };
+
   const adopt = async () => {
     if (!options || !selectedFile || !templateId || !title.trim()) return;
     setAdopting(true);
@@ -232,7 +242,11 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
     <main className="m365-page">
       <header className="m365-header">
         <div>
-          <p>ONEDRIVE PERSONAL · READ-ONLY INTEGRATION</p>
+          <p>
+            {connection.appfolder_write_available
+              ? "ONEDRIVE PERSONAL · EXCHANGE WRITE READY"
+              : "ONEDRIVE PERSONAL · READ + REVALIDATION"}
+          </p>
           <h1>{projectName}</h1>
           <span>Mở trong Word, quay lại Valora và kiểm tra thay đổi có kiểm soát.</span>
         </div>
@@ -240,6 +254,29 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
       </header>
 
       {sectionError && <div className="m365-inline-error" role="alert">{sectionError}</div>}
+
+      {connection.status === "active" && (
+        <section className="m365-exchange-notice" aria-label="Quy tắc Exchange">
+          <div>
+            <strong>Lưu trong Word/Excel chưa cập nhật VALORA.</strong>
+            <span>Chỉ “Nhập thay đổi” mới bắt đầu kiểm tra và ghi nhận.</span>
+          </div>
+          {connection.appfolder_write_available ? (
+            <ul aria-label="Khả năng Exchange khả dụng">
+              <li>Nhận tệp</li>
+              <li>Bản làm việc</li>
+              <li>Nhập thay đổi</li>
+              <li>Xuất sang OneDrive</li>
+            </ul>
+          ) : canAdopt ? (
+            <button onClick={() => void upgradeExchange()} type="button">
+              Cần cấp quyền Exchange
+            </button>
+          ) : (
+            <span>Cần cấp quyền Exchange từ người có quyền cập nhật hồ sơ.</span>
+          )}
+        </section>
+      )}
 
       {connection.status !== "active" ? (
         <section className="m365-connect-panel">

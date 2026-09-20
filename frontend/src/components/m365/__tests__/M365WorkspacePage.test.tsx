@@ -91,6 +91,9 @@ describe("M365WorkspacePage", () => {
       drive_id: "drive-1",
       status: "active",
       last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "read-only",
+      read_available: true,
+      appfolder_write_available: false,
     });
     api.getAdoptionOptions.mockResolvedValue({
       project_id: "project-1",
@@ -299,5 +302,45 @@ describe("M365WorkspacePage", () => {
 
     expect(JSON.stringify(root.toJSON())).toContain("OneDrive Personal đã sẵn sàng");
     expect(api.getOneDriveConnection).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Exchange write actions behind explicit reconsent", async () => {
+    api.listOperationalDocuments.mockResolvedValue([]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("READ + REVALIDATION");
+    expect(text).toContain("Cần cấp quyền Exchange");
+    expect(text).toContain("Lưu trong Word/Excel chưa cập nhật VALORA");
+    const upgrade = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Cần cấp quyền Exchange"),
+    );
+    await act(async () => upgrade.props.onClick());
+    expect(api.beginOneDriveAuthorization).toHaveBeenCalledWith("exchange_write");
+  });
+
+  it("shows bounded Exchange capabilities only for an AppFolder grant", async () => {
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "exchange-write-ready",
+      read_available: true,
+      appfolder_write_available: true,
+    });
+    api.listOperationalDocuments.mockResolvedValue([]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("EXCHANGE WRITE READY");
+    expect(text).toContain("Bản làm việc");
+    expect(text).toContain("Nhập thay đổi");
+    expect(text).toContain("Xuất sang OneDrive");
+    expect(text).not.toContain("Cần cấp quyền Exchange");
   });
 });

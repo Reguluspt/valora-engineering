@@ -13,6 +13,9 @@ export interface OneDriveConnection {
   drive_id: string | null;
   status: OneDriveConnectionStatus;
   last_verified_at: string | null;
+  capability_state: "read-only" | "exchange-write-ready" | "reconsent-required";
+  read_available: boolean;
+  appfolder_write_available: boolean;
 }
 
 export interface AdoptionTemplate {
@@ -99,9 +102,11 @@ export async function getOneDriveConnection(): Promise<OneDriveConnection> {
   return request<OneDriveConnection>("/api/v1/m365/onedrive/connection");
 }
 
-export async function beginOneDriveAuthorization(): Promise<string> {
+export async function beginOneDriveAuthorization(
+  scopeProfile: "read_only" | "exchange_write" = "read_only",
+): Promise<string> {
   const result = await request<{ authorization_url: string }>(
-    "/api/v1/m365/onedrive/authorize",
+    `/api/v1/m365/onedrive/authorize?scope_profile=${scopeProfile}`,
     { method: "POST" },
   );
   return result.authorization_url;

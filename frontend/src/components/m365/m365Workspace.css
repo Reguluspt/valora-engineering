@@ -69,6 +69,36 @@
   color: #ffbbb4;
 }
 
+.m365-exchange-notice {
+  align-items: center;
+  background: #fff8e8;
+  border: 1px solid #d8c58f;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.m365-exchange-notice div {
+  display: grid;
+  gap: 4px;
+}
+
+.m365-exchange-notice ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.m365-exchange-notice li {
+  border: 1px solid currentColor;
+  font-size: 0.75rem;
+  padding: 5px 8px;
+}
+
 .m365-connect-panel {
   display: flex;
   justify-content: space-between;
