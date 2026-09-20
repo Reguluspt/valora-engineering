@@ -110,6 +110,39 @@ Hard rules: quay lại VALORA không đồng nghĩa Word đã đổi; revalidati
 
 **Visual baseline `M365 Return & Revalidation — Iteration 1` đã được explicit chốt ngày 01/09/2026.** Board authority gồm: high-level return flow; 5 semantic outcome cards; state UI patterns; three-way comparison; conflict decision surface; background revalidation indicator; mandatory principles. Nếu wording minh họa mâu thuẫn semantic contract, contract thắng.
 
+## 1.4A Working Change Observation / Change Candidate / Human Commit — Baseline Contract v1
+
+Product Owner chốt automatic observation cho Working copy nhưng giữ human authority tại business write boundary.
+
+Canonical flow:
+
+```text
+VALORA Revision N
+→ tạo Working copy
+→ user sửa + Save trong Word
+→ notification/focus/freshness trigger
+→ AUTO REVALIDATION
+→ verify provider item/content
+→ Managed Region diff
+→ Old / V / W
+→ Change Candidate + recommendation
+→ Xem & xác nhận thay đổi
+→ domain decision / accepted document-version plan
+→ Revision N+1
+```
+
+`DocumentRevision` có nghĩa là phiên bản tài liệu mà VALORA đã chính thức chấp nhận; không đồng nhất với Word Save, M365 file version, notification, revalidation hoặc checksum change.
+
+Automatic processing được phép quan sát, tải bounded verified content, fingerprint/diff, tạo candidate và đề xuất. Nó không được tự mutate authoritative business data, resolve conflict, advance CurrentHead, tạo revision hoặc publish.
+
+Word-only Managed Region edit (`Old=V, W!=Old`) là proposal/review case, không phải three-way conflict giả. True conflict là `V!=Old, W!=Old, V!=W` và cần explicit human decision. Candidate stale/superseded phải re-review trước commit.
+
+Working Change Observation không tạo canonical stage thứ 17. Nó feed vào `DOCUMENT_WORKSPACE`, `DOCUMENT_SYNC_REVIEW` và Publishing readiness. Preferred user-facing label của `DOCUMENT_SYNC_REVIEW` là `Rà soát thay đổi tài liệu` / `Xem lại thay đổi & tạo phiên bản mới`.
+
+Preferred UX: `Đã phát hiện thay đổi từ Word → Xem & xác nhận thay đổi`; fallback `Kiểm tra thay đổi`. `Nhập thay đổi` nếu còn dùng chỉ có nghĩa bắt đầu review pipeline, không phải immediate `NEXT_REVISION`.
+
+Design authority chi tiết: `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md`. Architecture authority: ADR 0045.
+
 ## 1.5 Audit / Lineage Entry-point Consistency — Baseline Contract v1 + Visual Iteration 1
 Contract này khóa cách người dùng đi từ một business object/context sang đúng traceability surface. Đây là cross-product navigation/traceability pattern, không phải workflow checkpoint, không phải business commit và không tạo một màn `Audit toàn hệ thống`.
 
@@ -177,6 +210,8 @@ VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, D
 
 Return/Revalidation authority: external Word return phải revalidate M365 state trước mutation phụ thuộc freshness; M365 version mới không tự tạo Document Revision; Managed Region changes dùng three-way semantics và explicit conflict handling khi cần.
 
+Working Change Observation authority: provider notification chỉ là change signal; VALORA tự động revalidate/diff và tạo non-authoritative Change Candidate; human-confirmed business write boundary mới được tạo Revision N+1. Notification loss làm giảm timeliness, không được làm giảm correctness.
+
 Document/Release traceability entry-points tuân Audit/Lineage Contract: mở đúng history/source/decision/version/manifest surface theo câu hỏi nghiệp vụ và giữ document/revision/release return context.
 
 ## 6. Publishing
@@ -186,4 +221,4 @@ Không màn khóa riêng, không Export PDF.
 Release traceability dùng `Xem Release Manifest` làm entry point chuyên trách; không thay bằng generic Audit timeline.
 
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context; traceability context-first, giữ return target và không dựng `Audit toàn hệ thống`.
+Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; automatic Working-copy observation/analysis nhưng không automatic authoritative commit; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context; traceability context-first, giữ return target và không dựng `Audit toàn hệ thống`.
