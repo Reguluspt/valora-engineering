@@ -210,9 +210,15 @@ class DocumentStorageExecutionIntent(Base, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     document_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    expected_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    intent_kind: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="NEXT_REVISION"
+    )
+    expected_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     expected_document_revision: Mapped[int] = mapped_column(nullable=False)
     expected_content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    initial_data_snapshot_digest_sha256: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     plan_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -253,9 +259,23 @@ class DocumentStorageExecutionIntent(Base, UUIDMixin):
             name="fk_storage_intent_actor_tenant",
             ondelete="RESTRICT",
         ),
-        CheckConstraint("expected_document_revision > 0", name="chk_storage_intent_revision"),
+        CheckConstraint(
+            "(intent_kind = 'NEXT_REVISION' AND expected_revision_id IS NOT NULL "
+            "AND expected_document_revision > 0 "
+            "AND initial_data_snapshot_digest_sha256 IS NULL) OR "
+            "(intent_kind = 'INITIAL_REVISION' AND expected_revision_id IS NULL "
+            "AND expected_document_revision = 0 "
+            "AND initial_data_snapshot_digest_sha256 IS NOT NULL)",
+            name="chk_storage_intent_revision",
+        ),
         CheckConstraint("length(trim(idempotency_key)) > 0", name="chk_storage_intent_idempotency"),
         CheckConstraint(_sha256_check("expected_content_sha256"), name="chk_storage_intent_content"),
+        CheckConstraint(
+            "initial_data_snapshot_digest_sha256 IS NULL OR ("
+            + _sha256_check("initial_data_snapshot_digest_sha256")
+            + ")",
+            name="chk_storage_intent_initial_snapshot",
+        ),
         CheckConstraint(_sha256_check("request_digest_sha256"), name="chk_storage_intent_request"),
         CheckConstraint(_sha256_check("plan_digest_sha256"), name="chk_storage_intent_plan"),
         CheckConstraint(_sha256_check("decision_digest_sha256"), name="chk_storage_intent_decision"),

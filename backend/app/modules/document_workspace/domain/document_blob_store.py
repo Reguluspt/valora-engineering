@@ -39,6 +39,14 @@ class CleanupStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class BlobReadStatus(StrEnum):
+    MATCH = "MATCH"
+    MISMATCH = "MISMATCH"
+    ABSENT = "ABSENT"
+    UNAVAILABLE = "UNAVAILABLE"
+    REJECTED = "REJECTED"
+
+
 class InjectedStorageCrash(RuntimeError):
     """Test-only process interruption raised at a deterministic fake boundary."""
 
@@ -73,6 +81,14 @@ class CleanupResult:
 
 
 @dataclass(frozen=True)
+class VerifiedBlobRead:
+    status: BlobReadStatus
+    content: bytes | None = None
+    observed_sha256: str | None = None
+    observed_byte_length: int | None = None
+
+
+@dataclass(frozen=True)
 class _FakeObject:
     content: bytes
     version: str
@@ -83,7 +99,7 @@ _FAKE_EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 class DocumentBlobStore(Protocol):
-    """The four operations required by the immutable-object contract."""
+    """The narrow immutable-object write/recovery and bounded-read contract."""
 
     provider_kind: str
 
@@ -106,6 +122,15 @@ class DocumentBlobStore(Protocol):
         expected_byte_length: int,
     ) -> ChecksumVerification: ...
 
+    async def read_verified(
+        self,
+        *,
+        object_key: str,
+        expected_sha256: str,
+        expected_byte_length: int,
+        max_bytes: int,
+    ) -> VerifiedBlobRead: ...
+
     async def delete_uncommitted_or_expire(
         self, *, object_key: str, expected_sha256: str
     ) -> CleanupResult: ...
@@ -121,6 +146,7 @@ class InMemoryDocumentBlobStore:
         self._faults: dict[str, str] = {}
         self._version = 0
         self.calls = {"create": 0, "observe": 0, "verify": 0, "cleanup": 0}
+        self.calls["read"] = 0
 
     def set_fault(self, operation: str, outcome: str) -> None:
         self._faults[operation] = outcome
@@ -240,3 +266,34 @@ class InMemoryDocumentBlobStore:
             return CleanupResult(CleanupStatus.REJECTED)
         del self._objects[object_key]
         return CleanupResult(CleanupStatus.DELETED)
+
+    async def read_verified(
+        self,
+        *,
+        object_key: str,
+        expected_sha256: str,
+        expected_byte_length: int,
+        max_bytes: int,
+    ) -> VerifiedBlobRead:
+        self.calls["read"] += 1
+        if self._faults.get("read") == "unavailable":
+            return VerifiedBlobRead(BlobReadStatus.UNAVAILABLE)
+        if expected_byte_length < 0 or max_bytes < expected_byte_length:
+            return VerifiedBlobRead(BlobReadStatus.REJECTED)
+        stored = self._objects.get(object_key)
+        if stored is None:
+            return VerifiedBlobRead(BlobReadStatus.ABSENT)
+        content = stored.content
+        digest = hashlib.sha256(content).hexdigest()
+        if len(content) != expected_byte_length or digest != expected_sha256:
+            return VerifiedBlobRead(
+                BlobReadStatus.MISMATCH,
+                observed_sha256=digest,
+                observed_byte_length=len(content),
+            )
+        return VerifiedBlobRead(
+            BlobReadStatus.MATCH,
+            content=content,
+            observed_sha256=digest,
+            observed_byte_length=len(content),
+        )

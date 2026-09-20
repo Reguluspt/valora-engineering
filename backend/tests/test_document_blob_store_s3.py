@@ -21,6 +21,7 @@ from botocore.parsers import ResponseParserError
 from botocore.stub import ANY, Stubber
 
 from app.modules.document_workspace.domain.document_blob_store import (
+    BlobReadStatus,
     ChecksumVerificationStatus,
     CleanupStatus,
     CreateImmutableStatus,
@@ -407,6 +408,53 @@ def test_invalid_content_is_rejected_before_any_provider_write() -> None:
     result = asyncio.run(run())
     assert result.status == CreateImmutableStatus.REJECTED
     assert client.calls == []
+
+
+def test_bounded_authoritative_read_returns_only_verified_bytes() -> None:
+    client = _RecordingS3Client()
+    data = b"authoritative-read-contract"
+    client.objects[KEY] = data
+    result = asyncio.run(
+        _store(client).read_verified(
+            object_key=KEY,
+            expected_sha256=hashlib.sha256(data).hexdigest(),
+            expected_byte_length=len(data),
+            max_bytes=len(data),
+        )
+    )
+    assert result.status == BlobReadStatus.MATCH
+    assert result.content == data
+    assert len(client.calls_for("GetObject")) == 1
+
+
+def test_bounded_authoritative_read_rejects_limit_before_provider_call() -> None:
+    client = _RecordingS3Client()
+    data = b"too-large-for-caller"
+    result = asyncio.run(
+        _store(client).read_verified(
+            object_key=KEY,
+            expected_sha256=hashlib.sha256(data).hexdigest(),
+            expected_byte_length=len(data),
+            max_bytes=len(data) - 1,
+        )
+    )
+    assert result.status == BlobReadStatus.REJECTED
+    assert client.calls == []
+
+
+def test_bounded_authoritative_read_never_returns_mismatched_bytes() -> None:
+    client = _RecordingS3Client()
+    client.objects[KEY] = b"provider-bytes"
+    result = asyncio.run(
+        _store(client).read_verified(
+            object_key=KEY,
+            expected_sha256=hashlib.sha256(b"expected-bytes").hexdigest(),
+            expected_byte_length=len(b"expected-bytes"),
+            max_bytes=1024,
+        )
+    )
+    assert result.status == BlobReadStatus.MISMATCH
+    assert result.content is None
 
 
 def test_more_than_ten_thousand_parts_is_rejected_before_content_or_provider_io() -> None:

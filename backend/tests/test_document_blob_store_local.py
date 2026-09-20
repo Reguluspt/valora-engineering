@@ -27,6 +27,7 @@ if os.name != "posix" or not hasattr(os, "link"):
     )
 
 from app.modules.document_workspace.domain.document_blob_store import (
+    BlobReadStatus,
     ChecksumVerificationStatus,
     CleanupStatus,
     CreateImmutableResult,
@@ -94,6 +95,33 @@ def _async_test(function: Callable[..., Any]) -> Callable[..., None]:
         asyncio.run(function(*args, **kwargs))
 
     return run
+
+
+@_async_test
+async def test_bounded_authoritative_read_returns_only_exact_verified_bytes(
+    store: LocalFilesystemDocumentBlobStore,
+) -> None:
+    key = "org/read-contract/document.docx"
+    data = b"bounded-local-authoritative-read"
+    assert (await _create(store, object_key=key, data=data)).status == (
+        CreateImmutableStatus.CREATED
+    )
+    matched = await store.read_verified(
+        object_key=key,
+        expected_sha256=hashlib.sha256(data).hexdigest(),
+        expected_byte_length=len(data),
+        max_bytes=len(data),
+    )
+    assert matched.status == BlobReadStatus.MATCH
+    assert matched.content == data
+    mismatch = await store.read_verified(
+        object_key=key,
+        expected_sha256="0" * 64,
+        expected_byte_length=len(data),
+        max_bytes=len(data),
+    )
+    assert mismatch.status == BlobReadStatus.MISMATCH
+    assert mismatch.content is None
 
 
 def test_local_configuration_fails_closed_for_unsafe_roots(tmp_path: Path) -> None:

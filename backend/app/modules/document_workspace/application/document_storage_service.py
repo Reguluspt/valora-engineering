@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from typing import Literal
 
@@ -294,6 +294,112 @@ def prepare_storage_intent(
         raise _error(409, "storage_intent_conflict", "Storage intent conflicts with another run.") from exc
 
 
+def prepare_initial_storage_intent(
+    db: Session,
+    *,
+    actor: User,
+    organization_id: uuid.UUID,
+    project_id: uuid.UUID,
+    document_type: str,
+    title: str,
+    expected_content_sha256: str,
+    data_snapshot_digest_sha256: str,
+    idempotency_key: str,
+    request_digest_sha256: str,
+    plan_digest_sha256: str,
+    decision_digest_sha256: str,
+    correlation_id: str | None = None,
+) -> DocumentStorageExecutionIntent:
+    """Prepare revision 1 without publishing an unbound seed revision."""
+    normalized_key = idempotency_key.strip()
+    if not normalized_key or len(normalized_key) > 128:
+        _abort(db, 422, "invalid_idempotency_key", "Storage idempotency key is invalid.")
+    for value, field in (
+        (expected_content_sha256, "content digest"),
+        (data_snapshot_digest_sha256, "snapshot digest"),
+        (request_digest_sha256, "request digest"),
+        (plan_digest_sha256, "plan digest"),
+        (decision_digest_sha256, "decision digest"),
+    ):
+        _require_sha256(db, value, field)
+    actor = _reload_actor(db, actor=actor, organization_id=organization_id)
+    existing = _intent_by_key(
+        db, organization_id=organization_id, idempotency_key=normalized_key
+    )
+    if existing is not None:
+        if existing.request_digest_sha256 != request_digest_sha256:
+            _abort(db, 409, "idempotency_key_reused", "Storage key was used for another request.")
+        db.commit()
+        return existing
+    project = db.query(Project).filter(
+        Project.id == project_id, Project.organization_id == organization_id
+    ).with_for_update().first()
+    if project is None:
+        _abort(db, 404, "project_not_found", "Project was not found.")
+    normalized_type = document_type.strip()
+    normalized_title = title.strip()
+    if not normalized_type or not normalized_title:
+        _abort(db, 422, "document_invalid", "Document identity is invalid.")
+    document = DocumentRecord(
+        organization_id=organization_id,
+        project_id=project_id,
+        document_type=normalized_type,
+        title=normalized_title,
+        created_by_user_id=actor.id,
+    )
+    db.add(document)
+    db.flush()
+    intent = DocumentStorageExecutionIntent(
+        organization_id=organization_id,
+        project_id=project_id,
+        document_id=document.id,
+        intent_kind="INITIAL_REVISION",
+        expected_revision_id=None,
+        expected_document_revision=0,
+        expected_content_sha256=expected_content_sha256,
+        initial_data_snapshot_digest_sha256=data_snapshot_digest_sha256,
+        idempotency_key=normalized_key,
+        request_digest_sha256=request_digest_sha256,
+        plan_digest_sha256=plan_digest_sha256,
+        decision_digest_sha256=decision_digest_sha256,
+        requested_by_user_id=actor.id,
+        correlation_id=correlation_id,
+    )
+    db.add(intent)
+    db.flush()
+    db.add(
+        DocumentStorageExecutionState(
+            execution_intent_id=intent.id,
+            organization_id=organization_id,
+            project_id=project_id,
+            document_id=document.id,
+            current_state="PREPARED",
+            state_version=1,
+            last_event_sequence=1,
+        )
+    )
+    db.add(
+        DocumentStorageExecutionEvent(
+            organization_id=organization_id,
+            execution_intent_id=intent.id,
+            sequence=1,
+            event_code="PREPARED",
+            recorded_by_user_id=actor.id,
+        )
+    )
+    try:
+        db.commit()
+        return intent
+    except IntegrityError as exc:
+        db.rollback()
+        raced = _intent_by_key(
+            db, organization_id=organization_id, idempotency_key=normalized_key
+        )
+        if raced is not None and raced.request_digest_sha256 == request_digest_sha256:
+            return raced
+        raise _error(409, "storage_intent_conflict", "Storage intent conflicts with another run.") from exc
+
+
 def record_storage_candidate(
     db: Session,
     *,
@@ -314,6 +420,11 @@ def record_storage_candidate(
     if provider_kind not in {"fake", "local"}:
         _abort(db, 422, "storage_candidate_invalid", "Storage provider is invalid.")
     content_sha256 = hashlib.sha256(content).hexdigest()
+    if (
+        intent.intent_kind == "INITIAL_REVISION"
+        and content_sha256 != intent.expected_content_sha256
+    ):
+        _abort(db, 409, "storage_content_mismatch", "Imported content differs from the intent.")
     normalized_fields = tuple(
         value.strip()
         for value in (storage_profile_id, container_name, object_key, media_type, generator_version)
@@ -557,6 +668,10 @@ def finalize_storage_revision(
     retention_policy_code: str,
     retention_anchor_at: datetime,
     minimum_retain_until: datetime,
+    finalization_callback: Callable[
+        [Session, DocumentRevision, StorageObjectBinding], None
+    ]
+    | None = None,
 ) -> StorageObjectBinding:
     """Publish one N+1 revision, binding and head CAS in one short transaction."""
     intent = db.get(DocumentStorageExecutionIntent, intent_id)
@@ -618,13 +733,23 @@ def finalize_storage_revision(
         .with_for_update()
         .first()
     )
-    previous = db.get(DocumentRevision, intent.expected_revision_id)
-    if (
-        head is None
-        or previous is None
-        or head.current_revision_id != intent.expected_revision_id
-        or head.document_revision != intent.expected_document_revision
-    ):
+    previous = (
+        db.get(DocumentRevision, intent.expected_revision_id)
+        if intent.expected_revision_id is not None
+        else None
+    )
+    initial_revision = intent.intent_kind == "INITIAL_REVISION"
+    predecessor_invalid = (
+        head is not None
+        if initial_revision
+        else (
+            head is None
+            or previous is None
+            or head.current_revision_id != intent.expected_revision_id
+            or head.document_revision != intent.expected_document_revision
+        )
+    )
+    if predecessor_invalid:
         _append_transition(
             db,
             intent=intent,
@@ -642,8 +767,12 @@ def finalize_storage_revision(
         organization_id=organization_id,
         project_id=intent.project_id,
         document_id=intent.document_id,
-        document_revision=intent.expected_document_revision + 1,
-        data_snapshot_digest_sha256=previous.data_snapshot_digest_sha256,
+        document_revision=1 if initial_revision else intent.expected_document_revision + 1,
+        data_snapshot_digest_sha256=(
+            intent.initial_data_snapshot_digest_sha256
+            if initial_revision
+            else previous.data_snapshot_digest_sha256
+        ),
         content_checksum_sha256=candidate.content_sha256,
         idempotency_key=intent.idempotency_key,
         request_digest_sha256=intent.request_digest_sha256,
@@ -675,18 +804,31 @@ def finalize_storage_revision(
         minimum_retain_until=minimum_retain_until,
     )
     db.add(binding)
-    cas = db.execute(
-        update(DocumentRevisionCurrentHead)
-        .where(
-            DocumentRevisionCurrentHead.organization_id == organization_id,
-            DocumentRevisionCurrentHead.project_id == intent.project_id,
-            DocumentRevisionCurrentHead.document_id == intent.document_id,
-            DocumentRevisionCurrentHead.current_revision_id == intent.expected_revision_id,
-            DocumentRevisionCurrentHead.document_revision == intent.expected_document_revision,
+    if initial_revision:
+        db.add(
+            DocumentRevisionCurrentHead(
+                organization_id=organization_id,
+                project_id=intent.project_id,
+                document_id=intent.document_id,
+                current_revision_id=revision.id,
+                document_revision=revision.document_revision,
+            )
         )
-        .values(current_revision_id=revision.id, document_revision=revision.document_revision)
-    )
-    if cas.rowcount != 1:
+        cas_lost = False
+    else:
+        cas = db.execute(
+            update(DocumentRevisionCurrentHead)
+            .where(
+                DocumentRevisionCurrentHead.organization_id == organization_id,
+                DocumentRevisionCurrentHead.project_id == intent.project_id,
+                DocumentRevisionCurrentHead.document_id == intent.document_id,
+                DocumentRevisionCurrentHead.current_revision_id == intent.expected_revision_id,
+                DocumentRevisionCurrentHead.document_revision == intent.expected_document_revision,
+            )
+            .values(current_revision_id=revision.id, document_revision=revision.document_revision)
+        )
+        cas_lost = cas.rowcount != 1
+    if cas_lost:
         db.rollback()
         persisted_intent = db.get(DocumentStorageExecutionIntent, intent_id)
         if persisted_intent is not None:
@@ -701,6 +843,8 @@ def finalize_storage_revision(
             )
             db.commit()
         raise _error(409, "storage_head_superseded", "Document head changed before finalization.")
+    if finalization_callback is not None:
+        finalization_callback(db, revision, binding)
     _append_transition(db, intent=intent, state=state, next_state="FINALIZED", event_code="FINALIZED")
     log_audit_event(
         db,

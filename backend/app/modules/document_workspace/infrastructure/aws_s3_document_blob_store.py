@@ -26,6 +26,7 @@ from botocore.exceptions import (
 from botocore.parsers import ResponseParserError
 
 from app.modules.document_workspace.domain.document_blob_store import (
+    BlobReadStatus,
     ChecksumVerification,
     ChecksumVerificationStatus,
     CleanupResult,
@@ -34,6 +35,7 @@ from app.modules.document_workspace.domain.document_blob_store import (
     CreateImmutableStatus,
     ObjectObservation,
     ObjectObservationStatus,
+    VerifiedBlobRead,
 )
 
 
@@ -110,6 +112,26 @@ def _read_digest(body: Any) -> tuple[str, int]:
         digest.update(chunk)
         byte_length += len(chunk)
     return digest.hexdigest(), byte_length
+
+
+def _read_bounded_content(body: Any, *, max_bytes: int) -> tuple[bytes, str, int]:
+    if body is None or not callable(getattr(body, "read", None)):
+        raise ValueError("S3 response body is not readable")
+    digest = hashlib.sha256()
+    byte_length = 0
+    chunks: list[bytes] = []
+    while True:
+        chunk = body.read(_READ_CHUNK)
+        if not chunk:
+            break
+        if not isinstance(chunk, bytes):
+            raise ValueError("S3 response body returned non-bytes data")
+        byte_length += len(chunk)
+        if byte_length > max_bytes:
+            raise ValueError("S3 response body exceeds the bounded read limit")
+        digest.update(chunk)
+        chunks.append(chunk)
+    return b"".join(chunks), digest.hexdigest(), byte_length
 
 
 class AwsS3DocumentBlobStore:
@@ -470,6 +492,65 @@ class AwsS3DocumentBlobStore:
             byte_length=byte_length,
             etag=_opaque_text(response.get("ETag"), maximum=512),
             version_id=_opaque_text(response.get("VersionId"), maximum=255),
+        )
+
+    async def read_verified(
+        self,
+        *,
+        object_key: str,
+        expected_sha256: str,
+        expected_byte_length: int,
+        max_bytes: int,
+    ) -> VerifiedBlobRead:
+        if (
+            not self._key_is_allowed(object_key)
+            or expected_byte_length < 0
+            or max_bytes < expected_byte_length
+            or not _SHA256_RE.fullmatch(expected_sha256)
+        ):
+            return VerifiedBlobRead(BlobReadStatus.REJECTED)
+        try:
+            response = await asyncio.to_thread(
+                self._client.get_object,
+                Bucket=self._bucket,
+                Key=object_key,
+                ChecksumMode="ENABLED",
+            )
+        except ClientError as exc:
+            return VerifiedBlobRead(
+                BlobReadStatus.ABSENT if _is_missing(exc) else BlobReadStatus.UNAVAILABLE
+            )
+        except (BotoCoreError, ResponseParserError, TimeoutError, ConnectionError, OSError):
+            return VerifiedBlobRead(BlobReadStatus.UNAVAILABLE)
+        if not _successful_response(response):
+            return VerifiedBlobRead(BlobReadStatus.REJECTED)
+        body = response.get("Body")
+        try:
+            content, digest, length = await asyncio.to_thread(
+                _read_bounded_content, body, max_bytes=max_bytes
+            )
+        except (BotoCoreError, ResponseParserError, TimeoutError, ConnectionError, OSError):
+            return VerifiedBlobRead(BlobReadStatus.UNAVAILABLE)
+        except (TypeError, ValueError):
+            return VerifiedBlobRead(BlobReadStatus.REJECTED)
+        finally:
+            close = getattr(body, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:
+                    pass
+        if digest != expected_sha256 or length != expected_byte_length:
+            return VerifiedBlobRead(
+                BlobReadStatus.MISMATCH,
+                observed_sha256=digest,
+                observed_byte_length=length,
+            )
+        return VerifiedBlobRead(
+            BlobReadStatus.MATCH,
+            content=content,
+            observed_sha256=digest,
+            observed_byte_length=length,
         )
 
     async def delete_uncommitted_or_expire(

@@ -353,7 +353,7 @@ def test_local_provider_migration_refuses_downgrade_while_local_rows_exist(
 
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-                "b8d9e0f1a2b3"
+                "c9d0e1f2a3b4"
             )
             checks = {
                 constraint["name"]: constraint["sqltext"]

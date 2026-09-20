@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.modules.document_workspace.domain.document_blob_store import (
+    BlobReadStatus,
     ChecksumVerification,
     ChecksumVerificationStatus,
     CleanupResult,
@@ -20,6 +21,7 @@ from app.modules.document_workspace.domain.document_blob_store import (
     CreateImmutableStatus,
     ObjectObservation,
     ObjectObservationStatus,
+    VerifiedBlobRead,
 )
 
 
@@ -422,6 +424,68 @@ class LocalFilesystemDocumentBlobStore:
             return ChecksumVerification(ChecksumVerificationStatus.UNVERIFIABLE)
         finally:
             for descriptor in (parent_fd, objects_fd):
+                if descriptor is not None:
+                    os.close(descriptor)
+
+    async def read_verified(
+        self,
+        *,
+        object_key: str,
+        expected_sha256: str,
+        expected_byte_length: int,
+        max_bytes: int,
+    ) -> VerifiedBlobRead:
+        parts = self._key_parts(object_key)
+        if (
+            parts is None
+            or expected_byte_length < 0
+            or max_bytes < expected_byte_length
+            or not _SHA256_RE.fullmatch(expected_sha256)
+        ):
+            return VerifiedBlobRead(BlobReadStatus.REJECTED)
+        objects_fd: int | None = None
+        parent_fd: int | None = None
+        file_fd: int | None = None
+        try:
+            objects_fd = self._open_base("objects")
+            parent_fd = self._open_parent(objects_fd, parts, create=False)
+            file_fd = os.open(parts[-1], _FILE_READ_FLAGS, dir_fd=parent_fd)
+            entry = os.fstat(file_fd)
+            if not stat.S_ISREG(entry.st_mode) or entry.st_size > max_bytes:
+                return VerifiedBlobRead(BlobReadStatus.REJECTED)
+            chunks: list[bytes] = []
+            digest = hashlib.sha256()
+            length = 0
+            while True:
+                chunk = os.read(file_fd, _READ_SIZE)
+                if not chunk:
+                    break
+                length += len(chunk)
+                if length > max_bytes:
+                    return VerifiedBlobRead(BlobReadStatus.REJECTED)
+                digest.update(chunk)
+                chunks.append(chunk)
+            observed_sha256 = digest.hexdigest()
+            if length != expected_byte_length or observed_sha256 != expected_sha256:
+                return VerifiedBlobRead(
+                    BlobReadStatus.MISMATCH,
+                    observed_sha256=observed_sha256,
+                    observed_byte_length=length,
+                )
+            return VerifiedBlobRead(
+                BlobReadStatus.MATCH,
+                content=b"".join(chunks),
+                observed_sha256=observed_sha256,
+                observed_byte_length=length,
+            )
+        except FileNotFoundError:
+            return VerifiedBlobRead(BlobReadStatus.ABSENT)
+        except PermissionError:
+            return VerifiedBlobRead(BlobReadStatus.UNAVAILABLE)
+        except OSError:
+            return VerifiedBlobRead(BlobReadStatus.UNAVAILABLE)
+        finally:
+            for descriptor in (file_fd, parent_fd, objects_fd):
                 if descriptor is not None:
                     os.close(descriptor)
 
