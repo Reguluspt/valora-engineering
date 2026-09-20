@@ -213,4 +213,3 @@ prerequisites and cannot be claimed from G8.
 - [ADR 0043](0043-app-owned-immutable-document-storage.md)
 - [Exchange v1 implementation contract](../implementation/VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md)
 - [Document Blob Storage contract](../implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md)
-
