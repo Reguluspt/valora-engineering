@@ -155,10 +155,30 @@ def test_project_permissions_fail_before_graph(operational_api) -> None:
     documents = client.get(
         f"/api/v1/m365/onedrive/projects/{project_id}/documents"
     )
+    exchange = client.post(
+        f"/api/v1/m365/onedrive/projects/{project_id}/exchange/import-xlsx",
+        json={
+            "connection_id": str(context["binding"].connection_id),
+            "drive_item_id": "xlsx-1",
+            "batch_id": str(uuid.uuid4()),
+        },
+    )
 
     assert options.status_code == 403
     assert documents.status_code == 403
+    assert exchange.status_code == 403
     assert context["graph"].list_calls == calls
+
+
+def test_exchange_artifacts_hide_unknown_project(operational_api) -> None:
+    _, client = operational_api
+
+    response = client.get(
+        f"/api/v1/m365/onedrive/projects/{uuid.uuid4()}/exchange/artifacts"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error_code"] == "project_not_found"
 
 
 def test_authorize_denies_read_only_actor_before_oauth(

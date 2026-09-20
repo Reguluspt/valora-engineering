@@ -142,7 +142,7 @@ def _digest(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _definition_set_from_template_manifest(
+def definition_set_from_template_manifest(
     *,
     template_version_id: uuid.UUID,
     manifest: object,
@@ -181,6 +181,11 @@ def _definition_set_from_template_manifest(
         ),
         definitions=tuple(definitions),
     )
+
+
+# Compatibility alias for the earlier internal callers; new runtime code uses
+# the public name above so template authority parsing has one implementation.
+_definition_set_from_template_manifest = definition_set_from_template_manifest
 
 
 def _require_actor(
@@ -473,7 +478,7 @@ def resolve_managed_region_definition_set(
             "Tài liệu chưa có cấu hình vùng quản lý đã phê duyệt.",
         )
     try:
-        return _definition_set_from_template_manifest(
+        return definition_set_from_template_manifest(
             template_version_id=template_version.id,
             manifest=template_version.placeholder_manifest,
         )

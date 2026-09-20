@@ -77,6 +77,19 @@ export interface OperationalDocument {
   readiness: RevalidationReadiness;
 }
 
+export interface ExchangeArtifact {
+  artifact_id: string;
+  connection_id: string;
+  role: "inbox" | "working" | "export";
+  media: "docx" | "xlsx";
+  state: string;
+  display_name: string;
+  document_id: string | null;
+  document_revision_id: string | null;
+  excel_import_batch_id: string | null;
+  excel_source_artifact_id: string | null;
+}
+
 export interface ProvisionDocumentRequest {
   template_version_id: string;
   connection_id: string;
@@ -155,6 +168,64 @@ export async function revalidateOperationalDocument(
         trigger,
         idempotency_key: createIdempotencyKey("revalidation"),
       }),
+    },
+  );
+}
+
+export async function listExchangeArtifacts(projectId: string): Promise<ExchangeArtifact[]> {
+  return request<ExchangeArtifact[]>(
+    `/api/v1/m365/onedrive/projects/${projectId}/exchange/artifacts`,
+  );
+}
+
+export async function importExchangeDocx(
+  projectId: string,
+  payload: {
+    connection_id: string;
+    drive_item_id: string;
+    template_version_id: string;
+    title: string;
+    idempotency_key: string;
+  },
+): Promise<ExchangeArtifact> {
+  return request<ExchangeArtifact>(
+    `/api/v1/m365/onedrive/projects/${projectId}/exchange/import-docx`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export async function importExchangeXlsx(
+  projectId: string,
+  payload: { connection_id: string; drive_item_id: string; batch_id: string },
+): Promise<ExchangeArtifact> {
+  return request<ExchangeArtifact>(
+    `/api/v1/m365/onedrive/projects/${projectId}/exchange/import-xlsx`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export async function createExchangeCopy(
+  projectId: string,
+  documentId: string,
+  role: "working" | "export",
+  payload: { connection_id: string; destination_name: string; idempotency_key: string },
+): Promise<ExchangeArtifact> {
+  return request<ExchangeArtifact>(
+    `/api/v1/m365/onedrive/projects/${projectId}/documents/${documentId}/exchange/${role}`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export async function reimportExchangeArtifact(
+  projectId: string,
+  artifactId: string,
+  templateVersionId: string | null,
+): Promise<ExchangeArtifact> {
+  return request<ExchangeArtifact>(
+    `/api/v1/m365/onedrive/projects/${projectId}/exchange/artifacts/${artifactId}/reimport`,
+    {
+      method: "POST",
+      body: JSON.stringify({ template_version_id: templateVersionId }),
     },
   );
 }

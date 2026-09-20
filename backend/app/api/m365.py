@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -21,6 +21,17 @@ from app.modules.m365_integration.application.connection_service import (
     complete_onedrive_authorization,
     get_connection_capabilities,
     require_onedrive_actor,
+)
+from app.modules.m365_integration.application.exchange_import_service import (
+    create_docx_export,
+    create_docx_working_copy,
+    import_inbox_docx,
+    import_inbox_xlsx,
+    reimport_working_docx,
+)
+from app.modules.m365_integration.application.exchange_runtime_service import (
+    acquire_exchange_runtime,
+    resolve_exchange_definition_set,
 )
 from app.modules.m365_integration.application.provision_document_service import (
     provision_onedrive_document,
@@ -46,8 +57,11 @@ from app.modules.m365_integration.infrastructure.graph_adapter import MicrosoftG
 from app.modules.m365_integration.infrastructure.microsoft_oauth import (
     MicrosoftPersonalOAuthClient,
 )
-from app.modules.m365_integration.models import OneDriveConnection
-from app.modules.project_master_data.models import User, UserSession
+from app.modules.document_workspace.infrastructure.document_blob_store_factory import (
+    build_document_blob_store,
+)
+from app.modules.m365_integration.models import M365ExchangeArtifact, OneDriveConnection
+from app.modules.project_master_data.models import Project, User, UserSession
 
 
 router = APIRouter(prefix="/api/v1/m365/onedrive", tags=["m365-internal"])
@@ -195,6 +209,51 @@ class M365OperationalDocumentResponse(BaseModel):
     readiness: M365RevalidationReadinessResponse
 
 
+class M365ExchangeArtifactResponse(BaseModel):
+    artifact_id: uuid.UUID
+    connection_id: uuid.UUID
+    role: Literal["inbox", "working", "export"]
+    media: Literal["docx", "xlsx"]
+    state: str
+    display_name: str
+    document_id: uuid.UUID | None
+    document_revision_id: uuid.UUID | None
+    excel_import_batch_id: uuid.UUID | None
+    excel_source_artifact_id: uuid.UUID | None
+
+
+class M365ExchangeDocxImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connection_id: uuid.UUID
+    drive_item_id: str = Field(min_length=1, max_length=255)
+    template_version_id: uuid.UUID
+    title: str = Field(min_length=1, max_length=255)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class M365ExchangeXlsxImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connection_id: uuid.UUID
+    drive_item_id: str = Field(min_length=1, max_length=255)
+    batch_id: uuid.UUID
+
+
+class M365ExchangeCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connection_id: uuid.UUID
+    destination_name: str = Field(min_length=1, max_length=255)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class M365ExchangeReimportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    template_version_id: uuid.UUID | None = None
+
+
 def _components(db: Session):
     settings = get_settings()
     keys, active_version = parse_keyring(
@@ -208,6 +267,32 @@ def _components(db: Session):
         redirect_uri=settings.m365_redirect_uri,
     )
     return vault, oauth, MicrosoftGraphGateway()
+
+
+def _exchange_artifact_response(
+    artifact: M365ExchangeArtifact,
+) -> M365ExchangeArtifactResponse:
+    return M365ExchangeArtifactResponse(
+        artifact_id=artifact.id,
+        connection_id=artifact.connection_id,
+        role=artifact.role,
+        media=artifact.media,
+        state=artifact.state,
+        display_name=artifact.display_name,
+        document_id=artifact.document_id,
+        document_revision_id=artifact.document_revision_id,
+        excel_import_batch_id=artifact.excel_import_batch_id,
+        excel_source_artifact_id=artifact.excel_source_artifact_id,
+    )
+
+
+def _retention_window() -> tuple[datetime, datetime]:
+    anchor = datetime.now(timezone.utc)
+    try:
+        minimum = anchor.replace(year=anchor.year + 10)
+    except ValueError:
+        minimum = anchor.replace(year=anchor.year + 10, day=28)
+    return anchor, minimum
 
 
 @router.post("/authorize", response_model=OneDriveAuthorizationResponse)
@@ -349,6 +434,309 @@ def read_onedrive_connection(
         read_available=read_available,
         appfolder_write_available=appfolder_write_available,
     )
+
+
+@router.get(
+    "/projects/{project_id}/exchange/artifacts",
+    response_model=list[M365ExchangeArtifactResponse],
+)
+def read_exchange_artifacts(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> list[M365ExchangeArtifactResponse]:
+    project_exists = (
+        db.query(Project.id)
+        .filter(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
+    if project_exists is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "project_not_found", "detail": "Không tìm thấy hồ sơ."},
+        )
+    artifacts = (
+        db.query(M365ExchangeArtifact)
+        .filter(
+            M365ExchangeArtifact.organization_id == current_user.organization_id,
+            M365ExchangeArtifact.project_id == project_id,
+        )
+        .order_by(M365ExchangeArtifact.observed_at.desc(), M365ExchangeArtifact.id)
+        .all()
+    )
+    return [_exchange_artifact_response(artifact) for artifact in artifacts]
+
+
+@router.post(
+    "/projects/{project_id}/exchange/import-docx",
+    response_model=M365ExchangeArtifactResponse,
+    status_code=201,
+)
+async def import_exchange_docx(
+    project_id: uuid.UUID,
+    payload: M365ExchangeDocxImportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365ExchangeArtifactResponse:
+    document_type, definition_set = resolve_exchange_definition_set(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        template_version_id=payload.template_version_id,
+    )
+    vault, oauth, graph = _components(db)
+    runtime = acquire_exchange_runtime(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        connection_id=payload.connection_id,
+        oauth_client=oauth,
+        credential_vault=vault,
+    )
+    blob_store = build_document_blob_store(get_settings())
+    anchor, minimum = _retention_window()
+    _, _, artifact = await import_inbox_docx(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        connection_id=runtime.connection.id,
+        drive_item_id=payload.drive_item_id,
+        document_type=document_type,
+        title=payload.title,
+        definition_set=definition_set,
+        idempotency_key=payload.idempotency_key,
+        graph_gateway=graph,
+        access_token=runtime.access_token,
+        blob_store=blob_store,
+        storage_profile_id=f"exchange-{blob_store.provider_kind}",
+        container_name="valora-document-blobs",
+        retention_policy_code="official-document-10y",
+        retention_anchor_at=anchor,
+        minimum_retain_until=minimum,
+    )
+    return _exchange_artifact_response(artifact)
+
+
+@router.post(
+    "/projects/{project_id}/exchange/import-xlsx",
+    response_model=M365ExchangeArtifactResponse,
+    status_code=201,
+)
+def import_exchange_xlsx(
+    project_id: uuid.UUID,
+    payload: M365ExchangeXlsxImportRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365ExchangeArtifactResponse:
+    vault, oauth, graph = _components(db)
+    runtime = acquire_exchange_runtime(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        connection_id=payload.connection_id,
+        oauth_client=oauth,
+        credential_vault=vault,
+    )
+    artifact = import_inbox_xlsx(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        connection_id=runtime.connection.id,
+        batch_id=payload.batch_id,
+        drive_item_id=payload.drive_item_id,
+        graph_gateway=graph,
+        access_token=runtime.access_token,
+        request=request,
+    )
+    return _exchange_artifact_response(artifact)
+
+
+async def _create_exchange_copy(
+    *,
+    role: Literal["working", "export"],
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+    payload: M365ExchangeCreateRequest,
+    db: Session,
+    current_user: User,
+) -> M365ExchangeArtifactResponse:
+    vault, oauth, graph = _components(db)
+    runtime = acquire_exchange_runtime(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        connection_id=payload.connection_id,
+        oauth_client=oauth,
+        credential_vault=vault,
+    )
+    blob_store = build_document_blob_store(get_settings())
+    command = create_docx_working_copy if role == "working" else create_docx_export
+    artifact = await command(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        connection_id=runtime.connection.id,
+        document_id=document_id,
+        destination_name=payload.destination_name,
+        idempotency_key=payload.idempotency_key,
+        graph_gateway=graph,
+        access_token=runtime.access_token,
+        blob_store=blob_store,
+    )
+    if artifact is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_code": "exchange_provider_unavailable",
+                "detail": "OneDrive Exchange tạm thời không khả dụng.",
+            },
+        )
+    return _exchange_artifact_response(artifact)
+
+
+@router.post(
+    "/projects/{project_id}/documents/{document_id}/exchange/working",
+    response_model=M365ExchangeArtifactResponse,
+    status_code=201,
+)
+async def create_exchange_working_copy(
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+    payload: M365ExchangeCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365ExchangeArtifactResponse:
+    return await _create_exchange_copy(
+        role="working",
+        project_id=project_id,
+        document_id=document_id,
+        payload=payload,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/documents/{document_id}/exchange/export",
+    response_model=M365ExchangeArtifactResponse,
+    status_code=201,
+)
+async def create_exchange_export(
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+    payload: M365ExchangeCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365ExchangeArtifactResponse:
+    return await _create_exchange_copy(
+        role="export",
+        project_id=project_id,
+        document_id=document_id,
+        payload=payload,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/exchange/artifacts/{artifact_id}/reimport",
+    response_model=M365ExchangeArtifactResponse,
+)
+async def reimport_exchange_artifact(
+    project_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    payload: M365ExchangeReimportRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:update")),
+) -> M365ExchangeArtifactResponse:
+    artifact = (
+        db.query(M365ExchangeArtifact)
+        .filter(
+            M365ExchangeArtifact.id == artifact_id,
+            M365ExchangeArtifact.organization_id == current_user.organization_id,
+            M365ExchangeArtifact.project_id == project_id,
+            M365ExchangeArtifact.role.in_(("inbox", "working")),
+        )
+        .first()
+    )
+    if artifact is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error_code": "exchange_artifact_not_found",
+                "detail": "Không tìm thấy tệp Exchange.",
+            },
+        )
+    vault, oauth, graph = _components(db)
+    runtime = acquire_exchange_runtime(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        connection_id=artifact.connection_id,
+        oauth_client=oauth,
+        credential_vault=vault,
+    )
+    if artifact.media == "xlsx":
+        if artifact.excel_import_batch_id is None:
+            raise HTTPException(status_code=409, detail="Exchange XLSX lineage is incomplete.")
+        updated = import_inbox_xlsx(
+            db,
+            actor=current_user,
+            organization_id=current_user.organization_id,
+            project_id=project_id,
+            connection_id=runtime.connection.id,
+            batch_id=artifact.excel_import_batch_id,
+            drive_item_id=artifact.drive_item_id,
+            graph_gateway=graph,
+            access_token=runtime.access_token,
+            request=request,
+            reimport=True,
+        )
+        return _exchange_artifact_response(updated)
+    if payload.template_version_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "exchange_template_authority_required",
+                "detail": "Cần chọn mẫu DOCX đã phê duyệt.",
+            },
+        )
+    _, definition_set = resolve_exchange_definition_set(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        template_version_id=payload.template_version_id,
+    )
+    blob_store = build_document_blob_store(get_settings())
+    anchor, minimum = _retention_window()
+    result = await reimport_working_docx(
+        db,
+        actor=current_user,
+        organization_id=current_user.organization_id,
+        project_id=project_id,
+        artifact_id=artifact.id,
+        definition_set=definition_set,
+        idempotency_key=f"exchange-reimport-{artifact.id}-{artifact.e_tag}"[:128],
+        graph_gateway=graph,
+        access_token=runtime.access_token,
+        blob_store=blob_store,
+        storage_profile_id=f"exchange-{blob_store.provider_kind}",
+        container_name="valora-document-blobs",
+        retention_policy_code="official-document-10y",
+        retention_anchor_at=anchor,
+        minimum_retain_until=minimum,
+    )
+    return _exchange_artifact_response(result.artifact)
 
 
 def _adoption_options_response(options: AdoptionOptions) -> M365AdoptionOptionsResponse:

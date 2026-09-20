@@ -4,12 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
   beginOneDriveAuthorization: vi.fn(),
+  createExchangeCopy: vi.fn(),
   createIdempotencyKey: vi.fn(() => "adoption-test-key"),
   getAdoptionOptions: vi.fn(),
   getOneDriveConnection: vi.fn(),
+  importExchangeDocx: vi.fn(),
+  importExchangeXlsx: vi.fn(),
+  listExchangeArtifacts: vi.fn(),
   listOperationalDocuments: vi.fn(),
   provisionOperationalDocument: vi.fn(),
   revalidateOperationalDocument: vi.fn(),
+  reimportExchangeArtifact: vi.fn(),
 }));
 const session = vi.hoisted(() => ({
   permissions: ["project:read", "project:update"],
@@ -126,6 +131,11 @@ describe("M365WorkspacePage", () => {
     api.provisionOperationalDocument.mockResolvedValue({ document_id: "new-document" });
     api.beginOneDriveAuthorization.mockResolvedValue("https://login.microsoftonline.com/consumers");
     api.revalidateOperationalDocument.mockResolvedValue(undefined);
+    api.listExchangeArtifacts.mockResolvedValue([]);
+    api.createExchangeCopy.mockResolvedValue({ artifact_id: "exchange-copy" });
+    api.importExchangeDocx.mockResolvedValue({ artifact_id: "exchange-import" });
+    api.importExchangeXlsx.mockResolvedValue({ artifact_id: "exchange-xlsx" });
+    api.reimportExchangeArtifact.mockResolvedValue({ artifact_id: "exchange-reimport" });
   });
 
   it("renders all five server classifications without deriving a conflict", async () => {
@@ -342,5 +352,57 @@ describe("M365WorkspacePage", () => {
     expect(text).toContain("Nhập thay đổi");
     expect(text).toContain("Xuất sang OneDrive");
     expect(text).not.toContain("Cần cấp quyền Exchange");
+  });
+
+  it("wires AppFolder actions to bounded Exchange API commands", async () => {
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "exchange-write-ready",
+      read_available: true,
+      appfolder_write_available: true,
+    });
+    api.listOperationalDocuments.mockResolvedValue([document("no_change", 1)]);
+    api.listExchangeArtifacts.mockResolvedValue([
+      {
+        artifact_id: "working-1",
+        connection_id: "connection-1",
+        role: "working",
+        media: "docx",
+        state: "AVAILABLE",
+        display_name: "Bao-cao-working.docx",
+        document_id: "document-1",
+        document_revision_id: "revision-1",
+        excel_import_batch_id: null,
+        excel_source_artifact_id: null,
+      },
+    ]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const working = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Bản làm việc"),
+    );
+    await act(async () => working.props.onClick());
+    expect(api.createExchangeCopy).toHaveBeenCalledWith(
+      "project-1",
+      "document-1",
+      "working",
+      expect.objectContaining({ connection_id: "connection-1" }),
+    );
+
+    const reimport = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Nhập thay đổi"),
+    );
+    await act(async () => reimport.props.onClick());
+    expect(api.reimportExchangeArtifact).toHaveBeenCalledWith(
+      "project-1",
+      "working-1",
+      "template-1",
+    );
   });
 });

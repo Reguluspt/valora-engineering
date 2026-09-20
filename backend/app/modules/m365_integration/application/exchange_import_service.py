@@ -698,6 +698,7 @@ def import_inbox_xlsx(
         file=staging_upload,
         request=request,
         current_user=actor,
+        expected_source_artifact_id=source.id,
     )
     artifact = existing or M365ExchangeArtifact(
         organization_id=organization_id,

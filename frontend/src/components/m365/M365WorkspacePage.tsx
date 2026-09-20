@@ -3,14 +3,20 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AdoptionOptions,
   beginOneDriveAuthorization,
+  createExchangeCopy,
   createIdempotencyKey,
+  ExchangeArtifact,
   getAdoptionOptions,
   getOneDriveConnection,
+  importExchangeDocx,
+  importExchangeXlsx,
+  listExchangeArtifacts,
   listOperationalDocuments,
   OneDriveConnection,
   OneDriveEntry,
   OperationalDocument,
   provisionOperationalDocument,
+  reimportExchangeArtifact,
   RevalidationClassification,
   revalidateOperationalDocument,
 } from "../../api/m365";
@@ -94,6 +100,14 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
   const [title, setTitle] = useState("");
   const [adopting, setAdopting] = useState(false);
   const [checkingDocumentId, setCheckingDocumentId] = useState<string | null>(null);
+  const [exchangeArtifacts, setExchangeArtifacts] = useState<ExchangeArtifact[]>([]);
+  const [exchangeDriveItemId, setExchangeDriveItemId] = useState("");
+  const [exchangeBatchId, setExchangeBatchId] = useState("");
+  const [exchangeTitle, setExchangeTitle] = useState("");
+  const [exchangeMedia, setExchangeMedia] = useState<"docx" | "xlsx">("docx");
+  const [exchangeDocumentId, setExchangeDocumentId] = useState("");
+  const [exchangeArtifactId, setExchangeArtifactId] = useState("");
+  const [exchangeBusy, setExchangeBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState("loading");
@@ -105,6 +119,11 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
       ]);
       setConnection(currentConnection);
       setDocuments(currentDocuments);
+      if (currentConnection.appfolder_write_available && canAdopt) {
+        setExchangeArtifacts(await listExchangeArtifacts(projectId));
+      } else {
+        setExchangeArtifacts([]);
+      }
       if (currentConnection.status === "active" && canAdopt) {
         const currentOptions = await getAdoptionOptions(projectId);
         setOptions(currentOptions);
@@ -124,6 +143,10 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
 
   const refreshDocuments = useCallback(async () => {
     setDocuments(await listOperationalDocuments(projectId));
+  }, [projectId]);
+
+  const refreshExchangeArtifacts = useCallback(async () => {
+    setExchangeArtifacts(await listExchangeArtifacts(projectId));
   }, [projectId]);
 
   const checkDocument = useCallback(
@@ -227,6 +250,89 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
     window.open(document.readiness.web_url, "_blank", "noopener,noreferrer");
   };
 
+  const selectedExchangeDocumentId = exchangeDocumentId || documents[0]?.document_id || "";
+  const importableExchangeArtifacts = exchangeArtifacts.filter(
+    (artifact) => artifact.role !== "export",
+  );
+  const selectedExchangeArtifact = importableExchangeArtifacts.find(
+    (artifact) => artifact.artifact_id === exchangeArtifactId,
+  ) || importableExchangeArtifacts.find((artifact) => artifact.role === "working") ||
+    importableExchangeArtifacts[0];
+
+  const finishExchangeAction = async () => {
+    await Promise.all([refreshDocuments(), refreshExchangeArtifacts()]);
+  };
+
+  const receiveExchange = async () => {
+    if (!connection?.connection_id || !exchangeDriveItemId.trim()) return;
+    const connectionId = connection.connection_id;
+    setExchangeBusy("receive");
+    setSectionError(null);
+    try {
+      if (exchangeMedia === "docx") {
+        if (!templateId || !exchangeTitle.trim()) return;
+        await importExchangeDocx(projectId, {
+          connection_id: connectionId,
+          drive_item_id: exchangeDriveItemId.trim(),
+          template_version_id: templateId,
+          title: exchangeTitle.trim(),
+          idempotency_key: createIdempotencyKey("exchange-import-docx"),
+        });
+      } else {
+        if (!exchangeBatchId.trim()) return;
+        await importExchangeXlsx(projectId, {
+          connection_id: connectionId,
+          drive_item_id: exchangeDriveItemId.trim(),
+          batch_id: exchangeBatchId.trim(),
+        });
+      }
+      setExchangeDriveItemId("");
+      await finishExchangeAction();
+    } catch {
+      setSectionError("Không thể nhận tệp Exchange. Hãy kiểm tra Inbox và dữ liệu đã chọn.");
+    } finally {
+      setExchangeBusy(null);
+    }
+  };
+
+  const createExchangeDocumentCopy = async (role: "working" | "export") => {
+    if (!connection?.connection_id || !selectedExchangeDocumentId) return;
+    const connectionId = connection.connection_id;
+    const selected = documents.find((item) => item.document_id === selectedExchangeDocumentId);
+    setExchangeBusy(role);
+    setSectionError(null);
+    try {
+      await createExchangeCopy(projectId, selectedExchangeDocumentId, role, {
+        connection_id: connectionId,
+        destination_name: `${selected?.title || "VALORA"}-${role}.docx`,
+        idempotency_key: createIdempotencyKey(`exchange-${role}`),
+      });
+      await refreshExchangeArtifacts();
+    } catch {
+      setSectionError("Không thể tạo tệp Exchange mới. Không có tệp hiện có nào bị ghi đè.");
+    } finally {
+      setExchangeBusy(null);
+    }
+  };
+
+  const importExchangeChanges = async () => {
+    if (!selectedExchangeArtifact) return;
+    setExchangeBusy("reimport");
+    setSectionError(null);
+    try {
+      await reimportExchangeArtifact(
+        projectId,
+        selectedExchangeArtifact.artifact_id,
+        selectedExchangeArtifact.media === "docx" ? templateId || null : null,
+      );
+      await finishExchangeAction();
+    } catch {
+      setSectionError("Không thể nhập thay đổi. Authority hiện tại của VALORA được giữ nguyên.");
+    } finally {
+      setExchangeBusy(null);
+    }
+  };
+
   if (state === "loading") return <LoadingState message="Đang tải trạng thái OneDrive…" />;
   if (state === "error" || !connection) {
     return (
@@ -262,12 +368,7 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
             <span>Chỉ “Nhập thay đổi” mới bắt đầu kiểm tra và ghi nhận.</span>
           </div>
           {connection.appfolder_write_available ? (
-            <ul aria-label="Khả năng Exchange khả dụng">
-              <li>Nhận tệp</li>
-              <li>Bản làm việc</li>
-              <li>Nhập thay đổi</li>
-              <li>Xuất sang OneDrive</li>
-            </ul>
+            <span>Exchange AppFolder đã sẵn sàng cho các lệnh bên dưới.</span>
           ) : canAdopt ? (
             <button onClick={() => void upgradeExchange()} type="button">
               Cần cấp quyền Exchange
@@ -275,6 +376,109 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
           ) : (
             <span>Cần cấp quyền Exchange từ người có quyền cập nhật hồ sơ.</span>
           )}
+        </section>
+      )}
+
+      {connection.status === "active" && connection.appfolder_write_available && canAdopt && (
+        <section className="m365-exchange-actions" aria-labelledby="m365-exchange-actions-title">
+          <div className="m365-section-heading">
+            <div>
+              <p>EXCHANGE · CREATE-NEW ONLY</p>
+              <h2 id="m365-exchange-actions-title">Trao đổi tệp có kiểm soát</h2>
+            </div>
+          </div>
+          <div className="m365-exchange-fields">
+            <label>
+              Drive item ID trong Inbox
+              <input
+                onChange={(event) => setExchangeDriveItemId(event.target.value)}
+                placeholder="ID tệp .docx hoặc .xlsx"
+                value={exchangeDriveItemId}
+              />
+            </label>
+            <label>
+              Định dạng nhận
+              <select
+                onChange={(event) => setExchangeMedia(event.target.value as "docx" | "xlsx")}
+                value={exchangeMedia}
+              >
+                <option value="docx">DOCX</option>
+                <option value="xlsx">XLSX</option>
+              </select>
+            </label>
+            {exchangeMedia === "docx" ? (
+              <label>
+                Tên tài liệu trong VALORA
+                <input
+                  onChange={(event) => setExchangeTitle(event.target.value)}
+                  placeholder="Báo cáo thẩm định"
+                  value={exchangeTitle}
+                />
+              </label>
+            ) : (
+              <label>
+                Import batch ID
+                <input
+                  onChange={(event) => setExchangeBatchId(event.target.value)}
+                  placeholder="UUID lô Excel hiện có"
+                  value={exchangeBatchId}
+                />
+              </label>
+            )}
+            <label>
+              Tài liệu cho Working / Export
+              <select
+                onChange={(event) => setExchangeDocumentId(event.target.value)}
+                value={selectedExchangeDocumentId}
+              >
+                {documents.length === 0 && <option value="">Chưa có tài liệu</option>}
+                {documents.map((document) => (
+                  <option key={document.document_id} value={document.document_id}>{document.title}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Tệp để nhập thay đổi
+              <select
+                onChange={(event) => setExchangeArtifactId(event.target.value)}
+                value={selectedExchangeArtifact?.artifact_id || ""}
+              >
+                {importableExchangeArtifacts.length === 0 && (
+                  <option value="">Chưa có tệp Exchange</option>
+                )}
+                {importableExchangeArtifacts.map((artifact) => (
+                  <option key={artifact.artifact_id} value={artifact.artifact_id}>
+                    {artifact.display_name} · {artifact.media.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="m365-exchange-buttons">
+            <button
+              disabled={
+                exchangeBusy != null || !exchangeDriveItemId.trim() ||
+                (exchangeMedia === "docx" ? !templateId || !exchangeTitle.trim() : !exchangeBatchId.trim())
+              }
+              onClick={() => void receiveExchange()}
+              type="button"
+            >Nhận tệp</button>
+            <button
+              disabled={exchangeBusy != null || !selectedExchangeDocumentId}
+              onClick={() => void createExchangeDocumentCopy("working")}
+              type="button"
+            >Bản làm việc</button>
+            <button
+              disabled={exchangeBusy != null || !selectedExchangeArtifact}
+              onClick={() => void importExchangeChanges()}
+              type="button"
+            >Nhập thay đổi</button>
+            <button
+              disabled={exchangeBusy != null || !selectedExchangeDocumentId}
+              onClick={() => void createExchangeDocumentCopy("export")}
+              type="button"
+            >Xuất sang OneDrive</button>
+          </div>
         </section>
       )}
 

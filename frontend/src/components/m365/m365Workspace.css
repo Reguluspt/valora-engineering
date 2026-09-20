@@ -84,19 +84,34 @@
   gap: 4px;
 }
 
-.m365-exchange-notice ul {
+.m365-exchange-actions {
+  border: 1px solid var(--line-soft, #d8d2c3);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.m365-exchange-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.m365-exchange-fields label {
+  display: grid;
+  font-size: 0.78rem;
+  gap: 6px;
+}
+
+.m365-exchange-fields input,
+.m365-exchange-fields select {
+  min-width: 0;
+}
+
+.m365-exchange-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.m365-exchange-notice li {
-  border: 1px solid currentColor;
-  font-size: 0.75rem;
-  padding: 5px 8px;
 }
 
 .m365-connect-panel {

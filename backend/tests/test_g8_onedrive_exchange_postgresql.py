@@ -647,6 +647,143 @@ def test_exchange_xlsx_source_generation_race_blocks_stale_staging(
         engine.dispose()
 
 
+def test_exchange_xlsx_post_check_supersession_cannot_replace_staging(
+    postgres_exchange_database: URL, monkeypatch
+):
+    engine, sessions, graph, namespace, ids = _context(postgres_exchange_database)
+    storage = FakeObjectStorage()
+    set_object_storage_override(storage)
+    setup = sessions()
+    actor = setup.get(User, ids["actor_id"])
+    batch = ProjectAssetImportBatch(
+        organization_id=ids["organization_id"],
+        project_id=ids["project_id"],
+        source_filename="PG-post-check.xlsx",
+        created_by_user_id=ids["actor_id"],
+    )
+    setup.add(batch)
+    setup.commit()
+    item = graph.seed_file(
+        parent_item_id=namespace.inbox_item_id,
+        name="PG-post-check.xlsx",
+        content=_xlsx(asset_name="PG baseline"),
+    )
+    initial = import_inbox_xlsx(
+        setup,
+        actor=actor,
+        organization_id=ids["organization_id"],
+        project_id=ids["project_id"],
+        connection_id=ids["connection_id"],
+        batch_id=batch.id,
+        drive_item_id=item.drive_item_id,
+        graph_gateway=graph,
+        access_token="offline-token",
+        request=SimpleNamespace(headers={}),
+    )
+    batch_id = batch.id
+    artifact_id = initial.id
+    graph.replace_file_content(
+        drive_item_id=item.drive_item_id,
+        content=_xlsx(asset_name="PG older passed check"),
+    )
+    setup.close()
+
+    entered = threading.Event()
+    release = threading.Event()
+    call_lock = threading.Lock()
+    calls = 0
+    original_orchestrator = exchange_import_service.upload_excel_file_orchestrator
+
+    def gated_orchestrator(*args, **kwargs):
+        nonlocal calls
+        with call_lock:
+            calls += 1
+            is_older = calls == 1
+        if is_older:
+            entered.set()
+            assert release.wait(timeout=30), "older XLSX staging call was not released"
+        return original_orchestrator(*args, **kwargs)
+
+    monkeypatch.setattr(
+        exchange_import_service,
+        "upload_excel_file_orchestrator",
+        gated_orchestrator,
+    )
+    older_errors: list[BaseException] = []
+
+    def run_older() -> None:
+        db = sessions()
+        try:
+            import_inbox_xlsx(
+                db,
+                actor=db.get(User, ids["actor_id"]),
+                organization_id=ids["organization_id"],
+                project_id=ids["project_id"],
+                connection_id=ids["connection_id"],
+                batch_id=batch_id,
+                drive_item_id=item.drive_item_id,
+                graph_gateway=graph,
+                access_token="offline-token",
+                request=SimpleNamespace(headers={}),
+                reimport=True,
+            )
+        except BaseException as exc:
+            older_errors.append(exc)
+        finally:
+            db.close()
+
+    older = threading.Thread(target=run_older, daemon=True)
+    older.start()
+    try:
+        assert entered.wait(timeout=30), "older XLSX reimport never passed pointer check"
+        graph.replace_file_content(
+            drive_item_id=item.drive_item_id,
+            content=_xlsx(asset_name="PG newest committed"),
+        )
+        winner_db = sessions()
+        try:
+            winner = import_inbox_xlsx(
+                winner_db,
+                actor=winner_db.get(User, ids["actor_id"]),
+                organization_id=ids["organization_id"],
+                project_id=ids["project_id"],
+                connection_id=ids["connection_id"],
+                batch_id=batch_id,
+                drive_item_id=item.drive_item_id,
+                graph_gateway=graph,
+                access_token="offline-token",
+                request=SimpleNamespace(headers={}),
+                reimport=True,
+            )
+            winner_source_id = winner.excel_source_artifact_id
+        finally:
+            winner_db.close()
+            release.set()
+        older.join(timeout=60)
+    finally:
+        release.set()
+        set_object_storage_override(None)
+
+    verify = sessions()
+    try:
+        assert not older.is_alive()
+        assert len(older_errors) == 1
+        assert isinstance(older_errors[0], HTTPException)
+        assert older_errors[0].status_code == 409
+        assert older_errors[0].detail["error_code"] == "exchange_excel_source_conflict"
+        current = verify.get(ProjectAssetImportBatch, batch_id)
+        artifact = verify.get(M365ExchangeArtifact, artifact_id)
+        staged = verify.query(ProjectAssetImportStagingRow).filter_by(
+            import_batch_id=batch_id
+        ).all()
+        assert current.current_source_artifact_id == winner_source_id
+        assert artifact.excel_source_artifact_id == winner_source_id
+        assert [row.proposed_asset_name for row in staged] == ["PG newest committed"]
+    finally:
+        verify.close()
+        engine.dispose()
+
+
 def test_exchange_tenant_and_project_isolation(postgres_exchange_database: URL):
     engine, sessions, _, namespace, ids = _context(postgres_exchange_database)
     db = sessions()

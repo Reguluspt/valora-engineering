@@ -786,6 +786,93 @@ def test_graph_adapter_lists_only_folders_and_docx_without_exposing_next_link(
     assert "secret-cursor" not in str(children)
 
 
+def test_graph_exact_child_lookup_follows_bounded_provider_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gateway = MicrosoftGraphGateway(timeout_seconds=0.1)
+    next_link = (
+        "https://graph.microsoft.com/v1.0/drives/drive-1/items/parent/children"
+        "?$skiptoken=opaque"
+    )
+    responses = [
+        _GraphResponse(
+            200,
+            {
+                "@odata.nextLink": next_link,
+                "value": [
+                    {
+                        "id": f"item-{index}",
+                        "name": f"Other-{index}.docx",
+                        "size": 1,
+                        "eTag": f"etag-{index}",
+                        "file": {},
+                        "parentReference": {"driveId": "drive-1", "id": "parent"},
+                    }
+                    for index in range(100)
+                ],
+            },
+        ),
+        _GraphResponse(
+            200,
+            {
+                "value": [
+                    {
+                        "id": "target-item",
+                        "name": "Target.docx",
+                        "size": 7,
+                        "eTag": "target-etag",
+                        "file": {},
+                        "parentReference": {"driveId": "drive-1", "id": "parent"},
+                    }
+                ]
+            },
+        ),
+    ]
+    calls: list[str] = []
+
+    def paged_get(url, **kwargs):
+        assert kwargs["headers"]["Authorization"] == "Bearer secret-access-token"
+        calls.append(url)
+        return responses.pop(0)
+
+    monkeypatch.setattr("httpx.get", paged_get)
+    matches = gateway.resolve_child_by_exact_name(
+        access_token="secret-access-token",
+        drive_id="drive-1",
+        parent_item_id="parent",
+        exact_name="Target.docx",
+    )
+
+    assert [item.drive_item_id for item in matches] == ["target-item"]
+    assert calls[1] == next_link
+
+
+def test_graph_exact_child_lookup_rejects_cross_origin_next_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gateway = MicrosoftGraphGateway(timeout_seconds=0.1)
+
+    monkeypatch.setattr(
+        "httpx.get",
+        lambda *args, **kwargs: _GraphResponse(
+            200,
+            {
+                "@odata.nextLink": "https://attacker.invalid/steal",
+                "value": [],
+            },
+        ),
+    )
+
+    with pytest.raises(MicrosoftGraphError) as exc:
+        gateway.resolve_child_by_exact_name(
+            access_token="secret-access-token",
+            drive_id="drive-1",
+            parent_item_id="parent",
+            exact_name="Target.docx",
+        )
+    assert exc.value.category == "invalid_provider_url"
+
+
 def test_domain_rows_have_no_raw_oauth_secret_columns() -> None:
     forbidden = {
         "access_token",

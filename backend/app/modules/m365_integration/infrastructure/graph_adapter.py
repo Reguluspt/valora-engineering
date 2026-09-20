@@ -21,6 +21,7 @@ from app.modules.m365_integration.domain.graph_gateway import (
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 MAX_DOWNLOAD_REDIRECTS = 3
+MAX_EXACT_CHILD_PAGES = 20
 
 
 def _validated_web_url(value: object) -> str:
@@ -60,10 +61,38 @@ class MicrosoftGraphGateway:
     def __init__(self, *, timeout_seconds: float = 10.0) -> None:
         self._timeout_seconds = timeout_seconds
 
-    def _get(self, *, access_token: str, path: str, params: dict | None = None) -> dict:
+    def _get_url(
+        self,
+        *,
+        access_token: str,
+        url: str,
+        params: dict | None = None,
+    ) -> dict:
+        parsed = urlparse(url)
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise MicrosoftGraphError(
+                "Microsoft Graph returned an unsafe pagination URL.",
+                category="invalid_provider_url",
+                retryable=False,
+            ) from exc
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != "graph.microsoft.com"
+            or port not in {None, 443}
+            or parsed.username is not None
+            or parsed.password is not None
+            or not parsed.path.startswith("/v1.0/")
+        ):
+            raise MicrosoftGraphError(
+                "Microsoft Graph returned an unsafe pagination URL.",
+                category="invalid_provider_url",
+                retryable=False,
+            )
         try:
             response = httpx.get(
-                f"{GRAPH_BASE_URL}{path}",
+                url,
                 headers={"Authorization": f"Bearer {access_token}"},
                 params=params,
                 timeout=self._timeout_seconds,
@@ -95,6 +124,13 @@ class MicrosoftGraphGateway:
         if not isinstance(payload, dict):
             raise MicrosoftGraphError("Microsoft Graph response is invalid.")
         return payload
+
+    def _get(self, *, access_token: str, path: str, params: dict | None = None) -> dict:
+        return self._get_url(
+            access_token=access_token,
+            url=f"{GRAPH_BASE_URL}{path}",
+            params=params,
+        )
 
     @staticmethod
     def _exchange_item(payload: dict, *, expected_drive_id: str) -> GraphExchangeItem:
@@ -218,13 +254,35 @@ class MicrosoftGraphGateway:
                 "$select": "id,name,size,eTag,cTag,file,folder,parentReference",
             },
         )
-        values = payload.get("value")
-        if not isinstance(values, list):
-            raise MicrosoftGraphError("Microsoft Graph folder response is invalid.")
-        return tuple(
-            self._exchange_item(value, expected_drive_id=drive_id)
-            for value in values
-            if isinstance(value, dict) and value.get("name") == exact_name
+        matches: list[GraphExchangeItem] = []
+        for page_index in range(MAX_EXACT_CHILD_PAGES):
+            values = payload.get("value")
+            if not isinstance(values, list):
+                raise MicrosoftGraphError("Microsoft Graph folder response is invalid.")
+            matches.extend(
+                self._exchange_item(value, expected_drive_id=drive_id)
+                for value in values
+                if isinstance(value, dict) and value.get("name") == exact_name
+            )
+            next_link = payload.get("@odata.nextLink")
+            if next_link is None:
+                return tuple(matches)
+            if not isinstance(next_link, str) or not next_link:
+                raise MicrosoftGraphError("Microsoft Graph pagination response is invalid.")
+            if page_index + 1 >= MAX_EXACT_CHILD_PAGES:
+                raise MicrosoftGraphError(
+                    "Microsoft Graph exact-child lookup exceeded its bounded page limit.",
+                    category="provider_listing_truncated",
+                    retryable=False,
+                )
+            payload = self._get_url(
+                access_token=access_token,
+                url=next_link,
+            )
+        raise MicrosoftGraphError(
+            "Microsoft Graph exact-child lookup exceeded its bounded page limit.",
+            category="provider_listing_truncated",
+            retryable=False,
         )
 
     def ensure_child_folder(
