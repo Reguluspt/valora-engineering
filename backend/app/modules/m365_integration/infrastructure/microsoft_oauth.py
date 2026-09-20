@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from typing import Literal
 
 import msal
 
@@ -16,7 +17,18 @@ from app.modules.m365_integration.domain.graph_gateway import (
 CONSUMER_AUTHORITY = "https://login.microsoftonline.com/consumers"
 CONSUMER_TENANT_ID = "9188040d-6c67-4c5b-b112-36a304b66dad"
 CONSUMER_ISSUER = f"https://login.microsoftonline.com/{CONSUMER_TENANT_ID}/v2.0"
-GRAPH_SCOPES = ["Files.Read"]
+READ_ONLY_SCOPES = ["Files.Read"]
+EXCHANGE_WRITE_SCOPES = ["Files.Read", "Files.ReadWrite.AppFolder"]
+
+
+def _scopes_for_profile(
+    scope_profile: Literal["read_only", "exchange_write"],
+) -> list[str]:
+    if scope_profile == "read_only":
+        return READ_ONLY_SCOPES
+    if scope_profile == "exchange_write":
+        return EXCHANGE_WRITE_SCOPES
+    raise MicrosoftOAuthError("Microsoft OAuth scope profile is invalid.")
 
 
 class MicrosoftOAuthError(RuntimeError):
@@ -39,10 +51,12 @@ class MicrosoftPersonalOAuthClient:
             token_cache=cache,
         )
 
-    def begin(self) -> OAuthAuthorizationStart:
+    def begin(
+        self, *, scope_profile: Literal["read_only", "exchange_write"] = "read_only"
+    ) -> OAuthAuthorizationStart:
         cache = msal.SerializableTokenCache()
         flow = self._application(cache).initiate_auth_code_flow(
-            scopes=GRAPH_SCOPES,
+            scopes=_scopes_for_profile(scope_profile),
             redirect_uri=self._redirect_uri,
             prompt="select_account",
         )
@@ -94,8 +108,12 @@ class MicrosoftPersonalOAuthClient:
             raise MicrosoftOAuthError("Microsoft OAuth account is not a personal account.")
 
         access_token = result.get("access_token")
-        granted_scopes = frozenset(str(result.get("scope", "")).split())
-        if not isinstance(access_token, str) or "Files.Read" not in granted_scopes:
+        granted_scopes = frozenset(
+            scope.strip().lower()
+            for scope in str(result.get("scope", "")).split()
+            if scope.strip()
+        )
+        if not isinstance(access_token, str) or "files.read" not in granted_scopes:
             raise MicrosoftOAuthError("Microsoft OAuth did not grant the required file scope.")
         if not cache.find(msal.TokenCache.CredentialType.REFRESH_TOKEN):
             raise MicrosoftOAuthError("Microsoft OAuth token cache is unavailable.")
@@ -107,7 +125,12 @@ class MicrosoftPersonalOAuthClient:
             granted_scopes=granted_scopes,
         )
 
-    def acquire_access_token(self, *, token_cache: bytes) -> OAuthAccessToken:
+    def acquire_access_token(
+        self,
+        *,
+        token_cache: bytes,
+        scope_profile: Literal["read_only", "exchange_write"] = "read_only",
+    ) -> OAuthAccessToken:
         cache = msal.SerializableTokenCache()
         try:
             cache.deserialize(token_cache.decode("utf-8"))
@@ -117,7 +140,9 @@ class MicrosoftPersonalOAuthClient:
         accounts = app.get_accounts()
         if len(accounts) != 1:
             raise MicrosoftOAuthError("Microsoft OAuth account cache is unavailable.")
-        result = app.acquire_token_silent(GRAPH_SCOPES, account=accounts[0])
+        result = app.acquire_token_silent(
+            _scopes_for_profile(scope_profile), account=accounts[0]
+        )
         if not result or not isinstance(result.get("access_token"), str):
             raise MicrosoftOAuthError("Microsoft OAuth token refresh is required.")
         return OAuthAccessToken(

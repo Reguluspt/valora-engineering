@@ -19,6 +19,7 @@ from app.db import get_db
 from app.modules.m365_integration.application.connection_service import (
     begin_onedrive_authorization,
     complete_onedrive_authorization,
+    get_connection_capabilities,
     require_onedrive_actor,
 )
 from app.modules.m365_integration.application.provision_document_service import (
@@ -61,6 +62,11 @@ class OneDriveConnectionStatusResponse(BaseModel):
     drive_id: str | None
     status: Literal["not_connected", "active", "error", "revoked"]
     last_verified_at: datetime | None
+    capability_state: Literal[
+        "read-only", "exchange-write-ready", "reconsent-required"
+    ]
+    read_available: bool
+    appfolder_write_available: bool
 
 
 class M365AdoptionTemplateResponse(BaseModel):
@@ -207,6 +213,7 @@ def _components(db: Session):
 @router.post("/authorize", response_model=OneDriveAuthorizationResponse)
 def authorize_onedrive(
     request: Request,
+    scope_profile: Literal["read_only", "exchange_write"] = "read_only",
     db: Session = Depends(get_db),
     session: UserSession = Depends(get_current_session),
 ) -> OneDriveAuthorizationResponse:
@@ -231,6 +238,7 @@ def authorize_onedrive(
         user_session=session,
         oauth_client=oauth,
         credential_vault=vault,
+        scope_profile=scope_profile,
         correlation_id=get_correlation_id(request),
     )
     return OneDriveAuthorizationResponse(authorization_url=authorization_url)
@@ -314,12 +322,32 @@ def read_onedrive_connection(
             drive_id=None,
             status="not_connected",
             last_verified_at=None,
+            capability_state="reconsent-required",
+            read_available=False,
+            appfolder_write_available=False,
         )
+    read_available, appfolder_write_available = get_connection_capabilities(
+        db,
+        organization_id=current_user.organization_id,
+        connection_id=connection.id,
+    )
+    if connection.status != "active":
+        read_available = False
+        appfolder_write_available = False
+    if read_available and appfolder_write_available:
+        capability_state = "exchange-write-ready"
+    elif read_available:
+        capability_state = "read-only"
+    else:
+        capability_state = "reconsent-required"
     return OneDriveConnectionStatusResponse(
         connection_id=connection.id,
         drive_id=connection.drive_id,
         status=connection.status,
         last_verified_at=connection.last_verified_at,
+        capability_state=capability_state,
+        read_available=read_available,
+        appfolder_write_available=appfolder_write_available,
     )
 
 

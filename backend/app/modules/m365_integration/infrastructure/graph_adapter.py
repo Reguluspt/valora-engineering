@@ -12,6 +12,9 @@ from app.modules.m365_integration.domain.graph_gateway import (
     GraphDriveChildren,
     GraphDriveEntry,
     GraphDriveItem,
+    GraphExchangeItem,
+    GraphMutationResult,
+    GraphMutationStatus,
 )
 
 
@@ -92,6 +95,240 @@ class MicrosoftGraphGateway:
         if not isinstance(payload, dict):
             raise MicrosoftGraphError("Microsoft Graph response is invalid.")
         return payload
+
+    @staticmethod
+    def _exchange_item(payload: dict, *, expected_drive_id: str) -> GraphExchangeItem:
+        parent = payload.get("parentReference") or {}
+        drive_item_id = payload.get("id")
+        name = payload.get("name")
+        e_tag = payload.get("eTag")
+        parent_item_id = parent.get("id")
+        drive_id = parent.get("driveId") or expected_drive_id
+        is_folder = isinstance(payload.get("folder"), dict)
+        is_file = isinstance(payload.get("file"), dict)
+        try:
+            size_bytes = int(payload.get("size", 0))
+        except (TypeError, ValueError) as exc:
+            raise MicrosoftGraphError("Microsoft Graph item metadata is invalid.") from exc
+        if (
+            drive_id != expected_drive_id
+            or not isinstance(drive_item_id, str)
+            or not drive_item_id
+            or not isinstance(name, str)
+            or not name
+            or not isinstance(e_tag, str)
+            or not e_tag
+            or size_bytes < 0
+            or is_folder == is_file
+        ):
+            raise MicrosoftGraphError(
+                "Microsoft Graph returned mismatched item identity.",
+                category="identity_mismatch",
+                retryable=False,
+            )
+        return GraphExchangeItem(
+            drive_id=drive_id,
+            drive_item_id=drive_item_id,
+            parent_item_id=parent_item_id if isinstance(parent_item_id, str) else None,
+            kind="folder" if is_folder else "file",
+            name=name,
+            size_bytes=size_bytes,
+            e_tag=e_tag,
+            c_tag=payload.get("cTag") if isinstance(payload.get("cTag"), str) else None,
+        )
+
+    @staticmethod
+    def _mutation_failure(response: httpx.Response) -> GraphMutationResult | None:
+        request_id = response.headers.get("request-id")
+        if response.status_code == 409:
+            return GraphMutationResult(GraphMutationStatus.COLLISION, provider_request_id=request_id)
+        if response.status_code == 412:
+            return GraphMutationResult(
+                GraphMutationStatus.STALE_PRECONDITION, provider_request_id=request_id
+            )
+        if response.status_code == 429:
+            retry_after = response.headers.get("retry-after")
+            return GraphMutationResult(
+                GraphMutationStatus.UNAVAILABLE,
+                provider_request_id=request_id,
+                retry_after_seconds=(int(retry_after) if retry_after and retry_after.isdigit() else None),
+            )
+        if response.status_code >= 500 or response.status_code in {408}:
+            return GraphMutationResult(
+                GraphMutationStatus.OUTCOME_UNKNOWN, provider_request_id=request_id
+            )
+        if response.status_code >= 400:
+            return GraphMutationResult(GraphMutationStatus.REJECTED, provider_request_id=request_id)
+        return None
+
+    def get_app_root(self, *, access_token: str) -> GraphExchangeItem:
+        payload = self._get(
+            access_token=access_token,
+            path="/me/drive/special/approot",
+            params={"$select": "id,name,size,eTag,cTag,folder,parentReference"},
+        )
+        parent = payload.get("parentReference") or {}
+        drive_id = parent.get("driveId")
+        if not isinstance(drive_id, str) or not drive_id:
+            raise MicrosoftGraphError("Microsoft Graph app root identity is incomplete.")
+        return self._exchange_item(payload, expected_drive_id=drive_id)
+
+    def get_exchange_item_by_id(
+        self, *, access_token: str, drive_id: str, drive_item_id: str
+    ) -> GraphExchangeItem:
+        payload = self._get(
+            access_token=access_token,
+            path=(
+                f"/drives/{quote(drive_id, safe='')}/items/"
+                f"{quote(drive_item_id, safe='')}"
+            ),
+            params={"$select": "id,name,size,eTag,cTag,file,folder,parentReference"},
+        )
+        item = self._exchange_item(payload, expected_drive_id=drive_id)
+        if item.drive_item_id != drive_item_id:
+            raise MicrosoftGraphError(
+                "Microsoft Graph returned mismatched item identity.",
+                category="identity_mismatch",
+                retryable=False,
+            )
+        return item
+
+    def resolve_child_by_exact_name(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str,
+        exact_name: str,
+    ) -> tuple[GraphExchangeItem, ...]:
+        if not exact_name or "/" in exact_name or "\\" in exact_name:
+            raise MicrosoftGraphError(
+                "Microsoft Graph child name is invalid.",
+                category="invalid_target",
+                retryable=False,
+            )
+        payload = self._get(
+            access_token=access_token,
+            path=(
+                f"/drives/{quote(drive_id, safe='')}/items/"
+                f"{quote(parent_item_id, safe='')}/children"
+            ),
+            params={
+                "$top": "100",
+                "$select": "id,name,size,eTag,cTag,file,folder,parentReference",
+            },
+        )
+        values = payload.get("value")
+        if not isinstance(values, list):
+            raise MicrosoftGraphError("Microsoft Graph folder response is invalid.")
+        return tuple(
+            self._exchange_item(value, expected_drive_id=drive_id)
+            for value in values
+            if isinstance(value, dict) and value.get("name") == exact_name
+        )
+
+    def ensure_child_folder(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str,
+        exact_name: str,
+    ) -> GraphMutationResult:
+        matches = self.resolve_child_by_exact_name(
+            access_token=access_token,
+            drive_id=drive_id,
+            parent_item_id=parent_item_id,
+            exact_name=exact_name,
+        )
+        if len(matches) == 1 and matches[0].kind == "folder":
+            return GraphMutationResult(GraphMutationStatus.CREATED, item=matches[0])
+        if matches:
+            return GraphMutationResult(GraphMutationStatus.COLLISION)
+        url = (
+            f"{GRAPH_BASE_URL}/drives/{quote(drive_id, safe='')}/items/"
+            f"{quote(parent_item_id, safe='')}/children"
+        )
+        try:
+            response = httpx.post(
+                url,
+                headers={"Authorization": f"Bearer {access_token}"},
+                json={
+                    "name": exact_name,
+                    "folder": {},
+                    "@microsoft.graph.conflictBehavior": "fail",
+                },
+                timeout=self._timeout_seconds,
+            )
+        except httpx.HTTPError:
+            return GraphMutationResult(GraphMutationStatus.OUTCOME_UNKNOWN)
+        failure = self._mutation_failure(response)
+        if failure is not None:
+            return failure
+        try:
+            payload = response.json()
+        except ValueError:
+            return GraphMutationResult(GraphMutationStatus.OUTCOME_UNKNOWN)
+        return GraphMutationResult(
+            GraphMutationStatus.CREATED,
+            item=self._exchange_item(payload, expected_drive_id=drive_id),
+            provider_request_id=response.headers.get("request-id"),
+        )
+
+    def create_file(
+        self,
+        *,
+        access_token: str,
+        drive_id: str,
+        parent_item_id: str,
+        exact_name: str,
+        content: bytes,
+    ) -> GraphMutationResult:
+        if (
+            not exact_name
+            or "/" in exact_name
+            or "\\" in exact_name
+            or len(content) > MAX_DOWNLOAD_BYTES
+        ):
+            return GraphMutationResult(GraphMutationStatus.REJECTED)
+        matches = self.resolve_child_by_exact_name(
+            access_token=access_token,
+            drive_id=drive_id,
+            parent_item_id=parent_item_id,
+            exact_name=exact_name,
+        )
+        if matches:
+            return GraphMutationResult(GraphMutationStatus.COLLISION)
+        url = (
+            f"{GRAPH_BASE_URL}/drives/{quote(drive_id, safe='')}/items/"
+            f"{quote(parent_item_id, safe='')}:/"
+            f"{quote(exact_name, safe='')}:/content"
+        )
+        try:
+            response = httpx.put(
+                url,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/octet-stream",
+                    "If-None-Match": "*",
+                },
+                content=content,
+                timeout=self._timeout_seconds,
+            )
+        except httpx.HTTPError:
+            return GraphMutationResult(GraphMutationStatus.OUTCOME_UNKNOWN)
+        failure = self._mutation_failure(response)
+        if failure is not None:
+            return failure
+        try:
+            payload = response.json()
+        except ValueError:
+            return GraphMutationResult(GraphMutationStatus.OUTCOME_UNKNOWN)
+        return GraphMutationResult(
+            GraphMutationStatus.CREATED,
+            item=self._exchange_item(payload, expected_drive_id=drive_id),
+            provider_request_id=response.headers.get("request-id"),
+        )
 
     def get_default_drive(self, *, access_token: str) -> GraphDrive:
         payload = self._get(
