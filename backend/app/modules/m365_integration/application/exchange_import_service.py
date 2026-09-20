@@ -31,6 +31,7 @@ from app.modules.excel_import.application.import_service import upload_excel_fil
 from app.modules.excel_import.application.source_artifact_service import upload_source_artifact
 from app.modules.m365_integration.application.connection_service import (
     get_connection_capabilities,
+    require_onedrive_actor,
 )
 from app.modules.m365_integration.application.exchange_service import (
     MAX_EXCHANGE_BYTES,
@@ -135,6 +136,9 @@ async def import_inbox_docx(
     retention_anchor_at: datetime,
     minimum_retain_until: datetime,
 ) -> tuple[DocumentRevision, StorageObjectBinding, M365ExchangeArtifact]:
+    actor = require_onedrive_actor(
+        db, organization_id=organization_id, user_id=actor.id
+    )
     connection = db.query(OneDriveConnection).filter(
         OneDriveConnection.organization_id == organization_id,
         OneDriveConnection.id == connection_id,
@@ -295,6 +299,9 @@ async def create_docx_working_copy(
     access_token: str,
     blob_store: DocumentBlobStore,
 ) -> M365ExchangeArtifact | None:
+    actor = require_onedrive_actor(
+        db, organization_id=organization_id, user_id=actor.id
+    )
     head = db.query(DocumentRevisionCurrentHead).filter(
         DocumentRevisionCurrentHead.organization_id == organization_id,
         DocumentRevisionCurrentHead.project_id == project_id,
@@ -377,6 +384,9 @@ async def create_docx_export(
     blob_store: DocumentBlobStore,
 ) -> M365ExchangeArtifact | None:
     """Create a non-authoritative Export from the current immutable DOCX blob."""
+    actor = require_onedrive_actor(
+        db, organization_id=organization_id, user_id=actor.id
+    )
     head = db.query(DocumentRevisionCurrentHead).filter(
         DocumentRevisionCurrentHead.organization_id == organization_id,
         DocumentRevisionCurrentHead.project_id == project_id,
@@ -463,6 +473,9 @@ async def reimport_working_docx(
     minimum_retain_until: datetime,
 ) -> DocxReimportResult:
     """Explicitly promote one verified Working DOCX into revision N+1."""
+    actor = require_onedrive_actor(
+        db, organization_id=organization_id, user_id=actor.id
+    )
     artifact = db.query(M365ExchangeArtifact).filter(
         M365ExchangeArtifact.organization_id == organization_id,
         M365ExchangeArtifact.project_id == project_id,
@@ -615,6 +628,9 @@ def import_inbox_xlsx(
     request,
     reimport: bool = False,
 ) -> M365ExchangeArtifact:
+    actor = require_onedrive_actor(
+        db, organization_id=organization_id, user_id=actor.id
+    )
     connection = db.query(OneDriveConnection).filter(
         OneDriveConnection.organization_id == organization_id,
         OneDriveConnection.id == connection_id,

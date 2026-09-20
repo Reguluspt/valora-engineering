@@ -71,8 +71,11 @@ from app.modules.m365_integration.models import (
 from app.modules.project_master_data.models import (
     AuditEvent,
     ImportBatchStatus,
+    OrganizationStatus,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
+    UserRole,
+    UserStatus,
 )
 from tests.test_pr05_m365_foundation import TABLES, _connect, _seed
 
@@ -268,6 +271,131 @@ def _head(ctx, document_id):
 
 def _assert_code(exc: pytest.ExceptionInfo[HTTPException], code: str):
     assert exc.value.detail["error_code"] == code
+
+
+def test_exchange_commands_reject_inactive_actor_before_any_io(exchange_context):
+    ctx = exchange_context
+    actor = ctx["seeded"]["actor"]
+    actor.status = UserStatus.INACTIVE
+    ctx["db"].commit()
+    common = {
+        "actor": actor,
+        "organization_id": ctx["seeded"]["organization"].id,
+        "project_id": ctx["seeded"]["project"].id,
+        "graph_gateway": ctx["graph"],
+        "access_token": "offline-token",
+    }
+    calls = (
+        lambda: _run(
+            import_inbox_docx(
+                ctx["db"],
+                **common,
+                connection_id=ctx["connection"].id,
+                drive_item_id="forbidden-docx",
+                document_type="valuation_report",
+                title="Forbidden",
+                definition_set=REGIONS,
+                idempotency_key="forbidden-docx-import",
+                blob_store=ctx["blob"],
+                storage_profile_id="g8-fake",
+                container_name="g8-documents",
+                retention_policy_code="official-document-10y",
+                retention_anchor_at=RETENTION_ANCHOR,
+                minimum_retain_until=RETENTION_UNTIL,
+            )
+        ),
+        lambda: _run(
+            create_docx_working_copy(
+                ctx["db"],
+                **common,
+                connection_id=ctx["connection"].id,
+                document_id=ctx["connection"].id,
+                destination_name="Forbidden.docx",
+                idempotency_key="forbidden-working",
+                blob_store=ctx["blob"],
+            )
+        ),
+        lambda: _run(
+            create_docx_export(
+                ctx["db"],
+                **common,
+                connection_id=ctx["connection"].id,
+                document_id=ctx["connection"].id,
+                destination_name="Forbidden.docx",
+                idempotency_key="forbidden-export",
+                blob_store=ctx["blob"],
+            )
+        ),
+        lambda: _run(
+            reimport_working_docx(
+                ctx["db"],
+                **common,
+                artifact_id=ctx["connection"].id,
+                definition_set=REGIONS,
+                idempotency_key="forbidden-reimport",
+                blob_store=ctx["blob"],
+                storage_profile_id="g8-fake",
+                container_name="g8-documents",
+                retention_policy_code="official-document-10y",
+                retention_anchor_at=RETENTION_ANCHOR,
+                minimum_retain_until=RETENTION_UNTIL,
+            )
+        ),
+        lambda: import_inbox_xlsx(
+            ctx["db"],
+            **common,
+            connection_id=ctx["connection"].id,
+            batch_id=ctx["connection"].id,
+            drive_item_id="forbidden-xlsx",
+            request=SimpleNamespace(headers={}),
+        ),
+    )
+
+    for call in calls:
+        with pytest.raises(HTTPException) as exc:
+            call()
+        assert exc.value.status_code == 403
+        _assert_code(exc, "onedrive_forbidden")
+
+    assert ctx["graph"].ensure_calls == 0
+    assert ctx["graph"].create_calls == 0
+    assert ctx["blob"].calls["read"] == 0
+
+
+@pytest.mark.parametrize("denial", ["inactive_user", "inactive_org", "missing_permission"])
+def test_exchange_authorization_conditions_fail_closed_before_provider_io(
+    exchange_context, denial
+):
+    ctx = exchange_context
+    actor = ctx["seeded"]["actor"]
+    if denial == "inactive_user":
+        actor.status = UserStatus.INACTIVE
+    elif denial == "inactive_org":
+        ctx["seeded"]["organization"].status = OrganizationStatus.INACTIVE
+    else:
+        ctx["db"].query(UserRole).filter(UserRole.user_id == actor.id).update(
+            {UserRole.is_active: False}
+        )
+    ctx["db"].commit()
+
+    with pytest.raises(HTTPException) as exc:
+        import_inbox_xlsx(
+            ctx["db"],
+            actor=actor,
+            organization_id=ctx["seeded"]["organization"].id,
+            project_id=ctx["seeded"]["project"].id,
+            connection_id=ctx["connection"].id,
+            batch_id=ctx["connection"].id,
+            drive_item_id="forbidden-xlsx",
+            graph_gateway=ctx["graph"],
+            access_token="offline-token",
+            request=SimpleNamespace(headers={}),
+        )
+
+    assert exc.value.status_code == 403
+    _assert_code(exc, "onedrive_forbidden")
+    assert ctx["graph"].ensure_calls == 0
+    assert ctx["graph"].create_calls == 0
 
 
 def _new_excel_batch(ctx, *, source_filename: str = "Nguon.xlsx"):
