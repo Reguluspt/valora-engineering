@@ -5,22 +5,23 @@
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_ADDENDUM.md` — **Baseline `Audit / Lineage Entry-point Consistency Contract v1` + visual `Audit & Lineage Entry-point Pattern Board — Iteration 1`**.
-3. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_VISUAL_BASELINE_ADDENDUM.md` — **Baseline visual `M365 Return & Revalidation — Iteration 1`**.
-4. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_CONTRACT_ADDENDUM.md` — **Baseline `Microsoft 365 Return / Revalidation Contract v1`**; semantic authority thắng nếu visual wording minh họa khác contract.
-5. `VALORA_UIUX_HANDOFF_v2.3_CROSS_PRODUCT_STATE_PATTERN_BASELINE_ADDENDUM.md` — Baseline `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`.
-6. `VALORA_UIUX_HANDOFF_v2.3_POST_PUBLISH_SUCCESS_BASELINE_ADDENDUM.md` — Baseline `Đã phát hành — Iteration 1`.
-7. `VALORA_UIUX_HANDOFF_v2.3_CASE_OVERVIEW_ORCHESTRATION_BASELINE_ADDENDUM.md` — Baseline `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`.
-8. `VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md` — Baseline `Chọn NCC đã xác nhận giá — Iteration 1`.
-9. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md` — Baseline `Lịch sử & nguồn gốc — Iteration 1`.
-10. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — Baseline `Hồ sơ cũ — Iteration 1`.
-11. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
-12. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
-13. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
-14. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
-15. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
-16. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
-17. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
+2. `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` — **Baseline `Working Change Observation / Change Candidate / Human Commit Contract v1`**; semantic authority mới hơn cho Working-copy re-import/review và Document Revision commit boundary.
+3. `VALORA_UIUX_HANDOFF_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_ADDENDUM.md` — **Baseline `Audit / Lineage Entry-point Consistency Contract v1` + visual `Audit & Lineage Entry-point Pattern Board — Iteration 1`**.
+4. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_VISUAL_BASELINE_ADDENDUM.md` — **Baseline visual `M365 Return & Revalidation — Iteration 1`**.
+5. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_CONTRACT_ADDENDUM.md` — **Baseline `Microsoft 365 Return / Revalidation Contract v1`**; semantic authority thắng nếu visual wording minh họa khác contract.
+6. `VALORA_UIUX_HANDOFF_v2.3_CROSS_PRODUCT_STATE_PATTERN_BASELINE_ADDENDUM.md` — Baseline `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`.
+7. `VALORA_UIUX_HANDOFF_v2.3_POST_PUBLISH_SUCCESS_BASELINE_ADDENDUM.md` — Baseline `Đã phát hành — Iteration 1`.
+8. `VALORA_UIUX_HANDOFF_v2.3_CASE_OVERVIEW_ORCHESTRATION_BASELINE_ADDENDUM.md` — Baseline `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`.
+9. `VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md` — Baseline `Chọn NCC đã xác nhận giá — Iteration 1`.
+10. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_LINEAGE_HISTORY_BASELINE_ADDENDUM.md` — Baseline `Lịch sử & nguồn gốc — Iteration 1`.
+11. `VALORA_UIUX_HANDOFF_v2.3_HISTORICAL_DOSSIER_BASELINE_ADDENDUM.md` — Baseline `Hồ sơ cũ — Iteration 1`.
+12. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_REVIEW_BASELINE_ADDENDUM.md` — Baseline `Cần rà soát tri thức — Iteration 1`.
+13. `VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md` — Baseline `Quản lý Kho tri thức — Iteration 1`.
+14. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md` — Baseline Xác nhận phát hành.
+15. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md` — Baseline Xem lại & xử lý ngoại lệ.
+16. `VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md` — Baseline Chuẩn bị bộ phát hành.
+17. Các addendum Bulk Sync, Custom Template, Document Set, Generation/Sync, Managed Regions, Sync-Version, Fill Engine, NCC warning, Result/NCCQ hiện hành.
+18. `VALORA_USER_FLOW_MINDMAP_v2.3.md` — support flow; không override master.
 
 ## 2. Audit / Lineage entry-point authority
 `Audit / Lineage Entry-point Consistency Contract v1` + `Audit & Lineage Entry-point Pattern Board — Iteration 1` là cross-product traceability/navigation authority. Đây không phải workflow checkpoint, không tạo màn `Audit toàn hệ thống` và không tạo audit subsystem mới.
@@ -55,6 +56,42 @@ Hard semantics: quay lại không đồng nghĩa Word đã đổi; M365 version 
 
 Revalidation feed vào document/release readiness và Global Case State stale/blocking/next-action. Frontend không dựng workflow truth riêng. Nếu wording minh họa của visual mâu thuẫn semantic contract, contract thắng.
 
+## 3.1 Working Change Observation / Change Candidate authority
+
+Product Owner đã chốt `Working Change Observation / Change Candidate / Human Commit Contract v1`.
+
+Canonical flow:
+
+```text
+VALORA Revision N
+→ Working copy
+→ Word Save
+→ notification/focus/freshness trigger
+→ AUTO REVALIDATION
+→ verified DOCX read khi cần
+→ Managed Region diff
+→ Old / V / W
+→ Change Candidate + recommendation
+→ user review/confirmation
+→ approved revision command
+→ Revision N+1
+```
+
+Hard semantics:
+- notification chỉ là stale/wake-up signal, không phải business authority;
+- automatic revalidation/analysis được phép đọc, diff và đề xuất nhưng không mutate business truth;
+- Change Candidate không phải Document Revision;
+- Word Save / M365 version / revalidation không tự tạo Revision;
+- Word-only Managed Region edit là proposal/review, không phải synthetic three-way conflict;
+- true conflict dùng `Old | VALORA | Word` và explicit human decision;
+- candidate stale/superseded phải re-review;
+- `DOCUMENT_SYNC_REVIEW` không tạo stage thứ 17; user-facing ưu tiên `Rà soát thay đổi tài liệu`;
+- safety revalidation bắt buộc trước Revision / Sync / Publishing mutation phụ thuộc freshness.
+
+Preferred UX: `Đã phát hiện thay đổi từ Word → Xem & xác nhận thay đổi`; fallback `Kiểm tra thay đổi`. Nếu còn label `Nhập thay đổi`, nó chỉ bắt đầu review pipeline, không đồng nghĩa immediate `NEXT_REVISION`.
+
+ADR 0045 là architecture authority cho subscription/delta observation, Change Candidate và human-confirmed revision boundary.
+
 ## 4. Cross-product state authority
 `Cross-product Empty / Loading / Error / Retry Contract v1` là state-presentation và recovery authority dùng chung toàn VALORA. Nó không thay Error Registry; Error Registry vẫn là message authority, còn State Contract phân loại state, scope, surface, recovery action và preserve/replace behavior.
 
@@ -83,6 +120,7 @@ Không UI khóa riêng. Không Export PDF.
 - Single-user.
 - Vietnamese-first, Fluent 2, desktop-first, data-heavy/table-first.
 - AI advisory; human-confirmed official decisions.
+- Automatic Working-copy observation/analysis được phép; authoritative business mutation và Document Revision creation bắt buộc human-confirmed business write boundary.
 - Không silent bypass/publish/overwrite/knowledge activation/state transition/stale reconciliation.
 - Không silent retry mutation khi commit status chưa xác định.
 - Không revive KSCL/QC/multi-level approval từ legacy workflow commands.
@@ -92,6 +130,6 @@ Không UI khóa riêng. Không Export PDF.
 - Traceability entry point phải context-first, giữ return target và không dựng `Audit toàn hệ thống`.
 
 ## 11. ADR
-Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics; M365 file identity/version binding, webhook/change notification, managed-region fingerprint/diff, freshness policy và revalidation audit persistence cần ADR nếu implementation thay đổi persistence/architecture.
+Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics; M365 file identity/version binding, webhook/change notification, managed-region fingerprint/diff, freshness policy và revalidation audit persistence cần ADR nếu implementation thay đổi persistence/architecture. Working-copy subscription/delta observation, Change Candidate và human-confirmed revision boundary phải tuân ADR 0045.
 
 Audit/Lineage pattern ưu tiên reuse primitives hiện hữu. Nếu cần unified traceability projection, generic cross-domain reference persistence, lineage graph persistence hoặc thay đổi semantics của audit/lineage primitives thì phải đánh giá ADR trước khi thay đổi architecture.
