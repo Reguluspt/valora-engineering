@@ -3,12 +3,12 @@
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**
 **Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first
 **Trạng thái:** Canonical master — Consolidated v2.3
-**Cập nhật:** 01/09/2026
+**Cập nhật:** 21/09/2026
 
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
 
 ## 0. Authority hiện hành
-Đã khóa `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
+Đã khóa `Working Change Observation / Change Candidate / Human Commit Contract v1`, `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
 
 ## 1. North-star flow
 ```text
