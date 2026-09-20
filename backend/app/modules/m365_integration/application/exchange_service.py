@@ -408,11 +408,33 @@ def execute_exchange_create(
     if item is None:
         return None
 
-    persisted = db.query(M365ExchangeOperation).filter(
-        M365ExchangeOperation.organization_id == organization_id,
-        M365ExchangeOperation.id == operation_id,
-    ).with_for_update().first()
-    if persisted is None or persisted.state not in {"PREPARED", "PROVIDER_UNKNOWN"}:
+    persisted = (
+        db.query(M365ExchangeOperation)
+        .filter(
+            M365ExchangeOperation.organization_id == organization_id,
+            M365ExchangeOperation.id == operation_id,
+        )
+        .populate_existing()
+        .with_for_update()
+        .first()
+    )
+    if persisted is None:
+        _abort(db, 404, "exchange_operation_not_found", "Không tìm thấy yêu cầu Exchange.")
+    if persisted.state in {"PROVIDER_VERIFIED", "FINALIZED"}:
+        artifact = db.get(M365ExchangeArtifact, persisted.artifact_id)
+        if artifact is None:
+            _abort(
+                db,
+                409,
+                "exchange_operation_state_conflict",
+                "Bằng chứng Exchange không đầy đủ.",
+            )
+        if persisted.state == "PROVIDER_VERIFIED":
+            persisted.state = "FINALIZED"
+            persisted.finalized_at = utc_now()
+        db.commit()
+        return artifact
+    if persisted.state not in {"PREPARED", "PROVIDER_UNKNOWN"}:
         _abort(db, 409, "exchange_operation_state_conflict", "Trạng thái Exchange đã thay đổi.")
     observed_sha256 = hashlib.sha256(content).hexdigest()
     artifact = M365ExchangeArtifact(
@@ -438,7 +460,42 @@ def execute_exchange_create(
         excel_source_artifact_id=excel_source_artifact_id,
     )
     db.add(artifact)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raced = (
+            db.query(M365ExchangeOperation)
+            .filter(
+                M365ExchangeOperation.organization_id == organization_id,
+                M365ExchangeOperation.id == operation_id,
+            )
+            .populate_existing()
+            .first()
+        )
+        if (
+            raced is not None
+            and raced.artifact_id is not None
+            and raced.state in {"PROVIDER_VERIFIED", "FINALIZED"}
+        ):
+            return execute_exchange_create(
+                db,
+                organization_id=organization_id,
+                operation_id=operation_id,
+                content=content,
+                graph_gateway=graph_gateway,
+                access_token=access_token,
+                source_authority_type=source_authority_type,
+                document_id=document_id,
+                document_revision_id=document_revision_id,
+                excel_import_batch_id=excel_import_batch_id,
+                excel_source_artifact_id=excel_source_artifact_id,
+            )
+        raise _error(
+            409,
+            "exchange_operation_state_conflict",
+            "Trạng thái Exchange đã thay đổi.",
+        )
     persisted.state = "PROVIDER_VERIFIED"
     persisted.expected_drive_item_id = item.drive_item_id
     persisted.expected_e_tag = item.e_tag
