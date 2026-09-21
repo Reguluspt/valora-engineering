@@ -1,8 +1,8 @@
 # VALORA-ONEDRIVE-EXCHANGE-001 — OneDrive Personal Exchange v1
 
-**Status:** G8-H CORRECTED SNAPSHOT FROZEN FOR INDEPENDENT RE-REVIEW
+**Status:** COMPLETE — G8 OFFLINE ACCEPTED
 **Opened:** 2026-09-20, Asia/Saigon
-**Authority:** ADR 0044 and `VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md`
+**Authority:** ADR 0044 + `VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md`; DOCX Working-copy promotion semantics are subsequently amended by ADR 0045
 
 ## Goal
 
@@ -33,7 +33,28 @@ No live Microsoft/AWS call, credentials, customer data, deploy, release, PR Read
 |---|---|
 | G8-A contract/schema freeze | ACCEPTED — ADR 0044 and implementation contract |
 | G8-B through G8-G implementation/tests | COMPLETE — offline suites, PostgreSQL proofs and static checks green |
-| G8-H exact snapshot | CORRECTED SNAPSHOT FROZEN AFTER FULL RE-VERIFICATION |
-| G8-I/J independent reviews | PRIOR: Gemini ACCEPT / DeepSeek REJECT; both must rerun on the corrected snapshot |
-| G8-K commit/push | NOT STARTED |
-| G8-L exact-head CI | NOT STARTED |
+| G8-H exact snapshot | COMPLETE — corrected snapshot refrozen and findings resolved |
+| G8-I/J independent reviews | ACCEPTED — both independent reviewers accepted the corrected exact snapshot |
+| G8-K commit/push | COMPLETE — G8 code milestone ends at `f896f15b0b18e8eb3a32619bee2418f3a4b92da4` |
+| G8-L exact-head CI | PASS — GitHub CI #302; backend 1659 passed, frontend 140 passed, worker and whitespace jobs green |
+
+## Post-G8 semantic reconciliation — 2026-09-21
+
+G8 acceptance proves the offline Exchange/storage mechanism. It does **not** preserve the historical
+product meaning that a changed Working DOCX may immediately become Revision N+1 merely because the
+explicit re-import command was invoked.
+
+ADR 0045 and the Working Change Observation design addendum now govern future DOCX Working behavior:
+
+```text
+provider change / return
+→ automatic observation + exact revalidation
+→ Change Candidate + Old/V/W analysis
+→ recommendation / review / conflict decision
+→ explicit human confirmation
+→ approved revision command
+→ reuse G8 NEXT_REVISION + immutable storage + CurrentHead CAS
+```
+
+No G9/live Microsoft activity is opened by this closeout. G9 requires separate Product Owner
+authorization and remains a bounded provider-conformance decision.
