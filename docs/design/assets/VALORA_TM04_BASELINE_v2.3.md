@@ -4,7 +4,7 @@
 
 **Nguồn visual:** TM04 — Iteration 1 đã được người dùng duyệt và chốt baseline.
 
-TM04 là màn hình kiểm thử cuối của luồng cấu hình template báo giá NCC Word `.docx`, dùng cùng Valora shell + Fluent 2 với TM01/TM03.
+TM04 là màn hình kiểm thử cuối của luồng cấu hình template báo giá NCC Word `.docx`, dùng cùng Valora shell + Fluent 2 light với TM01/TM03.
 
 > Authority rule: tài liệu này nâng TM04 Iteration 1 thành design authority. Mọi mô tả cũ ghi TM04 là `mockup chưa duyệt baseline` hoặc `working iteration` bị superseded kể từ baseline này.
 
@@ -16,7 +16,7 @@ Dữ liệu test chỉ phục vụ kiểm thử template; không trở thành d�
 
 ## 2. Visual baseline — Iteration 1
 
-- Valora shell + Fluent 2, desktop-first.
+- Valora shell + Fluent 2 light, desktop-first.
 - Breadcrumb: `Cấu hình → Mẫu báo giá nhà cung cấp → Preview / Test fill`.
 - Header: `Preview / Test fill dữ liệu Word`.
 - Step rail bên trái thể hiện 4 bước: `Upload file → Mapping bảng danh mục → Mapping thông tin chung → Preview / Test fill`.
