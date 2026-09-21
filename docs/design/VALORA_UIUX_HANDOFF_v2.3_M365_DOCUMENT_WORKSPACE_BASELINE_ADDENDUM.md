@@ -6,6 +6,26 @@ Authority chi tiết: [`assets/VALORA_M365_DOCUMENT_WORKSPACE_BASELINE_v2.3.md`]
 
 Addendum này supersede mọi mô tả cũ mâu thuẫn với các quyết định dưới đây.
 
+## 2026-09-21 execution-boundary amendment
+
+The visual/review semantics in this baseline remain valid, but the historical direct-write
+interpretation is amended by ADR 0043–0045 and the Unified Appraisal OS roadmap.
+
+Current default authority:
+
+```text
+reviewed document plan / candidate
+→ explicit human confirmation
+→ app-owned immutable DocumentRevision N+1
+→ CurrentHead CAS
+→ optional create-new Working / Export copy
+```
+
+A Microsoft 365 Working file is non-authoritative. Word Save, provider notification, revalidation,
+preview and conflict decisions do not create a revision. Direct replacement of an existing bound
+OneDrive item is historical/blocked and may not be reintroduced without separate Product Owner
+authority and independent provider-concurrency proof.
+
 ## A. Routing sau Kết quả thẩm định giá
 
 ```text
