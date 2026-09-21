@@ -94,7 +94,7 @@ New document-change runtime is gated by an ADR-0045 implementation contract; web
 delta runtime is not authorized by ADR 0045 alone.
 
 G9 live AppFolder conformance: separate Product Owner gate; not automatically opened by G8.
-PR-08 through PR-13: not product-complete.
+Historical PR-08 through PR-13 capability labels remain not product-complete; current closure ordering is `OS-G0 → OS-G7`.
 Windows Preview: only after Software Completion.
 ```
 
@@ -153,7 +153,7 @@ Current v2.3 disposition:
    the four prefix stages.
 6. PR-07 direct OneDrive replacement execution is historical/blocked; new document-change runtime
    requires the ADR-0045 implementation contract.
-7. PR-08 through PR-13 remain to be closed as product/OS vertical slices.
+7. Historical PR-08 through PR-13 capability gaps remain open, but they must be closed in the current Unified Roadmap order `OS-G0 → OS-G7`, not by restoring the old PR sequence.
 
 
 ## 7. Module ownership (future runtime)
