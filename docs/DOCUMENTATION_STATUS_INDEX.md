@@ -3,6 +3,7 @@
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
 **Date:** 2026-09-21
 **Scope:** Classification and reading rules for repository documentation.
+**Inventory reconciliation:** 350 documentation/config-document files at the 2026-09-21 sweep.
 
 ## 1. Why this index exists
 
@@ -13,10 +14,11 @@ current roadmap or product authority.
 When documents conflict, use this order:
 
 ```text
-Product Owner explicit decision
+Explicit current Product Owner decision — wins only in named scope
+→ current v2.3 UI/UX master + Authority Index + applicable addenda + accepted scoped ADRs
+   (product semantics / workflow / IA / interaction / Microsoft Fluent 2 light visual authority)
 → VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
-→ current v2.3 UI/UX Authority Index + canonical master/addenda
-→ accepted current ADRs
+   (development sequencing / architecture integration)
 → current implementation contracts / active task contract
 → project handoff / acceptance matrix
 → historical design/sprint/audit/research evidence
@@ -24,14 +26,21 @@ Product Owner explicit decision
 
 Historical evidence must not be rewritten to pretend it knew later decisions.
 
-## 2. Current roadmap / product authority
+## 2. Current product/UX authority and roadmap roles
 
-Current:
+Current product/UX authority:
 
-- `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
 - `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`
 - `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
 - current v2.3 Design Authority addenda referenced by that index
+- accepted scoped ADRs where architecture/persistence semantics are explicitly governed
+
+Current development sequencing / architecture integration:
+
+- `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
+
+Conflict-resolution/read-order map:
+
 - `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md`
 
 Current document-change authority:
@@ -44,7 +53,7 @@ Current document-change authority:
 Current roadmap ordering:
 
 ```text
-OS-G0 Authority
+OS-G0 Authority + Fluent 2 light visual-system reconciliation
 → OS-G1 Pre-case
 → OS-G2 Appraisal Core
 → OS-G3 Document Runtime
@@ -53,6 +62,8 @@ OS-G0 Authority
 → OS-G6 Product E2E
 → OS-G7 AI Expansion
 ```
+
+Current visual authority is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Astryx is historical/low-level reference only and must not drive product styling.
 
 Sub-domain plans may not reorder this sequence without a new Product Owner decision.
 
