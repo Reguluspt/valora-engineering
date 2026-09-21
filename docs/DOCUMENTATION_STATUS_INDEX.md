@@ -47,7 +47,7 @@ Current document-change authority:
 
 - ADR 0043 — app-owned immutable document storage
 - ADR 0044 — OneDrive Personal Exchange v1, amended by ADR 0045
-- ADR 0045 — Working Change Observation / Change Candidate / Human Commit
+- ADR 0045 — Working Change Observation / DocumentChangeCandidate / Human Commit
 - `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md`
 
 Current roadmap ordering:
