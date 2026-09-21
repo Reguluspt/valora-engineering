@@ -4,15 +4,15 @@ Navigation index; this file does not replace design authority or acceptance evid
 
 ## Authority and implementation status
 
-- [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current product/development ordering; Appraisal OS roadmap wins over sub-domain/platform roadmaps.
+- [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) + [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md) — current product semantics, workflow, IA, interaction and Microsoft Fluent 2 light visual authority.
+- [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current development sequencing / architecture integration; it does not silently override UI/UX semantics.
 - [Documentation status index](DOCUMENTATION_STATUS_INDEX.md) — canonical classification of current authority, living engineering docs, historical audits/sprints/handoffs and superseded provider research.
 - [2026-09-21 documentation reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_UNIFIED_ROADMAP_V2_3.md) — inventory/classification and current-living-doc reconciliation against the Unified Roadmap.
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
 - [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
   delegated mechanical-worker, independent-review and commit-ownership rules.
-- [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) and [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md).
-- [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md).
+- [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md) — historical PR-labelled acceptance evidence plus current candidate reconciliation; **not** current roadmap sequencing.
 
 ## Document storage, OneDrive Exchange and document-change direction
 
