@@ -8,7 +8,7 @@
 > **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Scope
 
-Baseline này khóa màn hình `03_Hợp đồng — Danh sách & tạo tài liệu` trong Microsoft 365 Document Workspace.
+Baseline này khóa màn hình `03_Hợp đồng — Danh sách & tạo tài liệu` trong Không gian tài liệu.
 
 Mục tiêu: quản lý các tài liệu nghiệp vụ do VALORA sinh trong vòng đời hợp đồng, tạo tài liệu từ template đã cấu hình, theo dõi Data Snapshot / Document Revision / Microsoft 365 file version và giữ lineage tới bản scan ký trong `05_Pháp lý` nếu có.
 
@@ -76,7 +76,7 @@ Template/version đang sử dụng phải được ghi lineage; không silent ov
 
 Preview trong VALORA chỉ để xem, không phải Word editor.
 
-Thao tác chỉnh sửa nội dung Word dùng `Mở trong Word` theo authority Microsoft 365 Document Workspace.
+Thao tác chỉnh sửa nội dung Word dùng `Mở trong Word` theo authority Không gian tài liệu / Microsoft 365 integration.
 
 Panel chi tiết tối thiểu hiển thị loại tài liệu, mẫu sử dụng, phiên bản/revision, người tạo, thời gian tạo/cập nhật, trạng thái sync và vị trí file.
 
