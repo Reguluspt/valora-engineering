@@ -7,6 +7,8 @@
 
 ## 1. Read order
 
+Product/development ordering is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. UI/UX semantics remain governed by the v2.3 master/index and directly relevant addenda.
+
 1. `CODEX.md` — live task gate and agent operating rules.
 2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
 3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
