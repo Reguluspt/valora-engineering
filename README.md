@@ -16,7 +16,7 @@ Agents must `git fetch origin` and verify live `origin/main`.
 
 ## Product goal
 
-Valora is a **valuation / asset-identity workbench** for non-IT business users. Primary UX language is **Vietnamese**. Official UI/components follow the **Astryx** design system. Word/Excel are input/output only — they are **not** the source of truth.
+Valora is a **valuation / asset-identity workbench** for non-IT business users. Primary UX language is **Vietnamese**. Current product visual authority is **Microsoft Fluent 2 light**, desktop-first and data-heavy/table-first. Word/Excel are input/output only — they are **not** the source of truth.
 
 ## Current status (truthful)
 
@@ -62,7 +62,7 @@ Earlier S13 sequencing is historical context.
 
 ```text
 backend/     FastAPI + SQLAlchemy + Alembic (Python ≥3.12)
-frontend/    React 18 + TypeScript + Vite + Astryx
+frontend/    React 18 + TypeScript + Vite; Fluent 2 light product visual authority
 worker/      Python worker skeleton; planned reliable outbox/job runtime before long-running extraction/AI
 infra/       Local infra notes
 docs/        ADR, design contracts, audits, remediation, handoff
