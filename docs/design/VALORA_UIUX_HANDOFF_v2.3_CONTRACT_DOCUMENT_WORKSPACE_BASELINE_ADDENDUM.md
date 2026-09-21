@@ -4,6 +4,8 @@
 **Iteration:** 1
 **Ngày duyệt:** 30/08/2026
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Scope
 
 Baseline này khóa màn hình `03_Hợp đồng — Danh sách & tạo tài liệu` trong Microsoft 365 Document Workspace.
