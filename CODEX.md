@@ -14,12 +14,13 @@ Domain behavior must come from this read order:
 2. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
 3. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
 4. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
-5. The v2.3 addendum directly governing the assigned PR
-6. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
-7. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
-8. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
-9. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
-10. Feature contracts under docs/design/ and accepted docs/adr/* decisions
+5. docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md — current product/development ordering
+6. The v2.3 addendum directly governing the assigned PR
+7. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
+8. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
+9. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
+10. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
+11. Feature contracts under docs/design/ and accepted docs/adr/* decisions
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
