@@ -4,6 +4,7 @@
 **Phạm vi:** Nguồn giá & Chứng cứ → NCCQ → Kết quả thẩm định giá
 **Nguyên tắc supersession:** Addendum này ưu tiên áp dụng nếu mâu thuẫn với mô tả cũ trong master handoff hoặc iteration trước.
 
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## A. Thứ tự ưu tiên nguồn giá & chứng cứ
 
 Thứ tự nghiệp vụ được khóa:
@@ -97,7 +98,7 @@ Nguồn giá & Chứng cứ
 → Hoàn tất từng báo giá NCC
 → Chọn nhà cung cấp đã xác nhận giá
 → Kết quả thẩm định giá
-→ Microsoft 365 Document Workspace / Bộ tài liệu phát hành
+→ Không gian tài liệu / Bộ tài liệu hồ sơ
 ```
 
 Không có màn NCCQ aggregate trung gian.
