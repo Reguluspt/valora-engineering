@@ -1,3 +1,6 @@
+> **HISTORICAL DIRECT-WRITE RESEARCH — 2026-09-21**  
+> Retained as evidence only. Do not execute/reopen this plan from current roadmap. Direct replacement of an existing OneDrive item is historical/blocked. Current document direction is ADR 0043–0045 + `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
+
 # PR-07 — Implementation plan cho OAuth diagnostics và C2 research probe
 
 > **For agentic workers:** Sau khi có approval local, dùng `superpowers:executing-plans` để thực hiện task-by-task với một implementation owner và reviewer độc lập. `superpowers:subagent-driven-development` chỉ phù hợp nếu vẫn giữ exclusive ownership của ba tools. Checklist chưa tick là việc chưa thực hiện; hướng dẫn execution không cấp authority vượt §1.
