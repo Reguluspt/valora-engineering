@@ -1,9 +1,44 @@
 # VALORA OneDrive Personal Exchange v1 implementation contract
 
-**Status:** FROZEN FOR G8 OFFLINE IMPLEMENTATION
+**Status:** G8 OFFLINE IMPLEMENTATION COMPLETE — DOCX WORKING PROMOTION AMENDED BY ADR 0045
 **Date:** 2026-09-20
 **Task:** `VALORA-ONEDRIVE-EXCHANGE-001`
-**Authority:** ADR 0044, ADR 0043, ADR 0029
+**Authority:** ADR 0044, ADR 0043, ADR 0029; ADR 0045 supersedes DOCX Working-copy promotion semantics after G8
+
+## 2026-09-21 semantic amendment
+
+G8 has completed its offline implementation and remains valid as storage/Exchange machinery.
+
+For future DOCX Working-copy product/runtime behavior, ADR 0045 and the approved Working Change
+Observation design addendum supersede only this contract's **immediate promotion** semantics.
+
+Historical G8 proof:
+
+```text
+explicit re-import
+→ verified changed DOCX
+→ NEXT_REVISION
+```
+
+Current target semantics:
+
+```text
+provider change / return
+→ automatic observation/revalidation
+→ verified DOCX analysis
+→ Change Candidate
+→ Old / V / W
+→ recommendation/review/conflict
+→ explicit human confirmation
+→ approved revision command
+→ NEXT_REVISION
+```
+
+Therefore E9 remains valid evidence that the G8 immutable N+1 storage path works; it is **not**
+authority for a future UI/action to skip Change Candidate review or human confirmation.
+
+XLSX re-import semantics are unchanged: source/staging generation may advance only through the
+existing Excel intake boundary and Apply remains separately explicit.
 
 ## Boundary
 
@@ -85,12 +120,10 @@ explicit Inbox command
 No DB lock spans Graph or blob-provider I/O. A failed transaction publishes none of the four
 authoritative/linking rows. Replay uses the same command/intent.
 
-### Working and explicit re-import
+### Working and explicit re-import — G8 mechanism / amended product semantics
 
 Working reads the current binding through the bounded blob-read port and validates exact SHA-256/
-length before a create-new Graph operation. It creates no revision. Re-import repeats provider
-metadata/content verification; equal current checksum returns no-change; otherwise it uses the G6
-`NEXT_REVISION` flow and CurrentHead CAS.
+length before a create-new Graph operation. It creates no revision. The G8 implementation repeats provider metadata/content verification; equal current checksum returns no-change. G8 proved that changed bytes can safely reuse the G6 `NEXT_REVISION` flow and CurrentHead CAS. After ADR 0045, future product orchestration must place automatic revalidation + Change Candidate + review/human confirmation before that `NEXT_REVISION` boundary.
 
 ## XLSX commands
 
@@ -105,13 +138,12 @@ Keep the current M365 workspace. Present one capability-aware state:
 
 - `read-only`: existing read/revalidation remains usable; show “Cần cấp quyền Exchange”; write CTAs
   are unavailable.
-- `exchange-write-ready`: expose applicable “Nhận tệp”, “Bản làm việc”, “Nhập thay đổi” and “Xuất
-  sang OneDrive” actions.
+- `exchange-write-ready`: expose applicable “Nhận tệp”, “Bản làm việc” and “Xuất sang OneDrive”. A Working change enters the review pipeline via automatic observation or fallback `Kiểm tra thay đổi`; if legacy copy still shows `Nhập thay đổi`, it means begin review, not immediate Revision creation.
 - `reconsent-required`: explain the missing Exchange grant and provide only explicit reconsent.
 
 Near every Working action persist:
 
-> Lưu trong Word/Excel chưa cập nhật VALORA. Chỉ “Nhập thay đổi” mới bắt đầu kiểm tra và ghi nhận.
+> Lưu trong Word/Excel chưa cập nhật VALORA. VALORA có thể tự kiểm tra thay đổi; việc tạo phiên bản mới vẫn cần người dùng xem và xác nhận.
 
 ## Verification matrix
 
@@ -126,7 +158,7 @@ intake facades with stubs is not acceptance evidence.
 | E3–E4 | full SHA-256 and exact length |
 | E5 | duplicate import idempotency |
 | E6–E8 | Working/Word/Excel Save leaves authority/Apply unchanged |
-| E9 | explicit DOCX re-import creates one immutable N+1 revision |
+| E9 | historical G8 proof: explicit DOCX re-import can safely create one immutable N+1 revision; ADR 0045 now requires Change Candidate + human-confirmed promotion before this path is used as product semantics |
 | E10 | explicit XLSX re-import creates existing source/staging flow |
 | E11–E12 | DOCX head and Excel source-generation conflicts fail safely |
 | E13–E16 | Export/rename/move/delete leaves authority unchanged |
@@ -144,7 +176,4 @@ acceptance. T1–T14, L1–L17 and all affected backend/frontend suites remain r
 
 ## G9 prerequisites
 
-G9 remains closed until G8 has two independent verdicts on one exact frozen snapshot, exact-head CI
-succeeds, the Product Owner explicitly authorizes live reconsent, a synthetic-only Microsoft account
-and cleanup boundary are frozen, AppFolder preview availability is confirmed, and no broader scope is
-needed. Any need for `Files.ReadWrite` returns to the Product Owner with evidence.
+G8's independent-review and exact-head-CI prerequisites are satisfied. G9 nevertheless remains closed until the Product Owner explicitly authorizes a bounded live reconsent/AppFolder conformance probe, a synthetic-only Microsoft account and cleanup boundary are frozen, AppFolder preview availability is confirmed, and no broader scope is needed. Any need for `Files.ReadWrite` returns to the Product Owner with evidence.
