@@ -7,6 +7,8 @@
 **Implementers:** DeepSeek V4 Flash Vision Exp through OpenCode (initial implementation); Muse
 Spark 1.3 Free through OpenCode (accepted correction)
 
+**2026-09-21 visual-authority amendment:** this brief is historical implementation evidence. Current visual authority is Microsoft Fluent 2 light; Astryx/dark/cyan presentation is not an accepted target.
+
 ## Objective
 
 Expose the accepted PR-03 NCC Selection persistence as a tenant-safe project read aggregate and
@@ -49,7 +51,7 @@ for retries of the same explicit confirmation attempt and create a new key after
 ## UI acceptance criteria
 
 - Add a canonical project route for NCC Selection and wire it through the existing application shell.
-- Desktop-first, Fluent/Astryx-aligned, Vietnamese-first, data-heavy/table-first surface.
+- Desktop-first, Microsoft Fluent 2 light, Vietnamese-first, data-heavy/table-first surface.
 - KPI row: total asset lines, selected, unselected, stale/review-required and eligible quotes.
 - Search and status filter preserve values across retry; search error is not an empty result.
 - Main table columns follow the accepted baseline: asset, unit, quantity, current price, selected
