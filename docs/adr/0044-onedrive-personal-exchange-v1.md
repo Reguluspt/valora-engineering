@@ -4,7 +4,7 @@
 **Date:** 2026-09-20
 **Task:** `VALORA-ONEDRIVE-EXCHANGE-001`
 
-**2026-09-21 amendment:** ADR 0045 supersedes only the DOCX Working-copy promotion boundary. A changed Working DOCX must enter automatic revalidation / Change Candidate / review and may reach `NEXT_REVISION` only after an explicit human-confirmed revision command. All other Exchange v1 invariants remain in force.
+**2026-09-21 amendment:** ADR 0045 supersedes only the DOCX Working-copy promotion boundary. A changed Working DOCX must enter automatic revalidation / DocumentChangeCandidate / review and may reach `NEXT_REVISION` only after an explicit human-confirmed revision command. All other Exchange v1 invariants remain in force.
 
 ## Context
 
