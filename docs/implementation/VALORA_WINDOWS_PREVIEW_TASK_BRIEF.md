@@ -15,9 +15,10 @@ cloud staging. Windows Preview must not be used to discover, design or fill miss
 
 ```text
 PR-00 through PR-06 merged
-→ operational frontend entry and OneDrive Personal UI closure
-→ PR-07 through PR-12 backend/frontend implementation
-→ PR-13 North-star E2E
+→ Unified Appraisal OS roadmap OS-G0 through OS-G6
+→ Pre-case + Appraisal Core product closure
+→ Document Runtime + Release/Publishing
+→ traceability/state/fidelity + North-star exact-SHA E2E
 → Software Completion acceptance on an exact merged SHA
 → Windows Preview
 → production architecture decision
@@ -34,8 +35,7 @@ Windows Preview implementation may begin only when:
 1. The PR-00 through PR-13 feature/acceptance matrix has no required runtime or acceptance gap.
 2. Login, session restoration, logout, account/organization context and real project selection work
    through the product UI.
-3. OneDrive Personal connect, provision-or-adopt, return/revalidation and readiness work through the
-   product UI without adding SharePoint, OneDrive for Business or unauthorized Graph writes.
+3. Document Workspace and Working-change review follow current ADR 0045 authority; provider observation may be automatic but authoritative document mutation remains human-confirmed.
 4. Every production-scope screen uses real APIs or a truthful unavailable state; no placeholder or
    demonstration data stands in for product behavior.
 5. Backend/frontend tests, lint, build, migration, tenant, security and exact-SHA integration gates
@@ -55,7 +55,7 @@ business features or weaken session, CSRF, tenant, RBAC, audit or M365 safety co
   Completion;
 - no production/cloud deployment, public ingress, DNS, publication or release;
 - no production credentials or production data;
-- no SharePoint, OneDrive for Business, Graph write/sync, conflict resolution or silent overwrite;
+- no new product semantics, SharePoint/OneDrive Business expansion, unauthorized Graph mutation, silent overwrite or authority change during Windows packaging;
 - no MSI, Windows service or auto-update channel in the first preview;
 - no interference with containers, ports or processes outside the future isolated preview project.
 
