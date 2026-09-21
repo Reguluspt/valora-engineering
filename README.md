@@ -2,9 +2,9 @@
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
 **Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
-**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` and
-`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
-`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
+**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
+**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
+**Documentation status map:** `docs/DOCUMENTATION_STATUS_INDEX.md`
 **PR-00 through PR-04:** **MERGED by PR #29**
 **PR-05 and PR-06:** **MERGED by PR #30 and PR #31; backend/provider slices only**
 **PR-00 alignment gate:** **CLOSED**
@@ -46,7 +46,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ```text
 Accepted code baseline: origin/main 27d1cc6… (PR #31).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
-VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
+VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
 PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
 PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
 PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
