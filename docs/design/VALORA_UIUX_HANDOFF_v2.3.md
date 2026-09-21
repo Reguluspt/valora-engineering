@@ -1,14 +1,18 @@
 # VALORA — UI/UX Handoff v2.3
 
 **Tài liệu thiết kế quy trình người dùng — Single-user Workflow**
-**Visual baseline:** Microsoft Fluent 2, desktop-first, data-heavy/table-first, Vietnamese-first
+**Visual baseline:** Microsoft Fluent 2 light, desktop-first, data-heavy/table-first, Vietnamese-first
 **Trạng thái:** Canonical master — Consolidated v2.3
 **Cập nhật:** 21/09/2026
 
 > Design authority không đồng nghĩa product code đã implement. Quyết định explicit mới hơn thắng trong đúng scope.
+>
+> **Authority role:** tài liệu này + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` + addendum hiện hành là authority cho product semantics, workflow, interaction, information architecture và visual baseline. `VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` là authority cho development sequencing / architecture integration; roadmap không được tự đổi UX/business semantics đã khóa nếu chưa có explicit Product Owner decision.
 
 ## 0. Authority hiện hành
-Đã khóa `Working Change Observation / Change Candidate / Human Commit Contract v1`, `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
+Đã khóa **Microsoft Fluent 2 light visual language** và `Working Change Observation / Change Candidate / Human Commit Contract v1`, `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
+
+**Sequencing reconciliation 21/09/2026:** execution track `PR-00 → PR-13` trong Part 2C được giữ như historical implementation-closure plan và acceptance reference, nhưng **không còn là roadmap sequencing hiện hành**. Thứ tự phát triển hiện hành do `VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` quyết định: Authority → Pre-case → Appraisal Core → Document Runtime → Release/Publishing → Template Intelligence/Fidelity → E2E → AI Expansion. Các UX/business contracts của Part 2C vẫn giữ authority nếu chưa bị explicit addendum mới hơn supersede.
 
 ## 1. North-star flow
 ```text
@@ -18,18 +22,18 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 → Xác nhận & điều chỉnh danh mục → Workbench tài sản [Asset Context Drawer theo ngữ cảnh]
 → Nguồn giá & Chứng cứ → Tạo & quản lý báo giá NCC
 → Hoàn tất từng báo giá NCC → Chọn NCC đã xác nhận giá → Kết quả thẩm định giá
-→ Microsoft 365 Document Workspace
+→ Không gian tài liệu [Document Workspace — provider-neutral]
    → Tạo & Xem lại bộ tài liệu hồ sơ
-      → Batch generation → Review
-      → Mở trong Word ↔ Return / Revalidation [integration state, không checkpoint]
-      → khi dữ liệu thay đổi: Bulk Sync loop
-      → Tải lên mẫu tùy biến → AI mapping → Test fill → Xác nhận & Lưu template
+      → deterministic generation → GeneratedDocumentCandidate → Review → explicit Accept Version → Document Revision
+      → Microsoft 365 integration: Mở trong Word ↔ Return / Revalidation [integration state, không checkpoint]
+      → khi Working thay đổi: Auto Revalidation → DocumentChangeCandidate → Rà soát thay đổi tài liệu → Human Commit
+      → Thiết lập mẫu tùy biến là supporting flow; AI mapping là advisory và implementation timing theo Unified Roadmap
    → Báo cáo / Chứng thư: child-flow chuyên sâu khi cần
    → Publishing
       → Chuẩn bị bộ phát hành
       → Xem lại & xử lý ngoại lệ
       → Xác nhận phát hành [commit boundary]
-      → Release Manifest + khóa revision + audit [system consequence]
+      → Release Manifest bind exact accepted revisions + audit [system consequence]
       → Đã phát hành [success/read-only result]
 
 Horizontal traceability pattern, không phải checkpoint:
@@ -66,7 +70,7 @@ Implementation direction: read projection `GET /api/v1/projects/{project_id}/cas
 ## 1.2 Đã phát hành — Post-Publish Success Baseline Iteration 1
 `Đã phát hành` là success/read-only result state sau `Xác nhận phát hành` commit thành công. Không phải bước thứ 4 của Publishing và không phải checkpoint mới.
 
-UI chỉ được hiển thị success khi Release Manifest final đã commit hợp lệ. Success surface phản ánh Release ID thật, thời điểm/người phát hành, số tài liệu trong manifest, Document Revision đã bind/khóa, M365 file/version nếu có, retained warnings và audit/lineage.
+UI chỉ được hiển thị success khi Release Manifest final đã commit hợp lệ. Success surface phản ánh Release ID thật, thời điểm/người phát hành, số tài liệu trong manifest, exact accepted Document Revision đã bind, M365 Working/Export file/version nếu có, retained warnings và audit/lineage. Accepted revision đã immutable theo document authority; không cần một business stage `Khóa phiên bản` riêng.
 
 Layout authority: success banner + release summary + completed publishing progress + integrity/warning summary + document table + right rail. Primary CTA `Về Tổng quan hồ sơ`. Không edit/unlock/rollback/replace release, không Export PDF. Published release/revisions immutable.
 
@@ -137,7 +141,7 @@ Automatic processing được phép quan sát, tải bounded verified content, f
 
 Word-only Managed Region edit (`Old=V, W!=Old`) là proposal/review case, không phải three-way conflict giả. True conflict là `V!=Old, W!=Old, V!=W` và cần explicit human decision. Candidate stale/superseded phải re-review trước commit.
 
-Working Change Observation không tạo canonical stage thứ 17. Nó feed vào `DOCUMENT_WORKSPACE`, `DOCUMENT_SYNC_REVIEW` và Publishing readiness. Preferred user-facing label của `DOCUMENT_SYNC_REVIEW` là `Rà soát thay đổi tài liệu` / `Xem lại thay đổi & tạo phiên bản mới`.
+Working Change Observation không tạo canonical stage thứ 17 **và không tạo một màn Candidate độc lập**. `DocumentChangeCandidate` là domain/read-model của `DOCUMENT_SYNC_REVIEW`, feed vào `DOCUMENT_WORKSPACE`, `DOCUMENT_SYNC_REVIEW` và Publishing readiness. Preferred user-facing label của `DOCUMENT_SYNC_REVIEW` là `Rà soát thay đổi tài liệu` / `Xem lại thay đổi & tạo phiên bản mới`.
 
 Preferred UX: `Đã phát hiện thay đổi từ Word → Xem & xác nhận thay đổi`; fallback `Kiểm tra thay đổi`. `Nhập thay đổi` nếu còn dùng chỉ có nghĩa bắt đầu review pipeline, không phải immediate `NEXT_REVISION`.
 
@@ -205,8 +209,10 @@ Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | L�
 
 Knowledge traceability entry-points tuân Audit/Lineage Contract: `Lịch sử & nguồn gốc` tiếp tục là knowledge-governance surface; có thể deep-link tới hồ sơ cũ, tài sản chuẩn, review decision hoặc source locator nhưng không biến thành case/price audit timeline.
 
-## 5. Microsoft 365 / Documents
-VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, Document Revision, Release Manifest. Microsoft 365 sở hữu Word file/OneDrive-SharePoint file/version. Document Revision != M365 file version. Managed Region không silent overwrite; conflict phải explicit resolve. Published revision/release immutable.
+## 5. Không gian tài liệu / Microsoft 365 integration
+User-facing product surface dùng **`Không gian tài liệu` / `Bộ tài liệu hồ sơ`** theo mental model provider-neutral. `Microsoft 365`, `Word`, `OneDrive/SharePoint` chỉ xuất hiện như integration/action nơi cần thiết; không dùng provider làm tên domain workspace.
+
+VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, Document Revision, Release Manifest. Microsoft 365 sở hữu external Word file/OneDrive-SharePoint file/version. `DocumentRevision != M365 file version != Working/Export artifact`. Managed Region không silent overwrite; conflict phải explicit resolve. Published revision/release immutable.
 
 Return/Revalidation authority: external Word return phải revalidate M365 state trước mutation phụ thuộc freshness; M365 version mới không tự tạo Document Revision; Managed Region changes dùng three-way semantics và explicit conflict handling khi cần.
 
@@ -214,11 +220,15 @@ Working Change Observation authority: provider notification chỉ là change sig
 
 Document/Release traceability entry-points tuân Audit/Lineage Contract: mở đúng history/source/decision/version/manifest surface theo câu hỏi nghiệp vụ và giữ document/revision/release return context.
 
+**Version acceptance / lock semantics:** generation/fill/validation chỉ tạo `GeneratedDocumentCandidate`; `DocumentRevision` chỉ được tạo sau explicit `Tạo/Xác nhận phiên bản`. Accepted `DocumentRevision` là immutable authority. Không có standalone workflow stage/screen `Khóa phiên bản`; nếu mockup/wording cũ còn `Khóa phiên bản`, semantics đó được supersede bởi explicit version acceptance + ReleaseManifest bind exact revisions.
+
 ## 6. Publishing
-`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + locked revisions + audit [system consequence] → Đã phát hành [success/read-only result]`.
+`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest bind exact accepted revisions + immutable published release + audit [system consequence] → Đã phát hành [success/read-only result]`.
 Không màn khóa riêng, không Export PDF.
 
 Release traceability dùng `Xem Release Manifest` làm entry point chuyên trách; không thay bằng generic Audit timeline.
 
 ## 7. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; automatic Working-copy observation/analysis nhưng không automatic authoritative commit; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context; traceability context-first, giữ return target và không dựng `Audit toàn hệ thống`.
+Single-user; Vietnamese-first; **Microsoft Fluent 2 light**; desktop-first; data-heavy/table-first; AI advisory; human-confirmed official decisions; automatic Working-copy observation/analysis nhưng không automatic authoritative commit; không silent bypass/publish/overwrite/state transition/stale reconciliation; không fake Word/Excel editor; không Export PDF; published revision/release immutable; một primary CTA/recovery CTA mỗi context; traceability context-first, giữ return target và không dựng `Audit toàn hệ thống`.
+
+**Visual authority invariant:** approved Fluent 2 light mockups/baselines là visual authority. Astryx không còn là product visual-system authority; nếu package/component Astryx vẫn được giữ như low-level primitive thì phải được remap hoàn toàn sang Fluent 2 light tokens/interaction và không được mang dark/cyan/glassmorphic visual language vào production UI. Golden UI cần screenshot/visual-regression acceptance cho ít nhất S10, S12, S13, NCCQ/NCC Selection và Không gian tài liệu/M365 Return.
