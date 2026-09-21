@@ -5,6 +5,8 @@
 **Date:** 01/09/2026
 **Scope:** Microsoft 365 Document Workspace — return from external Word/Microsoft 365 editing, revalidation, stale/conflict classification, and safe continuation into sync/publishing.
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Purpose
 
 Contract này khóa hành vi khi người dùng mở tài liệu từ VALORA sang Microsoft Word/Microsoft 365 rồi quay lại VALORA. Mục tiêu là đảm bảo VALORA không giả định file không đổi, không silent overwrite, không tạo revision giả, và không cho Sync/Publishing tiếp tục trên trạng thái M365 chưa được xác minh khi freshness là bắt buộc.
@@ -222,7 +224,7 @@ Không dùng raw enum/code làm primary copy.
 Contract này kế thừa và nối:
 
 ```text
-Microsoft 365 Document Workspace
+Không gian tài liệu / Microsoft 365 integration
 → Microsoft 365 Return / Revalidation Contract v1
 → Document Sync & Version
 → Conflict Resolution khi cần
