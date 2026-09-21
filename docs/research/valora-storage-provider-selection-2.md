@@ -29,8 +29,7 @@ Constraints at the decision point:
 3. Prove Linux local-filesystem create-only publication before accepting any Exchange import as
    authoritative.
 4. Keep Backup transport outside document mutation, CurrentHead, normal read and write paths.
-5. Require explicit Inbox import or Working re-import; Word/Excel Save and Export never create a
-   revision or update CurrentHead.
+5. Require explicit Inbox initial import and explicit human-confirmed Working revision promotion. Word/Excel Save, provider notification, revalidation and Export never create a revision or update CurrentHead; Working observation/revalidation may run automatically under ADR 0045.
 6. Retain cloud-provider adapters and evidence without treating unrun live gates as conformance.
 
 ## Checklist
@@ -59,7 +58,7 @@ Vietnix CHEAP 2 VPS
 
 OneDrive Personal (non-authoritative Exchange)
   -> VALORA/Exchange/Inbox      # explicit import source
-  -> VALORA/Exchange/Working    # mutable Word/Excel copy; explicit re-import only
+  -> VALORA/Exchange/Working    # mutable Word/Excel copy; auto observation allowed, human-confirmed promotion required
   -> VALORA/Exchange/Exports    # mutable user-facing copies; no revision mutation
 
 Separate backup process
@@ -71,8 +70,7 @@ Separate backup process
 
 OneDrive Personal is not an authoritative document store, a CurrentHead authority or a required
 runtime dependency. Exchange files can be renamed, moved, edited or deleted without changing
-authority. Word/Excel Save changes only the mutable OneDrive file; a new revision requires an
-explicit VALORA import/re-import that captures exact bytes locally and wins CurrentHead CAS. Backup
+authority. Word/Excel Save changes only the mutable OneDrive file. VALORA may automatically observe/revalidate it, but a new revision requires ADR-0045 review plus an explicit human-confirmed revision command that captures exact accepted bytes locally and wins CurrentHead CAS. Backup
 authentication, quota, throttling, network or upload failure may fail a backup run, but must not fail
 a VALORA business transaction or prevent verified local blob reads.
 
@@ -92,9 +90,7 @@ remain targets, not achieved measurements.
 This record is a Product Owner architecture decision, not runtime evidence. At the decision point,
 the repository contains the accepted fake, durable execution/CAS model, AWS adapter and G1-G4 static
 evidence. The local adapter passed Linux G5 and independent G6 acceptance on the exact reviewed snapshot.
-OneDrive read/adopt/bind/revalidation plus G8 offline Exchange now exist on the active Draft PR #32. Adoption/runtime product completion must still be judged separately: adoption currently does not bind
-bytes into app-owned blob storage, and no Inbox/Working/Exports write lifecycle, explicit re-import,
-or backup/restore tooling is claimed complete by this record.
+OneDrive read/adopt/bind/revalidation plus G8 offline Exchange now exist on the active Draft PR #32. G8 proves the offline Inbox/Working/Exports Exchange lifecycle and app-owned revision storage machinery. Working Change Observation / Change Candidate runtime remains unimplemented and separately gated by ADR 0045; Backup/restore remains unopened.
 
 ### Corroborating links
 
