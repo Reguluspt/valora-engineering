@@ -34,11 +34,11 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | Design Book v1.4 | Adaptive workbook intake, Column Mapping Memory, Asset Identity Memory, historical dossier bootstrap, row alignment and feedback | Does **not** silently change S12 Apply v1 |
 | Excel staging contract §15 / ADR 0029 | S12 Apply command and `s12-pr-004-v1` semantics (implemented/merged) | A future Apply change requires a new version and ADR |
 | ADR 0014 | Historical deterministic candidate-generation rationale | Automated batch approval wording is superseded by **ADR 0031** |
-| ADR 0030 | Column Mapping Memory and Adaptive Workbook Intake | Implementation gated by S13 plan |
-| ADR 0031 | Asset Identity Memory and human-confirmed feedback | Implementation gated by S14 plan |
-| ADR 0032 | Paired dossier aggregate, extraction and row alignment | Implementation gated by S15 plan |
-| ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Phase-appropriate implementation begins with domain decisions; AI runtime gated by S16 |
-| ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no R2 capability promoted by S13–S16 |
+| ADR 0030 | Column Mapping Memory and Adaptive Workbook Intake | Historical implementation foundation; current product placement is under `OS-G1` Pre-case/intake slices where required, not an S13 sequencing gate |
+| ADR 0031 | Asset Identity Memory and human-confirmed feedback | Historical implementation foundation; current product placement is under `OS-G2` Asset Review/Workbench where required, not an S14 sequencing gate |
+| ADR 0032 | Paired dossier aggregate, extraction and row alignment | Historical/domain foundation; activate only when a current Unified Roadmap slice requires it, not through the old S15 sequencing gate |
+| ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Domain provenance foundation remains valid; broad AI runtime/learning expansion belongs to `OS-G7`, with only bounded earlier use when a current slice explicitly requires it |
+| ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no autonomous capability is promoted by historical S13–S16. Controlled automation belongs to `OS-G7` unless separately authorized earlier |
 | ADR 0036 | Computed Global Case State projection | Accepted foundation; PR-01 computed-on-read runtime is implemented and accepted; resume persistence remains deferred |
 | ADR 0037 | Durable Official Intake commit | Accepted foundation; the durable official-intake fact and command feed the implemented PR-01 provider |
 | ADR 0045 | Working-copy change observation and human-confirmed document revision | Automatic notification/delta/revalidation may create Change Candidates and recommendations; authoritative business mutation and Revision N+1 require explicit human-confirmed commit. Supersedes ADR 0044 only for immediate DOCX Working re-import promotion semantics. |
@@ -113,7 +113,7 @@ justified only when a concrete North-star slice cannot safely close without them
 - Domain decisions remain authoritative; `AITaskRun` and `DecisionEpisode` add task/learning provenance without duplicating domain truth.
 - Workflow-pattern learning uses domain commands and committed outcomes, never UI clickstream.
 - AI/rules create typed proposals only. Write-capable execution requires deterministic `ExecutionPolicy` and an allowlisted idempotent domain command.
-- Current S13–S16 scope does not promote R2 auto-draft/auto-stage. Later promotion requires task-specific design, shadow evaluation and owner-approved release.
+- Historical S13–S16 scope did not promote R2 auto-draft/auto-stage. Any future promotion follows the current `OS-G7` controlled-AI boundary and still requires task-specific design, shadow evaluation and owner-approved release.
 - Human, system and AI-service principals remain distinct; AI/system execution cannot impersonate human approval.
 - Long-running AI/extraction tasks require durable idempotent jobs and recoverable database/object-storage failure semantics before production automation.
 - Public fixtures must be anonymized; real client files never enter the public repository.
