@@ -6,7 +6,7 @@
 **Parent:** `Quản lý Kho tri thức — Iteration 1`
 
 ## 1. Vai trò
-`Cần rà soát tri thức` là human-review queue bên trong `Quản lý Kho tri thức`. Candidate do extraction, rules, AI, Asset Identity Memory hoặc hồ sơ cũ tạo ra không trở thành tri thức chính thức nếu chưa có quyết định của người dùng.
+`Cần rà soát tri thức` là local knowledge candidate queue bên trong `Quản lý Kho tri thức`; đây **không phải** global Review Queue/reviewer workflow của sản phẩm. Candidate do extraction, rules, AI, Asset Identity Memory hoặc hồ sơ cũ tạo ra không trở thành tri thức chính thức nếu chưa có quyết định của người dùng.
 
 ## 2. Routing
 ```text
