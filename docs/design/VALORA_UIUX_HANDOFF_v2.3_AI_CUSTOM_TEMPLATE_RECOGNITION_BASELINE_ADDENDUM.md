@@ -20,7 +20,7 @@ Tải file & phân tích
 → Xác nhận & Lưu template
 ```
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 - Header/breadcrumb trong context hồ sơ → Tài liệu & Workspace → Bộ tài liệu hồ sơ → Tải lên mẫu tùy biến.
 - Stepper 4 bước theo mental flow.
 - Cột trái: `Trường dữ liệu hồ sơ (Data Source)` với search/filter, nhóm `Tất cả / AI đề xuất / Chưa map`, confidence và giá trị hiện tại.
