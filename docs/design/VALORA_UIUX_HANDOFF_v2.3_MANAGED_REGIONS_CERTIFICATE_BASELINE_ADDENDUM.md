@@ -3,8 +3,10 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → Quản lý nội dung do VALORA quản lý.
+**Scope:** Không gian tài liệu → Microsoft 365 integration → Chứng thư thẩm định giá → Quản lý nội dung do VALORA quản lý.
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Quyết định baseline
 
 Mockup `Managed Regions — Chứng thư thẩm định giá — Iteration 1` được nâng thành visual/design authority. Thiết kế ưu tiên người dùng nghiệp vụ không rành IT và dùng cùng mental model với Managed Regions của Báo cáo, nhưng bề mặt Chứng thư được tối giản theo đặc thù tài liệu ngắn và dữ liệu có cấu trúc cao.
