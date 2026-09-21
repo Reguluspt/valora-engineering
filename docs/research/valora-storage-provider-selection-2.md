@@ -42,8 +42,8 @@ Constraints at the decision point:
 - [x] Select a separate OneDrive Personal namespace as encrypted off-site backup transport.
 - [x] Require separate acceptance gates for Local storage, Exchange and Backup.
 - [x] Implement and prove G5 for `VALORA-STORAGE-LOCAL-001`.
-- [ ] Independently accept Local-1 at G6.
-- [ ] Open and implement `VALORA-ONEDRIVE-EXCHANGE-001` after Local-1.
+- [x] Independently accept Local-1 at G6.
+- [x] Implement and close `VALORA-ONEDRIVE-EXCHANGE-001` G8 offline after Local-1.
 - [ ] Implement and restore-test `VALORA-BACKUP-ONEDRIVE-001` offline.
 - [ ] Perform separately authorized interactive OneDrive Exchange/Backup live evidence.
 
@@ -91,8 +91,8 @@ remain targets, not achieved measurements.
 
 This record is a Product Owner architecture decision, not runtime evidence. At the decision point,
 the repository contains the accepted fake, durable execution/CAS model, AWS adapter and G1-G4 static
-evidence. The local adapter has now passed its Linux G5 proof but awaits independent G6 acceptance.
-Existing OneDrive read/adopt/bind/revalidation is partial: adoption currently does not bind
+evidence. The local adapter passed Linux G5 and independent G6 acceptance on the exact reviewed snapshot.
+OneDrive read/adopt/bind/revalidation plus G8 offline Exchange now exist on the active Draft PR #32. Adoption/runtime product completion must still be judged separately: adoption currently does not bind
 bytes into app-owned blob storage, and no Inbox/Working/Exports write lifecycle, explicit re-import,
 or backup/restore tooling is claimed complete by this record.
 
