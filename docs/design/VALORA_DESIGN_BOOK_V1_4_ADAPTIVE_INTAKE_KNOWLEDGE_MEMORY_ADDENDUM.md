@@ -1,8 +1,10 @@
 # Valora Design Book v1.4 — Adaptive Intake, Knowledge Memory and Historical Dossier Addendum
 
+> **2026-09-21 roadmap reconciliation:** Adaptive Intake / Mapping Memory / Asset Identity Memory / dossier / AI-governance domain decisions remain usable where not superseded, but the S13–S16 sequencing in this document is historical. Current product/development ordering is `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`: Pre-case closure → Appraisal Core → Document Runtime → Release → Template Intelligence/Fidelity → E2E → AI expansion.
+
 - **Status:** Owner-requested design authority, accepted for phased implementation planning on 2026-07-14; reconciled for public repo under S13-PR-001 (2026-07-15); extended with bounded-AI automation readiness on 2026-07-16
 - **Relationship to v1.2:** v1.2-final remains authoritative for established domain boundaries.
-- **Relationship to v1.3:** v1.3 remains authoritative for Vietnamese-first UX, Astryx, AI-provider architecture and MVP scope; this addendum supersedes v1.3 §7 roadmap sequencing (“AI Assistant first”).
+- **Relationship to v1.3:** retain compatible domain/UX foundation only; current roadmap sequencing is governed by the Unified Appraisal OS roadmap v2.3, not v1.3/v1.4 sprint order.
 - **Relationship to S12:** S12 upload, staging, validation and Apply v1 are **implemented and merged** (`s12-pr-004-v1`). This addendum defines an **additive** Adaptive Intake path and does not silently change Apply semantics.
 - **Implementation gate:** S13-PR-001 is merged. Before S13 runtime, the bounded-AI automation readiness extension in §20 and ADR 0033–0034 must be merged as Gate 0c. Runtime then requires a separate owner-assigned task ID, migrations, tests and independent audit. **No runtime or autonomous capability is authorized by this document alone.**
 - **Privacy:** Public text uses anonymized fixture **PD-001** only. Real client workbooks and reports never enter the public repository.
