@@ -1,9 +1,10 @@
-# VALORA UI/UX v2.3 — Working Change Observation / Change Candidate / Human Commit — Baseline Addendum
+# VALORA UI/UX v2.3 — Working Change Observation / DocumentChangeCandidate / Human Commit — Baseline Addendum
 
 **Status:** Baseline / Design Authority  
 **Contract:** v1  
 **Date:** 21/09/2026  
-**Scope:** Document Workspace — Working-copy change observation, automatic revalidation, change analysis, review/conflict and authoritative Document Revision commit.
+**Visual authority:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first  
+**Scope:** `Không gian tài liệu` / Document Workspace — Working-copy change observation, automatic revalidation, change analysis, review/conflict and authoritative Document Revision commit.
 
 ## 1. Quyết định baseline
 
@@ -31,7 +32,7 @@ Không đồng nhất:
 - provider change notification;
 - checksum khác;
 - revalidation observation;
-- Change Candidate
+- DocumentChangeCandidate
 
 với Document Revision.
 
@@ -57,7 +58,7 @@ VALORA Revision N
 → đọc DOCX có kiểm soát khi cần
 → Managed Region diff
 → so sánh Old / V / W
-→ tạo Change Candidate
+→ tạo DocumentChangeCandidate
 → rule/AI có thể đưa đề xuất
 → user xem & xác nhận
 → domain command / accepted document-version plan
@@ -93,7 +94,7 @@ Automatic processing được phép:
 - kiểm tra SHA-256/byte length;
 - fingerprint/diff Managed Regions;
 - so sánh `Old / V / W`;
-- tạo non-authoritative Change Candidate;
+- tạo non-authoritative DocumentChangeCandidate;
 - sinh warning/conflict/recommendation;
 - chạy deterministic rule hoặc AI advisory analysis.
 
@@ -105,9 +106,9 @@ Automatic processing không được:
 - advance `DocumentRevisionCurrentHead`;
 - publish/release.
 
-## 6. Change Candidate semantics
+## 6. DocumentChangeCandidate semantics
 
-Change Candidate là review artifact, không phải business truth và không phải Document Revision.
+DocumentChangeCandidate là review artifact, không phải business truth và không phải Document Revision.
 
 Candidate phải trace được tối thiểu:
 - Project/Document;
@@ -304,7 +305,7 @@ Document
 → Working provider item/version
 → observation trigger/time
 → revalidation evidence
-→ Change Candidate
+→ DocumentChangeCandidate
 → Old / V / W + affected Managed Regions
 → recommendation
 → human/domain decision
@@ -340,7 +341,7 @@ thành:
 provider change / return
 → auto revalidate
 → verify
-→ Change Candidate
+→ DocumentChangeCandidate
 → Old / V / W
 → review / recommendation / conflict
 → human confirmation
@@ -355,7 +356,7 @@ Không rewrite storage engine.
 1. OneDrive/Microsoft 365 không phải business source of truth.
 2. Notification không phải authoritative evidence.
 3. Auto revalidation không phải business commit.
-4. Change Candidate không phải Document Revision.
+4. DocumentChangeCandidate không phải Document Revision.
 5. Word Save không tạo Revision.
 6. User-edited Managed Region không silent overwrite.
 7. True conflict cần explicit human decision.
@@ -372,7 +373,7 @@ Persistence hoặc runtime cho:
 - webhook validation/delivery;
 - delta cursor;
 - Working change observation;
-- Change Candidate;
+- DocumentChangeCandidate;
 - managed-region diff;
 - freshness/stale policy;
 - background job/idempotency;
