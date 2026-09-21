@@ -37,7 +37,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
 | UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
 | UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
-| UI/UX v2.3 PR-07 through PR-13 | **Not implemented**; PR-07 requires contract/ADR first |
+| UI/UX v2.3 downstream product stages | **Partially implemented on Draft PR #32**: Local G6 + OneDrive Exchange G8 are complete offline; ADR 0045 re-baselines document-change semantics. Canonical stages 5–16 and Release/Publishing remain incomplete. |
 | Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
@@ -51,7 +51,7 @@ PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
 PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
 PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
 Operational frontend entry — REQUIRED before Software Completion.
-PR-07 through PR-13 — NOT IMPLEMENTED; PR-07 requires accepted contract/ADR before runtime.
+Draft PR #32 contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and the remaining canonical stages are still incomplete.
 Software Completion — REQUIRED before Windows Preview.
 Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
@@ -147,3 +147,8 @@ Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not 
 ## License / ownership
 
 Engineering repository for Valora. Follow `PR_RULES.md` for every change.
+
+
+## Current roadmap
+
+Use `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` as the current product/development roadmap. Historical sprint plans, audit reports and earlier handoffs are evidence/reference only and do not override current v2.3 authority.
