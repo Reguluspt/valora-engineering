@@ -26,7 +26,7 @@ Màn hình không yêu cầu người dùng hiểu Region ID, field path, source
 
 ## B. Bố cục authority
 
-Desktop-first, Fluent 2, cùng shell với Mapping Template tài liệu generic.
+Desktop-first, Fluent 2 light, cùng shell với Mapping Template tài liệu generic.
 
 Bố cục ba vùng:
 
