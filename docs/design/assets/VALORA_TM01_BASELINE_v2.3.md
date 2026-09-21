@@ -2,7 +2,7 @@
 
 **Trạng thái:** BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY
 **Mockup:** TM01 Iteration 1
-**Phong cách:** VALORA shell + Fluent 2, desktop-first
+**Phong cách:** VALORA shell + Fluent 2 light, desktop-first
 **Phạm vi:** Visual/interaction baseline cho màn hình `Cấu hình → Mẫu báo giá NCC → Danh sách mẫu`
 
 Tài liệu này ghi lại visual baseline của mockup TM01 Iteration 1 đã được người dùng duyệt. Dữ liệu hiển thị trong mockup chỉ là dữ liệu minh họa; không phải dữ liệu khách hàng/NCC/hồ sơ thật.
@@ -82,7 +82,7 @@ Panel phải là vùng hỗ trợ; không được làm bảng chính bị thu h
 
 ## 6. Guardrail visual
 
-- Fluent 2, nền sáng, border nhẹ, radius và spacing đồng bộ NCCQ/S11–S13.
+- Fluent 2 light, nền sáng, border nhẹ, radius và spacing đồng bộ NCCQ/S11–S13.
 - Vietnamese-first.
 - Một primary CTA nổi bật: `Tạo mẫu mới`.
 - Không tự suy diễn template là `Đang sử dụng` nếu chưa đạt điều kiện readiness theo Handoff.
