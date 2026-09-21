@@ -64,9 +64,9 @@ live Files.ReadWrite.AppFolder/provider conformance remains a separately authori
 
 ADR 0045 + the Working Change Observation design addendum are now current authority for DOCX
 Working-copy changes:
-Word Save/provider notification -> observation/revalidation -> Change Candidate -> Old/V/W review
+Word Save/provider notification -> observation/revalidation -> DocumentChangeCandidate -> Old/V/W review
 -> explicit human-confirmed revision command -> G8 NEXT_REVISION storage boundary.
-Word Save, notification, revalidation and Change Candidate creation never create DocumentRevision
+Word Save, notification, revalidation and DocumentChangeCandidate creation never create DocumentRevision
 or mutate authoritative business data automatically.
 
 The original PR-07 direct OneDrive replacement/write path remains blocked/historical. Its protected
