@@ -3,7 +3,7 @@
 **Status:** Baseline / Design Authority
 **Contract:** v1
 **Date:** 01/09/2026
-**Scope:** Microsoft 365 Document Workspace — return from external Word/Microsoft 365 editing, revalidation, stale/conflict classification, and safe continuation into sync/publishing.
+**Scope:** Không gian tài liệu — Microsoft 365 integration — return from external Word/Microsoft 365 editing, revalidation, stale/conflict classification, and safe continuation into sync/publishing.
 
 
 > **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
