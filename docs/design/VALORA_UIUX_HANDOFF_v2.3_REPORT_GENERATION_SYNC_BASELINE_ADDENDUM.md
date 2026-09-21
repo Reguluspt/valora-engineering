@@ -6,6 +6,21 @@
 **Scope:** Microsoft 365 Document Workspace → Báo cáo thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
 **Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
 
+## 2026-09-21 generation/revision amendment
+
+Generation/fill completion is not itself revision authority.
+
+```text
+Template Version + Data Snapshot
+→ deterministic GeneratedDocumentCandidate
+→ structural/visual verification
+→ explicit Generate / Accept Version command
+→ DocumentRevision
+→ optional Working / Export
+```
+
+Working-copy edits then follow ADR 0045 Auto Revalidation → `DocumentChangeCandidate` → Old/V/W → human-confirmed Revision. This addendum does not authorize direct in-place OneDrive replacement.
+
 ## 1. Quyết định baseline
 
 Mockup `Sinh & Đồng bộ Báo cáo thẩm định giá — Iteration 1` được nâng thành **Baseline / Design Authority**.
