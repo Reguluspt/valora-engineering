@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — Working Change Observation / DocumentChangeCandidate / Human Commit — Baseline Addendum
 
-**Status:** Baseline / Design Authority  
-**Contract:** v1  
-**Date:** 21/09/2026  
-**Visual authority:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first  
+**Status:** Baseline / Design Authority
+**Contract:** v1
+**Date:** 21/09/2026
+**Visual authority:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first
 **Scope:** `Không gian tài liệu` / Document Workspace — Working-copy change observation, automatic revalidation, change analysis, review/conflict and authoritative Document Revision commit.
 
 ## 1. Quyết định baseline

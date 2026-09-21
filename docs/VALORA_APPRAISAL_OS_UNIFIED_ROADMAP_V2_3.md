@@ -1,9 +1,9 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
-**Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION  
-**Date:** 2026-09-21  
-**Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions  
-**Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction  
+**Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
+**Date:** 2026-09-21
+**Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
+**Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state:** merged main through PR #31; active Draft PR #32 on `feat/operational-frontend-m365`
 
 ## 1. Executive decision

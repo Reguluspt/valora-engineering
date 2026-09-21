@@ -3,7 +3,7 @@
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
 **Date:** 2026-09-21
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 350 documentation/config-document files at the 2026-09-21 post-reconciliation sweep.
+**Inventory reconciliation:** 351 documentation/config-document files at the 2026-09-21 live-tree verification sweep.
 
 ## 1. Why this index exists
 

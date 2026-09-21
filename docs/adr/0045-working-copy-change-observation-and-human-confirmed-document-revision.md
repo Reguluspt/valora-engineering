@@ -1,7 +1,7 @@
 # ADR 0045 — Working-copy change observation and human-confirmed document revision
 
-**Status:** ACCEPTED DESIGN / RUNTIME CONTRACT REQUIRED  
-**Date:** 2026-09-21  
+**Status:** ACCEPTED DESIGN / RUNTIME CONTRACT REQUIRED
+**Date:** 2026-09-21
 **Task:** `VALORA-DOCUMENT-CHANGE-OBSERVATION-001`
 
 ## Context

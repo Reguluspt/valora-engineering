@@ -1,4 +1,4 @@
-> **HISTORICAL DIRECT-WRITE RESEARCH — 2026-09-21**  
+> **HISTORICAL DIRECT-WRITE RESEARCH — 2026-09-21**
 > Retained as evidence only. Do not execute/reopen this plan from current roadmap. Direct replacement of an existing OneDrive item is historical/blocked. Current document direction is ADR 0043–0045 + `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 
 # PR-07 C2 partial-response semantics research
