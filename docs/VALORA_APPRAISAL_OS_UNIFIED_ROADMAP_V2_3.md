@@ -2,7 +2,7 @@
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION  
 **Date:** 2026-09-21  
-**Primary roadmap authority:** Appraisal OS Reconciliation & Development Direction v2.2  
+**Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions  
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction  
 **Repository state:** merged main through PR #31; active Draft PR #32 on `feat/operational-frontend-m365`
 
@@ -30,7 +30,21 @@ Authority cleanup
 → Controlled AI expansion
 ```
 
-## 2. Non-negotiable authority model
+## 2. Authority roles and non-negotiable model
+
+Conflict resolution / role split:
+
+```text
+1. Explicit current Product Owner decision — wins only in the scope it names
+2. Current UI/UX Design Authority v2.3 + Authority Index + applicable addenda + accepted scoped ADRs
+   → product semantics, workflow, IA, interaction and visual baseline
+3. This Unified Roadmap v2.3
+   → development sequencing and architecture integration
+4. Technical proposals / research
+5. Historical / superseded documents
+```
+
+`VALORA_UIUX_Handoff_v2.3` therefore answers **what the product must be**; this roadmap answers **what to build first and how the architecture is integrated**. The older Part 2C `PR-00 → PR-13` sequence is superseded for ordering only; its still-current UX/business contracts and acceptance invariants remain valid.
 
 - VALORA owns authoritative business facts.
 - PostgreSQL + append-only `DocumentRevision` + `DocumentRevisionCurrentHead` own accepted
@@ -44,6 +58,7 @@ Authority cleanup
   multi-level approval, NCCQ intermediate workflow, global Audit screen, standalone progress/version-lock screens.
 - New infrastructure/provider abstractions are allowed only when a concrete North-star slice cannot
   close safely without them.
+- Product visual authority is **Microsoft Fluent 2 light**, desktop-first, Vietnamese-first, data-heavy/table-first. Approved v2.3 mockups/baselines govern shell, navigation, density, tables, drawers, command bars and states. Astryx is not product visual authority; any retained Astryx primitive must be visually remapped to Fluent 2 light.
 
 ## 3. Current engineering state
 
@@ -223,21 +238,26 @@ A canonical stage is green only when all five axes are green:
 
 1. durable Domain Fact;
 2. Application/API;
-3. Product Surface;
+3. Product Surface — conforms to current UI/UX Design Authority and Fluent 2 light baseline;
 4. OS Integration — Case State + Next Action + blocker/warning/stale + Resume;
-5. Acceptance — tests/browser/E2E appropriate to the slice.
+5. Acceptance — tests/browser/E2E appropriate to the slice, including visual regression for authority-defined golden screens.
 
 A model/table/API alone is not product completion.
 
 ## 11. Unified roadmap
 
-### OS-G0 — Authority & branch reconciliation
+### OS-G0 — Authority, visual-system & branch reconciliation
 
 - reconcile PR #32 title/body/scope;
+- explicitly supersede old Astryx product-visual authority in engineering guidance; keep Astryx only as low-level primitive if fully remapped;
+- freeze a Fluent 2 light implementation contract: light semantic tokens, typography, density, shell/navigation, table/grid, drawer, command bar, button, status and state patterns;
+- remediate golden authority surfaces before adding broad new frontend capability: S10, S12, S13, NCCQ/NCC Selection and Không gian tài liệu/M365 Return;
+- add screenshot/visual-regression acceptance so dark/cyan/glassmorphic drift cannot pass as compliant;
 - keep G8 immutable storage/CAS/idempotency/recovery machinery;
 - freeze `VALORA-DOCUMENT-CHANGE-OBSERVATION-001` implementation contract;
 - remove active legacy Review Queue / Validation Dashboard / old S13 IA;
-- use provider-neutral Document Workspace naming;
+- use provider-neutral `Không gian tài liệu` / Document Workspace naming; Microsoft 365 is an integration, not the domain name;
+- record that Part 2C `PR-00 → PR-13` sequencing is historical/superseded for ordering only;
 - no automatic G9 live AppFolder;
 - no broad Template/Office platform implementation yet.
 
@@ -311,7 +331,9 @@ Minimum structural + visual acceptance before official generation.
 
 #### DOC-G9 Working Change Review
 Implement ADR 0045:
-notification/focus/freshness → revalidate → candidate → Old/V/W → review → human commit.
+notification/focus/freshness → revalidate → `DocumentChangeCandidate` → Old/V/W → review → human commit.
+
+`DocumentChangeCandidate` is a domain/read-model inside existing `DOCUMENT_SYNC_REVIEW`; it does not create a new canonical stage or standalone business workflow screen.
 
 ### OS-G4 — Release / Publishing
 
@@ -325,6 +347,7 @@ Build real release domain:
 - immutable published projection.
 
 Do not reuse legacy QC/reviewer workflow or `DocumentPackage` as a ReleaseManifest shortcut.
+Accepted `DocumentRevision` is already immutable document authority; do not add a standalone `Khóa phiên bản` stage/screen. Publishing binds exact accepted revisions into the ReleaseManifest.
 
 Supporting Phiếu KSCL as a document type does not create a KSCL workflow stage.
 
@@ -380,7 +403,7 @@ AI never compensates for missing domain facts or missing authoritative commands.
 
 ## 13. Immediate sequence
 
-1. Authority/branch closeout.
+1. Authority + Fluent 2 light visual-system + branch closeout.
 2. Pre-case product closure.
 3. Appraisal Core vertical slices.
 4. Start Document Runtime only when it becomes the real business critical path or a concrete earlier
@@ -400,3 +423,5 @@ AI never compensates for missing domain facts or missing authoritative commands.
 > mutation always passes a domain-controlled, human-confirmed boundary.
 
 > Template intelligence serves Appraisal OS; Appraisal OS must not become an Office-platform project.
+
+> UI/UX Handoff v2.3 defines product semantics and visual authority; this roadmap sequences implementation and must not silently redesign the product.
