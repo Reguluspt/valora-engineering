@@ -12,8 +12,8 @@ Mockup `Xác nhận phát hành — Iteration 1` được nâng thành Baseline 
 Chuẩn bị bộ phát hành
 → Xem lại & xử lý ngoại lệ
 → Xác nhận phát hành [commit boundary]
-→ hệ thống tạo Release Manifest
-→ khóa các Document Revision thuộc release
+→ hệ thống tạo Release Manifest bind exact accepted Document Revision
+→ finalize immutable Published release
 → ghi audit
 ```
 
@@ -41,12 +41,12 @@ Nếu trạng thái thay đổi sau lần review gần nhất, hệ thống ph�
 
 ## 5. Commit semantics
 Khi user xác nhận thành công, hệ thống thực hiện một hành động nghiệp vụ phát hành:
-1. tạo Release Manifest final, bind chính xác các Document Revision đã chọn;
-2. khóa/immutable các Document Revision thuộc release;
+1. tạo Release Manifest final, bind chính xác các accepted Document Revision đã chọn;
+2. finalize immutable Published release; không thay đổi mutability của accepted DocumentRevision;
 3. ghi audit event phát hành và lineage;
 4. ghi trạng thái release thành công.
 
-Các tài liệu đã bị loại không thuộc manifest và không bị khóa bởi release này. Warning non-Blocking còn lại phải được phản ánh/audit theo rule hiện hành.
+Các tài liệu đã bị loại không thuộc manifest. Accepted DocumentRevision đã immutable theo document authority, không cần một thao tác `lock` riêng từ release. Warning non-Blocking còn lại phải được phản ánh/audit theo rule hiện hành.
 
 ## 6. Release ID semantics
 Release ID hiển thị trước commit là `dự kiến/reserved`. Implementation không được coi một ID minh họa trên mockup là schema cứng. Nếu commit thất bại, không được hiển thị release như đã phát hành thành công.
@@ -60,9 +60,9 @@ Không được để UI báo `Đã phát hành` khi Release Manifest chưa đư
 - Không silent bypass Warning/Blocking.
 - Không fake Word editor.
 - Không `Xuất PDF`.
-- Lock revision là system consequence, không phải bước UI.
+- Không có revision-lock action/stage riêng; release bind exact accepted revisions và Published release là immutable.
 - Published release/revision immutable.
 - Một primary CTA mỗi context.
 
 ## 9. ADR
-Release Manifest transaction boundary, Release ID reservation, locking atomicity, retry/idempotency, failure recovery và audit commit semantics cần ADR nếu implementation chưa có authority tương ứng hoặc thay đổi persistence/architecture.
+Release Manifest transaction boundary, Release ID reservation, manifest/publish atomicity, retry/idempotency, failure recovery và audit commit semantics cần ADR nếu implementation chưa có authority tương ứng hoặc thay đổi persistence/architecture.
