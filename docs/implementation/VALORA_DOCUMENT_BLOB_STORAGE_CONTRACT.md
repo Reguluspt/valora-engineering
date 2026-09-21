@@ -1,6 +1,6 @@
 # VALORA Document Blob Storage contract
 
-**Status:** AMENDED — LOCAL VPS G5 PROVED; INDEPENDENT G6 REVIEW PENDING
+**Status:** AMENDED — LOCAL VPS G6 ACCEPTED; G8 OFFLINE EXCHANGE COMPLETE
 **Date:** 2026-09-20
 **Task:** `VALORA-STORAGE-ARCH-001`
 **Authority:** ADR 0043 and accepted `VALORA-STORAGE-FAKE-001`; live provider activity closed
@@ -24,12 +24,12 @@ is recorded in the table and §8.1; the isolated S3 plan does not make the runti
 | PR-05/PR-06 OneDrive read/bind/revalidation foundation | Implemented |
 | `DocumentBlobStore` port and deterministic fake | Implemented and accepted locally |
 | AWS S3 adapter | Implemented and independently reviewed for local preparation; not wired or live-proven |
-| Linux local filesystem adapter | Implemented; T1-T14 and L1-L17 pass on Linux, independent G6 review pending |
-| OneDrive Personal Exchange | Existing read/adopt/revalidation foundation only; explicit authoritative import/re-import, Working and Export remain separately gated |
+| Linux local filesystem adapter | Implemented and G6 accepted on the exact reviewed Linux/PostgreSQL snapshot |
+| OneDrive Personal Exchange | G8 offline implementation complete; Exchange is non-authoritative and DOCX Working promotion is amended by ADR 0045 |
 | Encrypted OneDrive Personal backup | Not implemented; independent namespace and later gate |
 | Durable document-storage execution intent/state/events | Implemented and accepted locally |
 | Candidate object and `StorageObjectBinding` persistence | Implemented and accepted locally |
-| PR-07 protected values, conflict/write runtime and migrations | Not implemented; blocked |
+| Document-change review runtime | Original direct OneDrive replacement path is historical/blocked; protected Old/V/W semantics remain reusable; ADR 0045 implementation contract is required for Working Change Observation/Change Candidate runtime |
 
 ## 3. Domain invariants
 
