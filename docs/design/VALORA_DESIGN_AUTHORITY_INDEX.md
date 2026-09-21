@@ -8,18 +8,19 @@
 
 ## 1. Read order
 
-Product/development ordering is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. UI/UX semantics remain governed by the v2.3 master/index and directly relevant addenda.
+Product/UX/business semantics and visual authority are governed by `VALORA_UIUX_HANDOFF_v2.3.md`, `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and directly relevant v2.3 addenda. Development ordering / architecture integration is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. An explicit current Product Owner decision wins only in the scope it names.
 
 1. `CODEX.md` — live task gate and agent operating rules.
 2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
 3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
 4. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
-5. The v2.3 addendum directly governing the assigned PR.
-6. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
-7. This file — earlier-version relationship and supersession map.
-8. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
-9. Design Book v1.2-final plus v1.3/v1.4 addenda — established domain model and bounded contexts.
-10. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
+5. The v2.3 addendum directly governing the assigned task.
+6. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` — current development sequencing / architecture integration.
+7. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
+8. This file — earlier-version relationship and supersession map.
+9. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
+10. Design Book v1.2-final plus v1.3/v1.4 addenda — established historical domain model and bounded contexts where not superseded.
+11. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
@@ -29,7 +30,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 |---|---|---|
 | UI/UX Handoff v2.3 + v2.3 Authority Index | North-star flow, single-user UX, stage/state vocabulary, NCC, M365, Publishing and audit/lineage UI semantics | Newer explicit v2.3 addendum wins only in its named scope |
 | Design Book v1.2-final | Core domain architecture, canonical assets, evidence/knowledge, workflow and document boundaries | Extended, not replaced, by v1.3/v1.4 |
-| Design Book v1.3 | MVP scope, Vietnamese-first UX, Astryx, provider gateway and human-in-the-loop AI | **§7 roadmap sequencing** is superseded by v1.4 (Sprint 13 is no longer “AI Assistant first”) |
+| Design Book v1.3 | Historical MVP/domain/provider/AI foundation | **Astryx visual-system authority is superseded by UI/UX Handoff v2.3 Microsoft Fluent 2 light**; roadmap sequencing is superseded by the Unified Roadmap v2.3 |
 | Design Book v1.4 | Adaptive workbook intake, Column Mapping Memory, Asset Identity Memory, historical dossier bootstrap, row alignment and feedback | Does **not** silently change S12 Apply v1 |
 | Excel staging contract §15 / ADR 0029 | S12 Apply command and `s12-pr-004-v1` semantics (implemented/merged) | A future Apply change requires a new version and ADR |
 | ADR 0014 | Historical deterministic candidate-generation rationale | Automated batch approval wording is superseded by **ADR 0031** |
@@ -165,7 +166,7 @@ Current v2.3 disposition:
 | `knowledge_evidence` | Reviewed quote/spec/knowledge candidates and activation |
 | `ai_governance_security` | Task registry, context-manifest governance, provider gateway, AI-task provenance and deterministic Execution Policy boundary |
 | Worker / reliable task runtime | Durable job/outbox execution, attempts, lease/retry/timeout/cancellation and stale-generation rejection |
-| Workbench / frontend | Vietnamese Astryx review surfaces |
+| Workbench / frontend | Vietnamese Microsoft Fluent 2 light review surfaces; desktop-first, data-heavy/table-first |
 
 Cross-module calls use application services / contracts. Direct active-knowledge injection is forbidden.
 
