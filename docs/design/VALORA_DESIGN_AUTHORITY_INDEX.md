@@ -140,7 +140,7 @@ Historical S13 runtime gate record:
 3. Follow PR order in `docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md`.
 
 S13-PR-002 through S13-PR-004 are implemented historical foundation. This record does not
-authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
+authorize S13-PR-005 or override the current Unified Roadmap `OS-G0 → OS-G7`. Historical PR-00→PR-13 labels remain acceptance/evidence references only.
 
 Current v2.3 disposition:
 
