@@ -1,3 +1,7 @@
+## Unified roadmap guardrail
+
+`docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` is the current product/development ordering. Sub-domain plans (storage, M365, template/Office, AI) may not reorder the North-star roadmap unless a new Product Owner decision explicitly amends it.
+
 ## Current document authority guardrail
 
 Word Save, provider notification, revalidation and Change Candidate creation are non-authoritative.
@@ -42,7 +46,7 @@ PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566
 PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDrive Personal only. OneDrive for Business and SharePoint remain deferred.
 PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
-Frontend Operational Completion — authentication/session/account context, real project selection and the PR-05/PR-06 OneDrive Personal journey must use real APIs and truthful states before Software Completion.
+Operational Frontend — implemented on Draft PR #32 and locally browser-accepted with a simulated provider; it remains unmerged and is not North-star product-completion evidence.
 The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
 Software Completion — all authorized backend and frontend runtime through PR-13 plus North-star E2E must pass on the exact candidate SHA before Windows Preview.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
