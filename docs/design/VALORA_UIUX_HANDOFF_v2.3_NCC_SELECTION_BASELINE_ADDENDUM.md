@@ -109,7 +109,7 @@ Price authority giữ nguyên:
 `NCC selected ≠ appraised price selected`.
 
 ## 6. Visual baseline — Iteration 1
-Desktop-first, Fluent 2, Vietnamese-first, data-heavy/table-first.
+Desktop-first, Fluent 2 light, Vietnamese-first, data-heavy/table-first.
 
 Main surface:
 - KPI summary: tổng dòng tài sản, đã chọn NCC, chưa chọn, cần xem lại, tổng báo giá đủ điều kiện;
