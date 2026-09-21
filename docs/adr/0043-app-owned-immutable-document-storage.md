@@ -180,8 +180,7 @@ It has two independent, explicitly separated roles:
 
 - **Exchange:** `VALORA/Exchange/Inbox`, `Working` and `Exports` hold mutable external files for
   explicit import, Word/Excel editing and export. A Save changes only the OneDrive file. Creating a
-  new `DocumentRevision` requires an explicit VALORA import/re-import command that stores exact bytes
-  in the app-owned blob store and wins the existing CurrentHead CAS.
+  new `DocumentRevision` requires an explicit VALORA-authorized revision command. Working changes may be observed/revalidated automatically under ADR 0045, but promotion occurs only after review/human confirmation; final bytes are stored in the app-owned blob store and must win the existing CurrentHead CAS.
 - **Backup:** `VALORA/Backup/<deployment-id>` receives only encrypted repository data covering valid
   PostgreSQL dumps and authoritative blobs. Backup content is not browsed as working documents and
   Exchange content is not evidence of backup.
@@ -255,7 +254,7 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 
 | Gate | Owner | Current state |
 |---|---|---|
-| Exchange semantics | Product Owner | ACCEPTED — Inbox/Working/Exports are non-authoritative; import/re-import is explicit |
+| Exchange semantics | Product Owner | ACCEPTED — Inbox/Working/Exports are non-authoritative; initial import is explicit; Working observation/revalidation may be automatic but Revision promotion requires ADR-0045 human-confirmed command |
 | Retention and legal hold | Product Owner | ACCEPTED — minimum ten years plus legal hold |
 | Finalized-revision deletion | Product Owner | ACCEPTED — no ordinary hard delete; audited policy purge only |
 | Encryption/key ownership | Product Owner | ACCEPTED TARGET — server-side, VALORA-controlled customer-managed key |
