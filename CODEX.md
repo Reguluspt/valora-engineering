@@ -131,7 +131,7 @@ No skipped tests to hide failures.
 No unrelated refactors or formatting churn.
 No deleting or weakening guardrails.
 Vietnamese client-facing copy must keep correct diacritics.
-Astryx compliance for Workbench UI.
+Microsoft Fluent 2 light compliance for Workbench/product UI; desktop-first, Vietnamese-first, data-heavy/table-first. Astryx is not current product visual authority.
 No client-identifying data or real customer files in the public repository.
 No direct bulk SQL into active knowledge from historical dossiers.
 ```
