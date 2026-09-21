@@ -110,6 +110,24 @@ Rule kết quả:
 Đơn giá Kết quả định giá <= Đơn giá báo giá NCC dùng để đối chiếu
 ```
 
+## Working Change Observation / Revision flow
+
+```text
+Accepted Revision N
+→ Create Working copy
+→ user edits/saves in Word
+→ automatic provider observation or focus/freshness fallback
+→ revalidation + verified read
+→ DocumentChangeCandidate
+→ Old / V / W
+→ recommendation / conflict review
+→ explicit human-confirmed command
+→ Revision N+1
+```
+
+This flow belongs under `DOCUMENT_WORKSPACE → DOCUMENT_SYNC_REVIEW`; it does not add a 17th
+canonical case stage. Word Save/provider notification never creates a revision by itself.
+
 ## Guardrail
 
 - `Kho tri thức` chỉ gợi ý; không tự ra quyết định giá.
@@ -119,4 +137,4 @@ Rule kết quả:
 - Không có S14 xác nhận lại giá, màn Kiểm tra hồ sơ riêng hoặc workflow KSCL riêng.
 - Không có NCCQ aggregate trung gian sau khi chọn NCC đã xác nhận giá.
 - Ba bảng Kết quả thẩm định giá là immutable layout.
-- Microsoft 365 quản lý file/version/Word; VALORA quản lý structured business data, snapshot, lineage và audit.
+- Microsoft 365 quản lý external Working/file/version surface; VALORA quản lý structured business data, snapshots, accepted DocumentRevision/CurrentHead, lineage và audit. OneDrive state never selects authoritative current revision.
