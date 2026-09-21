@@ -280,7 +280,24 @@ the merged PR-05/PR-06 rows above.
 | Automated/browser evidence | Frontend unit/API tests, backend API/service/adapter tests and simulated-provider desktop/laptop browser closeout | LOCAL PASS — exact counts below |
 | Residual acceptance | Exact-head CI, isolated PostgreSQL rerun and live Entra/browser/provider callback on this candidate | NOT EVIDENCED ON CANDIDATE |
 
-## Next bounded scopes and dependencies
+## Historical PR-labelled sequence — superseded for current ordering
+
+The numbered PR sequence below is retained only to explain historical acceptance dependencies and provider experiments. It is **not the current development roadmap**. Current sequencing is:
+
+```text
+OS-G0 Authority + Fluent 2 light visual reconciliation
+→ OS-G1 Pre-case Product Closure
+→ OS-G2 Appraisal Core
+→ OS-G3 Document Runtime
+→ OS-G4 Release / Publishing
+→ OS-G5 Template Intelligence / Fidelity
+→ OS-G6 Product E2E
+→ OS-G7 Controlled AI Expansion
+```
+
+Current next work must be selected from the Unified Roadmap and current Product Owner gate, not from historical PR numbering.
+
+### Historical dependency record
 
 1. **Operational entry and OneDrive Personal frontend closure.** The bounded implementation is a
    local unmerged candidate. Preserve its no-Graph-write boundary and obtain exact-head CI plus any
@@ -337,27 +354,17 @@ the merged PR-05/PR-06 rows above.
    the PR-05 secret and delegated `Files.Read`. Diagnose the token rejection without claiming
    provider evidence, then obtain a new action-time Product Owner approval before any later live
    attempt. PR-07 runtime/migrations and PR-08 remain gated.
-3. **PR-08 — Release Domain Foundation.** After PR-07, define and implement release preparation,
-   exception review, readiness inputs, manifest candidate and revision-lock preconditions without
-   publishing.
-4. **PR-09 — Publishing Commit/Success.** After PR-08, implement the explicit atomic publish command,
-   final immutable Release Manifest/locked revisions/audit and truthful post-publish read model.
-5. **PR-10 — Audit/Lineage Wiring.** After PR-03, PR-07 and PR-09, wire capability-specific entry
-   points and deep-link return context. Reuse existing primitives; require an ADR before any generic
-   cross-domain persistence or semantic rewrite.
-6. **PR-11 — State Sweep.** After PR-02 and PR-10, inventory each production surface against all 17
-   states and recovery rules; close real gaps and browser-test representative failure/retry paths.
-7. **PR-12 — Template Fidelity.** After PR-11 and the required sync semantics, freeze representative
-   real-template fixtures and implement the authorized workspace, mapping, test-fill, review and
-   managed-region fidelity flows without a fake Word/Excel editor.
-8. **PR-13 — North-star E2E.** After PR-07 through PR-12, add the browser E2E harness and prove the
-   supported journey from authentication and real project selection through publishing success,
-   including tenant denial, conflict/retry, immutable release and audit/lineage return context.
+3. **Historical PR-08 label — Release Domain Foundation.** The capability remains open, but current implementation belongs to `OS-G4` after the required current Appraisal/Document prerequisites. Define release preparation, exception review, readiness inputs and manifest candidate without inventing a separate revision-lock stage.
+4. **Historical PR-09 label — Publishing Commit/Success.** Current implementation belongs to `OS-G4`: explicit idempotent publish command, final immutable Release Manifest bound to exact accepted revisions, audit and truthful post-publish read model.
+5. **Historical PR-10 label — Audit/Lineage Wiring.** Current implementation is spread across the owning OS slices and completed/proved in `OS-G6`: wire capability-specific entry points and deep-link return context. Reuse existing primitives; require an ADR before generic cross-domain persistence or semantic rewrite.
+6. **Historical PR-11 label — State Sweep.** Cross-product state closure is an ongoing slice requirement and `OS-G6` completion gate: inventory production surfaces against all 17 states and recovery rules; close real gaps and browser-test representative failure/retry paths.
+7. **Historical PR-12 label — Template Fidelity.** Minimum deterministic document runtime belongs to `OS-G3`; advanced template intelligence/fidelity belongs to `OS-G5`. Freeze representative real-template fixtures and implement only the authorized mapping/fill/review/fidelity flows without a fake Word/Excel editor.
+8. **Historical PR-13 label — North-star E2E.** This is now the `OS-G6` exact-SHA completion proof: add the browser E2E harness and prove the supported journey from authentication and real project selection through publishing success, including tenant denial, conflict/retry, immutable release, visual authority and audit/lineage return context.
 
 ## Windows Preview gate
 
-Windows Preview is not authorized by this audit. `VALORA-WIN-PREVIEW-001` may start only after the
-operational frontend entry, PR-07 through PR-13 and Software Completion pass on one exact merged
+Windows Preview is not authorized by this audit. `VALORA-WIN-PREVIEW-001` may start only after
+Unified Roadmap `OS-G0 → OS-G6` Software Completion passes on one exact merged
 candidate SHA. The preview packages that accepted product for isolated Windows UAT; it does not
 provide a place to discover or complete business features.
 
