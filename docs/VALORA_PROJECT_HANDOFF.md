@@ -3,6 +3,7 @@
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
 **Reconciled:** 2026-09-21 — Draft PR #32 contains Operational Frontend + accepted Local G6 + completed G8 offline Exchange; ADR 0045 is current document-change direction
 **Accepted merged code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31); **active candidate:** Draft PR #32 / `feat/operational-frontend-m365`
+**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`; Working-copy change semantics are governed by the 2026-09-21 addendum + ADR 0045
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
