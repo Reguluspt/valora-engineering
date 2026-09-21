@@ -1,10 +1,16 @@
-# VALORA UI/UX Handoff v2.3 — Addendum Baseline Microsoft 365 Document Workspace
+# VALORA UI/UX Handoff v2.3 — Không gian tài liệu / Microsoft 365 Integration Baseline Addendum
 
 **Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
 
 Authority chi tiết: [`assets/VALORA_M365_DOCUMENT_WORKSPACE_BASELINE_v2.3.md`](./assets/VALORA_M365_DOCUMENT_WORKSPACE_BASELINE_v2.3.md).
 
 Addendum này supersede mọi mô tả cũ mâu thuẫn với các quyết định dưới đây.
+
+## 2026-09-21 provider-neutral product-surface amendment
+
+User-facing parent surface is **`Không gian tài liệu` / `Bộ tài liệu hồ sơ`**. Microsoft 365/Word/OneDrive/SharePoint are integration surfaces/actions, not the domain workspace name. Older mockup labels remain visual evidence only where they do not conflict with this naming/IA amendment.
+
+There is no standalone `Khóa phiên bản` workflow stage. Accepted `DocumentRevision` is immutable after explicit version acceptance; Publishing binds exact accepted revisions into a `ReleaseManifest`.
 
 ## 2026-09-21 execution-boundary amendment
 
@@ -30,11 +36,11 @@ authority and independent provider-concurrency proof.
 
 ```text
 Kết quả thẩm định giá
-→ Bộ tài liệu phát hành / Microsoft 365 Document Workspace
+→ Không gian tài liệu / Bộ tài liệu hồ sơ
 → Tạo và quản lý Báo cáo thẩm định giá + Chứng thư thẩm định giá
-→ Mở/chỉnh sửa trong Microsoft Word
-→ Đồng bộ Data Snapshot ↔ Document Revision ↔ Microsoft 365 version
-→ Khóa phiên bản
+→ GeneratedDocumentCandidate → explicit Xác nhận phiên bản → DocumentRevision
+→ optional Microsoft 365 Working copy → Mở/chỉnh sửa trong Word
+→ Return / Auto Revalidation → DocumentChangeCandidate → Rà soát thay đổi → Human Commit
 → Phát hành bộ tài liệu
 ```
 
@@ -125,4 +131,4 @@ Không có `Gửi kiểm tra / Chờ kiểm tra` trong single-user workflow hi�
 
 ## I. Design authority
 
-Mockup Microsoft 365 Document Workspace mới nhất ngay trước lệnh `chốt baseline` cùng file authority companion là design authority hiện hành.
+Mockup lịch sử của Microsoft 365 Document Workspace vẫn là visual evidence về bố cục/tương tác, nhưng current product naming/IA phải tuân `Không gian tài liệu` provider-neutral và Fluent 2 light authority.
