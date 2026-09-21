@@ -1,7 +1,9 @@
-# PR-07 OneDrive Personal conditional-commit conformance runbook
+# PR-07 OneDrive Personal conditional-commit conformance runbook — HISTORICAL DIRECT-WRITE RESEARCH
 
 **Task:** `VALORA-PR07-CONFORMANCE-001` **Status:** G3 OPTION A APPROVED; G4 CLOSED
-**Date:** 2026-09-19 **Authority:** accepted ADR 0042 and PR-07 implementation contract
+**Date:** 2026-09-19 **Authority:** accepted ADR 0042 and historical PR-07 implementation contract
+
+**Current disposition note (2026-09-21):** This runbook is retained as historical evidence for the rejected direct OneDrive replacement path. It is not the current document-write roadmap. ADR 0043 moved accepted revision bytes to app-owned immutable storage; ADR 0045 governs Working-copy observation/review/human-confirmed revision. Do not rerun this provider-write research unless the Product Owner explicitly reopens direct replacement.
 
 ## Purpose
 
