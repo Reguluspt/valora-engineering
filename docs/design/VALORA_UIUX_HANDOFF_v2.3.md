@@ -10,7 +10,7 @@
 > **Authority role:** tài liệu này + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` + addendum hiện hành là authority cho product semantics, workflow, interaction, information architecture và visual baseline. `VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` là authority cho development sequencing / architecture integration; roadmap không được tự đổi UX/business semantics đã khóa nếu chưa có explicit Product Owner decision.
 
 ## 0. Authority hiện hành
-Đã khóa **Microsoft Fluent 2 light visual language** và `Working Change Observation / Change Candidate / Human Commit Contract v1`, `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
+Đã khóa **Microsoft Fluent 2 light visual language** và `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`, `Audit / Lineage Entry-point Consistency Contract v1` + visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1`, `Microsoft 365 Return / Revalidation Contract v1` + visual baseline `M365 Return & Revalidation — Iteration 1`, `Cross-product Empty / Loading / Error / Retry Contract v1` + `Cross-product State Pattern Board — Iteration 1`, Publishing simplified flow, `Đã phát hành — Iteration 1`, `Tổng quan hồ sơ — Orchestration Hub — Iteration 2`, `Chọn NCC đã xác nhận giá — Iteration 1`, `Quản lý Kho tri thức — Iteration 1`, `Cần rà soát tri thức — Iteration 1`, `Hồ sơ cũ — Iteration 1` và `Lịch sử & nguồn gốc — Iteration 1`. Không có S14, Kiểm tra hồ sơ riêng, KSCL/phê duyệt nhiều cấp, NCCQ aggregate trung gian, màn rule-check giá riêng, màn Tiến độ hồ sơ riêng hoặc màn Audit toàn hệ thống.
 
 **Sequencing reconciliation 21/09/2026:** execution track `PR-00 → PR-13` trong Part 2C được giữ như historical implementation-closure plan và acceptance reference, nhưng **không còn là roadmap sequencing hiện hành**. Thứ tự phát triển hiện hành do `VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` quyết định: Authority → Pre-case → Appraisal Core → Document Runtime → Release/Publishing → Template Intelligence/Fidelity → E2E → AI Expansion. Các UX/business contracts của Part 2C vẫn giữ authority nếu chưa bị explicit addendum mới hơn supersede.
 
@@ -114,7 +114,7 @@ Hard rules: quay lại VALORA không đồng nghĩa Word đã đổi; revalidati
 
 **Visual baseline `M365 Return & Revalidation — Iteration 1` đã được explicit chốt ngày 01/09/2026.** Board authority gồm: high-level return flow; 5 semantic outcome cards; state UI patterns; three-way comparison; conflict decision surface; background revalidation indicator; mandatory principles. Nếu wording minh họa mâu thuẫn semantic contract, contract thắng.
 
-## 1.4A Working Change Observation / Change Candidate / Human Commit — Baseline Contract v1
+## 1.4A Working Change Observation / DocumentChangeCandidate / Human Commit — Baseline Contract v1
 
 Product Owner chốt automatic observation cho Working copy nhưng giữ human authority tại business write boundary.
 
@@ -129,7 +129,7 @@ VALORA Revision N
 → verify provider item/content
 → Managed Region diff
 → Old / V / W
-→ Change Candidate + recommendation
+→ DocumentChangeCandidate + recommendation
 → Xem & xác nhận thay đổi
 → domain decision / accepted document-version plan
 → Revision N+1
@@ -216,7 +216,7 @@ VALORA sở hữu structured data, Data Snapshot, lineage, audit, sync status, D
 
 Return/Revalidation authority: external Word return phải revalidate M365 state trước mutation phụ thuộc freshness; M365 version mới không tự tạo Document Revision; Managed Region changes dùng three-way semantics và explicit conflict handling khi cần.
 
-Working Change Observation authority: provider notification chỉ là change signal; VALORA tự động revalidate/diff và tạo non-authoritative Change Candidate; human-confirmed business write boundary mới được tạo Revision N+1. Notification loss làm giảm timeliness, không được làm giảm correctness.
+Working Change Observation authority: provider notification chỉ là change signal; VALORA tự động revalidate/diff và tạo non-authoritative DocumentChangeCandidate; human-confirmed business write boundary mới được tạo Revision N+1. Notification loss làm giảm timeliness, không được làm giảm correctness.
 
 Document/Release traceability entry-points tuân Audit/Lineage Contract: mở đúng history/source/decision/version/manifest surface theo câu hỏi nghiệp vụ và giữ document/revision/release return context.
 
