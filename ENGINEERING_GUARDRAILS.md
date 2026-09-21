@@ -1,7 +1,26 @@
+## Current document authority guardrail
+
+Word Save, provider notification, revalidation and Change Candidate creation are non-authoritative.
+They must never create a DocumentRevision or mutate business truth automatically.
+
+Canonical Working flow:
+
+```text
+observe/revalidate
+→ DocumentChangeCandidate
+→ Old / V / W
+→ review/conflict
+→ explicit human-confirmed command
+→ immutable DocumentRevision N+1
+```
+
+OneDrive is a non-authoritative port. App-owned immutable storage + PostgreSQL CurrentHead remain
+authoritative for accepted document revisions.
+
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-00 through PR-06 merged; Software Completion required before Windows Preview)
+**Last reconciled:** 2026-09-21 (Draft PR #32: Operational Frontend + Local G6 + G8 offline Exchange; ADR 0045 accepted)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -24,7 +43,7 @@ PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDri
 PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
 Frontend Operational Completion — authentication/session/account context, real project selection and the PR-05/PR-06 OneDrive Personal journey must use real APIs and truthful states before Software Completion.
-PR-07 through PR-13 — NOT IMPLEMENTED. PR-07 requires an accepted protected-value snapshot and sync/conflict transaction contract/ADR before runtime work.
+The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
 Software Completion — all authorized backend and frontend runtime through PR-13 plus North-star E2E must pass on the exact candidate SHA before Windows Preview.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
