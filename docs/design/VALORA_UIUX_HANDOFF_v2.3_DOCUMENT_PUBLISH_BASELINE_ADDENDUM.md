@@ -36,7 +36,7 @@ Không tạo workflow KSCL/phê duyệt nhiều cấp mới. Validation vẫn ph
 
 ## 2. Layout authority
 
-Desktop-first, Fluent 2, Vietnamese-first. Màn hình gồm:
+Desktop-first, Fluent 2 light, Vietnamese-first. Màn hình gồm:
 
 - breadcrumb + tiêu đề `Phát hành bộ tài liệu`;
 - stepper 4 bước;
@@ -126,7 +126,7 @@ Cho phép xem chi tiết package đã phát hành nhưng không dùng lịch s�
 
 ## 9. Historical visual reference
 
-Mockup `Phát hành bộ tài liệu — Iteration 1` được người dùng explicit nâng thành Baseline ngày 31/08/2026. Historical visual reference là mockup Fluent 2 với stepper 4 bước; current visual authority uses the simplified 3-step Publishing flow, bảng 6 tài liệu minh họa, readiness summary, lịch sử phát hành và publish CTA bị khóa khi còn tài liệu cần cập nhật.
+Mockup `Phát hành bộ tài liệu — Iteration 1` được người dùng explicit nâng thành Baseline ngày 31/08/2026. Historical visual reference là mockup Fluent 2 light với stepper 4 bước; current visual authority uses the simplified 3-step Publishing flow, bảng 6 tài liệu minh họa, readiness summary, lịch sử phát hành và publish CTA bị khóa khi còn tài liệu cần cập nhật.
 
 Dữ liệu minh họa trong mockup chỉ là placeholder thiết kế, không phải business fixture hay dữ liệu hồ sơ thật.
 
