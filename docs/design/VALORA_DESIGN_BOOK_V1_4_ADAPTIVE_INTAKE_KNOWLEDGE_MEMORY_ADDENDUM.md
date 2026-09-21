@@ -6,7 +6,7 @@
 - **Relationship to v1.2:** v1.2-final remains authoritative for established domain boundaries.
 - **Relationship to v1.3:** retain compatible domain/UX foundation only; current roadmap sequencing is governed by the Unified Appraisal OS roadmap v2.3, not v1.3/v1.4 sprint order.
 - **Relationship to S12:** S12 upload, staging, validation and Apply v1 are **implemented and merged** (`s12-pr-004-v1`). This addendum defines an **additive** Adaptive Intake path and does not silently change Apply semantics.
-- **Implementation gate:** S13-PR-001 is merged. Before S13 runtime, the bounded-AI automation readiness extension in §20 and ADR 0033–0034 must be merged as Gate 0c. Runtime then requires a separate owner-assigned task ID, migrations, tests and independent audit. **No runtime or autonomous capability is authorized by this document alone.**
+- **Historical implementation gate:** the S13/Gate-0c wording below records the earlier implementation program only. It is not a current execution order. New work follows the Unified Roadmap v2.3 and requires the current task-specific authority/contract. **No runtime or autonomous capability is authorized by this historical document alone.**
 - **Privacy:** Public text uses anonymized fixture **PD-001** only. Real client workbooks and reports never enter the public repository.
 
 ---
