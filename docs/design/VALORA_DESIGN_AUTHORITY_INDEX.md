@@ -3,6 +3,7 @@
 **Status:** Canonical reading order and conflict-resolution index
 **Reconciled:** 2026-09-21 (G8 offline Exchange complete on Draft PR #32; ADR 0045 + Working Change Observation design authority accepted)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
+**Documentation lifecycle:** `docs/DOCUMENTATION_STATUS_INDEX.md`.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Read order
