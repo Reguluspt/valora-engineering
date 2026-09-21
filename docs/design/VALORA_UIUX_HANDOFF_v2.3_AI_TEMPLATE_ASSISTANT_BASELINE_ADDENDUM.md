@@ -265,3 +265,7 @@ Baseline này khóa UX/mental model/business guardrails của AI-assisted templa
 - backend API contract chi tiết.
 
 Design Authority không đồng nghĩa product code đã implement.
+
+## Roadmap placement — 2026-09-21
+
+This baseline remains valid Design Authority for AI-assisted template UX. It is not the current global engineering priority. Under the Unified Appraisal OS roadmap, AI Template Mapper/intelligence expansion belongs to OS-G5 after the minimum deterministic Document Runtime exists. AI remains proposal-only and may not become a dependency for ordinary production fill.
