@@ -53,7 +53,7 @@ Provides lineage, version and activity visibility: source dossier/file/locator, 
 
 ## 3. Baseline layout — `Tài sản chuẩn`
 
-Desktop Fluent 2 layout:
+Desktop Fluent 2 light layout:
 
 - VALORA left navigation.
 - Header/breadcrumb: `Kho tri thức > Quản lý kho tri thức`.
@@ -191,7 +191,7 @@ Workbench uses the Knowledge Base for contextual retrieval. Knowledge Management
 
 - Single-user workflow.
 - Vietnamese-first.
-- Fluent 2, desktop-first, data-heavy/table-first.
+- Fluent 2 light, desktop-first, data-heavy/table-first.
 - One primary CTA per context.
 - No silent accept/activation/overwrite.
 - No fake Word editor.
