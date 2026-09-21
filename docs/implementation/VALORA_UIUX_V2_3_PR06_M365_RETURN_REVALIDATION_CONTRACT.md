@@ -1,6 +1,8 @@
 # VALORA UI/UX v2.3 — PR-06 M365 Return/Revalidation Implementation Contract
 
-**Task:** `VALORA-PR06-IMPL-001` **Status:** ACCEPTED — PRODUCT OWNER AUTHORIZED IMPLEMENTATION **Date:** 2026-09-12 **Authority:** PR-06 task brief, accepted ADR 0041, accepted ADR 0040, and the UI/UX v2.3 M365 Return/Revalidation semantic and visual addenda
+**Task:** `VALORA-PR06-IMPL-001` **Status:** ACCEPTED FOUNDATION — CURRENT WORKING-CHANGE SEMANTICS EXTENDED BY ADR 0045 **Date:** 2026-09-12 **Authority:** PR-06 task brief, ADR 0040–0041 and current UI/UX v2.3 Return/Revalidation authority
+
+**2026-09-21 current-authority note:** PR-06 explicit revalidation remains the read/integrity foundation. Current target may trigger observation/revalidation automatically on provider notification, focus/open or freshness-required actions. Such automatic work remains non-authoritative and may only produce/update `DocumentChangeCandidate`; it must not create `DocumentRevision` or mutate business truth. Human-confirmed promotion is governed by ADR 0045 and the Working Change Observation addendum.
 
 ## Scope
 
