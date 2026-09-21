@@ -106,11 +106,13 @@ Preview Word: **cuộn trang liên tục**.
 Command bar authority:
 
 - `Mở trong Word`;
-- `Đồng bộ dữ liệu`;
-- `Tạo phiên bản mới`;
+- `Kiểm tra thay đổi` — fallback khi automatic observation không khả dụng hoặc user muốn refresh;
+- `Xem & xác nhận thay đổi` — chỉ hiện khi có `DocumentChangeCandidate` cần review;
+- `Tạo/Xác nhận phiên bản` — explicit acceptance boundary cho `GeneratedDocumentCandidate`/accepted document plan;
 - `So sánh`;
-- `Khóa phiên bản`;
 - `...`.
+
+Không có command `Khóa phiên bản`. Accepted `DocumentRevision` đã immutable; Publishing chỉ bind exact accepted revisions vào `ReleaseManifest`.
 
 **Không có chức năng `Xuất PDF`.**
 
