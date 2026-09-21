@@ -8,6 +8,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current development sequencing / architecture integration; it does not silently override UI/UX semantics.
 - [Documentation status index](DOCUMENTATION_STATUS_INDEX.md) — canonical classification of current authority, living engineering docs, historical audits/sprints/handoffs and superseded provider research.
 - [2026-09-21 documentation reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_UNIFIED_ROADMAP_V2_3.md) — inventory/classification and current-living-doc reconciliation against the Unified Roadmap.
+- [2026-09-21 Handoff/Roadmap/Fluent 2 reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_HANDOFF_ROADMAP_FLUENT2.md) — post-reconciliation sweep for authority roles, Fluent 2 light, provider-neutral Document Workspace, OS-G0→OS-G7 sequencing and current document/release semantics.
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
 - [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
