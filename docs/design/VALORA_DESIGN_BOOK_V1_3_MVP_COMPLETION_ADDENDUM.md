@@ -1,5 +1,7 @@
 # Valora Design Book v1.3 — MVP Completion Addendum
 
+> **2026-09-21 current-roadmap amendment:** Domain/UX principles in this addendum remain historical foundation where not superseded. All Phase/Sprint sequencing is superseded by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. `Review Queue` and standalone `Validation Dashboard` rows below are legacy vocabulary only and must not be revived as current product navigation/workflow.
+
 - **Status**: Draft for Phase 2 execution (historical roadmap sequencing partially superseded)
 - **Relationship to v1.2**: v1.2 remains authoritative for existing domain architecture; v1.3 adds MVP completion scope, UX rules, AI provider rules, and expansion deferrals.
 - **Supersession (2026-07-15 / S13-PR-001):** Any **§7 / “Sprint 13 = AI Assistant first”** roadmap sequencing in v1.3 is superseded by Design Book **v1.4** and the Design Authority Index. Active order is Gate 0c bounded-AI design closeout → S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 dossiers → S16 reliable audited AI suggestions and shadow evaluation. Vietnamese-first UX, Astryx, MVP module freeze, and human-in-the-loop AI rules in this document **remain in force**. Design Book v1.4 §20 and ADR 0033–0034 additionally govern task provenance, provider fallback, policy, reliable jobs and future capability promotion.
