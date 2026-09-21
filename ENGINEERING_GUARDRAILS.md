@@ -116,7 +116,7 @@ No module should depend on another without a clear application service or domain
 
 ```text
 Valora Workbench is the main workspace.
-Vietnamese-first UX; Astryx design compliance.
+Vietnamese-first UX; Microsoft Fluent 2 light design compliance; desktop-first, data-heavy/table-first. Astryx may remain only as a low-level primitive if fully remapped and visually conformant.
 ```
 
 ### Word / Excel
