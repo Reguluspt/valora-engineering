@@ -30,7 +30,7 @@ TM03 Excel trước rule Word-only vẫn là lịch sử và không có authorit
 
 Authority visual/interaction:
 
-- Valora shell + Fluent 2, desktop-first;
+- Valora shell + Fluent 2 light, desktop-first;
 - step rail 4 bước của setup template;
 - chọn bộ dữ liệu test;
 - vùng dữ liệu test với `Thông tin chung` / `Bảng danh mục`;
