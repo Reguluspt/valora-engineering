@@ -8,7 +8,7 @@ Iteration này đã được người dùng duyệt và **chốt baseline**. Aut
 
 Các điểm visual/interaction của Iteration 1 được giữ làm nguồn truy vết lịch sử:
 
-- Valora shell + Fluent 2, desktop-first;
+- Valora shell + Fluent 2 light, desktop-first;
 - step rail `Upload file → Mapping bảng danh mục → Mapping thông tin chung → Preview / Test fill`;
 - chọn bộ dữ liệu test và tùy chọn highlight mapping;
 - vùng dữ liệu test có ngữ cảnh `Thông tin chung` / `Bảng danh mục`;
