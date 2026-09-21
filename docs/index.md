@@ -4,6 +4,8 @@ Navigation index; this file does not replace design authority or acceptance evid
 
 ## Authority and implementation status
 
+- [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current product/development ordering; Appraisal OS roadmap wins over sub-domain/platform roadmaps.
+
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
 - [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
   delegated mechanical-worker, independent-review and commit-ownership rules.
