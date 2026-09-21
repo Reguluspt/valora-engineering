@@ -3,9 +3,10 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Scope:** Microsoft 365 Document Workspace → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.
-**Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
+**Scope:** Không gian tài liệu → Microsoft 365 integration → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first.
 
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Quyết định baseline
 Mockup `AI nhận diện & thiết lập mẫu từ tài liệu tải lên — Iteration 1` được nâng thành **Baseline / Design Authority**.
 
