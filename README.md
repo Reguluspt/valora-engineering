@@ -10,7 +10,7 @@
 **PR-00 alignment gate:** **CLOSED**
 **PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
 **PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
-**Active task:** **Operational frontend completion, then PR-07 contract/ADR before runtime**
+**Current execution direction:** **OS-G0 authority + Fluent 2 light visual-system reconciliation, then OS-G1 Pre-case Product Closure per Unified Roadmap v2.3**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -99,9 +99,9 @@ Future ownership (design only until runtime PRs): Adaptive Intake + Column Mappi
 
 ## Authority hierarchy
 
-Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md` → handoff → Design Book v1.2/v1.3/v1.4 → contracts/ADRs → S13–S16 plan.
+Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 + Authority Index/addendum → Unified Roadmap v2.3 → task-specific contract/ADR → verified implementation evidence. Design Book v1.x and S13–S16 plans are historical/domain reference only where not superseded.
 
-Roadmap (active after separate assignment): S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 reliable audited AI suggestions + shadow evaluation → S17 reports → S18 auth/pilot.
+Historical roadmap only: S13 Adaptive Intake → S14 Asset Identity Memory → S15 dossiers → S16 AI suggestions → S17 reports → S18 pilot. **Do not execute this sequence as the current roadmap.** Current ordering is OS-G0 → OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 
 ## Local setup
 
