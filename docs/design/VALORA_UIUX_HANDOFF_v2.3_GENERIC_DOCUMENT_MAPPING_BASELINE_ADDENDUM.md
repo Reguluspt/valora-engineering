@@ -40,7 +40,7 @@ Primary interaction tại bước 2 là **preview Word trực tiếp + chọn d�
 
 ## C. Bố cục visual authority — Iteration 2
 
-Desktop-first, Fluent 2, cùng VALORA shell của Không gian tài liệu.
+Desktop-first, Fluent 2 light, cùng VALORA shell của Không gian tài liệu.
 
 Bố cục chính:
 
