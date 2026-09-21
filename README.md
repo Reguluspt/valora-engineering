@@ -31,7 +31,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | S12 parser capability | `.xlsx` fixed-alias staging + validate + Apply v1 remains frozen |
 | **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
 | **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
-| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current UI/UX work follows the v2.3 PR track |
+| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current product work follows Unified Roadmap `OS-G0 → OS-G7` |
 | Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
