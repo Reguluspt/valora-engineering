@@ -167,3 +167,7 @@ Do đó không tạo các hệ quản lý template độc lập trùng lặp cho
 - Không đưa dữ liệu khách hàng/NCC/hồ sơ thật vào public repo.
 - Design authority không đồng nghĩa product code đã implement.
 - Không khóa implementation technology ở baseline này.
+
+## Roadmap placement — 2026-09-21
+
+This Design Authority remains valid for template-management UX/domain boundaries. The Unified Appraisal OS roadmap controls implementation ordering: minimum deterministic template/compiler/fill capability needed by Document Runtime belongs to OS-G3; advanced template intelligence/family/adaptation belongs to OS-G5. Template platform work must not displace Pre-case or Appraisal Core closure.
