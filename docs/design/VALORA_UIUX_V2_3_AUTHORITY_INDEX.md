@@ -2,6 +2,7 @@
 
 **Status:** Canonical UI/UX reading order for v2.3
 **Consolidation:** 21/09/2026 — `Working Change Observation / Change Candidate / Human Commit Contract v1`.
+**Roadmap sequencing authority:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`; UI/UX documents remain authority for detailed product semantics/interaction.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
@@ -133,3 +134,7 @@ Không UI khóa riêng. Không Export PDF.
 Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics; M365 file identity/version binding, webhook/change notification, managed-region fingerprint/diff, freshness policy và revalidation audit persistence cần ADR nếu implementation thay đổi persistence/architecture. Working-copy subscription/delta observation, Change Candidate và human-confirmed revision boundary phải tuân ADR 0045.
 
 Audit/Lineage pattern ưu tiên reuse primitives hiện hữu. Nếu cần unified traceability projection, generic cross-domain reference persistence, lineage graph persistence hoặc thay đổi semantics của audit/lineage primitives thì phải đánh giá ADR trước khi thay đổi architecture.
+
+## Historical handoff versions
+
+`VALORA_UIUX_HANDOFF_v1.8.md` through `VALORA_UIUX_HANDOFF_v2.2.md` are design history. They are not current authority where v2.3 master/addenda or the Unified Roadmap provide a newer explicit decision.
