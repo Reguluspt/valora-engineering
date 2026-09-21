@@ -1,8 +1,8 @@
-# Valora Astryx Token & Component Mapping
+# Valora Astryx Token & Component Mapping — Historical / Low-level Reference
 
 > **2026-09-21 product-surface amendment:** This file remains a design-system mapping reference, not product navigation authority. `Review Queue` and standalone `Validation Dashboard` sections/labels below describe legacy surfaces and are deprecated for new UI work. Current v2.3 product authority requires contextual review/validation at the owning workflow surface.
 
-This document establishes the UI/UX design-system contract mapping for the Project Valora MVP screens using the Astryx Design System guidelines.
+This document preserves the historical Astryx package/component mapping from the earlier MVP track. It is **not current product visual authority**. Current authority is Microsoft Fluent 2 light from `VALORA_UIUX_HANDOFF_v2.3.md` and `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`. Any retained Astryx primitive must be fully remapped to Fluent 2 light semantics and must not introduce dark/cyan/glassmorphic language.
 
 ---
 
@@ -16,8 +16,8 @@ This document establishes the UI/UX design-system contract mapping for the Proje
 
 ---
 
-## 2. Astryx Usage Principles
-- **No Custom Patterns**: Use Astryx components whenever a matching UI layout is available. Custom overrides must be documented.
+## 2. Historical Astryx usage principles — non-authoritative
+- Historical rule only. For new/current UI work, Fluent 2 light authority wins. Do not select an Astryx component merely because it exists; use it only if it can be made visually/behaviorally conformant without reintroducing the superseded visual language.
 - **Vietnamese-First i18n**: User-facing English labels are strictly forbidden. All labels must map to localized Vietnamese terms in i18n dictionaries.
 - **Error Masking Policy**: Technical/SQL/API error logs are strictly hidden from non-IT end-users. All technical exceptions map to clean Vietnamese warning boxes with next-action buttons.
 
