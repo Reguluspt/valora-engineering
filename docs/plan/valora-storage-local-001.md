@@ -1,6 +1,6 @@
 # VALORA-STORAGE-LOCAL-001 — Linux local immutable DocumentBlobStore
 
-**Status:** G6 REVIEW CANDIDATE — FINAL VERDICTS REQUIRED
+**Status:** COMPLETE — G6 ACCEPTED
 **Opened:** 2026-09-20, Asia/Saigon
 **Authority:** ADR 0043, the Document Blob Storage contract and the 2026-09-20 Product Owner
 deployment-path decision
@@ -24,9 +24,9 @@ local-disk custody, the long-term RPO/RTO targets or general production-provider
 | Four-operation `DocumentBlobStore` port | Implemented | Preserve unchanged |
 | Deterministic fake and T1-T14 | Accepted | Keep passing unchanged |
 | AWS S3 adapter/evidence | G1-G4 static retained | Do not delete, invoke or wire |
-| Linux local immutable adapter | Implemented at G4 | T1-T14/L1-L17 proved at G5; G6 pending |
+| Linux local immutable adapter | Implemented at G4 | T1-T14/L1-L17 proved at G5; G6 accepted on exact committed snapshot |
 | Deployment provider/root configuration | Implemented at G4 | Validated settings, fail-closed factory and persistent volume shape |
-| OneDrive Exchange / encrypted Backup | Partial / not implemented | Both out of scope for Local-1 and remain independent later gates |
+| OneDrive Exchange / encrypted Backup | Exchange now complete offline at G8; Backup unopened | Both remain independent from Local-1 authority |
 
 ## Frozen local layout and identity
 
@@ -148,12 +148,20 @@ provider validation or hardware-enforced immutability.
 1. **G1 — plan/contract: COMPLETE.** Authority, AWS deferral and two OneDrive roles synchronized.
 2. **G2/G4 — adapter/config/migration: COMPLETE.** No Exchange or Backup tooling was added.
 3. **G5 — verification: PASS.** T1-T14, L1-L17, PostgreSQL CAS/migration and static gates passed.
-4. **G6 — acceptance: REVIEW CANDIDATE.** Freeze an exact manifest and obtain two independent
-   read-only reviews before accepting Local-1; this file records the frozen candidate state, while
-   reviewer verdicts are external gate evidence.
+4. **G6 — acceptance: ACCEPTED.** Exact reviewed snapshot `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; DeepSeek v4.1 Flash ACCEPT and Gemini 3.1 Pro High ACCEPT with no blocking P0/P1/P2 findings. Durable closeout evidence is recorded in `docs/implementation/VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json` at evidence commit `5c54116a6f5fab70d375935e71a591845bdcdb9a`.
 
-`VALORA-BACKUP-ONEDRIVE-001` remains unopened for implementation until G4/Local-1 passes. A failure
+`VALORA-BACKUP-ONEDRIVE-001` remains unopened and requires a separate Product Owner authorization; Local-1 passing does not automatically open Backup. A failure
 to prove atomic no-replace publication is a stop condition, not a reason to weaken the contract.
+
+## G6 closeout — 2026-09-20
+
+Local-1 is accepted for the current VPS pilot boundary. The accepted evidence proves application-level
+immutable/create-only local publication, tenant-safe storage finalization and recovery on the reviewed
+Linux/PostgreSQL snapshot. It does not claim HA, hardware WORM, long-term production RPO/RTO,
+encrypted local-disk custody or cloud-provider conformance.
+
+Known P3 follow-ups remain recorded in the closeout manifest and are non-blocking for the accepted
+pilot boundary.
 
 ## Stop conditions
 
