@@ -24,7 +24,7 @@ User-facing title ưu tiên: `Quản lý nội dung do VALORA quản lý (Chứn
 
 ## 3. Layout authority
 
-Desktop-first Fluent 2:
+Desktop-first Fluent 2 light:
 
 - Header/breadcrumb + `Mở trong Word` + một primary CTA `Đồng bộ vào Word (n vùng)`.
 - Stepper 4 bước.
