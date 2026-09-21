@@ -69,25 +69,33 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-Accepted code baseline: origin/main 27d1cc6… (PR #31)
-Canonical UI/UX authority: docs/uiux-handoff-v2.2 at 1cf5046…
+Accepted merged baseline: origin/main 27d1cc6… (PR #31)
+Active integration candidate: Draft PR #32 / feat/operational-frontend-m365
+G6 Local immutable storage: ACCEPTED
+G8 OneDrive Personal Exchange offline implementation: COMPLETE at f896f15…
+ADR 0045 / Working Change Observation design authority: ACCEPTED
 
-PR-00 through PR-04 — MERGED by PR #29 at 2775cb9; PR-01 is a bounded prefix foundation
-PR-02 browser acceptance and PR-03 migration round-trip evidence are included on main
-PR-05 OneDrive Personal foundation — MERGED by PR #30 at 42a87fc; no frontend
-PR-06 OneDrive Personal return/revalidation — MERGED by PR #31 at 27d1cc6; no frontend
-Operational frontend entry — REQUIRED before Software Completion
-PR-07 through PR-13 — NOT IMPLEMENTED
-PR-07 runtime — BLOCKED on an accepted protected-value snapshot and sync/conflict contract/ADR
-Software Completion — REQUIRED before Windows Preview
-PR-05 → PR-06 Return/Revalidation → PR-07 Sync/Conflict
-PR-07 → PR-08 Release Domain Foundation → PR-09 Publishing Commit/Success
-PR-03 + PR-07 + PR-09 → PR-10 Audit/Lineage Wiring
-PR-02 → PR-10 → PR-11 State Sweep → PR-12 Template Fidelity → PR-13 North-star E2E
+Current product direction:
+Authority cleanup
+→ complete Pre-case product journey
+→ close ASSET_REVIEW → APPRAISAL_RESULT as vertical OS slices
+→ Document Workspace with automatic observation/revalidation + Change Candidate + Human Commit
+→ Release/Publishing
+→ traceability/state/fidelity/E2E
+→ bounded AI expansion
+
+Original direct OneDrive replacement PR-07 write path: BLOCKED/HISTORICAL.
+Protected Old/V/W and explicit conflict semantics remain reusable.
+New document-change runtime is gated by an ADR-0045 implementation contract; webhook/subscription/
+delta runtime is not authorized by ADR 0045 alone.
+
+G9 live AppFolder conformance: separate Product Owner gate; not automatically opened by G8.
+PR-08 through PR-13: not product-complete.
+Windows Preview: only after Software Completion.
 ```
 
-
-Deterministic structure discovery, mapping profiles, identity retrieval and document extraction must exist before external AI is allowed to augment ambiguous cases.
+Infrastructure expansion is not a roadmap goal by itself. New storage/provider/Graph abstractions are
+justified only when a concrete North-star slice cannot safely close without them.
 
 ## 5. Binding v1.4 decisions
 
@@ -132,12 +140,17 @@ authorize S13-PR-005 or override the current v2.3 PR-00 → PR-13 track.
 
 Current v2.3 disposition:
 
-1. PR-00 through PR-04 — **merged** by PR #29 at `2775cb9`; PR #28 is the merged integration precursor. PR-01 remains a bounded prefix foundation rather than all 16 stages.
-2. PR-02 desktop/laptop browser acceptance and the PR-03 migration upgrade/downgrade/upgrade regression are included in the PR #29 rollup on `main`.
-3. PR-05 OneDrive Personal foundation — **merged** by PR #30 at `42a87fc`; backend/provider acceptance passed, frontend absent. OneDrive for Business and SharePoint remain deferred.
-4. PR-06 OneDrive Personal return/revalidation — **merged** by PR #31 at `27d1cc6`; backend/provider acceptance passed, frontend absent.
-5. PR-07 through PR-13 — **not implemented**. PR-07 runtime requires an accepted protected-value snapshot and sync/conflict transaction contract/ADR first.
-6. Exact per-layer status and residual gaps are governed by `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`.
+1. PR-00 through PR-04 — merged bounded foundations/slices.
+2. PR-05 / PR-06 — merged OneDrive Personal read/revalidation foundations.
+3. Draft PR #32 — operational frontend candidate + accepted Local G6 + completed G8 offline Exchange.
+4. ADR 0045 — accepted target semantics for automatic Working observation, Change Candidate and
+   explicit human-confirmed Revision N+1.
+5. Canonical stages 5-16 remain incomplete at OS/product level; Case State provider still only owns
+   the four prefix stages.
+6. PR-07 direct OneDrive replacement execution is historical/blocked; new document-change runtime
+   requires the ADR-0045 implementation contract.
+7. PR-08 through PR-13 remain to be closed as product/OS vertical slices.
+
 
 ## 7. Module ownership (future runtime)
 
