@@ -3,9 +3,11 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
-**Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
+**Scope:** Không gian tài liệu → Microsoft 365 integration → Chứng thư thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first.
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 2026-09-21 generation/revision amendment
 
 Generation/fill output is a candidate until explicit acceptance. Canonical flow:
@@ -37,7 +39,7 @@ Chọn template & phạm vi
 ```
 
 ## 3. Layout authority — Fluent 2
-- Breadcrumb trong context hồ sơ → Tài liệu & Workspace → Microsoft 365 Document Workspace → Chứng thư thẩm định giá.
+- Breadcrumb trong context hồ sơ → Tài liệu & Workspace → Không gian tài liệu → Microsoft 365 integration → Chứng thư thẩm định giá.
 - Stepper 6 bước theo mental flow.
 - Cột trái: `Template & Phạm vi sinh tài liệu`, `Data Snapshot`, `Kiểm tra Managed Regions`.
 - Trung tâm: preview Word view-only lớn nhất, có overlay/nhãn vùng được quản lý.
