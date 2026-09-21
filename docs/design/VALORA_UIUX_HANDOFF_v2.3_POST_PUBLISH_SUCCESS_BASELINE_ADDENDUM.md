@@ -33,7 +33,7 @@ Success state phải phản ánh artifact thật đã commit:
 Nếu commit thất bại hoặc chưa xác định, không route sang success state và không hiển thị `Đã phát hành`.
 
 ## 3. Layout authority — Iteration 1
-Desktop Fluent 2, Vietnamese-first, read-only.
+Desktop Fluent 2 light, Vietnamese-first, read-only.
 
 ### Header / success banner
 - tiêu đề `Bộ tài liệu đã được phát hành`;
