@@ -1,24 +1,38 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-12 — PR-00 through PR-06 merged; Software Completion required before Windows Preview
-**Accepted code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
-**Canonical UI/UX authority:** `docs/uiux-handoff-v2.2` at `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
+**Reconciled:** 2026-09-21 — Draft PR #32 contains Operational Frontend + accepted Local G6 + completed G8 offline Exchange; ADR 0045 is current document-change direction
+**Accepted merged code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31); **active candidate:** Draft PR #32 / `feat/operational-frontend-m365`
+**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`; Working-copy change semantics are governed by the 2026-09-21 addendum + ADR 0045
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ### Live task gate
 
 ```text
-Read `docs/design/VALORA_UIUX_HANDOFF_v2.3.md`, then
-`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`, then the directly relevant v2.3 addendum.
+Read the v2.3 master + authority index + directly relevant addendum before coding.
 
-PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566859cb`; PR #28 is the merged integration precursor. PR-01 is a bounded prefix foundation, not complete coverage of all 16 stages. PR-02 browser acceptance and the PR-03 migration round-trip regression are included in the rollup now on `main`.
-PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; delegated OneDrive Personal foundation and live-account acceptance passed. OneDrive for Business and SharePoint remain deferred.
-PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; canonical provision, immutable baseline, five-way return classification, readiness and live OneDrive Personal acceptance passed.
-The per-layer truth for PR-00 through PR-13 is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Merge status never substitutes for frontend, browser or E2E evidence.
-Frontend Operational Completion and PR-07 through PR-13 remain before Software Completion. Windows Preview follows Software Completion and must not be used as a product implementation environment.
-Known legacy QC/approval/standalone-validation implementation remains unchanged but must not expand
-or drive new UI. Earlier S13 sequencing below is historical context only.
+Merged main remains PR-00 through PR-06 at 27d1cc6.
+Draft PR #32 is the active integration candidate and now carries:
+- Operational Frontend entry and M365 workspace;
+- Local immutable DocumentBlobStore accepted at G6;
+- OneDrive Personal Exchange G8 offline implementation complete at f896f15…;
+- ADR 0045 / Working Change Observation + Change Candidate + Human Commit authority.
+
+Do not infer "product complete" from those infrastructure/integration milestones.
+Global Case State still has only the four prefix-stage providers; stages 5-16 remain unavailable.
+Legacy Review Queue / standalone Validation Dashboard / old Workbench right-panel IA remain debt.
+
+The original PR-07 direct OneDrive replacement mechanism is blocked/historical. Reuse its Old/V/W,
+protected-value and explicit-conflict semantics only where compatible. New document-change runtime
+must follow ADR 0045:
+automatic observation/revalidation -> Change Candidate -> review/conflict -> explicit human commit
+-> app-owned immutable Revision N+1.
+
+G9 live AppFolder conformance is a separate Product Owner decision. ADR 0045 does not authorize
+webhook/subscription/delta runtime by itself; freeze a task-specific implementation contract first.
+
+North-star completion, Release/Publishing, traceability/state/fidelity and exact-SHA E2E remain
+before Software Completion. Windows Preview follows Software Completion.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are evidence, not evergreen status.
@@ -109,19 +123,19 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ### Current UI/UX integration track
 
-| ID | Status | Evidence / next gate |
+| Capability / gate | Current state | Evidence / next gate |
 |---|---|---|
-| PR-00 | MERGED | Authority ratchet and contract tests landed through PR #29 / `2775cb9` |
-| PR-01 / PR-01a | MERGED — BOUNDED FOUNDATION | case-state prefix, official intake and preliminary snapshot/result runtime landed through PR #29; 12 downstream stages remain unavailable |
-| PR-02 | MERGED — BOUNDED SLICE | Case Overview landed through PR #29; browser closeout `docs/audits/PR-02_BROWSER_ACCEPTANCE_CLOSEOUT.md` is present on `main` |
-| PR-03 | MERGED — BOUNDED SLICE | append-only tenant-safe NCC Selection persistence and PostgreSQL round-trip regression landed through PR #29 |
-| PR-04 | MERGED — BOUNDED SLICE | NCC Selection API/UI landed through PR #29; no separate pixel-level browser acceptance artifact |
-| PR-05 | MERGED — BACKEND/PROVIDER SLICE | PR #30 / `42a87fc`; OneDrive Personal OAuth/Graph foundation and live-account acceptance; no frontend |
-| PR-06 | MERGED — BACKEND/PROVIDER SLICE | PR #31 / `27d1cc6`; document provision/baseline/revalidation/readiness and live acceptance; no frontend |
-| PR-07 through PR-13 | NOT IMPLEMENTED | See the feature/acceptance matrix for exact authority, residual gaps and dependency gates |
-| Frontend Operational Completion | REQUIRED BEFORE SOFTWARE COMPLETION | login/session/logout, account/organization context, real project selection and PR-05/06 OneDrive Personal journey through real APIs |
-| Software Completion | REQUIRED BEFORE WINDOWS PREVIEW | all PR-00 through PR-13 columns truthfully closed and North-star E2E passing on the exact candidate SHA |
-| Windows Preview | DEFERRED ROADMAP GATE | task `VALORA-WIN-PREVIEW-001`; starts only after Software Completion and precedes cloud staging |
+| PR-00–PR-04 | MERGED bounded foundations/slices | PR #29; PR-01 remains four-stage Case State prefix |
+| PR-05 | MERGED backend/provider foundation | PR #30; delegated OneDrive Personal read/OAuth |
+| PR-06 | MERGED return/revalidation foundation | PR #31; five-way revalidation + live read acceptance |
+| Operational Frontend | IMPLEMENTED ON DRAFT PR #32 | Login/session/project/M365 workspace; local simulated-provider browser closeout exists; not merged |
+| Local immutable storage | G6 ACCEPTED | reviewed snapshot `d71a42e…`; durable G6 closeout manifest `5c54116…` |
+| OneDrive Exchange G8 | OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
+| Working Change Observation direction | DESIGN/ADR ACCEPTED | ADR 0045 + v2.3 addendum; runtime implementation contract still required |
+| PR-07 direct replace path | BLOCKED / HISTORICAL | ADR 0042 D6 remains a constraint for any future direct replacement; not current primary roadmap |
+| PR-08–PR-13 | NOT PRODUCT-COMPLETE | close as North-star/OS vertical slices after authority cleanup and document-change rebaseline |
+| Software Completion | OPEN | requires full North-star, release/publishing, traceability/state/fidelity and exact-SHA E2E |
+| Windows Preview | DEFERRED | only after Software Completion |
 
 ### Merged on main (do not re-open)
 
@@ -160,7 +174,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 - `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
 - R2 auto-draft/auto-stage/exception-only-review capability promotion
 - Open-ended agent orchestration or AI direct database mutation
-- PDF/Word product reporting
+- PDF export remains out of scope; DOCX Document Workspace/report/certificate generation is in product scope and must follow current v2.3 authority
 - CRM/revenue dashboards
 - Production certification
 - Broad debt F-01 tenant isolation, F-02 legacy atomic audit, F-05 Astryx, etc. (tracked separately)
@@ -197,5 +211,6 @@ docs/adr/0031-contextual-asset-identity-memory-and-human-confirmed-feedback.md
 docs/adr/0032-paired-dossier-aggregate-document-extraction-and-row-alignment.md
 docs/adr/0033-audited-ai-task-runs-decision-episodes-and-learning-evidence.md
 docs/adr/0034-risk-tiered-execution-policy-and-reliable-autonomous-commands.md
+docs/adr/0045-working-copy-change-observation-and-human-confirmed-document-revision.md
 docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 ```
