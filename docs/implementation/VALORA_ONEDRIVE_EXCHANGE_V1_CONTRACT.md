@@ -26,7 +26,7 @@ Current target semantics:
 provider change / return
 → automatic observation/revalidation
 → verified DOCX analysis
-→ Change Candidate
+→ DocumentChangeCandidate
 → Old / V / W
 → recommendation/review/conflict
 → explicit human confirmation
@@ -35,7 +35,7 @@ provider change / return
 ```
 
 Therefore E9 remains valid evidence that the G8 immutable N+1 storage path works; it is **not**
-authority for a future UI/action to skip Change Candidate review or human confirmation.
+authority for a future UI/action to skip DocumentChangeCandidate review or human confirmation.
 
 XLSX re-import semantics are unchanged: source/staging generation may advance only through the
 existing Excel intake boundary and Apply remains separately explicit.
@@ -123,7 +123,7 @@ authoritative/linking rows. Replay uses the same command/intent.
 ### Working and explicit re-import — G8 mechanism / amended product semantics
 
 Working reads the current binding through the bounded blob-read port and validates exact SHA-256/
-length before a create-new Graph operation. It creates no revision. The G8 implementation repeats provider metadata/content verification; equal current checksum returns no-change. G8 proved that changed bytes can safely reuse the G6 `NEXT_REVISION` flow and CurrentHead CAS. After ADR 0045, future product orchestration must place automatic revalidation + Change Candidate + review/human confirmation before that `NEXT_REVISION` boundary.
+length before a create-new Graph operation. It creates no revision. The G8 implementation repeats provider metadata/content verification; equal current checksum returns no-change. G8 proved that changed bytes can safely reuse the G6 `NEXT_REVISION` flow and CurrentHead CAS. After ADR 0045, future product orchestration must place automatic revalidation + DocumentChangeCandidate + review/human confirmation before that `NEXT_REVISION` boundary.
 
 ## XLSX commands
 
@@ -158,7 +158,7 @@ intake facades with stubs is not acceptance evidence.
 | E3–E4 | full SHA-256 and exact length |
 | E5 | duplicate import idempotency |
 | E6–E8 | Working/Word/Excel Save leaves authority/Apply unchanged |
-| E9 | historical G8 proof: explicit DOCX re-import can safely create one immutable N+1 revision; ADR 0045 now requires Change Candidate + human-confirmed promotion before this path is used as product semantics |
+| E9 | historical G8 proof: explicit DOCX re-import can safely create one immutable N+1 revision; ADR 0045 now requires DocumentChangeCandidate + human-confirmed promotion before this path is used as product semantics |
 | E10 | explicit XLSX re-import creates existing source/staging flow |
 | E11–E12 | DOCX head and Excel source-generation conflicts fail safely |
 | E13–E16 | Export/rename/move/delete leaves authority unchanged |
