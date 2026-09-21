@@ -48,7 +48,7 @@ PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-o
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
 Operational Frontend — implemented on Draft PR #32 and locally browser-accepted with a simulated provider; it remains unmerged and is not North-star product-completion evidence.
 The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
-Software Completion — all authorized backend and frontend runtime through PR-13 plus North-star E2E must pass on the exact candidate SHA before Windows Preview.
+Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
@@ -82,18 +82,18 @@ S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and mu
 ## 2. Design Authority
 
 ```text
-Valora Design Book v1.2-final
-+ v1.3 MVP completion addendum
-+ v1.4 Adaptive Intake / Knowledge Memory addendum
 docs/design/VALORA_UIUX_HANDOFF_v2.3.md
 docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
 directly relevant VALORA_UIUX_HANDOFF_v2.3_* addendum
-docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md
+accepted scoped ADR(s)
+docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
+task-specific implementation contract
 docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
-docs/design/* contracts (including Excel staging §15, frozen s12-pr-004-v1)
-docs/adr/* (including ADR 0028–0034)
-docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
+docs/design/* current contracts (including Excel staging §15, frozen s12-pr-004-v1)
 docs/VALORA_PROJECT_HANDOFF.md
+Historical reference only where not superseded:
+  Design Book v1.2/v1.3/v1.4
+  docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
 ```
 
 ## 3. Module Boundaries
@@ -130,7 +130,7 @@ S12 parser v1 remains `.xlsx` + fixed aliases for its historical upload path.
 S13-PR-002 adds bounded `.xls`/`.xlsx` source adapters and immutable source artifacts;
 S13-PR-003 adds deterministic structure discovery and row classification.
 S13-PR-004 mapping-memory persistence/application services are implemented historical foundation.
-The old S13-PR-005 API/UX sequence no longer authorizes current work; follow the v2.3 PR track.
+The old S13-PR-005 API/UX sequence no longer authorizes current work; follow the Unified Roadmap OS-G0→OS-G7.
 Any replacement of S12 Apply v1 still requires explicit authority and ADR review.
 ```
 
