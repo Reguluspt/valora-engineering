@@ -1,5 +1,7 @@
 # Valora Astryx Token & Component Mapping
 
+> **2026-09-21 product-surface amendment:** This file remains a design-system mapping reference, not product navigation authority. `Review Queue` and standalone `Validation Dashboard` sections/labels below describe legacy surfaces and are deprecated for new UI work. Current v2.3 product authority requires contextual review/validation at the owning workflow surface.
+
 This document establishes the UI/UX design-system contract mapping for the Project Valora MVP screens using the Astryx Design System guidelines.
 
 ---
