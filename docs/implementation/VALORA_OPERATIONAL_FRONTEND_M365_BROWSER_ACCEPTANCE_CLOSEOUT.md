@@ -5,7 +5,7 @@
 **Branch:** `feat/operational-frontend-m365`
 **Base:** `6af3c86`
 
-**Historical evidence note:** This closeout is immutable evidence for the 2026-09-13 operational-frontend snapshot. Later Draft PR #32 work added Local G6, G8 Exchange and exact-head CI. Do not read the residual limitations below as the current branch status; use the feature/acceptance matrix and current handoff for present state.
+**Historical evidence note:** This closeout is immutable functional/browser evidence for the 2026-09-13 operational-frontend snapshot. Later Draft PR #32 work added Local G6, G8 Exchange and authority reconciliation. It is **not current visual acceptance**: the historical dark/Astryx presentation conflicts with the current Microsoft Fluent 2 light authority. Do not read the residual limitations below as current branch/product status; use the feature/acceptance matrix, UI/UX Handoff v2.3 and Unified Roadmap for present truth.
 
 ## Scope
 
