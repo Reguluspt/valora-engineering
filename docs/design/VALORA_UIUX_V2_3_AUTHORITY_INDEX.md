@@ -1,7 +1,7 @@
 # VALORA UI/UX v2.3 — Authority Index
 
 **Status:** Canonical UI/UX reading order for v2.3
-**Consolidation:** 21/09/2026 — `Working Change Observation / Change Candidate / Human Commit Contract v1`.
+**Consolidation:** 21/09/2026 — `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`.
 **Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration and must not silently override those product semantics.
 
 ## 0. Visual authority
@@ -12,7 +12,7 @@ Part 2C `PR-00 → PR-13` remains historical implementation-closure evidence; it
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
-2. `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` — **Baseline `Working Change Observation / Change Candidate / Human Commit Contract v1`**; semantic authority mới hơn cho Working-copy re-import/review và Document Revision commit boundary.
+2. `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` — **Baseline `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`**; semantic authority mới hơn cho Working-copy re-import/review và Document Revision commit boundary.
 3. `VALORA_UIUX_HANDOFF_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_ADDENDUM.md` — **Baseline `Audit / Lineage Entry-point Consistency Contract v1` + visual `Audit & Lineage Entry-point Pattern Board — Iteration 1`**.
 4. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_VISUAL_BASELINE_ADDENDUM.md` — **Baseline visual `M365 Return & Revalidation — Iteration 1`**.
 5. `VALORA_UIUX_HANDOFF_v2.3_M365_RETURN_REVALIDATION_CONTRACT_ADDENDUM.md` — **Baseline `Microsoft 365 Return / Revalidation Contract v1`**; semantic authority thắng nếu visual wording minh họa khác contract.
@@ -63,9 +63,9 @@ Hard semantics: quay lại không đồng nghĩa Word đã đổi; M365 version 
 
 Revalidation feed vào document/release readiness và Global Case State stale/blocking/next-action. Frontend không dựng workflow truth riêng. Nếu wording minh họa của visual mâu thuẫn semantic contract, contract thắng.
 
-## 3.1 Working Change Observation / Change Candidate authority
+## 3.1 Working Change Observation / DocumentChangeCandidate authority
 
-Product Owner đã chốt `Working Change Observation / Change Candidate / Human Commit Contract v1`.
+Product Owner đã chốt `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`.
 
 Canonical flow:
 
@@ -78,7 +78,7 @@ VALORA Revision N
 → verified DOCX read khi cần
 → Managed Region diff
 → Old / V / W
-→ Change Candidate + recommendation
+→ DocumentChangeCandidate + recommendation
 → user review/confirmation
 → approved revision command
 → Revision N+1
@@ -87,7 +87,7 @@ VALORA Revision N
 Hard semantics:
 - notification chỉ là stale/wake-up signal, không phải business authority;
 - automatic revalidation/analysis được phép đọc, diff và đề xuất nhưng không mutate business truth;
-- Change Candidate không phải Document Revision;
+- DocumentChangeCandidate không phải Document Revision;
 - Word Save / M365 version / revalidation không tự tạo Revision;
 - Word-only Managed Region edit là proposal/review, không phải synthetic three-way conflict;
 - true conflict dùng `Old | VALORA | Word` và explicit human decision;
@@ -97,7 +97,7 @@ Hard semantics:
 
 Preferred UX: `Đã phát hiện thay đổi từ Word → Xem & xác nhận thay đổi`; fallback `Kiểm tra thay đổi`. Nếu còn label `Nhập thay đổi`, nó chỉ bắt đầu review pipeline, không đồng nghĩa immediate `NEXT_REVISION`.
 
-ADR 0045 là architecture authority cho subscription/delta observation, Change Candidate và human-confirmed revision boundary.
+ADR 0045 là architecture authority cho subscription/delta observation, DocumentChangeCandidate và human-confirmed revision boundary.
 
 ## 4. Cross-product state authority
 `Cross-product Empty / Loading / Error / Retry Contract v1` là state-presentation và recovery authority dùng chung toàn VALORA. Nó không thay Error Registry; Error Registry vẫn là message authority, còn State Contract phân loại state, scope, surface, recovery action và preserve/replace behavior.
@@ -137,7 +137,7 @@ Không UI khóa riêng. Không Export PDF.
 - Traceability entry point phải context-first, giữ return target và không dựng `Audit toàn hệ thống`.
 
 ## 11. ADR
-Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics; M365 file identity/version binding, webhook/change notification, managed-region fingerprint/diff, freshness policy và revalidation audit persistence cần ADR nếu implementation thay đổi persistence/architecture. Working-copy subscription/delta observation, Change Candidate và human-confirmed revision boundary phải tuân ADR 0045.
+Global Case State projection/resume persistence; cross-product durable processing/job identity; post-publish projection; Release Manifest transaction/locking/idempotency/recovery; NCC-selection persistence/revision/stale; DossierBundle/extraction/row-alignment; knowledge activation/versioning/lineage; Managed Region merge semantics; M365 file identity/version binding, webhook/change notification, managed-region fingerprint/diff, freshness policy và revalidation audit persistence cần ADR nếu implementation thay đổi persistence/architecture. Working-copy subscription/delta observation, DocumentChangeCandidate và human-confirmed revision boundary phải tuân ADR 0045.
 
 Audit/Lineage pattern ưu tiên reuse primitives hiện hữu. Nếu cần unified traceability projection, generic cross-domain reference persistence, lineage graph persistence hoặc thay đổi semantics của audit/lineage primitives thì phải đánh giá ADR trước khi thay đổi architecture.
 
