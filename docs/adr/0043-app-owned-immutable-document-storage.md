@@ -1,6 +1,6 @@
 # ADR 0043 — App-owned immutable document storage
 
-**Status:** AMENDED — LOCAL VPS G5 PROVED; INDEPENDENT G6 REVIEW PENDING
+**Status:** AMENDED — LOCAL VPS G6 ACCEPTED; G8 OFFLINE EXCHANGE COMPLETE
 **Date:** 2026-09-20
 **Task:** `VALORA-STORAGE-ARCH-001`
 
@@ -263,8 +263,8 @@ Rejected. It cannot roll back an external object and creates unnecessary lock co
 | Provider-neutral fake T1–T14 | Engineering | ACCEPTED — local proof and independent review passed |
 | Production residency and provider | Architecture/Product Owner | OPEN; not selected |
 | S3 isolated-spike plan and account boundary | Product Owner/Engineering | G1-G4 complete/static evidence retained; G5 live AWS NOT RUN; closed/deferred by Product Owner before invocation |
-| Current pilot provider | Product Owner/Engineering | LOCAL FILESYSTEM selected; G5 local proof passed, independent G6 review pending |
-| OneDrive Exchange | Product Owner/Engineering | Separately gated; existing read/adopt/revalidation is partial and live OAuth/write activity is not authorized |
+| Current pilot provider | Product Owner/Engineering | LOCAL FILESYSTEM selected; G6 accepted on exact reviewed Linux/PostgreSQL snapshot |
+| OneDrive Exchange | Product Owner/Engineering | G8 offline implementation complete; OneDrive remains non-authoritative; live AppFolder conformance/reconsent is separately gated |
 | Off-site backup transport | Product Owner/Engineering | Separate encrypted Backup namespace selected; implementation/live OAuth not yet accepted |
 | Production provider selection | Architecture/Product Owner | NOT RUN; no AWS production-provider claim |
 
@@ -305,6 +305,17 @@ live OneDrive OAuth, deployment or production claims.
   separately gated OneDrive Exchange and encrypted Backup roles. Neither role is authoritative and
   neither may be confused with the other. The single VPS is not HA/WORM and the long-term RPO/RTO
   targets remain unproven.
+
+### 2026-09-21 gate reconciliation
+
+- `VALORA-STORAGE-LOCAL-001` G6 is accepted. Exact reviewed snapshot:
+  `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout manifest is retained in
+  `docs/implementation/VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json`.
+- `VALORA-ONEDRIVE-EXCHANGE-001` G8 is complete offline at code milestone `f896f15…`.
+- ADR 0045 governs the newer Working-copy observation/review/human-confirmed revision boundary.
+  Nothing in G6/G8 authorizes Word Save/provider notification to create a revision automatically.
+- Production residency/provider, long-term RPO/RTO, encrypted off-site Backup and live AppFolder
+  conformance remain separate/open gates.
 
 ## References
 
