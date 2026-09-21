@@ -3,7 +3,7 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Ngày chốt:** 30/08/2026
-**Scope:** Microsoft 365 Document Workspace — UX đồng bộ dữ liệu và quản lý phiên bản tài liệu Word sau khi dữ liệu VALORA thay đổi.
+**Scope:** Không gian tài liệu — Microsoft 365 integration — UX đồng bộ dữ liệu và quản lý phiên bản tài liệu Word sau khi dữ liệu VALORA thay đổi.
 
 
 > **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
