@@ -36,7 +36,7 @@ Người dùng phải có thể:
 
 ## C. Layout authority
 
-Desktop-first, Fluent 2, data-heavy.
+Desktop-first, Fluent 2 light, data-heavy.
 
 Bố cục chính:
 
