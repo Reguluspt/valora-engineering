@@ -38,7 +38,7 @@ Chọn template & phạm vi
 → Kết quả đồng bộ
 ```
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 - Breadcrumb trong context hồ sơ → Tài liệu & Workspace → Không gian tài liệu → Microsoft 365 integration → Chứng thư thẩm định giá.
 - Stepper 6 bước theo mental flow.
 - Cột trái: `Template & Phạm vi sinh tài liệu`, `Data Snapshot`, `Kiểm tra Managed Regions`.
