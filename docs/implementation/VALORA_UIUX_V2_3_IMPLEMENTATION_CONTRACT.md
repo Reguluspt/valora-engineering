@@ -1,10 +1,13 @@
-# VALORA UI/UX v2.3 — Lightweight Implementation Contract
+# VALORA UI/UX v2.3 — Lightweight Implementation Contract — Historical PR-00 Ratchet
 
 **Task:** PR-00 — Authority Alignment Guard
 
+**Status:** HISTORICAL PR-00 RATCHET — STILL ENFORCED WHERE NOT SUPERSEDED
+
 **Mode:** Ratchet-only; no runtime semantic change
 
-**Authority branch:** `docs/uiux-handoff-v2.2`
+**Original authority branch:** `docs/uiux-handoff-v2.2`
+**Current authority:** Unified Appraisal OS roadmap v2.3 + canonical UI/UX v2.3 authority index. This file remains a narrow ratchet contract and must not be used as a current roadmap.
 
 **Authority tip inspected:** `1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
 
