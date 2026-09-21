@@ -2,7 +2,13 @@
 
 **Status:** Canonical UI/UX reading order for v2.3
 **Consolidation:** 21/09/2026 — `Working Change Observation / Change Candidate / Human Commit Contract v1`.
-**Roadmap sequencing authority:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`; UI/UX documents remain authority for detailed product semantics/interaction.
+**Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration and must not silently override those product semantics.
+
+## 0. Visual authority
+
+Current product visual language is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Approved visual baselines/mockups are authority. Astryx is historical/low-level reference only; retained Astryx primitives must be fully remapped and must not introduce dark/cyan/glassmorphic language.
+
+Part 2C `PR-00 → PR-13` remains historical implementation-closure evidence; its sequencing is superseded by the Unified Roadmap v2.3, while still-current UX/business contracts remain valid.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
