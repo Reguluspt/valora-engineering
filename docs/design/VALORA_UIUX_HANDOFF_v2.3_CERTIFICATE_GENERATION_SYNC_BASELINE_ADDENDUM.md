@@ -6,6 +6,21 @@
 **Scope:** Microsoft 365 Document Workspace → Chứng thư thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
 **Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
 
+## 2026-09-21 generation/revision amendment
+
+Generation/fill output is a candidate until explicit acceptance. Canonical flow:
+
+```text
+Template Version + Data Snapshot
+→ GeneratedDocumentCandidate
+→ verification
+→ explicit human Generate / Accept Version
+→ DocumentRevision
+→ optional Working / Export
+```
+
+Any later Word edits use ADR 0045 change observation/review/human commit. Microsoft 365 file/version remains external lineage, not document authority.
+
 ## 1. Quyết định baseline
 Mockup `Sinh & Đồng bộ Chứng thư thẩm định giá — Iteration 1` được nâng thành **Baseline / Design Authority**.
 
