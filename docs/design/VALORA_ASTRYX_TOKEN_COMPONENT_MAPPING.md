@@ -12,7 +12,7 @@ This document preserves the historical Astryx package/component mapping from the
   - `@astryxdesign/core`
   - `@astryxdesign/theme-neutral`
   - `@astryxdesign/cli`
-- **Current UI Migration Status**: Existing Valora screens have not yet been refactored to Astryx. The current production-facing UI still uses custom CSS variables (defined in [index.css](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/index.css)) and custom React components (located under `src/components/common`) until future migration PRs.
+- **Historical migration snapshot**: at the time of the Astryx spike, screens had not been fully migrated. This is not a current migration target. Current remediation target is Microsoft Fluent 2 light; historical Astryx package presence does not authorize Astryx visual styling.
 
 ---
 
@@ -209,7 +209,7 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 ---
 
 ## 7. Implementation Rules for Future PRs
-- **Token Compliance**: Frontend stylesheets must only inherit Astryx tokens. Direct hex color values or hardcoded margins/paddings are forbidden.
+- **Historical token-compliance rule — superseded**: do not use this Astryx-token requirement for current work. Current frontend styles must follow the Fluent 2 light implementation contract and approved v2.3 visual baselines; dark/cyan/glassmorphic hard-coded styling is remediation debt.
 - **Strict Verification Blockers**: 
   - Any raw JSON error log, backend stack trace, or HTTP code exposed to the UI.
   - Any direct mention of AI model provider names (e.g. Gemini, DeepSeek) inside client screens (must use *Trợ lý Valora*).
@@ -226,7 +226,7 @@ All HTTP failures must map to friendly Vietnamese dialog representations:
 
 ---
 
-## 9. Official Astryx Source Alignment
+## 9. Historical Astryx package/source alignment
 
 - **Official Source Confirmed**: `facebook/astryx`
 - **Installed Packages**:
