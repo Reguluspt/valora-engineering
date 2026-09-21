@@ -1,6 +1,43 @@
 # VALORA UI/UX v2.3 — PR-07 Sync/Conflict Implementation Contract
 
-**Task:** `VALORA-PR07-CONTRACT-001` **Status:** ACCEPTED BY PRODUCT OWNER **Date:** 2026-09-13 **Authority:** accepted ADR 0042, accepted ADRs 0040–0041, and UI/UX v2.3 Document Sync Version plus Bulk Sync Preview/Conflict/Confirm/Result addenda
+**Task:** `VALORA-PR07-CONTRACT-001` **Status:** ACCEPTED HISTORICAL CONTRACT — EXECUTION PATH RE-BASELINED BY ADR 0043–0045 **Date:** 2026-09-13; reconciled 2026-09-21 **Authority:** ADR 0042 remains authority for protected values/Old-V-W/conflict semantics; ADR 0043–0045 govern the current app-owned revision and Working-copy review direction
+
+## 2026-09-21 current-direction reconciliation
+
+This contract remains useful for:
+- protected typed `Old` values and server-owned Managed Region mapping;
+- deterministic `Old / V / W` comparison;
+- zero-document-write preview/conflict decisions;
+- explicit no-default conflict handling;
+- tenant/RBAC/idempotency/audit requirements.
+
+Its **direct provider-write execution path is no longer the current primary roadmap**.
+
+ADR 0043 moved authoritative DOCX bytes/revisions to app-owned immutable storage after the direct
+OneDrive replacement path could not prove the required provider CAS semantics. ADR 0044 then added
+non-authoritative create-new Exchange Working/Export copies. ADR 0045 now requires automatic
+observation/revalidation + Change Candidate + explicit human-confirmed promotion before a Working
+DOCX can create `Revision N+1`.
+
+Current target:
+
+```text
+Working copy change
+→ observe/revalidate
+→ Change Candidate
+→ Old / V / W
+→ review/conflict decisions
+→ explicit human confirmation
+→ app-owned immutable Revision N+1
+→ optional new Working/Export copy
+```
+
+Do **not** implement the historical `replace existing bound OneDrive item` execution from this
+contract unless a future Product Owner decision explicitly reopens that mechanism and independently
+satisfies ADR 0042/D6.
+
+A new task-specific implementation contract under ADR 0045 is required before webhook/subscription,
+delta cursor, Change Candidate persistence or human-confirmed revision runtime work starts.
 
 ## Authorization gate
 
@@ -16,13 +53,13 @@ authorized until the documented reopen trigger is met.
 
 ## Scope
 
-After acceptance, implement the minimum OneDrive Personal sync/conflict slice that:
+Historical accepted scope described the minimum OneDrive Personal sync/conflict slice as follows. For current implementation, preserve only the semantics explicitly retained by the reconciliation section above:
 
 - enrolls immutable protected values only under historical-content proof;
 - builds a bounded, persisted, zero-document-write three-way preview;
 - records explicit conflict decisions;
-- conditionally updates only selected Managed Regions in the exact bound DOCX;
-- creates new immutable VALORA revision/binding/baseline lineage per successful document;
+- historically: conditionally update selected Managed Regions in the exact bound DOCX; **current target instead commits accepted content to app-owned immutable Revision N+1 and treats Working as non-authoritative**;
+- creates new immutable VALORA revision/binding/baseline lineage per successful accepted document;
 - recovers safely when Graph and database outcomes are uncertain;
 - returns per-document bulk results without false all-or-nothing claims.
 
@@ -345,6 +382,5 @@ Stop runtime implementation if any of these is unresolved:
 
 ## Acceptance gate
 
-Closed by explicit Product Owner acceptance on 2026-09-13. The authorization remains bounded to the
-PR-07 implementation and migrations described here; it does not authorize push, pull request
+The 2026-09-13 acceptance remains historical authority for the preserved comparison/conflict/security semantics. It is **not** sufficient authorization for the superseded direct-provider-write execution or for the new ADR-0045 observer/candidate runtime. A new task-specific contract is required; it does not authorize push, pull request
 publication, merge, deployment, release publishing, PR-08 work or widened Microsoft 365 scope.
