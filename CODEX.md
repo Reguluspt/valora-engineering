@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-20 (local authority plus separate OneDrive Exchange/Backup paths)
+**Last reconciled:** 2026-09-21 (Local G6 accepted; G8 offline Exchange complete; ADR 0045 Working Change Observation/Human Commit accepted)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -35,30 +35,54 @@ Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 ### Live task gate (fetch origin/main before acting)
 
 ```text
-Accepted code baseline: `origin/main` at
-`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31).
-Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
-`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
+Accepted merged code baseline remains `origin/main` at
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31). Always fetch and verify live main.
 
-PR-00 through PR-04 — MERGED to `main` by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566859cb` after PR #28 merged into the integration branch. PR-01 is a bounded prefix foundation, not all 16 stages. PR-02 browser acceptance and the PR-03 migration round-trip regression are included in the merged rollup.
-PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`. Delegated OneDrive Personal foundation and live-account acceptance passed; OneDrive for Business and SharePoint remain deferred.
-PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`. Canonical document provision, immutable revalidation baseline, five-way classification, computed readiness, PostgreSQL gates and live OneDrive Personal acceptance passed.
-The authoritative PR-00 through PR-13 feature/acceptance status is recorded in `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. A merged PR is not evidence that backend, frontend, browser and end-to-end columns all pass.
-Frontend Operational Completion — login/session restoration/logout, account/organization context, real project selection and OneDrive Personal connect/provision-or-adopt/revalidation/readiness must be available through real APIs without placeholder data before Software Completion.
-PR-07 through PR-13 — NOT IMPLEMENTED. PR-07 runtime is blocked on an accepted protected-value snapshot and sync/conflict transaction contract/ADR; later PRs follow the dependency sequence in the acceptance matrix.
-Software Completion — all authorized backend and frontend runtime through PR-13, operational entry, connected production surfaces and North-star E2E must pass on an exact merged candidate SHA before any Windows Preview runtime work begins.
-Windows Preview — `VALORA-WIN-PREVIEW-001` follows Software Completion and precedes cloud staging. It packages the already-complete product for isolated Windows/Docker Desktop UAT and must not be used to discover or fill missing product implementation.
-Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
-Storage current gate — `VALORA-STORAGE-S3-SPIKE-001` G1-G4 evidence is retained, but AWS G5/G6 were
-not run and AWS is not the selected current provider. `VALORA-STORAGE-LOCAL-001` has passed its local
-G5 proof and awaits independent G6 review. OneDrive Personal has two separately gated,
-non-authoritative roles: explicit document
-Exchange under `VALORA/Exchange/{Inbox,Working,Exports}` and encrypted off-site Backup under
-`VALORA/Backup/<deployment-id>`. Exchange is not backup, Backup is not a working-document surface,
-and Word/Excel Save never creates a VALORA revision. No AWS activity, live OneDrive OAuth, merge,
-deployment or production release is authorized by this gate.
-The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
-owner-authorized UI/UX track.
+Active integration candidate: Draft PR #32 / `feat/operational-frontend-m365`.
+It contains the operational frontend, Local immutable DocumentBlobStore, OneDrive Personal Exchange
+and the later documentation reconciliation. Treat the live PR head as mutable; milestone SHAs below
+are evidence, not evergreen branch heads.
+
+PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
+canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
+PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
+PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
+
+Operational Frontend — IMPLEMENTED ON DRAFT PR #32 and locally browser-accepted against a simulated
+provider. It is not yet merged into main and does not by itself prove the full North-star E2E.
+
+VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
+`d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
+`VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json`. Local immutable blobs are the current VPS pilot
+document-byte provider; PostgreSQL + DocumentRevision/CurrentHead remain authority.
+
+VALORA-ONEDRIVE-EXCHANGE-001 — G8 OFFLINE IMPLEMENTATION COMPLETE at code milestone
+`f896f15b0b18e8eb3a32619bee2418f3a4b92da4`. Exact-head CI run #302 passed all jobs; backend
+reported 1659 passed and frontend 140 passed. G8 proves offline Exchange/storage behavior only;
+live Files.ReadWrite.AppFolder/provider conformance remains a separately authorized G9 decision.
+
+ADR 0045 + the Working Change Observation design addendum are now current authority for DOCX
+Working-copy changes:
+Word Save/provider notification -> observation/revalidation -> Change Candidate -> Old/V/W review
+-> explicit human-confirmed revision command -> G8 NEXT_REVISION storage boundary.
+Word Save, notification, revalidation and Change Candidate creation never create DocumentRevision
+or mutate authoritative business data automatically.
+
+The original PR-07 direct OneDrive replacement/write path remains blocked/historical. Its protected
+value and three-way comparison semantics remain reusable, but new document-change runtime must be
+re-baselined around ADR 0045 and a task-specific implementation contract before coding. Do not start
+webhook/subscription/delta watcher runtime from ADR 0045 alone.
+
+PR-08 through PR-13 remain not implemented as complete product stages. Software Completion still
+requires the North-star product path, release/publishing, traceability/state/fidelity and exact-SHA
+E2E acceptance before Windows Preview.
+
+Known legacy Review Queue / standalone Validation Dashboard / old Workbench right-panel IA are debt
+and must not expand or be treated as current product authority.
+
+OneDrive Exchange is non-authoritative. Encrypted off-site Backup remains a separate unopened task.
+No AWS live activity, live Exchange reconsent/provider probe, production deploy or release is
+authorized unless the Product Owner explicitly opens that gate.
 ```
 
 Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
