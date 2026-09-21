@@ -68,7 +68,7 @@ Current PR-07 interpretation:
 - ADR 0042 protected-value + Old/V/W + explicit conflict semantics remain reusable;
 - ADR 0043–0045 move the current target to app-owned immutable revisions plus non-authoritative
   Working copies;
-- new document-change runtime must use automatic observation/revalidation → Change Candidate →
+- new document-change runtime must use automatic observation/revalidation → DocumentChangeCandidate →
   review/conflict → explicit human-confirmed Revision N+1;
 - G9 live AppFolder conformance is a separate Product Owner gate and does not substitute for the
   ADR-0045 implementation contract.
