@@ -4,7 +4,9 @@
 **Status:** IMPLEMENTED ON DRAFT PR #32 — HISTORICAL BOUNDED CONTRACT
 **Date:** 2026-09-12
 **Authority:** Product Owner request, accepted ADR 0040/0041, accepted PR-05/PR-06 contracts,
-and the UI/UX v2.3 M365 Workspace and Return/Revalidation addenda
+and the UI/UX v2.3 document-workspace and Return/Revalidation addenda
+
+**2026-09-21 current-product amendment:** This is historical bounded implementation evidence. Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`; Microsoft 365/OneDrive/Word are integrations, not the domain workspace name. Current visual authority is Microsoft Fluent 2 light. Provider-centric labels and dark/cyan styling from the historical operational frontend are remediation debt, not accepted product UX.
 
 ## Purpose and boundary
 
