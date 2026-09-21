@@ -5,6 +5,8 @@
 **Branch:** `feat/operational-frontend-m365`
 **Base:** `6af3c86`
 
+**Historical evidence note:** This closeout is immutable evidence for the 2026-09-13 operational-frontend snapshot. Later Draft PR #32 work added Local G6, G8 Exchange and exact-head CI. Do not read the residual limitations below as the current branch status; use the feature/acceptance matrix and current handoff for present state.
+
 ## Scope
 
 This closeout covers the operational frontend entry added after PR-06: login/session restoration,
