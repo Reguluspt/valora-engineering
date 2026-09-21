@@ -42,7 +42,7 @@ Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are ev
 
 ## 1. Product goal and persona
 
-Valora is a **valuation and asset-identity workbench** for business appraisers and review roles who are **not software engineers**. UX must be **Vietnamese-first**, non-IT error messages, and **Astryx**-aligned components.
+Valora is a **single-user valuation and asset-identity workbench** for business appraisers who are **not software engineers**. UX must be **Vietnamese-first**, non-IT, desktop-first, data-heavy/table-first and conform to **Microsoft Fluent 2 light**.
 
 Word/Excel are **ports** for import/export. The Workbench + database are the source of truth.
 
@@ -50,12 +50,12 @@ Design Book v1.4 adds two separate, auditable memories: **Column Mapping Memory*
 
 The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt provenance, `DecisionEpisode` learning lineage, intent-level workflow-pattern inputs and a deny-by-default risk-tiered `ExecutionPolicy`. It prepares future automation but does not enable autonomous runtime or weaken human gates.
 
-## 2. Vietnamese UX and Astryx
+## 2. Vietnamese UX and Fluent 2 light
 
 - Labels: `frontend/src/i18n/` + `docs/design/VALORA_VIETNAMESE_I18N_LABEL_DICTIONARY.md`
 - Errors: `frontend/src/errors/` + `docs/design/VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md`
-- Design system: `@astryxdesign/core`, `@astryxdesign/theme-neutral`
-- Mapping notes: `docs/design/VALORA_ASTRYX_TOKEN_COMPONENT_MAPPING.md`
+- Current visual authority: Microsoft Fluent 2 light, desktop-first, data-heavy/table-first.
+- `docs/design/VALORA_ASTRYX_TOKEN_COMPONENT_MAPPING.md` is historical/low-level reference only; Astryx may not drive product visual language.
 
 ## 3. Bounded contexts and ownership
 
@@ -66,7 +66,7 @@ The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt p
 | `knowledge_evidence` | Evidence library, knowledge versions, quotes; **planned** reviewed bootstrap candidates |
 | `workflow_workbench` | Workflow + workbench session helpers; future patterns derive from domain commands/outcomes, not UI clickstream |
 | `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
-| `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only in S13–S16 |
+| `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only unless a later owner-approved task explicitly promotes capability |
 | `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
 
 API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench under `frontend/src/components/workbench/*`.
@@ -134,7 +134,7 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | OneDrive Exchange G8 | OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
 | Working Change Observation direction | DESIGN/ADR ACCEPTED | ADR 0045 + v2.3 addendum; runtime implementation contract still required |
 | PR-07 direct replace path | BLOCKED / HISTORICAL | ADR 0042 D6 remains a constraint for any future direct replacement; not current primary roadmap |
-| PR-08–PR-13 | NOT PRODUCT-COMPLETE | close as North-star/OS vertical slices after authority cleanup and document-change rebaseline |
+| Historical PR-08–PR-13 labels | NOT PRODUCT-COMPLETE | evidence labels only; current closure order is OS-G0→OS-G7 in the Unified Roadmap |
 | Software Completion | OPEN | requires full North-star, release/publishing, traceability/state/fidelity and exact-SHA E2E |
 | Windows Preview | DEFERRED | only after Software Completion |
 
@@ -161,14 +161,14 @@ Gate: freeze task-specific design/evidence contract before runtime implementatio
 ### Historical next-candidate record — not a current execution gate
 
 ```text
-S13-PR-005 — Mapping Confirmation API and Astryx Vietnamese UX
+S13-PR-005 — Mapping Confirmation API and historical Astryx Vietnamese UX
 ```
 
-Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → dossier/job foundation → reliable audited AI suggestions and shadow evaluation.
+This S13–S16 sequence is historical only. Do not use it as the current execution order; follow the Unified Roadmap OS-G0→OS-G7.
 
 ## 9. Out of scope (still)
 
-- Mapping-confirmation API/Astryx UX (S13-PR-005)
+- Historical S13-PR-005 Mapping-confirmation/Astryx UX sequence is not a current execution gate
 - Asset Identity Memory runtime
 - Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
 - AI provider runtime and end-to-end AI mapping/matching
@@ -178,7 +178,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 - PDF export remains out of scope; DOCX Document Workspace/report/certificate generation is in product scope and must follow current v2.3 authority
 - CRM/revenue dashboards
 - Production certification
-- Broad debt F-01 tenant isolation, F-02 legacy atomic audit, F-05 Astryx, etc. (tracked separately)
+- Broad debt remains tracked separately; current cross-product visual debt is Fluent 2 light conformance and removal of dark/cyan/glassmorphic/Astryx product styling
 
 ## 10. Safe onboarding for the next agent
 
@@ -187,7 +187,7 @@ Then follow S13–S16 plan: Column Mapping Memory → Asset Identity Memory → 
 3. Create a **new** branch from clean `main` for the assigned task ID.
 4. Prefer code + tests + CI over stale audit prose.
 5. Never treat local PG skips as PASS.
-6. Do not restart closed S13 work. Follow the v2.3 PR-00 → PR-13 execution track and its dependency gates.
+6. Do not restart closed S13 work. Follow `VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` (OS-G0→OS-G7); historical PR labels are acceptance evidence only.
 7. Treat AI output as a proposal; mapping, identity, price, Apply and knowledge activation remain human-controlled.
 8. Do not re-open S12-PR-003/004 as blocked/not started — they are merged.
 9. Do not claim uncommitted local docs are already merged authority.
