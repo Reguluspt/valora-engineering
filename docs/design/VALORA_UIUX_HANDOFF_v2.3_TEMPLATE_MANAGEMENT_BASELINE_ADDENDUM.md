@@ -60,7 +60,7 @@ Word Generic Document Mapping Iteration 2 là authority cho UX mapping Word gene
 
 ## D. Bố cục visual authority
 
-Desktop-first, Fluent 2, table-first.
+Desktop-first, Fluent 2 light, table-first.
 
 Header:
 
