@@ -42,7 +42,7 @@ Chọn template & phạm vi
 
 Không tạo workflow phê duyệt/KSCL mới. Đây là child flow của Không gian tài liệu; Microsoft 365 là integration và phải tiếp tục dùng authority Sync/Version + Publishing hiện hành.
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 
 - Header/breadcrumb đặt trong context hồ sơ → Tài liệu & Workspace → Không gian tài liệu → Microsoft 365 integration → Báo cáo thẩm định giá.
 - Stepper 6 bước theo mental flow.
