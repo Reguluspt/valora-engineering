@@ -3,7 +3,7 @@
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
 **Date:** 2026-09-21
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 350 documentation/config-document files at the 2026-09-21 sweep.
+**Inventory reconciliation:** 350 documentation/config-document files at the 2026-09-21 post-reconciliation sweep.
 
 ## 1. Why this index exists
 
@@ -66,6 +66,15 @@ OS-G0 Authority + Fluent 2 light visual-system reconciliation
 Current visual authority is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Astryx is historical/low-level reference only and must not drive product styling.
 
 Sub-domain plans may not reorder this sequence without a new Product Owner decision.
+
+## 2.1 Current visual-system disposition
+
+- Microsoft Fluent 2 light is current product visual authority.
+- S10/S12/S13/NCCQ/NCC Selection/Không gian tài liệu approved baselines are golden visual references.
+- Astryx mapping/package records are historical/low-level implementation evidence only.
+- Existing dark/cyan/glassmorphic frontend is remediation debt, not visual acceptance.
+- Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
+- Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
 
 ## 3. Current engineering / evidence documents
 
