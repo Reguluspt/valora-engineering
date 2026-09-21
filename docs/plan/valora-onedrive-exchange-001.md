@@ -49,7 +49,7 @@ ADR 0045 and the Working Change Observation design addendum now govern future DO
 ```text
 provider change / return
 → automatic observation + exact revalidation
-→ Change Candidate + Old/V/W analysis
+→ DocumentChangeCandidate + Old/V/W analysis
 → recommendation / review / conflict decision
 → explicit human confirmation
 → approved revision command
