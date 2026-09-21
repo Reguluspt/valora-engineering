@@ -10,7 +10,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) and [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md).
 - [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md).
 
-## PR-07 — provider conformance and storage successor
+## Document storage, OneDrive Exchange and document-change direction
 
 - [OAuth diagnostics and C2 implementation plan](plan/pr07-oauth-c2-implementation.md) — G1 and the first bounded G2 attempt are historical; G4 remains closed.
 - [C2 partial-response semantics research](research/pr07-c2-partial-response-semantics.md) — the v1 predicate correction plus the amended single v2 live observation.
@@ -26,7 +26,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Completed storage fake task](plan/done/valora-storage-fake-001.md) — provider-neutral persistence, deterministic fake, PostgreSQL DB CAS and T1–T14 proof accepted with no cloud calls.
 - [Deferred isolated S3 spike](plan/valora-storage-s3-spike-001.md) — G1-G4 static evidence is retained; G5 live AWS and G6 provider selection were not run after the Product Owner changed the current deployment path.
 - [Current pilot storage/OneDrive decision](research/valora-storage-provider-selection-2.md) — local authoritative immutable blobs plus independent non-authoritative OneDrive Exchange and encrypted Backup roles.
-- [Local provider task awaiting G6](plan/valora-storage-local-001.md) — Linux atomic create-only adapter passed T1-T14/L1-L17 and awaits two independent reviews; Exchange and Backup remain later separate gates.
+- [Completed Local provider task](plan/valora-storage-local-001.md) — G6 accepted on exact reviewed snapshot `d71a42e…`; T1-T14/L1-L17, PostgreSQL CAS/migration and two independent reviews passed. Durable evidence: `VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json`.
 - [Superseded provider-spike selection](research/valora-storage-provider-selection.md) — historical AWS/Azure comparison and AWS G1-G4 preparation rationale.
 - [Storage policy decision](research/pr07-storage-fallback-options-2.md) — Model A and the accepted retention, deletion, encryption and recovery baseline; links the superseded initial fallback research.
 - [Accepted ADR 0044 Exchange v1](adr/0044-onedrive-personal-exchange-v1.md) — explicit
@@ -34,9 +34,10 @@ Navigation index; this file does not replace design authority or acceptance evid
   reconciliation while OneDrive remains non-authoritative.
 - [Working Change Observation / Change Candidate / Human Commit Design Authority](design/VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md) — automatic Working-copy detection/revalidation and recommendation with no automatic business commit or Revision creation.
 - [Accepted ADR 0045](adr/0045-working-copy-change-observation-and-human-confirmed-document-revision.md) — folder-level change signal + delta/exact revalidation + non-authoritative Change Candidate + explicit human-confirmed Revision N+1 boundary.
+- **Next implementation gate for document change observation:** freeze `VALORA-DOCUMENT-CHANGE-OBSERVATION-001` runtime contract (subscription lifecycle, webhook validation, delta cursor, durable job, Change Candidate schema/read model, stale rules, review/confirmation API and acceptance matrix) before coding.
 - [OneDrive Exchange v1 implementation contract](implementation/VALORA_ONEDRIVE_EXCHANGE_V1_CONTRACT.md)
-  and [active G8 plan](plan/valora-onedrive-exchange-001.md) — frozen offline schema/port/state-machine,
-  UI boundary and E1–E30 acceptance matrix; live Microsoft activity remains closed.
+  and [completed G8 offline plan](plan/valora-onedrive-exchange-001.md) — offline schema/port/state-machine,
+  UI boundary and E1–E30 acceptance completed at code milestone `f896f15…`; live Microsoft AppFolder conformance remains a separate Product Owner gate.
 - [Accepted ADR 0042](adr/0042-onedrive-personal-protected-values-and-sync-write-transactions.md) and [accepted sync/conflict contract](implementation/VALORA_UIUX_V2_3_PR07_SYNC_CONFLICT_CONTRACT.md).
-- [Provider-conformance runbook](implementation/VALORA_UIUX_V2_3_PR07_PROVIDER_CONFORMANCE_RUNBOOK.md) — historical/current execution evidence; PR-07 runtime remains blocked.
+- [Provider-conformance runbook](implementation/VALORA_UIUX_V2_3_PR07_PROVIDER_CONFORMANCE_RUNBOOK.md) — historical evidence for the rejected direct OneDrive replacement path; ADR 0042/D6 remains relevant only if direct replacement is proposed again.
 - [Research handoff](research/pr07-onedrive-conformance-handoff.md) — C1 chronology plus the amended C2 observation and remaining provider questions.
