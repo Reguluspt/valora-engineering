@@ -16,7 +16,7 @@ Its **direct provider-write execution path is no longer the current primary road
 ADR 0043 moved authoritative DOCX bytes/revisions to app-owned immutable storage after the direct
 OneDrive replacement path could not prove the required provider CAS semantics. ADR 0044 then added
 non-authoritative create-new Exchange Working/Export copies. ADR 0045 now requires automatic
-observation/revalidation + Change Candidate + explicit human-confirmed promotion before a Working
+observation/revalidation + DocumentChangeCandidate + explicit human-confirmed promotion before a Working
 DOCX can create `Revision N+1`.
 
 Current target:
@@ -24,7 +24,7 @@ Current target:
 ```text
 Working copy change
 → observe/revalidate
-→ Change Candidate
+→ DocumentChangeCandidate
 → Old / V / W
 → review/conflict decisions
 → explicit human confirmation
@@ -37,7 +37,7 @@ contract unless a future Product Owner decision explicitly reopens that mechanis
 satisfies ADR 0042/D6.
 
 A new task-specific implementation contract under ADR 0045 is required before webhook/subscription,
-delta cursor, Change Candidate persistence or human-confirmed revision runtime work starts.
+delta cursor, DocumentChangeCandidate persistence or human-confirmed revision runtime work starts.
 
 ## Authorization gate
 
