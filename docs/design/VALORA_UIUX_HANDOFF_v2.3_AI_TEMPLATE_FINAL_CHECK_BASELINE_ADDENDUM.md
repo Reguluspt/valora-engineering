@@ -34,7 +34,7 @@ Không có silent publish. Việc hoàn tất/lưu template là thao tác explic
 
 ## 3. Layout Baseline — Iteration 1
 
-Desktop-first, Fluent 2, data/document-first.
+Desktop-first, Fluent 2 light, data/document-first.
 
 - Header giữ context `Thiết lập mẫu tài liệu` và stepper 4 bước; Bước 4 là trạng thái hiện hành.
 - Preview/Test fill là vùng lớn nhất của màn hình.
