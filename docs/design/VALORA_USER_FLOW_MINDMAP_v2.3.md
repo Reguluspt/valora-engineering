@@ -72,14 +72,18 @@ mindmap
         Kết quả thẩm định giá
         Đơn giá do người dùng quyết định
         Tổng cộng / Làm tròn / Bằng chữ
-    Bộ tài liệu phát hành
-      Microsoft 365 Document Workspace
-      Tạo / quản lý Word
-      Mở trong Word
-      Đồng bộ dữ liệu
-      Tạo phiên bản mới
+    Không gian tài liệu
+      Tạo / quản lý bộ tài liệu hồ sơ
+      GeneratedDocumentCandidate
+      Xác nhận phiên bản mới
+      Document Revision
+      Microsoft 365 integration
+        Mở trong Word
+        Return / Auto Revalidation
+        DocumentChangeCandidate
+        Rà soát thay đổi tài liệu
+        Human Commit
       So sánh
-      Khóa phiên bản
       Phát hành bộ tài liệu
       Không có Xuất PDF trong baseline
       Cấu trúc thư mục
