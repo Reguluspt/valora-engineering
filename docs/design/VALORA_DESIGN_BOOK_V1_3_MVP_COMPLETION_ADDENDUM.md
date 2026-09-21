@@ -4,7 +4,7 @@
 
 - **Status**: HISTORICAL DESIGN FOUNDATION — current product/visual/roadmap authority is v2.3 Handoff + Unified Roadmap
 - **Relationship to v1.2**: v1.2 remains authoritative for existing domain architecture; v1.3 adds MVP completion scope, UX rules, AI provider rules, and expansion deferrals.
-- **Supersession (2026-07-15 / S13-PR-001):** Any **§7 / “Sprint 13 = AI Assistant first”** roadmap sequencing in v1.3 is superseded by Design Book **v1.4** and the Design Authority Index. Active order is Gate 0c bounded-AI design closeout → S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 dossiers → S16 reliable audited AI suggestions and shadow evaluation. Vietnamese-first UX and human-in-the-loop AI principles remain useful where not superseded. **Astryx visual-system authority does not remain in force**; Microsoft Fluent 2 light in UI/UX Handoff v2.3 supersedes it. Design Book v1.4 §20 and ADR 0033–0034 additionally govern task provenance, provider fallback, policy, reliable jobs and future capability promotion.
+- **Supersession (2026-09-21):** All §7/Sprint sequencing in v1.3 and the later S13–S16 sequence are historical only. Current development ordering is `OS-G0 → OS-G7` in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. Vietnamese-first UX and human-in-the-loop AI principles remain useful where not superseded. **Astryx visual-system authority does not remain in force**; Microsoft Fluent 2 light in UI/UX Handoff v2.3 supersedes it. Design Book v1.4 §20 and ADR 0033–0034 remain historical/domain foundations where compatible with current authority.
 
 ---
 
@@ -119,12 +119,12 @@ $$\text{AI Suggestion} \longrightarrow \text{User Review} \longrightarrow \text{
 
 ---
 
-## 7. Phase 2 Roadmap
+## 7. Historical Phase 2 Roadmap — superseded for sequencing
 
 - **Sprint 10**: Design Book v1.3 + Astryx Vietnamese UX Contract
 - **Sprint 11**: Live Workbench Data Loop
 - **Sprint 12**: Excel Import Pipeline
-- **Historical roadmap — superseded by v1.4:** Sprint 13 was previously planned as AI Assistant MVP (Gemini + DeepSeek Gateway). Active sequencing is defined by the Design Authority Index and v1.4.
+- **Historical roadmap:** Sprint 13 was previously planned as AI Assistant MVP (Gemini + DeepSeek Gateway). Neither this sequence nor the later v1.4 S13–S16 sequence is current; use the Unified Roadmap v2.3.
 - **Sprint 14**: Document Report Generation MVP
 - **Sprint 15**: Real Auth + Pilot Acceptance
 
