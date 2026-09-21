@@ -19,7 +19,7 @@ The Product Owner has approved a refined target model:
 
 - VALORA should automatically observe and analyze Working-copy changes where technically possible;
 - Word Save, provider notification and revalidation are never business commits;
-- automatic processing may create a non-authoritative Change Candidate and recommendation;
+- automatic processing may create a non-authoritative DocumentChangeCandidate and recommendation;
 - authoritative domain mutation and `DocumentRevision N+1` require an explicit human-confirmed
   business write boundary.
 
@@ -42,7 +42,7 @@ accepted. It is not equivalent to:
 - a changed eTag/cTag;
 - a changed checksum before review;
 - a revalidation observation;
-- a Change Candidate.
+- a DocumentChangeCandidate.
 
 Only an authorized business commit may create `DocumentRevision N+1` and advance
 `DocumentRevisionCurrentHead`.
@@ -104,12 +104,12 @@ Automatic revalidation may:
 
 It may not automatically apply a Word value to authoritative domain data or create a new revision.
 
-### D6. Introduce a non-authoritative Change Candidate boundary
+### D6. Introduce a non-authoritative DocumentChangeCandidate boundary
 
 The target runtime must have a durable/recoverable representation of a document change candidate
 before human review if background processing crosses process/session boundaries.
 
-A Change Candidate must be explicitly linked to:
+A DocumentChangeCandidate must be explicitly linked to:
 
 - organization/project/document;
 - accepted baseline revision;
@@ -175,7 +175,7 @@ provider change / return
 → observe
 → revalidate
 → verified content read
-→ Change Candidate
+→ DocumentChangeCandidate
 → Old / V / W
 → recommendation/review/conflict
 → explicit human confirmation
@@ -283,7 +283,7 @@ Before runtime implementation, freeze a task-specific contract covering:
 - subscription lifecycle and validation;
 - delta cursor/reconciliation;
 - durable job/idempotency boundary;
-- Change Candidate schema/read model;
+- DocumentChangeCandidate schema/read model;
 - Managed Region diff inputs;
 - stale/superseded rules;
 - review/confirmation command;
