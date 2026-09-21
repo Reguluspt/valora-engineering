@@ -1,8 +1,9 @@
 # VALORA UI/UX v2.3 — PR-00 through PR-13 Feature/Acceptance Matrix
 
-**Status:** VERIFIED REPOSITORY AUDIT — CURRENT-STATE GATE
+**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-21 ACTIVE-CANDIDATE RECONCILIATION
 **Audit date:** 2026-09-12
 **Verified baseline:** `origin/main` at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`
+**Current candidate reconciliation:** 2026-09-21 — Draft PR #32 / `feat/operational-frontend-m365`; G8 code milestone `f896f15...`; later commits are documentation reconciliation
 **Scope:** Repository, merged pull requests, exact-head CI, migrations, tests, frontend routes and browser evidence
 
 This matrix separates design, runtime, integration and acceptance evidence. `MERGED` means only that
@@ -35,6 +36,40 @@ journey to complete.
 - `A8`: the M365/Contract Document Workspace, document-set review, generic mapping/review,
   template-management, AI-template, managed-region, spreadsheet-fill, report and certificate addenda.
 - `A9`: `VALORA_USER_FLOW_MINDMAP_v2.3.md` and the complete north-star flow in the v2.3 master.
+- `A10`: `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` + ADR 0045.
+
+## 2026-09-21 active Draft PR #32 reconciliation
+
+The table below remains the verified **merged baseline** audit and must not be rewritten as though
+unmerged work had landed on `main`. For current candidate planning, this addendum supersedes older
+"current candidate" wording elsewhere in this file.
+
+Current Draft PR #32 contains:
+
+| Capability | Candidate status | Evidence / limitation |
+|---|---|---|
+| Operational Frontend entry | IMPLEMENTED / UNMERGED | Login/session/account/project/M365 workspace exists; historical simulated-provider browser closeout exists |
+| Local immutable DocumentBlobStore | G6 ACCEPTED | exact reviewed snapshot `d71a42e…`; durable closeout manifest; not HA/WORM/long-term production proof |
+| OneDrive Personal Exchange | G8 OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
+| Working Change Observation semantics | DESIGN/ADR ACCEPTED | A10 / ADR 0045; runtime implementation contract not yet frozen |
+| Global Case State stages 5–16 | STILL NOT AVAILABLE | G6/G8 do not add canonical stage providers |
+| Release/Publishing | NOT IMPLEMENTED | no ReleasePlan/ReleaseManifest/publish commit runtime |
+| North-star E2E | NOT IMPLEMENTED | no full exact-SHA product journey proof |
+
+Current PR-07 interpretation:
+
+- the direct replacement of an existing OneDrive document remains blocked/historical;
+- ADR 0042 protected-value + Old/V/W + explicit conflict semantics remain reusable;
+- ADR 0043–0045 move the current target to app-owned immutable revisions plus non-authoritative
+  Working copies;
+- new document-change runtime must use automatic observation/revalidation → Change Candidate →
+  review/conflict → explicit human-confirmed Revision N+1;
+- G9 live AppFolder conformance is a separate Product Owner gate and does not substitute for the
+  ADR-0045 implementation contract.
+
+Current product priority is no longer "more provider substrate first". After authority cleanup,
+close the Pre-case journey and canonical appraisal stages as vertical slices, then implement the
+document-change review boundary, Release/Publishing, traceability/state/fidelity and North-star E2E.
 
 ## Feature/acceptance matrix
 
