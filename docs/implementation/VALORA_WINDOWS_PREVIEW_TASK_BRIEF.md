@@ -32,7 +32,7 @@ SharePoint and OneDrive for Business remain deferred.
 
 Windows Preview implementation may begin only when:
 
-1. The PR-00 through PR-13 feature/acceptance matrix has no required runtime or acceptance gap.
+1. Unified Roadmap OS-G0 through OS-G6 required product/acceptance gaps are closed; the historical PR-00–PR-13 matrix may be used as evidence but is not the sequencing gate.
 2. Login, session restoration, logout, account/organization context and real project selection work
    through the product UI.
 3. Document Workspace and Working-change review follow current ADR 0045 authority; provider observation may be automatic but authoritative document mutation remains human-confirmed.
@@ -40,7 +40,7 @@ Windows Preview implementation may begin only when:
    demonstration data stands in for product behavior.
 5. Backend/frontend tests, lint, build, migration, tenant, security and exact-SHA integration gates
    pass.
-6. PR-13 proves the supported north-star journey end to end.
+6. OS-G6 proves the supported North-star journey end to end on the exact candidate SHA, including required failure/retry/tenant/immutability and visual-authority checks.
 
 ## Deferred implementation boundary
 
