@@ -20,7 +20,7 @@ Quản lý Kho tri thức
 Đây không phải approval workflow nhiều người.
 
 ## 3. Layout baseline
-Desktop Fluent 2, data-heavy:
+Desktop Fluent 2 light, data-heavy:
 - header/breadcrumb giữ shell Kho tri thức;
 - tabs `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`, `Cần rà soát` active;
 - trái: danh sách candidate, search/filter/sort, loại candidate, nguồn tạo, độ ưu tiên, trạng thái;
