@@ -14,7 +14,7 @@ Màn hình không tổng hợp coverage 3 NCC và không đánh giá readiness t
 
 ## 2. Visual baseline — Iteration 3
 
-- Valora shell + Fluent 2, desktop-first.
+- Valora shell + Fluent 2 light, desktop-first.
 - Breadcrumb theo context hồ sơ và báo giá, ví dụ: `Hồ sơ thẩm định → [Hồ sơ] → Báo giá nhà cung cấp → [NCC / Mã báo giá]`.
 - Header `Hoàn tất báo giá nhà cung cấp`.
 - Primary CTA: `Hoàn tất báo giá`.
