@@ -1,6 +1,10 @@
 # ADR 0042 — OneDrive Personal protected values and recoverable sync writes
 
-**Status:** ACCEPTED BY PRODUCT OWNER **Date:** 2026-09-13 **Task:** `VALORA-PR07-CONTRACT-001`
+**Status:** ACCEPTED HISTORICAL PR-07 AUTHORITY — COMPARISON/CONFLICT SEMANTICS RETAINED; DIRECT-WRITE EXECUTION RE-BASELINED BY ADR 0043–0045 **Date:** 2026-09-13 **Task:** `VALORA-PR07-CONTRACT-001`
+
+## 2026-09-21 current-use note
+
+Retain D1–D3 protected-value, server-owned mapping and deterministic `Old / V / W` comparison semantics plus explicit no-default conflict decisions. Do not use this ADR to reopen direct replacement of an existing OneDrive item. Current document runtime uses app-owned immutable revisions (ADR 0043), Exchange Working copies (ADR 0044) and Working Change Observation / Human Commit (ADR 0045).
 
 ## Context
 
