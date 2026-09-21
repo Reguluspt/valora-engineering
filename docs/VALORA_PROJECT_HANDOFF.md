@@ -17,7 +17,7 @@ Draft PR #32 is the active integration candidate and now carries:
 - Operational Frontend entry and M365 workspace;
 - Local immutable DocumentBlobStore accepted at G6;
 - OneDrive Personal Exchange G8 offline implementation complete at f896f15…;
-- ADR 0045 / Working Change Observation + Change Candidate + Human Commit authority.
+- ADR 0045 / Working Change Observation + DocumentChangeCandidate + Human Commit authority.
 
 Do not infer "product complete" from those infrastructure/integration milestones.
 Global Case State still has only the four prefix-stage providers; stages 5-16 remain unavailable.
@@ -26,7 +26,7 @@ Legacy Review Queue / standalone Validation Dashboard / old Workbench right-pane
 The original PR-07 direct OneDrive replacement mechanism is blocked/historical. Reuse its Old/V/W,
 protected-value and explicit-conflict semantics only where compatible. New document-change runtime
 must follow ADR 0045:
-automatic observation/revalidation -> Change Candidate -> review/conflict -> explicit human commit
+automatic observation/revalidation -> DocumentChangeCandidate -> review/conflict -> explicit human commit
 -> app-owned immutable Revision N+1.
 
 G9 live AppFolder conformance is a separate Product Owner decision. ADR 0045 does not authorize
