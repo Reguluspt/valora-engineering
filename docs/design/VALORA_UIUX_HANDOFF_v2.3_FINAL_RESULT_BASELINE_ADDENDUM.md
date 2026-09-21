@@ -38,9 +38,9 @@ Nếu sau này cần một hành động `Hoàn tất hồ sơ` về mặt trạ
 
 ## C. Company form = immutable layout
 
-03 bảng tại bước cuối là **biểu mẫu do công ty ban hành**. Layout/schema của chúng là authority nghiệp vụ và không được redesign theo Fluent 2.
+03 bảng tại bước cuối là **biểu mẫu do công ty ban hành**. Layout/schema của chúng là authority nghiệp vụ và không được redesign theo Fluent 2 light.
 
-Fluent 2 chỉ áp dụng cho shell/context xung quanh.
+Fluent 2 light chỉ áp dụng cho shell/context xung quanh.
 
 ### C1. Bảng Đặc điểm kinh tế - kỹ thuật
 
@@ -88,9 +88,9 @@ Giá trong Bảng Tổng hợp NCC phải truy vết được tới:
 
 Thông tin KTKT và giá Tổ TĐG đánh giá phải giữ lineage tới dữ liệu làm việc tương ứng; hệ thống không được làm mất dữ liệu gốc/nguồn.
 
-## E. Fluent 2 visual authority
+## E. Fluent 2 light visual authority
 
-Được phép dùng Fluent 2 cho:
+Được phép dùng Fluent 2 light cho:
 
 - sidebar/navigation;
 - breadcrumb/header;
@@ -126,7 +126,7 @@ Các mockup bước cuối trước baseline này không còn authority nếu c�
 - thêm Thành tiền cho từng NCC;
 - thêm cột phân tích không có trong mẫu;
 - thay bảng Kết quả thẩm định bằng schema dashboard khác;
-- tự điều chỉnh bố cục biểu mẫu để bám Fluent 2.
+- tự điều chỉnh bố cục biểu mẫu để bám Fluent 2 light.
 
 ## H. Nhiệm vụ tiếp theo
 
