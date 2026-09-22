@@ -29,18 +29,17 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-intro" aria-labelledby="login-title">
-        <p className="login-eyebrow">VALORA · OPERATIONAL WORKSPACE</p>
-        <h1 id="login-title">Mỗi hồ sơ bắt đầu từ một ngữ cảnh đáng tin cậy.</h1>
+        <p className="login-eyebrow">VALORA</p>
+        <h1 id="login-title">Không gian làm việc thẩm định giá</h1>
         <p>
-          Đăng nhập vào đúng đơn vị để mở hồ sơ, kiểm tra lineage và làm việc với tài liệu
-          OneDrive Personal đã được xác minh.
+          Đăng nhập vào đúng đơn vị để mở hồ sơ, tiếp tục công việc và truy cập Không gian tài liệu.
         </p>
         <div className="login-trust-note">
-          <span>01</span>
-          <p>Phiên làm việc dùng cookie bảo mật; mật khẩu và token không được lưu trên trình duyệt.</p>
+          <strong>Bảo vệ phiên làm việc</strong>
+          <p>Phiên làm việc dùng cookie bảo mật; mật khẩu và token không được ứng dụng lưu trong trình duyệt.</p>
         </div>
       </section>
-      <form className="login-card" onSubmit={submit}>
+      <form aria-describedby={error ? "login-error" : undefined} className="login-card valora-panel" onSubmit={submit}>
         <header>
           <p>Truy cập hệ thống</p>
           <h2>Đăng nhập Valora</h2>
@@ -48,6 +47,7 @@ export function LoginPage() {
         <label>
           Mã đơn vị
           <input
+            className="valora-field"
             autoComplete="organization"
             name="organization_slug"
             onChange={(event) => setOrganizationSlug(event.target.value)}
@@ -59,6 +59,7 @@ export function LoginPage() {
         <label>
           Email
           <input
+            className="valora-field"
             autoComplete="email"
             name="email"
             onChange={(event) => setEmail(event.target.value)}
@@ -71,6 +72,7 @@ export function LoginPage() {
         <label>
           Mật khẩu
           <input
+            className="valora-field"
             autoComplete="current-password"
             name="password"
             onChange={(event) => setPassword(event.target.value)}
@@ -79,8 +81,8 @@ export function LoginPage() {
             value={password}
           />
         </label>
-        {error && <div className="login-error" role="alert">{error}</div>}
-        <button className="login-submit" disabled={submitting} type="submit">
+        {error && <div className="login-error valora-message valora-message--error" id="login-error" role="alert">{error}</div>}
+        <button className="login-submit valora-button valora-button--primary" disabled={submitting} type="submit">
           {submitting ? "Đang xác minh…" : "Đăng nhập"}
         </button>
         <small>Chỉ tài khoản đang hoạt động trong đúng đơn vị mới có thể tiếp tục.</small>
