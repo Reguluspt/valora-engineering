@@ -10,7 +10,7 @@ import { ProjectListPage } from "../ProjectListPage";
 describe("ProjectListPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders real projects and opens the OneDrive route", async () => {
+  it("renders real projects and opens the provider-neutral document workspace route", async () => {
     listProjects.mockResolvedValue([
       {
         id: "project-1",
@@ -29,7 +29,7 @@ describe("ProjectListPage", () => {
 
     expect(root.root.findByType("h2").children.join("")).toBe("Nhà máy An Phú");
     const button = root.root.findAllByType("button").find((item: any) =>
-      item.children.includes("Tài liệu OneDrive"),
+      item.children.includes("Không gian tài liệu"),
     );
     act(() => button.props.onClick());
     expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1/documents");
