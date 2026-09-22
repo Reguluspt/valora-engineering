@@ -73,7 +73,7 @@ export function ProjectListPage({ onNavigate }: { onNavigate: (path: string) => 
                 onClick={() => onNavigate(projectDocumentsPath(project.id))}
                 type="button"
               >
-                Tài liệu OneDrive
+                Không gian tài liệu
               </button>
               <button
                 className="project-primary-action"

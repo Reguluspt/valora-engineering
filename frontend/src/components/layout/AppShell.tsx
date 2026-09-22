@@ -3,7 +3,6 @@ import { AppShell as AstryxAppShell } from "@astryxdesign/core/AppShell";
 import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import {
   APP_ROUTES,
-  LEGACY_ROUTE_ALIASES,
   projectOverviewPath,
   projectWorkbenchPath,
   projectNccSelectionPath,
@@ -23,9 +22,6 @@ interface AppShellProps {
 
 export function AppShell({ currentPath, onNavigate, account, onLogout, children }: AppShellProps) {
   const projectRoute = splitProjectRoute(currentPath);
-  const getLinkActive = (path: string) => {
-    return currentPath.startsWith(path);
-  };
 
   const handleWorkbenchClick = () => {
     if (projectRoute) {
@@ -56,7 +52,7 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
         {projectRoute && (
           <SideNavItem
             isSelected={projectRoute.view === "documents"}
-            label="Tài liệu OneDrive"
+            label="Không gian tài liệu"
             onClick={() => onNavigate(projectDocumentsPath(projectRoute.projectRef))}
           />
         )}
@@ -67,16 +63,6 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
             onClick={() => onNavigate(projectNccSelectionPath(projectRoute.projectRef))}
           />
         )}
-        <SideNavItem
-          isSelected={getLinkActive(APP_ROUTES.legacyReviewQueue) || getLinkActive(LEGACY_ROUTE_ALIASES.reviewQueue)}
-          label={t("review.queue")}
-          onClick={() => onNavigate(APP_ROUTES.legacyReviewQueue)}
-        />
-        <SideNavItem
-          isSelected={getLinkActive(APP_ROUTES.legacyValidationDashboard) || getLinkActive(LEGACY_ROUTE_ALIASES.validationDashboard)}
-          label={t("nav.errorDashboard")}
-          onClick={() => onNavigate(APP_ROUTES.legacyValidationDashboard)}
-        />
       </SideNavSection>
       <div className="account-context">
         <span>{account.organization_slug}</span>

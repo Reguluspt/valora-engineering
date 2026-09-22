@@ -16,8 +16,6 @@ import {
   splitProjectRoute,
 } from "./contracts/valoraV23";
 
-import { ReviewQueueDashboard } from "./components/workbench/review/ReviewQueueDashboard";
-
 const WORKBENCH_BASE = APP_ROUTES.projectList;
 const NEUTRAL_PATH = WORKBENCH_BASE;
 
@@ -99,26 +97,6 @@ export function AuthenticatedApp() {
 
     if (currentPath.split("?", 1)[0] === APP_ROUTES.m365Return) {
       return <M365ReturnPage currentPath={currentPath} onNavigate={handleNavigate} />;
-    }
-
-    if (currentPath === APP_ROUTES.legacyReviewQueue) {
-      return <ReviewQueueDashboard />;
-    }
-
-    if (currentPath === APP_ROUTES.legacyValidationDashboard) {
-      return (
-        <div style={{ padding: "var(--space-xl)" }}>
-          <h2 style={{ color: "#fff" }}>Bảng lỗi cần xử lý</h2>
-          <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-lg)" }}>
-            Chưa có dữ liệu kiểm tra.
-          </p>
-          <div style={{ border: "1px solid var(--border-color)", padding: "var(--space-lg)", borderRadius: "var(--radius-lg)" }}>
-            <p style={{ color: "var(--text-muted)" }}>
-              Kết quả kiểm tra sẽ được hiển thị khi dữ liệu được cung cấp từ hệ thống.
-            </p>
-          </div>
-        </div>
-      );
     }
 
     return (

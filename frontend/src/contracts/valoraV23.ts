@@ -1,7 +1,7 @@
 export const UIUX_V23_AUTHORITY = {
   version: "2.3",
-  branch: "docs/uiux-handoff-v2.2",
-  tip: "1cf50460e54ba19d2f6a9d8f933ab123e4e615d6"
+  master: "docs/design/VALORA_UIUX_HANDOFF_v2.3.md",
+  authorityIndex: "docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md"
 } as const;
 
 export const CANONICAL_CASE_STAGES = [
@@ -49,9 +49,7 @@ export const APP_ROUTES = {
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
   projectDocumentsSuffix: "/documents",
-  m365Return: "/workbench/m365/return",
-  legacyReviewQueue: "/workbench/queue",
-  legacyValidationDashboard: "/workbench/validation"
+  m365Return: "/workbench/m365/return"
 } as const;
 
 export function projectWorkbenchPath(projectRef: string): string {
@@ -104,18 +102,6 @@ export function splitProjectRoute(path: string): {
   }
 }
 
-export const LEGACY_ROUTE_ALIASES = {
-  reviewQueue: "/queue",
-  validationDashboard: "/validation"
-} as const;
-
-// Known pre-v2.3 navigation debt. Keeping these paths here prevents silent expansion while
-// leaving removal/deprecation to a separately authorized runtime remediation task.
-export const LEGACY_ROUTE_RATCHET = [
-  APP_ROUTES.legacyReviewQueue,
-  APP_ROUTES.legacyValidationDashboard
-] as const;
-
 export const FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS = [
   "/kscl",
   "/qc",
@@ -131,5 +117,9 @@ export const FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS = [
 
 export const FORBIDDEN_NEW_STANDALONE_ROUTES = [
   "/audit",
-  "/workbench/audit"
+  "/workbench/audit",
+  "/queue",
+  "/validation",
+  "/workbench/queue",
+  "/workbench/validation"
 ] as const;
