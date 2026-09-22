@@ -10,7 +10,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [2026-09-21 documentation reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_UNIFIED_ROADMAP_V2_3.md) — inventory/classification and current-living-doc reconciliation against the Unified Roadmap.
 - [2026-09-21 Handoff/Roadmap/Fluent 2 reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_HANDOFF_ROADMAP_FLUENT2.md) — post-reconciliation sweep for authority roles, Fluent 2 light, provider-neutral Document Workspace, OS-G0→OS-G7 sequencing and current document/release semantics.
 - [Frontend Astryx → Fluent 2 code inventory](audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md) — live file/component inventory, legacy-route findings and migration disposition.
-- [VALORA-FLUENT2-REMEDIATION-001](implementation/VALORA-FLUENT2-REMEDIATION-001.md) — active OS-G0 implementation contract and F2-PR-001…008 delivery sequence.
+- [VALORA-FLUENT2-REMEDIATION-001](implementation/VALORA-FLUENT2-REMEDIATION-001.md) — active OS-G0 implementation contract and F2-PR-001…008 delivery sequence; detailed task-ready packets are `VALORA-FLUENT2-F2-PR-001_IMPLEMENTATION_PLAN.md` through `...008...` in `docs/implementation/`.
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
 - [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,

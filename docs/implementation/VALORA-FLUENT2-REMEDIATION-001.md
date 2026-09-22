@@ -1,6 +1,6 @@
 # VALORA-FLUENT2-REMEDIATION-001
 
-**Status:** READY FOR IMPLEMENTATION PLANNING
+**Status:** READY FOR DEV — PR-LEVEL IMPLEMENTATION PLANS FROZEN
 **Roadmap placement:** OS-G0 — Authority, visual-system & branch reconciliation
 **Baseline branch:** `feat/operational-frontend-m365`
 **Inventory baseline:** `bc31acd5eeb3742d9ecf0bb66a848704e3405a9a`
@@ -295,6 +295,19 @@ Final closeout requires exact-head CI.
 - zero reachable legacy global Review Queue/Validation Dashboard;
 - all defined golden screenshots accepted;
 - exact-head CI green.
+
+## 8.1 Detailed implementation packets
+
+- `VALORA-FLUENT2-F2-PR-001_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-002_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-003_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-004_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-005_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-006_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-007_IMPLEMENTATION_PLAN.md`
+- `VALORA-FLUENT2-F2-PR-008_IMPLEMENTATION_PLAN.md`
+
+These packets are the task-ready execution layer. If a packet conflicts with a newer explicit Design Authority decision, the newer authority wins and the packet must be amended before coding.
 
 ## 9. Dependency order
 
