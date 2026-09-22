@@ -1,6 +1,6 @@
 # PR_RULES.md — Valora Pull Request Rules
 
-**Created:** 2026-07-06  
+**Created:** 2026-07-06
 **Applies to:** Every PR in the Valora repository
 
 ## 1. PR Size
@@ -158,6 +158,28 @@ invented domain behavior
 security issue
 missing required tests
 architecture conflict
+```
+
+## 9.1 Exact-head baseline and handoff rule
+
+Every implementation PR/task must state:
+
+```text
+Baseline branch:
+Baseline SHA:
+Baseline exact-head CI run:
+Predecessor/dependency:
+```
+
+Rules:
+
+```text
+Do not begin implementation from an unverified moving HEAD.
+The baseline CI must be SUCCESS for the exact recorded SHA.
+A parent commit's green CI does not certify a descendant commit.
+After code changes, required focused tests/reviews and exact-head CI must pass before closeout.
+Do not release a dependent PR/task until the predecessor exact-head gate is green.
+If HEAD changes after review/CI, refresh the required evidence for the new exact HEAD.
 ```
 
 ## 10. Merge Blockers

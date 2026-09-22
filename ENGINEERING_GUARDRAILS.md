@@ -24,7 +24,7 @@ authoritative for accepted document revisions.
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-21 (Draft PR #32: Operational Frontend + Local G6 + G8 offline Exchange; ADR 0045 accepted)
+**Last reconciled:** 2026-09-22 (exact-head baseline/delivery gate added; Fluent 2 OS-G0 planning frozen)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -311,6 +311,21 @@ Before adding major dependencies, check purpose, license, security, maintenance,
 ## 11. Audit Expectations
 
 Every PR is auditable against scope, Design Book compliance, security, tests, file changes, migration impact.
+
+### Exact-head evidence guardrail
+
+```text
+Execution baseline = named branch + exact commit SHA + successful required CI on that exact SHA.
+Parent/earlier CI is never evidence for a changed HEAD.
+Docs-only changes are not exempt when the resulting commit becomes the baseline for downstream work.
+
+Dependent implementation work must not start until its predecessor/baseline gate is green.
+After implementation, the changed exact HEAD must pass all task-required focused gates and CI before
+the task is considered complete or its dependent task is released.
+
+If the reviewed/tested HEAD changes, previous CI/review evidence is retained as history but must not
+be reported as exact-head acceptance for the new commit.
+```
 
 ## 12. Merge Gate
 

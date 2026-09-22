@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-21 (Local G6 accepted; G8 offline Exchange complete; ADR 0045 Working Change Observation/Human Commit accepted)
+**Last reconciled:** 2026-09-22 (exact-head baseline/delivery gate added; Fluent 2 OS-G0 task packets frozen)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -201,6 +201,34 @@ Tests or explicit N/A for docs-only.
 No silent refactors.
 User/owner controls Draft PR creation, Ready, squash, and merge
 unless a task explicitly authorizes otherwise.
+```
+
+### 8.1 Exact-head baseline and dependent-task gate
+
+```text
+A task may be handed to implementation only from an explicitly recorded baseline SHA whose required
+CI has completed SUCCESS on that exact SHA.
+
+A successful CI run on a parent/earlier commit does not certify a later HEAD. There is no
+"green by inheritance", including for docs-only commits when they become the execution baseline.
+
+Every implementation task packet must record:
+- baseline branch;
+- exact baseline SHA;
+- exact-head CI run number/status;
+- dependency/predecessor task state.
+
+Normal delivery sequence:
+green exact-head baseline
+→ bounded implementation
+→ focused tests/static/browser/visual gates required by the task
+→ review on a frozen snapshot where required
+→ resulting exact-head CI SUCCESS
+→ task/PR closeout
+→ only then release dependent task(s) to implementation.
+
+If HEAD changes after CI/review, the prior evidence remains historical evidence only; re-run or
+revalidate the gates required for the new exact HEAD before closeout or dependent-task handoff.
 ```
 
 ## 9. Security Requirement
