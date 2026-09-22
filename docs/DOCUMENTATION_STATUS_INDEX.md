@@ -75,6 +75,7 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Existing dark/cyan/glassmorphic frontend is remediation debt, not visual acceptance.
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
+- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
 
 ## 3. Current engineering / evidence documents
 

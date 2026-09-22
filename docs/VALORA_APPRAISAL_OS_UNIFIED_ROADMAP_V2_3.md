@@ -248,6 +248,9 @@ A model/table/API alone is not product completion.
 
 ### OS-G0 — Authority, visual-system & branch reconciliation
 
+Execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`.
+Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
+
 - reconcile PR #32 title/body/scope;
 - explicitly supersede old Astryx product-visual authority in engineering guidance; keep Astryx only as low-level primitive if fully remapped;
 - freeze a Fluent 2 light implementation contract: light semantic tokens, typography, density, shell/navigation, table/grid, drawer, command bar, button, status and state patterns;
