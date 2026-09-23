@@ -52,7 +52,7 @@ Các tài liệu đã bị loại không thuộc manifest. Accepted DocumentRevi
 Release ID hiển thị trước commit là `dự kiến/reserved`. Implementation không được coi một ID minh họa trên mockup là schema cứng. Nếu commit thất bại, không được hiển thị release như đã phát hành thành công.
 
 ## 7. Failure semantics
-Không được để UI báo `Đã phát hành` khi Release Manifest chưa được commit hợp lệ. Nếu kiến trúc cho phép partial commit giữa manifest/locking/audit thì phải có transaction/recovery authority qua ADR; UI phải phản ánh trạng thái thực tế và không che lỗi.
+Không được để UI báo `Đã phát hành` khi Release Manifest chưa được commit hợp lệ. Nếu kiến trúc cho phép partial commit giữa manifest/publish-state/audit thì phải có transaction/recovery authority qua ADR; UI phải phản ánh trạng thái thực tế và không che lỗi.
 
 ## 8. Guardrails
 - Single-user.

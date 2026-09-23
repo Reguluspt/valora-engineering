@@ -3,7 +3,7 @@
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
 **Date:** 2026-09-23
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 351 documentation/config-document files at the 2026-09-21 live-tree verification sweep.
+**Inventory reconciliation:** 379 documentation/config-document artifacts at the 2026-09-23 exact-tree sweep: 368 Markdown files + 11 supporting documentation artifacts (JSON/config evidence) across the root governance set and `docs/**`.
 
 ## 1. Why this index exists
 
@@ -15,13 +15,17 @@ When documents conflict, use this order:
 
 ```text
 Explicit current Product Owner decision — wins only in named scope
-→ current v2.3 UI/UX master + Authority Index + applicable addenda + accepted scoped ADRs
-   (product semantics / workflow / IA / interaction / Microsoft Fluent 2 light visual authority)
+→ CODEX.md
+→ ENGINEERING_GUARDRAILS.md
+→ current v2.3 UI/UX master
+→ current v2.3 UI/UX Authority Index
+→ applicable current v2.3 addendum
 → VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
-   (development sequencing / architecture integration)
-→ current implementation contracts / active task contract
-→ project handoff / acceptance matrix
-→ historical design/sprint/audit/research evidence
+→ VALORA_AI_MASTER_PLAN_V1.md for OS-G7 / AI-readiness only
+→ accepted scoped ADR
+→ current task / implementation contract
+→ current handoff / acceptance evidence
+→ historical Design Book / sprint / audit / remediation / research evidence
 ```
 
 Historical evidence must not be rewritten to pretend it knew later decisions.
@@ -38,7 +42,7 @@ Current product/UX authority:
 Current development sequencing / architecture integration:
 
 - `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
-- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 architecture detail; documentation authority only, not runtime activation
+- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — current OS-G7 / AI-readiness architecture detail; documentation authority only, not runtime activation
 
 Conflict-resolution/read-order map:
 
@@ -77,6 +81,29 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
 - Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
+
+### 2.2 2026-09-23 inventory by lifecycle/category
+
+Exact-tree inventory used for this reconciliation:
+
+| Category | Count |
+|---|---:|
+| Root governance docs (`CODEX`, guardrails, PR rules, README) | 4 |
+| `docs/` root files | 9 |
+| ADR | 45 |
+| Architecture | 1 |
+| Audits | 150 |
+| Design (including design assets) | 70 |
+| Handoff | 4 |
+| Implementation | 57 |
+| Plan | 9 |
+| Reference | 1 |
+| Remediation | 4 |
+| Research | 8 |
+| Sprint 1–8 history | 17 |
+| **Total** | **379** |
+
+Lifecycle rule: current/living authority and active engineering documents receive substantive review; audits, old handoffs, sprint plans, research and superseded remediation are preserved as historical evidence and marker-scanned for misleading current-authority wording. Presence in the tree does not promote historical evidence to current authority.
 
 ## 3. Current engineering / evidence documents
 
@@ -222,7 +249,7 @@ Current AI architecture detail:
 - `docs/implementation/VALORA-AI-PR-000...` through `...AI-PR-012...`.
 
 Rules:
-- AI-PR-000 is documentation-only.
+- AI-PR-000 documentation reconciliation is **IMPLEMENTED / NO RUNTIME AUTHORIZATION**.
 - AI-PR-001…012 are **PLANNED / NOT AUTHORIZED FOR RUNTIME** until explicit assignment and prerequisites.
 - Historical S13–S16 AI sequencing is evidence/reference only.
 - No provider call, migration, agent, R2 promotion or autonomous command is authorized by documentation presence.

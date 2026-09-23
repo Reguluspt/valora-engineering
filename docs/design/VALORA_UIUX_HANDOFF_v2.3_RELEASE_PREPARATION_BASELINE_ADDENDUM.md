@@ -17,7 +17,7 @@ Chuẩn bị bộ phát hành
 → Xác nhận phát hành
 ```
 
-`Khóa phiên bản đã phát hành` không còn là một bước thao tác riêng; đó là hậu quả hệ thống của hành động phát hành thành công.
+`Khóa phiên bản đã phát hành` là nhãn lịch sử của flow cũ, không phải action/stage hay mutation hiện hành. Accepted `DocumentRevision` đã immutable trước Publishing; hành động phát hành chỉ bind exact accepted revisions vào immutable release/manifest.
 
 ## 2. Mental model
 VALORA tự chuẩn bị bộ phát hành từ revision mới nhất đủ điều kiện. User không phải chọn thủ công từng tài liệu bình thường; user chủ yếu review **ngoại lệ**.
