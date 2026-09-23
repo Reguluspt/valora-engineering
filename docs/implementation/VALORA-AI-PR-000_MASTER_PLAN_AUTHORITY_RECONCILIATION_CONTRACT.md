@@ -1,6 +1,6 @@
 # AI-PR-000 — Master Plan & Authority Reconciliation
 
-**Status:** DOCUMENTATION IMPLEMENTED / NO RUNTIME AUTHORIZATION  
+**Status:** DOCUMENTATION IMPLEMENTED / NO RUNTIME AUTHORIZATION<br>
 **Program:** VALORA AI Master Plan v1.0  
 **Roadmap placement:** OS-G7.0  
 **Depends on:** exact integration baseline review; no runtime prerequisite  

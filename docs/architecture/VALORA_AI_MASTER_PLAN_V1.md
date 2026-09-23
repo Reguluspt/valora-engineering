@@ -1,7 +1,7 @@
 # VALORA AI MASTER PLAN v1.0
 ## Nền tảng Trí tuệ Thẩm định & Trợ lý Valora
 
-**Status:** CURRENT OS-G7 ARCHITECTURE DETAIL / DOCUMENTATION AUTHORITY — DOCUMENTATION ONLY  
+**Status:** CURRENT OS-G7 ARCHITECTURE DETAIL / DOCUMENTATION AUTHORITY — DOCUMENTATION ONLY<br>
 **Date:** 2026-09-23  
 **Product authority:** VALORA Appraisal OS v2.3  
 **Code baseline reviewed:** `feat/operational-frontend-m365`  
