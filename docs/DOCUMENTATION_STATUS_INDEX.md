@@ -38,6 +38,7 @@ Current product/UX authority:
 Current development sequencing / architecture integration:
 
 - `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
+- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 architecture detail; documentation authority only, not runtime activation
 
 Conflict-resolution/read-order map:
 
@@ -60,7 +61,7 @@ OS-G0 Authority + Fluent 2 light visual-system reconciliation
 → OS-G4 Release/Publishing
 → OS-G5 Template Intelligence/Fidelity
 → OS-G6 Product E2E
-→ OS-G7 AI Expansion
+→ OS-G7 Valora Intelligence Platform & Assistant
 ```
 
 Current visual authority is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Astryx is historical/low-level reference only and must not drive product styling.
@@ -94,7 +95,7 @@ Use for current implementation truth, always checking the live Git/PR SHA:
 Current candidate facts as of this reconciliation:
 
 - merged main: through PR #31 at `27d1cc6...`;
-- Draft PR #32: active integration candidate;
+- Draft PR #32: active integration candidate; `feat/operational-frontend-m365` exact head is `d725bbc6...` after F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into that branch; this is not merged-main authority;
 - Local immutable storage: G6 accepted;
 - OneDrive Exchange: G8 offline complete at code milestone `f896f15...`;
 - Working Change Observation: design/ADR accepted, runtime implementation contract still required;
@@ -212,7 +213,21 @@ Use these distinct concepts:
 
 Never collapse them into one generic Candidate/Version model.
 
-## 12. Maintenance rule
+## 12. AI architecture and implementation-contract status
+
+Current AI architecture detail:
+- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`;
+- ADR 0033/0034 as retained foundations;
+- `docs/implementation/VALORA-AI-PR-000...` through `...AI-PR-012...`.
+
+Rules:
+- AI-PR-000 is documentation-only.
+- AI-PR-001…012 are **PLANNED / NOT AUTHORIZED FOR RUNTIME** until explicit assignment and prerequisites.
+- Historical S13–S16 AI sequencing is evidence/reference only.
+- No provider call, migration, agent, R2 promotion or autonomous command is authorized by documentation presence.
+- OS-G1→OS-G6 should remain AI-readable-by-design.
+
+## 13. Maintenance rule
 
 When a current decision changes:
 
