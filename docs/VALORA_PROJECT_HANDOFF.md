@@ -65,7 +65,7 @@ The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt p
 | `taxonomy_asset_identity` | Taxonomy, canonical assets, aliases, candidates; **planned** Raw Asset Observation + Asset Identity Memory |
 | `knowledge_evidence` | Evidence library, knowledge versions, quotes; **planned** reviewed bootstrap candidates |
 | `workflow_workbench` | Workflow + workbench session helpers; future patterns derive from domain commands/outcomes, not UI clickstream |
-| `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
+| `document_engine_intelligence` | Document templates/render/intelligence tables; dossier extraction/alignment runtime foundations exist and reuse the durable `TaskJob`/worker boundary; the productized paired-dossier flow remains incomplete |
 | `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only unless a later owner-approved task explicitly promotes capability |
 | `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
 
@@ -170,9 +170,9 @@ This S13–S16 sequence is historical only. Do not use it as the current executi
 
 - Historical S13-PR-005 Mapping-confirmation/Astryx UX sequence is not a current execution gate
 - Asset Identity Memory runtime
-- Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
+- Productized paired Excel–Word/PDF dossier flow beyond the existing extraction/alignment runtime foundations
 - AI provider runtime and end-to-end AI mapping/matching
-- `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
+- `AITaskRun`, `AITaskAttempt`, `AIContextManifest`, `DecisionEpisode` and the full AI task/provider runtime; existing durable `TaskJob`/worker infrastructure must be reused
 - R2 auto-draft/auto-stage/exception-only-review capability promotion
 - Open-ended agent orchestration or AI direct database mutation
 - PDF export remains out of scope; DOCX Document Workspace/report/certificate generation is in product scope and must follow current v2.3 authority

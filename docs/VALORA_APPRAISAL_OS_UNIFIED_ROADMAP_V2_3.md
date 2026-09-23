@@ -162,8 +162,8 @@ Accepted DocumentRevision(s)
 → ReleasePlan
 → Readiness
 → ReleaseExceptionDecision if needed
-→ exact-revision ReleaseManifest
-→ explicit Publish
+→ explicit Release Confirmation / idempotent Publish command [commit boundary]
+→ ReleaseManifest binds exact accepted DocumentRevision IDs
 → immutable PUBLISHED projection
 ```
 
@@ -354,8 +354,8 @@ Build real release domain:
 - `ReleasePlan`;
 - readiness;
 - exception decisions;
-- exact-revision `ReleaseManifest`;
-- idempotent publish;
+- explicit idempotent Release Confirmation / publish command;
+- exact-revision `ReleaseManifest` binding as the confirmed publish consequence;
 - unknown-result recovery;
 - immutable published projection.
 
