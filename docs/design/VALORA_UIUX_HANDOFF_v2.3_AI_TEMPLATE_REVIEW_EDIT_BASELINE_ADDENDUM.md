@@ -9,6 +9,8 @@ Addendum này ghi nhận quyết định explicit mới nhất của người d�
 
 Authority này là child baseline của `AI_TEMPLATE_ASSISTANT_BASELINE_ADDENDUM` và khóa interaction sau bước `AI phân tích & đề xuất`.
 
+> **2026-09-23 runtime-boundary reconciliation:** This file is interaction authority, not provider-runtime authorization. Provider-neutral/deterministic template assistance may be implemented in the owning roadmap slice; LLM/external-provider-backed analysis, model routing and `AITaskRun` execution remain OS-G7 under `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` unless a later explicit Product Owner exception opens a narrower task-specific gate.
+
 ## A. Flow authority
 
 ```text
@@ -69,10 +71,12 @@ Chưa mapping
 
 Ý nghĩa:
 
-- `Đã mapping`: AI confidence cao hoặc user đã xác nhận/gán;
+- `Đã mapping`: user đã explicit xác nhận/gán mapping;
 - `Cần xác nhận`: AI có đề xuất nhưng user cần kiểm tra;
 - `Chưa mapping`: vùng có khả năng cần dữ liệu nhưng chưa có mapping;
 - `Đã bỏ qua`: user đã explicit xác nhận vùng không dùng mapping.
+
+AI confidence cao có thể làm proposal nổi bật/ưu tiên rà soát, nhưng **không** được tính là `Đã mapping` trước explicit user confirmation.
 
 Không coi `Đã bỏ qua` và `Chưa mapping` là cùng một trạng thái.
 
