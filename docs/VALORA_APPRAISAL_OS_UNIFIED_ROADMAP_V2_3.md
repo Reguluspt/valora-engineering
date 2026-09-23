@@ -36,12 +36,20 @@ Conflict resolution / role split:
 
 ```text
 1. Explicit current Product Owner decision — wins only in the scope it names
-2. Current UI/UX Design Authority v2.3 + Authority Index + applicable addenda + accepted scoped ADRs
+2. `CODEX.md`
+3. `ENGINEERING_GUARDRAILS.md`
+4. Current UI/UX Handoff v2.3
+5. Current UI/UX v2.3 Authority Index
+6. Applicable current v2.3 addendum
    → product semantics, workflow, IA, interaction and visual baseline
-3. This Unified Roadmap v2.3
+7. This Unified Roadmap v2.3
    → development sequencing and architecture integration
-4. Technical proposals / research
-5. Historical / superseded documents
+8. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
+   → OS-G7 / AI-readiness architecture detail only; not runtime authorization
+9. Accepted scoped ADR
+10. Current task / implementation contract
+11. Current handoff / acceptance evidence
+12. Historical Design Book / sprint / audit / remediation / research evidence
 ```
 
 `VALORA_UIUX_Handoff_v2.3` therefore answers **what the product must be**; this roadmap answers **what to build first and how the architecture is integrated**. The older Part 2C `PR-00 → PR-13` sequence is superseded for ordering only; its still-current UX/business contracts and acceptance invariants remain valid.

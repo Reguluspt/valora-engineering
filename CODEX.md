@@ -10,18 +10,21 @@
 Domain behavior must come from this read order:
 
 ```text
-1. CODEX.md (this file) — live task gate and agent operating rules
-2. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
-3. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
-4. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
-5. docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md — current product/development ordering
-6. docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 architecture detail only; never runtime authorization by itself
-7. The v2.3 addendum directly governing the assigned PR
-8. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
-9. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
-10. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
-11. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
-12. Feature contracts under docs/design/ and accepted docs/adr/* decisions
+1. Explicit current Product Owner decision — wins only in the scope it names
+2. CODEX.md (this file) — live task gate and agent operating rules
+3. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
+4. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
+5. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
+6. The current v2.3 addendum directly governing the assigned scope
+7. docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md — current product/development ordering
+8. docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 / AI-readiness architecture detail; never runtime authorization by itself
+9. Accepted scoped ADR governing the assigned boundary
+10. Current task / implementation contract, including the lightweight v2.3 runtime guard where applicable
+11. Current handoff / acceptance evidence
+12. Historical Design Book / sprint / audit / remediation / research evidence
+
+docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md is a supersession/navigation map for these sources; it
+does not outrank the authority listed above.
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.

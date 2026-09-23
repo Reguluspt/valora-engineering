@@ -100,7 +100,7 @@ Future/continuing ownership follows current implementation state: mapping/identi
 
 ## Authority hierarchy
 
-Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 + Authority Index/addendum → Unified Roadmap v2.3 → AI Master Plan v1 when the work touches OS-G7/AI-readiness → task-specific contract/ADR → verified implementation evidence. Design Book v1.x and S13–S16 plans are historical/domain reference only where not superseded.
+Read order: explicit current Product Owner decision (named scope only) → `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 → UI/UX Authority Index → applicable current v2.3 addendum → Unified Roadmap v2.3 → AI Master Plan v1 for OS-G7/AI-readiness → accepted scoped ADR → current task/implementation contract → current handoff/acceptance evidence → historical Design Book/sprint/audit/remediation/research evidence.
 
 Historical roadmap only: S13 Adaptive Intake → S14 Asset Identity Memory → S15 dossiers → S16 AI suggestions → S17 reports → S18 pilot. **Do not execute this sequence as the current roadmap.** Current ordering is OS-G0 → OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 
@@ -137,11 +137,11 @@ Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not 
 
 ## What this repository is not yet
 
-- Adaptive `.xls`/`.xlsx` structure discovery and mapping-confirmation UX
-- Column Mapping Memory / Asset Identity Memory runtime
-- Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
-- End-to-end AI column/identity matching
-- AI task/context/attempt/decision runtime and reliable background jobs
+- Current product-facing Adaptive Intake / mapping-confirmation UX completion (the historical workbook adapter and structure-discovery foundations already exist)
+- Current product-facing Column Mapping / Asset Identity review-loop completion beyond the implemented historical foundations
+- Productized paired Excel–Word/PDF dossier flow beyond the existing extraction/alignment foundations
+- End-to-end provider-backed AI column/identity matching
+- Full AI task/context/attempt/decision runtime; future AI must reuse the existing reliable `TaskJob`/worker background-job infrastructure
 - Bounded R2 automation or an open-ended agent orchestrator
 - Production certification
 

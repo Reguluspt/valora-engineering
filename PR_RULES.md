@@ -47,23 +47,22 @@ ADR needed: yes/no
 
 Every PR must cite the exact design source.
 
-Examples:
+Current work must cite the applicable source from the repository authority chain, for example:
 
 ```text
-Valora Design Book v1.2-final / 05_FINAL_HANDOFF/02_ENGINEERING_HANDOFF_GATE.md
-v1.2-alpha-completed / 09_DATA_MODEL/...
-v1.2-delta-completed / 06_WORKBENCH/...
-```
-
-For Sprint 0, use:
-
-```text
-README.md
 CODEX.md
 ENGINEERING_GUARDRAILS.md
-docs/01_SPRINT_0_PLAN.md
-docs/03_DEFINITION_OF_DONE.md
+docs/design/VALORA_UIUX_HANDOFF_v2.3.md
+docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
+the applicable current v2.3 addendum
+docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
+docs/architecture/VALORA_AI_MASTER_PLAN_V1.md      # only for OS-G7 / AI-readiness scope
+accepted scoped ADR
+current task / implementation contract
 ```
+
+Older Design Book and Sprint 0 sources may be cited as historical/domain evidence where still applicable,
+but they do not override current v2.3 authority or the Unified Roadmap.
 
 ## 4. Scope Declaration
 
@@ -188,7 +187,7 @@ Do not merge if:
 
 ```text
 PR exceeds sprint scope
-PR contradicts Design Book
+PR contradicts current Design Authority, Unified Roadmap, or an accepted scoped ADR
 PR implements domain logic not assigned
 PR lacks required tests
 PR commits secrets

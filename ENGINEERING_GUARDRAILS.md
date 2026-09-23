@@ -82,18 +82,21 @@ S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and mu
 ## 2. Design Authority
 
 ```text
+Explicit current Product Owner decision — named scope only
+CODEX.md
+ENGINEERING_GUARDRAILS.md
 docs/design/VALORA_UIUX_HANDOFF_v2.3.md
 docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
 directly relevant VALORA_UIUX_HANDOFF_v2.3_* addendum
-accepted scoped ADR(s)
 docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
-task-specific implementation contract
-docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
-docs/design/* current contracts (including Excel staging §15, frozen s12-pr-004-v1)
-docs/VALORA_PROJECT_HANDOFF.md
+docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 / AI-readiness only; no runtime authorization
+accepted scoped ADR(s)
+task-specific implementation contract / current design contract
+docs/VALORA_PROJECT_HANDOFF.md + current acceptance evidence
 Historical reference only where not superseded:
+  docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md as supersession/navigation map
   Design Book v1.2/v1.3/v1.4
-  docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
+  sprint / audit / remediation / research evidence
 ```
 
 ## 3. Module Boundaries

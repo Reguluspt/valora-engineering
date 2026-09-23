@@ -10,17 +10,21 @@
 
 Product/UX/business semantics and visual authority are governed by `VALORA_UIUX_HANDOFF_v2.3.md`, `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and directly relevant v2.3 addenda. Development ordering / architecture integration is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture and AI-readable-by-design constraints but does not activate AI runtime. An explicit current Product Owner decision wins only in the scope it names.
 
-1. `CODEX.md` — live task gate and agent operating rules.
-2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
-3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
-4. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
-5. The v2.3 addendum directly governing the assigned task.
-6. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` — current development sequencing / architecture integration.
-7. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
-8. This file — earlier-version relationship and supersession map.
-9. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
-10. Design Book v1.2-final plus v1.3/v1.4 addenda — established historical domain model and bounded contexts where not superseded.
-11. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
+1. Explicit current Product Owner decision — wins only in the scope it names.
+2. `CODEX.md` — live task gate and agent operating rules.
+3. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
+4. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
+5. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
+6. The current v2.3 addendum directly governing the assigned scope.
+7. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` — current development sequencing / architecture integration.
+8. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 / AI-readiness architecture detail; never runtime authorization by itself.
+9. Accepted scoped ADR governing the assigned boundary.
+10. Current task / implementation contract, including `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` where applicable.
+11. `docs/VALORA_PROJECT_HANDOFF.md` and current acceptance evidence.
+12. Design Book v1.2-final plus v1.3/v1.4, sprint, audit, remediation and research material — historical/domain evidence where not superseded.
+
+This file is a supersession/navigation map for the authority above; it does not create a higher
+authority tier of its own.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
