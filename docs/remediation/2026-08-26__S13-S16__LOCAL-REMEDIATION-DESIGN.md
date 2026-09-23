@@ -1,12 +1,14 @@
 # S13-S16 Local Remediation Design and Assignment Packet
 
-**Status:** Owner-authorized for local implementation on 2026-08-26. No push, Draft PR, Ready, merge, or deployment is authorized by this packet.
+**Status:** HISTORICAL LOCAL REMEDIATION EVIDENCE — original 2026-08-26 authorization is closed/superseded for current sequencing.
 
 **Archive evidence:** `archive/local-s13-s16-e826a8c` at `e826a8cfe09000f1a28750cd00c99b325e2744af` preserves the original 19 local commits unchanged.
 
 **Coordination baseline:** `remediation/s13-s16-integration` starts from accepted `origin/main` `d09662c95edfd3515d405e468d215159b46fbf1f`.
 
-**S13-PR-004 baseline rule:** Any S13-PR-004 implementation or correction must remain attributable to the assigned baseline `2af753520ab6b7885555adc5b7945a28d32ee311`. The coordination branch does not supersede that exact-baseline requirement.
+**Historical S13-PR-004 baseline rule:** The original remediation required attribution to `2af753520ab6b7885555adc5b7945a28d32ee311`.
+
+> **2026-09-23 current disposition:** Preserve this packet as evidence of the local remediation program. Do not use its branch architecture, Astryx-era reading order, or S13–S16 sequence as a current assignment. Current authority is `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX v2.3 authority → Unified Roadmap v2.3; AI work additionally follows `VALORA_AI_MASTER_PLAN_V1.md`. Durable job and dossier foundations implemented from this program remain reusable.
 
 ## 1. Objective
 
