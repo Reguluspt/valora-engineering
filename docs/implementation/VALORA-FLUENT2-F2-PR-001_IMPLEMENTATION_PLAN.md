@@ -1,6 +1,6 @@
 # F2-PR-001 — Runtime Authority Ratchet & Legacy Route Removal
 
-**Status:** READY FOR DEV
+**Status:** MERGED ON INTEGRATION — PR #34 / `ae5239922b69f2208ee5fc64f70134dba2284605`
 **Parent contract:** `VALORA-FLUENT2-REMEDIATION-001`
 **Roadmap:** OS-G0
 **Depends on:** documentation baseline only

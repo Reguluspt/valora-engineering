@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — PR-00 through PR-13 Feature/Acceptance Matrix
 
-**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-21 ACTIVE-CANDIDATE RECONCILIATION
+**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-23 ACTIVE-CANDIDATE RECONCILIATION
 **Audit date:** 2026-09-12
 **Verified baseline:** `origin/main` at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`
-**Current candidate reconciliation:** 2026-09-21 — Draft PR #32 / `feat/operational-frontend-m365`; G8 code milestone `f896f15...`; later commits are documentation reconciliation
+**Current candidate reconciliation:** 2026-09-23 — Draft PR #32 / `feat/operational-frontend-m365` at `d725bbc6…`; F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into integration; exact-head CI #454 SUCCESS
 **Scope:** Repository, merged pull requests, exact-head CI, migrations, tests, frontend routes and browser evidence
 
 This matrix separates design, runtime, integration and acceptance evidence. `MERGED` means only that
@@ -38,13 +38,13 @@ journey to complete.
 - `A9`: `VALORA_USER_FLOW_MINDMAP_v2.3.md` and the complete north-star flow in the v2.3 master.
 - `A10`: `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` + ADR 0045.
 
-## 2026-09-21 authority/visual-system reconciliation
+## 2026-09-23 authority/visual-system reconciliation
 
 This file keeps PR-00→PR-13 labels as historical acceptance evidence only. Current development ordering is OS-G0→OS-G7 in the Unified Roadmap v2.3. Product/UX/visual authority is the current UI/UX Handoff v2.3, which now requires Microsoft Fluent 2 light.
 
-Current Draft PR #32 has a cross-product visual conformance gap: the existing frontend shell/pages still use superseded Astryx/dark/cyan/glassmorphic styling. Historical functional/browser acceptance therefore does not equal current visual acceptance. OS-G0 must remediate and visually regression-test the approved golden surfaces (S10, S12, S13, NCCQ/NCC Selection, Không gian tài liệu/M365 Return).
+Current Draft PR #32 remains in OS-G0 visual remediation, but F2-PR-001…003 have already removed the legacy global Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens/shared styles, and replaced production Astryx shell/login/shared-state TS/TSX usage. Residual Astryx global CSS/packages and feature-page dark/cyan debt remain for F2-PR-004…008. Historical functional/browser acceptance therefore still does not equal final current visual acceptance.
 
-## 2026-09-21 active Draft PR #32 reconciliation
+## 2026-09-23 active Draft PR #32 reconciliation
 
 The table below remains the verified **merged baseline** audit and must not be rewritten as though
 unmerged work had landed on `main`. For current candidate planning, this addendum supersedes older
@@ -54,7 +54,7 @@ Current Draft PR #32 contains:
 
 | Capability | Candidate status | Evidence / limitation |
 |---|---|---|
-| Operational Frontend entry | IMPLEMENTED / UNMERGED / VISUALLY NON-CONFORMANT | Login/session/account/project/document integration entry exists; historical simulated-provider browser closeout exists, but current dark/Astryx presentation conflicts with Fluent 2 light authority |
+| Operational Frontend entry | IMPLEMENTED / UNMERGED / PARTIALLY FLUENT-2-REMEDIATED | Integration head `d725bbc6…`; F2-PR-001…003 merged with CI #454 green. Shell/login/shared states are remediated; feature surfaces F2-PR-004…007 and residual Astryx CSS/packages F2-PR-008 remain |
 | Local immutable DocumentBlobStore | G6 ACCEPTED | exact reviewed snapshot `d71a42e…`; durable closeout manifest; not HA/WORM/long-term production proof |
 | OneDrive Personal Exchange | G8 OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
 | Working Change Observation semantics | DESIGN/ADR ACCEPTED | A10 / ADR 0045; runtime implementation contract not yet frozen |
