@@ -1,6 +1,6 @@
 # Valora Design Book v1.4 — Adaptive Intake, Knowledge Memory and Historical Dossier Addendum
 
-> **2026-09-21 roadmap reconciliation:** Adaptive Intake / Mapping Memory / Asset Identity Memory / dossier / AI-governance domain decisions remain usable where not superseded, but the S13–S16 sequencing in this document is historical. Current product/development ordering is `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`: Pre-case closure → Appraisal Core → Document Runtime → Release → Template Intelligence/Fidelity → E2E → AI expansion.
+> **2026-09-21 roadmap reconciliation:** Adaptive Intake / Mapping Memory / Asset Identity Memory / dossier / AI-governance domain decisions remain usable where not superseded, but the S13–S16 sequencing in this document is historical. Current product/development ordering is `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`: Pre-case closure → Appraisal Core → Document Runtime → Release → Template Intelligence/Fidelity → E2E → Valora Intelligence Platform & Assistant.
 
 - **Status:** HISTORICAL DOMAIN/AI FOUNDATION — retained where not superseded by current v2.3 product, visual and roadmap authority
 - **Relationship to v1.2:** v1.2-final remains authoritative for established domain boundaries.

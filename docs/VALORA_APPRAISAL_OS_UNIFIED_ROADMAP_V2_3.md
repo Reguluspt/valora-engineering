@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Date:** 2026-09-21
+**Last reconciled:** 2026-09-23
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (reconciled 2026-09-23):** `origin/main` remains merged through PR #31 at `27d1cc6…`; active Draft PR #32 remains against `main`, while integration branch `feat/operational-frontend-m365` is at `d725bbc6…` after F2-PR-001 (#34), F2-PR-002 (#36) and F2-PR-003 (#38) merged into that integration branch. This is not claimed as merged to `main`.
