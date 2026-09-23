@@ -257,7 +257,15 @@ AI Proposal
 
 Không lấy positive learning từ UI click, autosave, failed/unreviewed/stale/superseded AI output hoặc conversation text đơn thuần.
 
-## 20. OS-G7 execution gates
+## 20. Ranh giới OS-G5 Template Intelligence và OS-G7 AI Runtime
+
+OS-G5 được phép hoàn thiện UX/domain contract cho AI-assisted template setup, provider-neutral task/interface contracts và deterministic/rule-based candidate mapping sau khi deterministic Document Runtime tối thiểu tồn tại.
+
+OS-G5 **không tự cấp quyền** cho LLM/external-provider execution. Mọi provider-backed template analysis/mapping, model routing, `AITaskRun` execution và provider fallback vẫn thuộc OS-G7 runtime, trừ khi Product Owner có quyết định explicit mở một exception hẹp với task-specific contract/evaluation gate.
+
+Điều này giữ nguyên Design Authority của các AI Template baselines mà không phá sequencing nguyên tắc “authoritative operating loop first”.
+
+## 21. OS-G7 execution gates
 
 - **OS-G7.0:** AI Authority & Contract Freeze — docs/design only.
 - **OS-G7.1:** AI Runtime Provenance Foundation.
@@ -270,7 +278,7 @@ Không lấy positive learning từ UI click, autosave, failed/unreviewed/stale/
 - **OS-G7.8:** Evaluation, Shadow & Release.
 - **OS-G7.9:** Controlled Automation.
 
-## 21. PR program
+## 22. PR program
 
 | PR | Scope | Runtime authorization |
 |---|---|---|
@@ -288,18 +296,18 @@ Không lấy positive learning từ UI click, autosave, failed/unreviewed/stale/
 | AI-PR-011 | Model/Prompt/Retriever Release Registry | gated |
 | AI-PR-012 | Selected R1 production tasks | gated + task-specific release |
 
-## 22. Điều phải làm trong OS-G1 → OS-G6
+## 23. Điều phải làm trong OS-G1 → OS-G6
 
 Mỗi stage mới phải có durable facts, API, UI, Case State, Next Action, blocker/warning/stale semantics, lineage, evidence refs và version tokens.
 
-## 23. Production safety invariants
+## 24. Production safety invariants
 
 Không cross-tenant retrieval; provider không có DB session; model không trực tiếp persistence mutation; unregistered task/tool/model/provider bị từ chối; không autonomous R3/R4; material claims truy nguồn được; provider failure giữ manual path; stale result không tác động generation mới; promoted capability có rollback/kill switch; provenance tái tạo được release/input.
 
-## 24. Explicit non-goals
+## 25. Explicit non-goals
 
 Không general autonomous agent, AI final-price approval, AI signature, AI release/publishing authority, self-modifying prompt/policy, per-click online training, unrestricted web/SQL tool, automatic cross-tenant learning, giant vector DB làm source of truth, hay multi-agent chỉ vì xu hướng.
 
-## 25. Kết luận
+## 26. Kết luận
 
 Giữ nguyên OS-G0 → OS-G6. Mở rộng OS-G7 thành **Valora Intelligence Platform & Assistant**. Áp dụng ngay **AI-readable-by-design** vào domain slices, nhưng không kích hoạt runtime AI trước khi authoritative operating loop và task-specific gates được đóng.

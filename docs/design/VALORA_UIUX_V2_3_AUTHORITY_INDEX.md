@@ -2,7 +2,7 @@
 
 **Status:** Canonical UI/UX reading order for v2.3
 **Consolidation:** 21/09/2026 — `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`.
-**Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration and must not silently override those product semantics.
+**Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture only; it does not override this UI/UX authority or authorize provider AI by itself.
 
 ## 0. Visual authority
 
@@ -120,7 +120,7 @@ Hard invariants: Empty không che Error; Loading khác Processing; usable data k
 Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`. Structured KTKT là business data; historical dossier là candidate pipeline; knowledge review cần explicit human decision; history/lineage read-only.
 
 ## 9. Publishing routing authority — complete
-`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest + khóa revision + audit [system consequence] → Đã phát hành [success/read-only result]`.
+`Chuẩn bị bộ phát hành → Xem lại & xử lý ngoại lệ → Xác nhận phát hành [commit boundary] → Release Manifest bind exact accepted Document Revision + audit [system consequence] → Đã phát hành [success/read-only result]`. Accepted `DocumentRevision` đã immutable trước Publishing; không có lock mutation/stage riêng.
 Không UI khóa riêng. Không Export PDF.
 
 ## 10. Guardrails

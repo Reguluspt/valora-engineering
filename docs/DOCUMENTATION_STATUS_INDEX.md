@@ -1,7 +1,7 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-21
+**Date:** 2026-09-23
 **Scope:** Classification and reading rules for repository documentation.
 **Inventory reconciliation:** 351 documentation/config-document files at the 2026-09-21 live-tree verification sweep.
 
@@ -196,8 +196,9 @@ minimum deterministic compiler/fill needed by OS-G3
    → Template Family / adaptation
 ```
 
-OfficeCLI is only a candidate read-only Office Intelligence sidecar until a bounded conformance gate
-accepts it. OfficeCLI/template/AI work is not allowed to displace Pre-case or Appraisal Core closure.
+OS-G5 may freeze/implement AI-assisted template UX/task contracts, provider-neutral interfaces and deterministic/rule-based candidate mapping. LLM/external-provider execution remains OS-G7 runtime under the AI Master Plan unless separately and explicitly authorized.
+
+OfficeCLI is only a candidate read-only Office Intelligence sidecar until a bounded conformance gate accepts it. OfficeCLI/template/AI work is not allowed to displace Pre-case or Appraisal Core closure.
 
 ## 11. Document lifecycle vocabulary
 

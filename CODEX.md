@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-22 (exact-head baseline/delivery gate added; Fluent 2 OS-G0 task packets frozen)
+**Last reconciled:** 2026-09-23 (integration head/F2 progress + AI Master Plan authority reconciliation)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -15,12 +15,13 @@ Domain behavior must come from this read order:
 3. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
 4. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
 5. docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md — current product/development ordering
-6. The v2.3 addendum directly governing the assigned PR
-7. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
-8. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
-9. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
-10. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
-11. Feature contracts under docs/design/ and accepted docs/adr/* decisions
+6. docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 architecture detail only; never runtime authorization by itself
+7. The v2.3 addendum directly governing the assigned PR
+8. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
+9. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
+10. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
+11. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
+12. Feature contracts under docs/design/ and accepted docs/adr/* decisions
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
@@ -40,17 +41,20 @@ Accepted merged code baseline remains `origin/main` at
 `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31). Always fetch and verify live main.
 
 Active integration candidate: Draft PR #32 / `feat/operational-frontend-m365`.
-It contains the operational frontend, Local immutable DocumentBlobStore, OneDrive Personal Exchange
-and the later documentation reconciliation. Treat the live PR head as mutable; milestone SHAs below
-are evidence, not evergreen branch heads.
+At the 2026-09-23 reconciliation it is at exact head `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`
+after F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into the integration branch; exact-head
+CI #454 is SUCCESS. This is not merged-main authority. Treat the live PR head as mutable; milestone
+SHAs below are evidence, not evergreen branch heads.
 
 PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
 canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
 
-Operational Frontend — IMPLEMENTED ON DRAFT PR #32 and locally browser-accepted against a simulated
-provider. It is not yet merged into main and does not by itself prove the full North-star E2E.
+Operational Frontend — IMPLEMENTED ON DRAFT PR #32. F2-PR-001…003 have removed the legacy global
+Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens and replaced
+the production Astryx shell/login/shared-state primitives. F2-PR-004…008 remain before OS-G0 visual
+closeout. The branch is not merged to main and does not prove the full North-star E2E.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
@@ -78,8 +82,9 @@ PR-08 through PR-13 remain not implemented as complete product stages. Software 
 requires the North-star product path, release/publishing, traceability/state/fidelity and exact-SHA
 E2E acceptance before Windows Preview.
 
-Known legacy Review Queue / standalone Validation Dashboard / old Workbench right-panel IA are debt
-and must not expand or be treated as current product authority.
+Legacy global Review Queue / standalone Validation Dashboard production routing was removed by
+F2-PR-001. The old Workbench right-panel IA remains remediation debt until its owning Fluent 2 slice;
+none of these legacy concepts may be revived as product authority.
 
 OneDrive Exchange is non-authoritative. Encrypted off-site Backup remains a separate unopened task.
 No AWS live activity, live Exchange reconsent/provider probe, production deploy or release is
@@ -113,7 +118,7 @@ Human, system and ai_service principals remain distinct; AI/system never imperso
 AITaskRun/DecisionEpisode are provenance around authoritative domain decisions, not replacement truth.
 Workflow patterns derive from domain commands and committed outcomes, never UI clickstream.
 Temporary selections, autosave, failed/stale runs and unreviewed output are not positive feedback.
-Long-running production AI/extraction tasks require durable outbox/job/attempt execution and stale-result protection.
+Long-running production AI/extraction tasks must reuse the existing durable `TaskJob`/`TaskJobAttempt`/worker execution boundary, including lease/retry/dead-letter/stale-generation protection; do not create a second AI queue.
 ADR 0028 restricted Workbench fields (description, appraised_unit_price,
   review_status, validation_status) require draft-commit command path + authorization
   + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.

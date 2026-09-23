@@ -2,7 +2,8 @@
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
 **Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
-**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
+**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`  
+**AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
 **Documentation status map:** `docs/DOCUMENTATION_STATUS_INDEX.md`
 **PR-00 through PR-04:** **MERGED by PR #29**
@@ -32,12 +33,12 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
 | **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
 | Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current product work follows Unified Roadmap `OS-G0 → OS-G7` |
-| Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
+| Asset Identity Memory / dossiers / AI matching | Identity-decision/feedback and dossier extraction/alignment foundations are implemented; provider-backed AI matching and the full OS-G7 assistant runtime are not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
-| Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
+| Bounded-AI task/decision/policy architecture | ADR 0033–0034 accepted; `TaskJob`/worker durable execution foundation exists, but `AITaskRun`/`AIContextManifest`/`DecisionEpisode`/`ExecutionPolicy` runtime and provider gateway are not implemented |
 | UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
 | UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
-| UI/UX v2.3 downstream product stages | **Partially implemented on Draft PR #32**: Local G6 + OneDrive Exchange G8 are complete offline; ADR 0045 re-baselines document-change semantics. Canonical stages 5–16 and Release/Publishing remain incomplete. |
+| UI/UX v2.3 downstream product stages | **Partially implemented on Draft PR #32**: Local G6 + OneDrive Exchange G8 are complete offline; F2-PR-001…003 are merged on integration head `d725bbc6…` with CI #454 green; F2-PR-004…008, canonical stages 5–16 and Release/Publishing remain incomplete. |
 | Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
@@ -63,7 +64,7 @@ Earlier S13 sequencing is historical context.
 ```text
 backend/     FastAPI + SQLAlchemy + Alembic (Python ≥3.12)
 frontend/    React 18 + TypeScript + Vite; Fluent 2 light product visual authority
-worker/      Python worker skeleton; planned reliable outbox/job runtime before long-running extraction/AI
+worker/      Python reliable-job worker; durable TaskJob/attempt lease/retry/dead-letter runtime exists and is reused by document extraction/alignment; future AI must reuse it
 infra/       Local infra notes
 docs/        ADR, design contracts, audits, remediation, handoff
 .github/     CI workflows
@@ -81,7 +82,7 @@ ai_governance_security/        AI task/context/provider provenance + ExecutionPo
 excel_import/                  streaming parser + staging + Apply (S12 v1)
 ```
 
-Future ownership (design only until runtime PRs): Adaptive Intake + Column Mapping Memory → `excel_import`; Raw Asset Observation / Identity Memory → `taxonomy_asset_identity`; dossier extraction/alignment → `document_engine_intelligence`; task/context/attempt provenance and deny-by-default ExecutionPolicy → `ai_governance_security`; durable outbox/job execution → worker/runtime infrastructure.
+Future/continuing ownership follows current implementation state: mapping/identity memories remain in their existing bounded contexts; dossier extraction/alignment and durable job execution already have runtime foundations; future `AITaskRun`/context/attempt provenance, Task Registry/Gateway and deny-by-default `ExecutionPolicy` remain OS-G7 work under `ai_governance_security`/shared AI platform boundaries. AI must reuse the existing worker/runtime infrastructure.
 
 ### Non-negotiable invariants
 
@@ -99,7 +100,7 @@ Future ownership (design only until runtime PRs): Adaptive Intake + Column Mappi
 
 ## Authority hierarchy
 
-Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 + Authority Index/addendum → Unified Roadmap v2.3 → task-specific contract/ADR → verified implementation evidence. Design Book v1.x and S13–S16 plans are historical/domain reference only where not superseded.
+Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 + Authority Index/addendum → Unified Roadmap v2.3 → AI Master Plan v1 when the work touches OS-G7/AI-readiness → task-specific contract/ADR → verified implementation evidence. Design Book v1.x and S13–S16 plans are historical/domain reference only where not superseded.
 
 Historical roadmap only: S13 Adaptive Intake → S14 Asset Identity Memory → S15 dossiers → S16 AI suggestions → S17 reports → S18 pilot. **Do not execute this sequence as the current roadmap.** Current ordering is OS-G0 → OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 

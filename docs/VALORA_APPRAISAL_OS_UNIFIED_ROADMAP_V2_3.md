@@ -27,7 +27,7 @@ Authority cleanup
 → Release / Publishing
 → Template Intelligence / Fidelity expansion
 → Product E2E completion
-→ Controlled AI expansion
+→ Valora Intelligence Platform & Assistant
 ```
 
 ## 2. Authority roles and non-negotiable model
@@ -368,6 +368,8 @@ After minimum deterministic document runtime exists:
 - dual-render conformance.
 
 AI mapping remains proposal-only.
+
+**OS-G5 / OS-G7 boundary:** OS-G5 may freeze AI-assisted template UX/task contracts, provider-neutral interfaces and deterministic/rule-based candidate mapping needed for template intelligence. Any LLM/external-provider execution, `AITaskRun` runtime, model routing or provider fallback is OS-G7 runtime and remains gated by the AI Master Plan unless an explicit Product Owner decision authorizes a narrower exception.
 
 ### OS-G6 — Product Completion
 
