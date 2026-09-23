@@ -11,7 +11,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Documentation status index](DOCUMENTATION_STATUS_INDEX.md) — canonical classification of current authority, living engineering docs, historical audits/sprints/handoffs and superseded provider research.
 - [2026-09-21 documentation reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_UNIFIED_ROADMAP_V2_3.md) — inventory/classification and current-living-doc reconciliation against the Unified Roadmap.
 - [2026-09-21 Handoff/Roadmap/Fluent 2 reconciliation audit](audits/2026-09-21__DOCUMENTATION_RECONCILIATION_HANDOFF_ROADMAP_FLUENT2.md) — post-reconciliation sweep for authority roles, Fluent 2 light, provider-neutral Document Workspace, OS-G0→OS-G7 sequencing and current document/release semantics.
-- [Frontend Astryx → Fluent 2 code inventory](audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md) — live file/component inventory, legacy-route findings and migration disposition.
+- [Frontend Astryx → Fluent 2 code inventory](audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md) — historical code-inventory baseline at `bc31acd…`; its 2026-09-23 disposition points to F2-PR-001…003 completed integration work and F2-PR-004…008 residual debt.
 - [VALORA-FLUENT2-REMEDIATION-001](implementation/VALORA-FLUENT2-REMEDIATION-001.md) — active OS-G0 implementation contract and F2-PR-001…008 delivery sequence; detailed task-ready packets are `VALORA-FLUENT2-F2-PR-001_IMPLEMENTATION_PLAN.md` through `...008...` in `docs/implementation/`.
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).

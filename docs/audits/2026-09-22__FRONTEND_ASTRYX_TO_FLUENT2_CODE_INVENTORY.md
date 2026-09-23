@@ -6,6 +6,8 @@
 **Scope:** production frontend visual/runtime code, routing and direct design-system dependencies.
 **Authority:** UI/UX Handoff v2.3 + Authority Index + applicable addenda for product/visual semantics; Unified Roadmap v2.3 for sequencing.
 
+> **2026-09-23 current disposition:** This is a code-inventory snapshot at audited head `bc31acd…`, not current branch state. F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 subsequently merged on integration head `d725bbc…` (CI #454 SUCCESS), removing the legacy global Review Queue/Validation Dashboard production routes, establishing Fluent 2 light token/shared-style foundations, and replacing production Astryx shell/login/shared-state TS/TSX usage. Use `VALORA-FLUENT2-REMEDIATION-001.md` plus F2-PR-004…008 plans for current residual debt.
+
 ## 1. Executive finding
 
 The current frontend is not simply “an Astryx UI.” It is a mixed stack:
