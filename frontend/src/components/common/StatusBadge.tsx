@@ -6,8 +6,17 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
+  const tone = {
+    draft: "warning",
+    review: "info",
+    approved: "success",
+    warning: "warning",
+    error: "error",
+    blocking: "error",
+  }[status];
+
   return (
-    <span className={`badge badge-${status}`}>
+    <span className={`valora-status valora-status--${tone}`} data-status={status}>
       {label}
     </span>
   );

@@ -31,36 +31,24 @@ export function WorkbenchHeader({
   return (
     <header className="workbench-header">
       <h2 className="project-title">{projectTitle}</h2>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+      <div className="project-status-bar">
         {onNavigateOverview && (
-          <button className="action-btn" onClick={onNavigateOverview} type="button">
+          <button className="valora-button valora-button--secondary" onClick={onNavigateOverview} type="button">
             {t("nav.caseOverview")}
           </button>
         )}
         {apiReachable !== null && (
-          <span style={{
-            fontSize: "var(--font-size-xs)",
-            color: apiReachable ? "var(--status-approved)" : "var(--status-error)",
-            padding: "2px 6px",
-            border: `1px solid ${apiReachable ? "var(--status-approved)" : "var(--status-error)"}`,
-            borderRadius: "var(--radius-sm)"
-          }}>
-            {apiReachable ? t("nav.serverConnected") : t("nav.serverDisconnected")}
-          </span>
+          <StatusBadge
+            label={apiReachable ? t("nav.serverConnected") : t("nav.serverDisconnected")}
+            status={apiReachable ? "approved" : "error"}
+          />
         )}
-        <div className="project-status-bar">
-          <span>{t("workbench.statusLabel")}</span>
-          {status && statusLabel ? (
-            <StatusBadge status={status} label={statusLabel} />
-          ) : (
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              Chưa có dữ liệu trạng thái
-            </span>
-          )}
-          <button className="action-btn" disabled title={t("workbench.requiresBackendSession")}>
-            {t("review.submitQc")} [{t("status.locked")}]
-          </button>
-        </div>
+        <span>{t("workbench.statusLabel")}</span>
+        {status && statusLabel ? (
+          <StatusBadge status={status} label={statusLabel} />
+        ) : (
+          <span>Chưa có dữ liệu trạng thái</span>
+        )}
       </div>
     </header>
   );

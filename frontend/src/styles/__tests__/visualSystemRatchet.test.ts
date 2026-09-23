@@ -57,7 +57,6 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
     pattern: /@astryxdesign\/[a-z0-9@/_-]+/gi,
     allowedOccurrences: {
       "index.css": 3,
-      "components/layout/AppShell.tsx": 2,
     },
     forbiddenExamples: ['@import "@astryxdesign/core/astryx.css";'],
   },
@@ -65,7 +64,6 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
     label: "neon cyan literals",
     pattern: /(?:#(?:66fcf1|45f3ff)(?:[0-9a-f]{2})?\b|rgba?\(\s*(?:102(?:\s*,\s*|\s+)252(?:\s*,\s*|\s+)241|69(?:\s*,\s*|\s+)243(?:\s*,\s*|\s+)255)\b[^)]*\))/gi,
     allowedOccurrences: {
-      "auth/session.css": 3,
       "components/case-overview/caseOverview.css": 2,
       "components/m365/m365Workspace.css": 1,
       "components/workbench/AssetGrid.tsx": 2,
@@ -77,9 +75,7 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   {
     label: "backdrop blur",
     pattern: /(?:(?:-webkit-)?\bbackdrop-?filter|\bWebkitBackdropFilter)\s*:/gi,
-    allowedOccurrences: {
-      "components/common/ConflictWarning.tsx": 1,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ["backdrop-filter: blur(8px)", 'backdropFilter: "blur(8px)"', 'WebkitBackdropFilter: "blur(8px)"'],
   },
   {
