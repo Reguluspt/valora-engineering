@@ -49,6 +49,12 @@ function caseProjection() {
     status: "open",
     row_version: 1,
   }] : [];
+  // Fixture-only projection for UI coverage; PR-01 has no runtime stale provider.
+  const stale = caseScenario === "stale" ? [{
+    kind: "SOURCE_STALE",
+    target_type: "project",
+    target_id: projectFixture.id,
+  }] : [];
   const prefixComplete = caseScenario === "unavailable";
   return {
     case_version: "a".repeat(64),
@@ -67,7 +73,7 @@ function caseProjection() {
     })),
     blockers: blocker,
     warnings: warning,
-    stale: [],
+    stale,
     capabilities: caseStages.map((stage, index) => ({
       stage,
       available: index < 4,
@@ -131,7 +137,7 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/__fixture/scenario" && request.method === "GET") {
     const nextCase = url.searchParams.get("case");
     const nextProjects = url.searchParams.get("projects");
-    if (nextCase && !["normal", "blocking", "warning", "unavailable", "loading", "error"].includes(nextCase)) {
+    if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
       return send(response, 400, { detail: "Unknown case fixture" });
     }
     if (nextProjects && !["populated", "empty", "loading", "error"].includes(nextProjects)) {
