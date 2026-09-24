@@ -2,7 +2,7 @@
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
 **Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
-**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`  
+**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`<br>
 **AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
 **Documentation status map:** `docs/DOCUMENTATION_STATUS_INDEX.md`

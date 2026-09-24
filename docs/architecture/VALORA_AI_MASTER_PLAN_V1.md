@@ -2,11 +2,11 @@
 ## Nền tảng Trí tuệ Thẩm định & Trợ lý Valora
 
 **Status:** CURRENT OS-G7 ARCHITECTURE DETAIL / DOCUMENTATION AUTHORITY — DOCUMENTATION ONLY<br>
-**Date:** 2026-09-23  
-**Product authority:** VALORA Appraisal OS v2.3  
-**Code baseline reviewed:** `feat/operational-frontend-m365`  
-**Exact HEAD:** `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`  
-**Exact-head CI:** `#454 — SUCCESS`  
+**Date:** 2026-09-23<br>
+**Product authority:** VALORA Appraisal OS v2.3<br>
+**Code baseline reviewed:** `feat/operational-frontend-m365`<br>
+**Exact HEAD:** `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`<br>
+**Exact-head CI:** `#454 — SUCCESS`<br>
 **Runtime authorization:** NONE. Tài liệu này không kích hoạt provider AI, migration AI, autonomous command hay thay đổi human approval gate.
 
 ## 1. Quyết định định hướng

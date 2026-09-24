@@ -1,10 +1,10 @@
 # AI-PR-000 — Master Plan & Authority Reconciliation
 
 **Status:** DOCUMENTATION IMPLEMENTED / NO RUNTIME AUTHORIZATION<br>
-**Program:** VALORA AI Master Plan v1.0  
-**Roadmap placement:** OS-G7.0  
-**Depends on:** exact integration baseline review; no runtime prerequisite  
-**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable  
+**Program:** VALORA AI Master Plan v1.0<br>
+**Roadmap placement:** OS-G7.0<br>
+**Depends on:** exact integration baseline review; no runtime prerequisite<br>
+**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable<br>
 **Important:** Contract docs-only này đã được thực hiện. Việc hoàn tất AI-PR-000 không cấp quyền cho AI-PR-001…012, runtime/provider/autonomy hay bất kỳ migration AI nào.
 
 ## 1. Objective

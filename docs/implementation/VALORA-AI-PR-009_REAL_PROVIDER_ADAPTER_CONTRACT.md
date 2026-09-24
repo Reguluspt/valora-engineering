@@ -1,10 +1,10 @@
 # AI-PR-009 — First Real Provider/Model Adapter
 
-**Status:** PLANNED / NOT AUTHORIZED FOR RUNTIME  
-**Program:** VALORA AI Master Plan v1.0  
-**Roadmap placement:** OS-G7.2 / activation gate  
-**Depends on:** AI-PR-001…008 accepted + explicit provider/data-policy authorization  
-**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable  
+**Status:** PLANNED / NOT AUTHORIZED FOR RUNTIME<br>
+**Program:** VALORA AI Master Plan v1.0<br>
+**Roadmap placement:** OS-G7.2 / activation gate<br>
+**Depends on:** AI-PR-001…008 accepted + explicit provider/data-policy authorization<br>
+**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable<br>
 **Important:** File này là implementation contract tương lai. Sự tồn tại của file không cấp quyền coding/runtime/provider/autonomy.
 
 ## 1. Objective

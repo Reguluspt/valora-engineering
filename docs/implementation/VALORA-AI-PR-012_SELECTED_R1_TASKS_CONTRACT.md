@@ -1,10 +1,10 @@
 # AI-PR-012 — Selected R1 Appraisal Suggestion Tasks
 
-**Status:** PLANNED / NOT AUTHORIZED FOR RUNTIME  
-**Program:** VALORA AI Master Plan v1.0  
-**Roadmap placement:** OS-G7.6 / OS-G7.9  
-**Depends on:** AI-PR-010/011 accepted + task-specific release  
-**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable  
+**Status:** PLANNED / NOT AUTHORIZED FOR RUNTIME<br>
+**Program:** VALORA AI Master Plan v1.0<br>
+**Roadmap placement:** OS-G7.6 / OS-G7.9<br>
+**Depends on:** AI-PR-010/011 accepted + task-specific release<br>
+**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable<br>
 **Important:** File này là implementation contract tương lai. Sự tồn tại của file không cấp quyền coding/runtime/provider/autonomy.
 
 ## 1. Objective
