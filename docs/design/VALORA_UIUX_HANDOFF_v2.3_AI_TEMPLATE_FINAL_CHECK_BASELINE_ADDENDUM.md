@@ -5,6 +5,8 @@
 **Scope:** Dùng chung cho Word generic và Bảng tính; validation chuyên biệt theo format
 **Approved:** 30/08/2026
 
+> **2026-09-23 runtime-boundary reconciliation:** This child baseline inherits the AI Template Assistant and AI Master Plan boundary. Its UX and deterministic validation/fidelity behavior may be implemented in the owning non-provider slices, but LLM/external-provider-backed execution remains OS-G7 runtime and is not authorized by this document alone.
+
 ## 1. Authority
 
 Bước 4 `Kiểm tra & hoàn tất` là checkpoint cuối của flow:

@@ -6,6 +6,8 @@
 
 Authority chi tiết: [`assets/VALORA_S17_BASELINE_v2.3.md`](./assets/VALORA_S17_BASELINE_v2.3.md).
 
+> **2026-09-23 current routing disposition:** Addendum này tiếp tục là authority cho child screen `Hoàn tất một báo giá NCC`. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` mới hơn khóa routing sau NCC Selection và không cho phép phục hồi một standalone whole-case S17 readiness dashboard.
+
 ## A. Quyết định scope mới nhất
 
 Người dùng đã làm rõ rằng flow đang thiết kế tại Iteration 3 là **xử lý/hoàn tất một báo giá cụ thể của một nhà cung cấp**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định.
@@ -15,7 +17,7 @@ Vì vậy:
 - Iteration 3 được nâng thành baseline authority cho **child screen của NCCQ — Hoàn tất báo giá nhà cung cấp**;
 - các Iteration 1–2 bị superseded;
 - badge `S17` trong mockup được xem là nhãn iteration lịch sử, không được dùng để suy diễn rằng màn hình này thay thế `S17 — Hoàn tất hồ sơ` cấp toàn hồ sơ;
-- `S17 — Hoàn tất hồ sơ` cấp hồ sơ vẫn là một scope riêng cần thiết kế/khóa sau, nếu product workflow vẫn giữ checkpoint đó.
+- Quyết định `Kết quả thẩm định giá` mới hơn supersede mọi suy diễn về một standalone `S17 — Hoàn tất hồ sơ` dashboard chen giữa `Chọn nhà cung cấp đã xác nhận giá` và `Kết quả thẩm định giá`. Nếu sau này cần action hoàn tất hồ sơ cho state/audit, action đó không được đổi routing đã khóa nếu chưa có explicit Product Owner decision mới.
 
 ## B. Lifecycle báo giá hiện tại
 
@@ -81,6 +83,6 @@ Thiếu file ký/đóng dấu không mặc định là warning ở giai đoạn 
 |---|---|
 | NCCQ | Baseline Iteration 6 — màn hình tổng hợp quản lý báo giá NCC |
 | NCCQ child — Hoàn tất 1 báo giá NCC | **Baseline Iteration 3 — authority addendum này** |
-| S17 — Hoàn tất hồ sơ toàn cục | Chưa được baseline bởi Iteration 3; giữ scope riêng để thiết kế sau |
+| S17 — Hoàn tất hồ sơ toàn cục | Không có standalone dashboard/checkpoint trong routing hiện hành; action state/audit tương lai (nếu cần) phải giữ nguyên routing và cần explicit authority mới |
 
 Addendum này supersede mọi mô tả trước đó coi `S17 Iteration 1/2/3` là readiness toàn hồ sơ khi đang ở flow của một báo giá NCC.

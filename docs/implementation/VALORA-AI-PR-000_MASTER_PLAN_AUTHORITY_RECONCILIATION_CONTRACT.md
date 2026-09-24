@@ -1,0 +1,31 @@
+# AI-PR-000 — Master Plan & Authority Reconciliation
+
+**Status:** DOCUMENTATION IMPLEMENTED / NO RUNTIME AUTHORIZATION<br>
+**Program:** VALORA AI Master Plan v1.0<br>
+**Roadmap placement:** OS-G7.0<br>
+**Depends on:** exact integration baseline review; no runtime prerequisite<br>
+**Authority:** Unified Roadmap v2.3 + VALORA AI Master Plan v1.0 + ADR 0033/0034 where applicable<br>
+**Important:** Contract docs-only này đã được thực hiện. Việc hoàn tất AI-PR-000 không cấp quyền cho AI-PR-001…012, runtime/provider/autonomy hay bất kỳ migration AI nào.
+
+## 1. Objective
+Đưa AI Master Plan vào repo, mở rộng OS-G7, khóa authority/read-order và tạo AI-PR-001…012 mà không mở runtime AI.
+
+## 2. Scope
+Documentation-only; reconcile roadmap state, add Master Plan, update docs indexes, link ADR 0033/0034, classify S13–S16 as historical evidence and freeze AI-readable-by-design.
+
+## 3. Required deliverables
+- Master Plan.
+- Unified Roadmap update.
+- Documentation index/status update.
+- AI-PR-001…012 contracts.
+- Explicit runtime prohibition.
+
+## 4. Acceptance gate
+- Diff chỉ `docs/**`.
+- Không migration/source/dependency/config/runtime change.
+- Giữ OS-G0→OS-G7.
+- Phân biệt main và integration candidate.
+- Downstream contracts đều NOT AUTHORIZED FOR RUNTIME.
+
+## 5. Forbidden scope
+Provider calls, credentials, runtime code, migrations, feature flags, autonomous capability.

@@ -1,8 +1,10 @@
 # VALORA UI/UX v2.3 — PR-01 PreliminaryAnalysisSnapshot Contract
 
-**Status:** IMPLEMENTATION PACKET — VALORA-PR01-IMPL-002
+**Status:** IMPLEMENTED HISTORICAL SLICE — source fact later consumed by accepted Case State providers
 **Scope:** Immutable, versioned `PreliminaryAnalysisSnapshot` source fact, strict v2 line manifest, human-confirmed command and focused tests. Does not include artifact generation, projection providers, case-state/current_stage publication, HTTP endpoints, frontend or deployment.
 **Authority:** ADR 0038 D3–D4, ADR 0037/OFFICIAL_INTAKE commit pattern, Case State Projection Contract §5.
+
+> **2026-09-23 current disposition:** The scope/exit-gate text below records this slice at implementation time. The separately authorized `preliminary_analysis_v1` provider and Case State endpoint were later implemented/wired; those later contracts supersede any statement below that provider runtime remains blocked.
 
 ## 1. Schema
 

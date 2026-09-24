@@ -1,9 +1,9 @@
 # VALORA UI/UX v2.3 — PR-00 through PR-13 Feature/Acceptance Matrix
 
-**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-21 ACTIVE-CANDIDATE RECONCILIATION
+**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-23 ACTIVE-CANDIDATE RECONCILIATION
 **Audit date:** 2026-09-12
 **Verified baseline:** `origin/main` at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`
-**Current candidate reconciliation:** 2026-09-21 — Draft PR #32 / `feat/operational-frontend-m365`; G8 code milestone `f896f15...`; later commits are documentation reconciliation
+**Current candidate reconciliation:** 2026-09-23 — Draft PR #32 / `feat/operational-frontend-m365` at `d725bbc6…`; F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into integration; exact-head CI #454 SUCCESS
 **Scope:** Repository, merged pull requests, exact-head CI, migrations, tests, frontend routes and browser evidence
 
 This matrix separates design, runtime, integration and acceptance evidence. `MERGED` means only that
@@ -38,13 +38,13 @@ journey to complete.
 - `A9`: `VALORA_USER_FLOW_MINDMAP_v2.3.md` and the complete north-star flow in the v2.3 master.
 - `A10`: `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md` + ADR 0045.
 
-## 2026-09-21 authority/visual-system reconciliation
+## 2026-09-23 authority/visual-system reconciliation
 
 This file keeps PR-00→PR-13 labels as historical acceptance evidence only. Current development ordering is OS-G0→OS-G7 in the Unified Roadmap v2.3. Product/UX/visual authority is the current UI/UX Handoff v2.3, which now requires Microsoft Fluent 2 light.
 
-Current Draft PR #32 has a cross-product visual conformance gap: the existing frontend shell/pages still use superseded Astryx/dark/cyan/glassmorphic styling. Historical functional/browser acceptance therefore does not equal current visual acceptance. OS-G0 must remediate and visually regression-test the approved golden surfaces (S10, S12, S13, NCCQ/NCC Selection, Không gian tài liệu/M365 Return).
+Current Draft PR #32 remains in OS-G0 visual remediation, but F2-PR-001…003 have already removed the legacy global Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens/shared styles, and replaced production Astryx shell/login/shared-state TS/TSX usage. Residual Astryx global CSS/packages and feature-page dark/cyan debt remain for F2-PR-004…008. Historical functional/browser acceptance therefore still does not equal final current visual acceptance.
 
-## 2026-09-21 active Draft PR #32 reconciliation
+## 2026-09-23 active Draft PR #32 reconciliation
 
 The table below remains the verified **merged baseline** audit and must not be rewritten as though
 unmerged work had landed on `main`. For current candidate planning, this addendum supersedes older
@@ -54,7 +54,7 @@ Current Draft PR #32 contains:
 
 | Capability | Candidate status | Evidence / limitation |
 |---|---|---|
-| Operational Frontend entry | IMPLEMENTED / UNMERGED / VISUALLY NON-CONFORMANT | Login/session/account/project/document integration entry exists; historical simulated-provider browser closeout exists, but current dark/Astryx presentation conflicts with Fluent 2 light authority |
+| Operational Frontend entry | IMPLEMENTED / UNMERGED / PARTIALLY FLUENT-2-REMEDIATED | Integration head `d725bbc6…`; F2-PR-001…003 merged with CI #454 green. Shell/login/shared states are remediated; feature surfaces F2-PR-004…007 and residual Astryx CSS/packages F2-PR-008 remain |
 | Local immutable DocumentBlobStore | G6 ACCEPTED | exact reviewed snapshot `d71a42e…`; durable closeout manifest; not HA/WORM/long-term production proof |
 | OneDrive Personal Exchange | G8 OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
 | Working Change Observation semantics | DESIGN/ADR ACCEPTED | A10 / ADR 0045; runtime implementation contract not yet frozen |
@@ -89,8 +89,8 @@ document-change review boundary, Release/Publishing, traceability/state/fidelity
 | PR-05 OneDrive Personal foundation | PASS — A3, ADR 0040 and PR-05 contract | PASS — delegated OAuth, tenant/user connection, encrypted credential vault, Graph adapter and document binding primitives | NOT IMPLEMENTED | PARTIAL — authorize/callback exist; no frontend caller and no user-facing connection-status/return flow | PASS — `f4c8d2a1b7e9` | PASS — fake-provider, PostgreSQL and live-account acceptance | NOT EVIDENCED | NOT EVIDENCED | MERGED by PR #30 / `42a87fc` | `m365_integration/**`; `api/m365.py`; `test_pr05_m365_*`; PR #30 CI | Operational connect UI, callback return target, connection-state surface and bind/adopt journey are absent | Contract the operational M365 entry gaps, then implement OneDrive Personal UI only |
 | PR-06 OneDrive Personal return/revalidation | PASS — A4, ADR 0041 and PR-06 contract | PASS — canonical provision, immutable baseline, five-way classification and computed readiness | NOT IMPLEMENTED | PARTIAL — provision, baseline, readiness and revalidate endpoints exist; no frontend caller | PASS — `a6d9e4c2b8f1`; single Alembic head | PASS — service/API/provision/PostgreSQL and live OneDrive Personal acceptance | NOT EVIDENCED | NOT EVIDENCED | MERGED by PR #31 / `27d1cc6` | `provision_document_service.py`; `revalidation_service.py`; `api/m365.py`; `test_pr06_m365_*`; PR #31 and exact-main CI | No UI for provision/adopt, return/focus revalidation, five outcomes or readiness; no protected value snapshot for PR-07 | Complete operational M365 frontend; accept PR-07 snapshot/sync ADR before writes |
 | PR-07 Sync / Conflict | PASS — A4/A5 + accepted ADR 0042; ADR 0043 policy baseline accepted | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | PASS — storage execution/binding persistence only; no PR-07 runtime migration | `C2_AUTO_V2` LOCAL PASS — `89/89`; G3 OPTION A APPROVED; STORAGE FAKE T1–T14 + POSTGRESQL CAS + INDEPENDENT REVIEW PASS | NOT IMPLEMENTED | NOT IMPLEMENTED | BLOCKED — ORIGINAL ONEDRIVE WRITE PATH; S3 G4 STATIC REVIEW READY / LIVE AWS CLOSED | The OneDrive candidate remains rejected historical evidence. ADR 0043 accepts app-owned immutable storage and the narrow `DocumentBlobStore` contract. The fake and local S3 adapter evidence passed; G4 freezes a no-network harness, intended non-production boundary and action-time checklist, with both required reviewers ready on the corrected snapshot. Production provider/residency remain unselected | Isolated live-provider evidence, production provider/residency, production encryption operations and recovery objectives remain unresolved | Request separate Product Owner action-time approval for at most one G5 invocation. Keep credentials, AWS requests/resources, real data, production migration, PR-08, deployment and release closed |
-| PR-08 Release Domain Foundation | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No release aggregate/model/service/API/UI found; publishing names occur only in v2.3 constants/presentation | Release aggregate, exceptions, manifest inputs, revision locking and authorization semantics are absent | Contract/ADR release aggregate and exception/readiness invariants after PR-07 |
-| PR-09 Publishing Commit / Success | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No `Release`, `ReleaseManifest`, publish command or post-publish runtime found | Atomic commit, immutable manifest/locked revisions, uncertain-commit recovery and success projection are absent | Implement only after PR-08 foundation; prove atomicity/idempotency and immutable success read model |
+| PR-08 Release Domain Foundation | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No release aggregate/model/service/API/UI found; publishing names occur only in v2.3 constants/presentation | Release aggregate, exceptions, exact-revision manifest binding and publish authorization semantics are absent | Contract/ADR release aggregate and exception/readiness invariants after PR-07 |
+| PR-09 Publishing Commit / Success | PASS — A6 | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT STARTED | No `Release`, `ReleaseManifest`, publish command or post-publish runtime found | Atomic publish commit, immutable manifest bound to exact accepted revisions, uncertain-commit recovery and success projection are absent | Implement only after PR-08 foundation; prove atomicity/idempotency and immutable success read model |
 | PR-10 Audit / Lineage Wiring | PASS — A7 plus domain authorities | PARTIAL — reusable audit, document, knowledge and NCC lineage primitives exist; no unified context-first projection | PARTIAL — isolated lineage panel/history affordances exist; no canonical five-entry-point wiring | NOT IMPLEMENTED for canonical deep-link context | N/A until contract decides whether persistence changes | PARTIAL — legacy primitive tests only; no PR-10 contract suite | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | Existing `AuditEvent`, document workspace, knowledge and NCC history primitives; no canonical `context_type/context_id/return_target` integration | Capability-specific entry points, missing-link semantics, deep-link/return target and cross-domain lineage tests are absent | Contract the projection/reference boundary; require ADR only if persistence or primitive semantics change |
 | PR-11 Cross-product State Sweep | PASS — A0 | PARTIAL — domain errors/states exist unevenly | PARTIAL — shared loading/error/empty components and PR-02/04 local states exist; no product-wide sweep | PARTIAL — no uniform retry/uncertain-mutation behavior | N/A unless a discovered backend fact is missing | PARTIAL — component-local tests only | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | `components/common/**`; PR-02 and PR-04 state tests; repository still contains legacy placeholders | All production surfaces have not proven the 17-state contract, one recovery CTA, offline and partial-success behavior | Inventory every production route/API, close gaps per domain, then browser-test representative states |
 | PR-12 Template Fidelity | PASS — A8 | PARTIAL — legacy template/document-engine primitives exist, not the v2.3 product flow | NOT IMPLEMENTED for v2.3 workspace/template flow | NOT IMPLEMENTED end to end | PARTIAL — historical document/template schema only; no PR-12 migration | PARTIAL — historical backend primitives only | NOT EVIDENCED | NOT EVIDENCED | NOT STARTED | `document_workspace/**`, document engine/intelligence APIs and models exist; frontend has no document/template surface | Workspace, template upload/mapping/test-fill/review/save, managed-region fidelity and report/certificate flows are absent | Freeze a bounded fidelity contract against real templates; implement after PR-11 and required PR-07 sync semantics |
@@ -292,7 +292,7 @@ OS-G0 Authority + Fluent 2 light visual reconciliation
 → OS-G4 Release / Publishing
 → OS-G5 Template Intelligence / Fidelity
 → OS-G6 Product E2E
-→ OS-G7 Controlled AI Expansion
+→ OS-G7 Valora Intelligence Platform & Assistant
 ```
 
 Current next work must be selected from the Unified Roadmap and current Product Owner gate, not from historical PR numbering.

@@ -1,9 +1,9 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-21
+**Date:** 2026-09-24
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 351 documentation/config-document files at the 2026-09-21 live-tree verification sweep.
+**Inventory reconciliation:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
 ## 1. Why this index exists
 
@@ -15,13 +15,17 @@ When documents conflict, use this order:
 
 ```text
 Explicit current Product Owner decision — wins only in named scope
-→ current v2.3 UI/UX master + Authority Index + applicable addenda + accepted scoped ADRs
-   (product semantics / workflow / IA / interaction / Microsoft Fluent 2 light visual authority)
+→ CODEX.md
+→ ENGINEERING_GUARDRAILS.md
+→ current v2.3 UI/UX master
+→ current v2.3 UI/UX Authority Index
+→ applicable current v2.3 addendum
 → VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
-   (development sequencing / architecture integration)
-→ current implementation contracts / active task contract
-→ project handoff / acceptance matrix
-→ historical design/sprint/audit/research evidence
+→ VALORA_AI_MASTER_PLAN_V1.md for OS-G7 / AI-readiness only
+→ accepted scoped ADR
+→ current task / implementation contract
+→ current handoff / acceptance evidence
+→ historical Design Book / sprint / audit / remediation / research evidence
 ```
 
 Historical evidence must not be rewritten to pretend it knew later decisions.
@@ -38,6 +42,7 @@ Current product/UX authority:
 Current development sequencing / architecture integration:
 
 - `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
+- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — current OS-G7 / AI-readiness architecture detail; documentation authority only, not runtime activation
 
 Conflict-resolution/read-order map:
 
@@ -60,7 +65,7 @@ OS-G0 Authority + Fluent 2 light visual-system reconciliation
 → OS-G4 Release/Publishing
 → OS-G5 Template Intelligence/Fidelity
 → OS-G6 Product E2E
-→ OS-G7 AI Expansion
+→ OS-G7 Valora Intelligence Platform & Assistant
 ```
 
 Current visual authority is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Astryx is historical/low-level reference only and must not drive product styling.
@@ -72,10 +77,34 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Microsoft Fluent 2 light is current product visual authority.
 - S10/S12/S13/NCCQ/NCC Selection/Không gian tài liệu approved baselines are golden visual references.
 - Astryx mapping/package records are historical/low-level implementation evidence only.
-- Existing dark/cyan/glassmorphic frontend is remediation debt, not visual acceptance.
+- F2-PR-001…003 already moved production routing, shared Fluent 2 tokens/styles and shell/login/shared-state primitives toward the current authority. F2-PR-004…008 own the remaining feature-surface, residual stylesheet/package and visual-regression closure. Historical `Astryx`/dark/cyan/glass mentions or prohibition text do not imply current visual direction.
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
-- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
+- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
+- Final documentation reconciliation record: `docs/audits/2026-09-24__AI_MASTER_PLAN_UNIFIED_ROADMAP_DOCUMENTATION_RECONCILIATION.md`.
+
+### 2.2 2026-09-24 inventory by lifecycle/category
+
+Exact-tree inventory used for this reconciliation:
+
+| Category | Count |
+|---|---:|
+| Root governance docs (`CODEX`, guardrails, PR rules, README) | 4 |
+| `docs/` root files | 9 |
+| ADR | 45 |
+| Architecture | 1 |
+| Audits | 151 |
+| Design (including design assets) | 70 |
+| Handoff | 4 |
+| Implementation | 57 |
+| Plan | 9 |
+| Reference | 1 |
+| Remediation | 4 |
+| Research | 8 |
+| Sprint 1–8 history | 17 |
+| **Total** | **380** |
+
+Lifecycle rule: current/living authority and active engineering documents receive substantive review; audits, old handoffs, sprint plans, research and superseded remediation are preserved as historical evidence and marker-scanned for misleading current-authority wording. Presence in the tree does not promote historical evidence to current authority.
 
 ## 3. Current engineering / evidence documents
 
@@ -94,7 +123,7 @@ Use for current implementation truth, always checking the live Git/PR SHA:
 Current candidate facts as of this reconciliation:
 
 - merged main: through PR #31 at `27d1cc6...`;
-- Draft PR #32: active integration candidate;
+- Draft PR #32: active integration candidate; `feat/operational-frontend-m365` exact head is `d725bbc6...` after F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into that branch; this is not merged-main authority;
 - Local immutable storage: G6 accepted;
 - OneDrive Exchange: G8 offline complete at code milestone `f896f15...`;
 - Working Change Observation: design/ADR accepted, runtime implementation contract still required;
@@ -156,6 +185,8 @@ is immutable historical evidence unless a file explicitly states it is a current
 Do not rewrite test counts, historical verdicts or old assumptions. If a later decision supersedes an
 audit conclusion, add a current disposition outside the evidence or in this status index.
 
+The 2026-09-21 documentation reconciliation audits are historical snapshots of their recorded branch/head/inventory. Their older roadmap labels, counts and implementation states do not override the 2026-09-24 status index, Unified Roadmap, current UI/UX authority or AI Master Plan.
+
 ## 8. Research / provider evidence
 
 Research documents are evidence, not authority unless promoted by an ADR/Product Owner decision.
@@ -195,8 +226,9 @@ minimum deterministic compiler/fill needed by OS-G3
    → Template Family / adaptation
 ```
 
-OfficeCLI is only a candidate read-only Office Intelligence sidecar until a bounded conformance gate
-accepts it. OfficeCLI/template/AI work is not allowed to displace Pre-case or Appraisal Core closure.
+OS-G5 may freeze/implement AI-assisted template UX/task contracts, provider-neutral interfaces and deterministic/rule-based candidate mapping. LLM/external-provider execution remains OS-G7 runtime under the AI Master Plan unless separately and explicitly authorized.
+
+OfficeCLI is only a candidate read-only Office Intelligence sidecar until a bounded conformance gate accepts it. OfficeCLI/template/AI work is not allowed to displace Pre-case or Appraisal Core closure.
 
 ## 11. Document lifecycle vocabulary
 
@@ -212,7 +244,21 @@ Use these distinct concepts:
 
 Never collapse them into one generic Candidate/Version model.
 
-## 12. Maintenance rule
+## 12. AI architecture and implementation-contract status
+
+Current AI architecture detail:
+- `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`;
+- ADR 0033/0034 as retained foundations;
+- `docs/implementation/VALORA-AI-PR-000...` through `...AI-PR-012...`.
+
+Rules:
+- AI-PR-000 documentation reconciliation is **IMPLEMENTED / NO RUNTIME AUTHORIZATION**.
+- AI-PR-001…012 are **PLANNED / NOT AUTHORIZED FOR RUNTIME** until explicit assignment and prerequisites.
+- Historical S13–S16 AI sequencing is evidence/reference only.
+- No provider call, migration, agent, R2 promotion or autonomous command is authorized by documentation presence.
+- OS-G1→OS-G6 should remain AI-readable-by-design.
+
+## 13. Maintenance rule
 
 When a current decision changes:
 

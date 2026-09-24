@@ -1,6 +1,6 @@
 ## Unified roadmap guardrail
 
-`docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` is the current product/development ordering. Sub-domain plans (storage, M365, template/Office, AI) may not reorder the North-star roadmap unless a new Product Owner decision explicitly amends it.
+`docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` is the current product/development ordering. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture and AI-readable-by-design requirements, but does not authorize runtime AI. Sub-domain plans (storage, M365, template/Office, AI) may not reorder the North-star roadmap unless a new Product Owner decision explicitly amends it.
 
 ## Current document authority guardrail
 
@@ -24,7 +24,7 @@ authoritative for accepted document revisions.
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-22 (exact-head baseline/delivery gate added; Fluent 2 OS-G0 planning frozen)
+**Last reconciled:** 2026-09-23 (integration head/F2 progress + AI Master Plan authority reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -46,7 +46,7 @@ PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566
 PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDrive Personal only. OneDrive for Business and SharePoint remain deferred.
 PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
-Operational Frontend — implemented on Draft PR #32 and locally browser-accepted with a simulated provider; it remains unmerged and is not North-star product-completion evidence.
+Operational Frontend — implemented on Draft PR #32. At reconciliation head `d725bbc6…`, F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 are merged on the integration branch and exact-head CI #454 is green; F2-PR-004…008 remain. The candidate is still unmerged to main and is not North-star product-completion evidence.
 The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
 Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
@@ -82,18 +82,21 @@ S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and mu
 ## 2. Design Authority
 
 ```text
+Explicit current Product Owner decision — named scope only
+CODEX.md
+ENGINEERING_GUARDRAILS.md
 docs/design/VALORA_UIUX_HANDOFF_v2.3.md
 docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
 directly relevant VALORA_UIUX_HANDOFF_v2.3_* addendum
-accepted scoped ADR(s)
 docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
-task-specific implementation contract
-docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
-docs/design/* current contracts (including Excel staging §15, frozen s12-pr-004-v1)
-docs/VALORA_PROJECT_HANDOFF.md
+docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 / AI-readiness only; no runtime authorization
+accepted scoped ADR(s)
+task-specific implementation contract / current design contract
+docs/VALORA_PROJECT_HANDOFF.md + current acceptance evidence
 Historical reference only where not superseded:
+  docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md as supersession/navigation map
   Design Book v1.2/v1.3/v1.4
-  docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
+  sprint / audit / remediation / research evidence
 ```
 
 ## 3. Module Boundaries
@@ -161,8 +164,7 @@ AITaskRun/DecisionEpisode provide task/learning provenance but do not replace do
 Workflow-pattern inputs are domain commands and committed outcomes, never UI clickstream.
 Temporary/autosave/unreviewed/failed/stale/rolled-back output is not positive learning evidence.
 Human, system and ai_service principals are distinct; AI/system cannot impersonate human approval.
-Gemini/DeepSeek (or other providers) are future gateway candidates only after
-deterministic S13–S15 foundations and ADR-governed provider integration.
+Gemini/DeepSeek (or other providers) are replaceable future gateway candidates only through the OS-G7 Task Registry/ModelPolicy/ProviderGateway gates in the AI Master Plan. Provider-backed runtime remains unauthorized until the applicable OS-G7 prerequisites and explicit task/provider authorization are satisfied.
 ```
 
 ### Adaptive Intake / Memory (v1.4 design authority and phased runtime)
@@ -187,8 +189,7 @@ No R2 auto-draft/auto-stage/exception-only-review promotion in S13–S16.
 Any future write-capable automation uses an allowlisted idempotent domain command
   with server tenant/RBAC/state/version checks and atomic required audit.
 Final price, QC approval, signature and report/certificate release remain human-only.
-Long-running production AI/extraction work requires durable outbox/job/attempt execution,
-  lease/retry/timeout/cancellation and stale-generation protection.
+Long-running production AI/extraction work must reuse the implemented durable `TaskJob`/`TaskJobAttempt`/worker boundary with lease/retry/timeout/cancellation/dead-letter and stale-generation protection; no second AI queue is permitted.
 Provider fallback is task-specific and evaluated; deterministic/manual fallback remains complete.
 Future agents use typed allowlisted tools and the same policy/command gates.
 ```

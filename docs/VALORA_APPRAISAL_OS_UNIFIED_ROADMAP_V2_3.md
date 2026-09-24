@@ -1,10 +1,10 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Date:** 2026-09-21
+**Last reconciled:** 2026-09-23
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
-**Repository state:** merged main through PR #31; active Draft PR #32 on `feat/operational-frontend-m365`
+**Repository state (reconciled 2026-09-23):** `origin/main` remains merged through PR #31 at `27d1cc6…`; active Draft PR #32 remains against `main`, while integration branch `feat/operational-frontend-m365` is at `d725bbc6…` after F2-PR-001 (#34), F2-PR-002 (#36) and F2-PR-003 (#38) merged into that integration branch. This is not claimed as merged to `main`.
 
 ## 1. Executive decision
 
@@ -27,7 +27,7 @@ Authority cleanup
 → Release / Publishing
 → Template Intelligence / Fidelity expansion
 → Product E2E completion
-→ Controlled AI expansion
+→ Valora Intelligence Platform & Assistant
 ```
 
 ## 2. Authority roles and non-negotiable model
@@ -36,12 +36,20 @@ Conflict resolution / role split:
 
 ```text
 1. Explicit current Product Owner decision — wins only in the scope it names
-2. Current UI/UX Design Authority v2.3 + Authority Index + applicable addenda + accepted scoped ADRs
+2. `CODEX.md`
+3. `ENGINEERING_GUARDRAILS.md`
+4. Current UI/UX Handoff v2.3
+5. Current UI/UX v2.3 Authority Index
+6. Applicable current v2.3 addendum
    → product semantics, workflow, IA, interaction and visual baseline
-3. This Unified Roadmap v2.3
+7. This Unified Roadmap v2.3
    → development sequencing and architecture integration
-4. Technical proposals / research
-5. Historical / superseded documents
+8. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
+   → OS-G7 / AI-readiness architecture detail only; not runtime authorization
+9. Accepted scoped ADR
+10. Current task / implementation contract
+11. Current handoff / acceptance evidence
+12. Historical Design Book / sprint / audit / remediation / research evidence
 ```
 
 `VALORA_UIUX_Handoff_v2.3` therefore answers **what the product must be**; this roadmap answers **what to build first and how the architecture is integrated**. The older Part 2C `PR-00 → PR-13` sequence is superseded for ordering only; its still-current UX/business contracts and acceptance invariants remain valid.
@@ -67,7 +75,9 @@ Conflict resolution / role split:
 `origin/main` accepted merged baseline remains PR #31 at
 `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`.
 
-### Active Draft PR #32
+### Active Draft PR #32 / integration branch
+
+PR #32 remains open/draft against `main`. Integration branch exact head is `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`; exact-head CI #454 is SUCCESS. F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 are merged into that integration branch only.
 
 Contains:
 - Operational Frontend candidate;
@@ -152,8 +162,8 @@ Accepted DocumentRevision(s)
 → ReleasePlan
 → Readiness
 → ReleaseExceptionDecision if needed
-→ exact-revision ReleaseManifest
-→ explicit Publish
+→ explicit Release Confirmation / idempotent Publish command [commit boundary]
+→ ReleaseManifest binds exact accepted DocumentRevision IDs
 → immutable PUBLISHED projection
 ```
 
@@ -344,8 +354,8 @@ Build real release domain:
 - `ReleasePlan`;
 - readiness;
 - exception decisions;
-- exact-revision `ReleaseManifest`;
-- idempotent publish;
+- explicit idempotent Release Confirmation / publish command;
+- exact-revision `ReleaseManifest` binding as the confirmed publish consequence;
 - unknown-result recovery;
 - immutable published projection.
 
@@ -367,6 +377,8 @@ After minimum deterministic document runtime exists:
 
 AI mapping remains proposal-only.
 
+**OS-G5 / OS-G7 boundary:** OS-G5 may freeze AI-assisted template UX/task contracts, provider-neutral interfaces and deterministic/rule-based candidate mapping needed for template intelligence. Any LLM/external-provider execution, `AITaskRun` runtime, model routing or provider fallback is OS-G7 runtime and remains gated by the AI Master Plan unless an explicit Product Owner decision authorizes a narrower exception.
+
 ### OS-G6 — Product Completion
 
 Complete:
@@ -377,16 +389,45 @@ Complete:
 - full exact-SHA North-star E2E;
 - negative/tenant/provider-uncertain paths.
 
-### OS-G7 — Controlled AI Expansion
+### OS-G7 — Valora Intelligence Platform & Assistant
 
-Only after the authoritative operating loop is closed:
-- AITaskRun/provenance;
-- DecisionEpisode/feedback;
-- benchmarked model/prompt releases;
-- deny-by-default ExecutionPolicy;
-- narrowly allowlisted autonomous commands where separately authorized.
+Runtime activation remains **after the authoritative operating loop is closed**. Architecture/design may be frozen earlier so OS-G1→OS-G6 remain AI-readable-by-design without activating AI.
+
+Master architecture: `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`.
+
+#### OS-G7.0 — AI Authority & Contract Freeze
+Master Plan, ADR 0033/0034 reconciliation, risk taxonomy, Assistant authority, AI-readable domain contract and initial task catalog. Documentation/design only; no provider calls.
+
+#### OS-G7.1 — AI Runtime Provenance Foundation
+`AITaskRun`, append-only `AITaskAttempt`, `AIContextManifest`, `DecisionEpisode`, `RetrievalIndexRelease`; reuse compatible `LearningFeedbackEvent`; bind to existing durable `TaskJob`/worker, no second AI queue.
+
+#### OS-G7.2 — Task Registry, Model Policy & Provider Gateway
+Versioned task/input/output/prompt/schema registry, model policy, provider-neutral gateway, deterministic/mock path first, redaction/data-policy and explicit evaluated fallback.
+
+#### OS-G7.3 — Context & Retrieval Engine
+Task-specific Context Assembler, reproducible `AIContextManifest`, structured/SQL/full-text/domain retrieval first, optional embeddings as derived projections, claim-to-source citation contract and versioned retrieval releases.
+
+#### OS-G7.4 — Valuation Knowledge v1
+First bounded pack: Machinery & Equipment + Comparison Approach + Vietnam + Vietnamese; versioned methodology, evidence semantics, comparable criteria, adjustment reasoning and professional control rules.
+
+#### OS-G7.5 — Typed Tool Registry
+Tenant-safe read tools over Case State, assets, evidence, quotes, knowledge, dossiers, pricing and documents; no generic SQL/database mutation tool.
+
+#### OS-G7.6 — Appraisal Intelligence Task Pack v1
+Start with bounded R0/R1 tasks such as case summary, next-action/blocker explanation, historical asset search, evidence summary/missing detection and price-deviation explanation. AI may draft/propose; it does not approve final price.
+
+#### OS-G7.7 — Valora Assistant
+Project/case/stage/asset-aware, Vietnamese-first, Fluent 2 light, tool-enabled and citation-grounded. Conversation history is UX context, not business truth. Provider failure must leave normal VALORA workflow usable.
+
+#### OS-G7.8 — Evaluation, Shadow & Release
+Versioned evaluation corpus with leakage controls; shadow execution and independent human comparison; model/prompt/retriever regression, latency/cost and unsupported-claim/citation metrics; capability-specific release, rollback and kill switch.
+
+#### OS-G7.9 — Controlled Automation
+Promotion lifecycle: shadow → review-only → active suggestion → narrowly evaluated reversible R2. Deny-by-default `ExecutionPolicy`. R3 official mutation remains authenticated human command; R4 final price/professional approval/signature/release remains human-only.
 
 AI never compensates for missing domain facts or missing authoritative commands.
+
+**Cross-cutting prerequisite effective now:** every OS-G1→OS-G6 vertical slice must expose durable facts, Case State/Next Action, blocker/warning/stale semantics, evidence/lineage references and authoritative version tokens so later AI does not reverse-engineer UI state.
 
 ## 12. Mapping from the Template/Fill technical proposal
 
@@ -414,7 +455,7 @@ AI never compensates for missing domain facts or missing authoritative commands.
 5. Release/Publishing.
 6. Template intelligence/fidelity expansion.
 7. Full product E2E.
-8. Controlled AI expansion.
+8. Valora Intelligence Platform & Assistant — execute OS-G7.0→OS-G7.9 only under explicit gates; provider/runtime activation remains downstream of authoritative-loop completion.
 
 ## 14. Governing principles
 

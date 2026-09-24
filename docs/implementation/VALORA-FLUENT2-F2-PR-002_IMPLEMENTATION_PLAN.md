@@ -1,6 +1,6 @@
 # F2-PR-002 — Fluent 2 Light Token & Shared-Style Foundation
 
-**Status:** READY FOR DEV
+**Status:** MERGED ON INTEGRATION — PR #36 / `4a7730fd22d5dcc5b07618fc2c9d770dbb629692`
 **Depends on:** F2-PR-001
 **Blocks:** F2-PR-003
 

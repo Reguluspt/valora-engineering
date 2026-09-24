@@ -268,4 +268,4 @@ Design Authority không đồng nghĩa product code đã implement.
 
 ## Roadmap placement — 2026-09-21
 
-This baseline remains valid Design Authority for AI-assisted template UX. It is not the current global engineering priority. Under the Unified Appraisal OS roadmap, AI Template Mapper/intelligence expansion belongs to OS-G5 after the minimum deterministic Document Runtime exists. AI remains proposal-only and may not become a dependency for ordinary production fill.
+This baseline remains valid Design Authority for AI-assisted template UX. It is not the current global engineering priority. Under the Unified Appraisal OS roadmap, OS-G5 may implement the UX/task contract, provider-neutral interfaces and deterministic/rule-based candidate mapping after the minimum deterministic Document Runtime exists. **LLM/external-provider-backed template analysis/mapping remains OS-G7 runtime under `VALORA_AI_MASTER_PLAN_V1.md` and is not authorized by this baseline alone**, unless a later explicit Product Owner decision opens a narrower exception. AI remains proposal-only and may not become a dependency for ordinary production fill.

@@ -1,6 +1,6 @@
 # F2-PR-003 — Shell, Login & Shared State Primitives
 
-**Status:** READY FOR DEV
+**Status:** MERGED ON INTEGRATION — PR #38 / `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`; exact-head CI #454 SUCCESS
 **Depends on:** F2-PR-002
 **Blocks:** F2-PR-004…007
 

@@ -1,8 +1,8 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-21 — Draft PR #32 contains Operational Frontend + accepted Local G6 + completed G8 offline Exchange; ADR 0045 is current document-change direction
-**Accepted merged code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31); **active candidate:** Draft PR #32 / `feat/operational-frontend-m365`
+**Reconciled:** 2026-09-23 — Draft PR #32 integration head `d725bbc6…` includes F2-PR-001…003, accepted Local G6 and completed G8 offline Exchange; ADR 0045 remains current document-change direction; AI architecture detail is `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
+**Accepted merged code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31); **active candidate:** Draft PR #32 / `feat/operational-frontend-m365` at reconciliation head `d725bbc6f60f2a21ec11a555d9565d2ab01470ae` (CI #454 SUCCESS)
 **Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`; Working-copy change semantics are governed by the 2026-09-21 addendum + ADR 0045
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
@@ -21,7 +21,7 @@ Draft PR #32 is the active integration candidate and now carries:
 
 Do not infer "product complete" from those infrastructure/integration milestones.
 Global Case State still has only the four prefix-stage providers; stages 5-16 remain unavailable.
-Legacy Review Queue / standalone Validation Dashboard / old Workbench right-panel IA remain debt.
+Legacy global Review Queue / standalone Validation Dashboard production routes were removed by F2-PR-001. The old Workbench right-panel IA remains remediation debt until F2-PR-005; F2-PR-003 has already replaced the production Astryx shell/login/shared-state primitives.
 
 The original PR-07 direct OneDrive replacement mechanism is blocked/historical. Reuse its Old/V/W,
 protected-value and explicit-conflict semantics only where compatible. New document-change runtime
@@ -65,7 +65,7 @@ The 2026-07-16 extension adds provider-independent `AITaskRun`/context/attempt p
 | `taxonomy_asset_identity` | Taxonomy, canonical assets, aliases, candidates; **planned** Raw Asset Observation + Asset Identity Memory |
 | `knowledge_evidence` | Evidence library, knowledge versions, quotes; **planned** reviewed bootstrap candidates |
 | `workflow_workbench` | Workflow + workbench session helpers; future patterns derive from domain commands/outcomes, not UI clickstream |
-| `document_engine_intelligence` | Document templates/render/intelligence tables; **planned** dossier extraction/alignment |
+| `document_engine_intelligence` | Document templates/render/intelligence tables; dossier extraction/alignment runtime foundations exist and reuse the durable `TaskJob`/worker boundary; the productized paired-dossier flow remains incomplete |
 | `ai_governance_security` | AI task/context/provider provenance and deterministic Execution Policy boundary; advisory only unless a later owner-approved task explicitly promotes capability |
 | `excel_import` | S12 streaming staging + Apply; **planned** Adaptive Intake + Column Mapping Memory |
 
@@ -77,7 +77,7 @@ API surface lives under `backend/app/api/*`. Frontend focus is Live Workbench un
 |---|---|
 | Backend | Auth, RBAC, domain APIs, persistence, audit, Excel intake + Apply |
 | Frontend | App shell, Workbench grid/drafts/session, API clients |
-| Worker | Skeleton only; planned durable outbox/job/attempt/lease/retry runtime before long-running dossier extraction and production AI tasks |
+| Worker | Durable `TaskJob`/`TaskJobAttempt` lease/retry/dead-letter runtime and reliable worker are implemented for document extraction/alignment; future AI tasks must reuse this boundary, not create a second queue |
 
 Local infra: PostgreSQL 16, Redis 7, MinIO via `docker-compose.yml`.
 
@@ -129,7 +129,7 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 | PR-00–PR-04 | MERGED bounded foundations/slices | PR #29; PR-01 remains four-stage Case State prefix |
 | PR-05 | MERGED backend/provider foundation | PR #30; delegated OneDrive Personal read/OAuth |
 | PR-06 | MERGED return/revalidation foundation | PR #31; five-way revalidation + live read acceptance |
-| Operational Frontend | IMPLEMENTED ON DRAFT PR #32 | Login/session/project/M365 workspace; local simulated-provider browser closeout exists; not merged |
+| Operational Frontend | IMPLEMENTED / PARTIALLY FLUENT-2-REMEDIATED ON DRAFT PR #32 | F2-PR-001…003 merged on integration head `d725bbc6…` (CI #454); F2-PR-004…008 remain; not merged to main |
 | Local immutable storage | G6 ACCEPTED | reviewed snapshot `d71a42e…`; durable G6 closeout manifest `5c54116…` |
 | OneDrive Exchange G8 | OFFLINE COMPLETE | code milestone `f896f15…`; exact-head CI #302 green; no live AppFolder conformance claim |
 | Working Change Observation direction | DESIGN/ADR ACCEPTED | ADR 0045 + v2.3 addendum; runtime implementation contract still required |
@@ -170,9 +170,9 @@ This S13–S16 sequence is historical only. Do not use it as the current executi
 
 - Historical S13-PR-005 Mapping-confirmation/Astryx UX sequence is not a current execution gate
 - Asset Identity Memory runtime
-- Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
+- Productized paired Excel–Word/PDF dossier flow beyond the existing extraction/alignment runtime foundations
 - AI provider runtime and end-to-end AI mapping/matching
-- `AITaskRun`, `DecisionEpisode`, AI context manifest and reliable AI job runtime
+- `AITaskRun`, `AITaskAttempt`, `AIContextManifest`, `DecisionEpisode` and the full AI task/provider runtime; existing durable `TaskJob`/worker infrastructure must be reused
 - R2 auto-draft/auto-stage/exception-only-review capability promotion
 - Open-ended agent orchestration or AI direct database mutation
 - PDF export remains out of scope; DOCX Document Workspace/report/certificate generation is in product scope and must follow current v2.3 authority

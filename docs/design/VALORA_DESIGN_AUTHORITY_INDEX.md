@@ -1,26 +1,30 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-21 (G8 offline Exchange complete on Draft PR #32; ADR 0045 + Working Change Observation design authority accepted)
+**Reconciled:** 2026-09-23 (authority hierarchy + F2-PR-001…003 integration state + AI Master Plan / Unified Roadmap reconciliation)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 **Documentation lifecycle:** `docs/DOCUMENTATION_STATUS_INDEX.md`.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Read order
 
-Product/UX/business semantics and visual authority are governed by `VALORA_UIUX_HANDOFF_v2.3.md`, `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and directly relevant v2.3 addenda. Development ordering / architecture integration is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. An explicit current Product Owner decision wins only in the scope it names.
+Product/UX/business semantics and visual authority are governed by `VALORA_UIUX_HANDOFF_v2.3.md`, `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and directly relevant v2.3 addenda. Development ordering / architecture integration is governed by `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture and AI-readable-by-design constraints but does not activate AI runtime. An explicit current Product Owner decision wins only in the scope it names.
 
-1. `CODEX.md` — live task gate and agent operating rules.
-2. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
-3. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
-4. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
-5. The v2.3 addendum directly governing the assigned task.
-6. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` — current development sequencing / architecture integration.
-7. `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` — lightweight implementation guard.
-8. This file — earlier-version relationship and supersession map.
-9. `docs/VALORA_PROJECT_HANDOFF.md` — verified implementation history and baseline context.
-10. Design Book v1.2-final plus v1.3/v1.4 addenda — established historical domain model and bounded contexts where not superseded.
-11. Feature contracts under `docs/design/`, then accepted ADRs and task-specific audit evidence.
+1. Explicit current Product Owner decision — wins only in the scope it names.
+2. `CODEX.md` — live task gate and agent operating rules.
+3. `ENGINEERING_GUARDRAILS.md` — permanent security, tenant, audit and mutation invariants.
+4. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical UI/UX master.
+5. `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` — v2.3 reading order and scope.
+6. The current v2.3 addendum directly governing the assigned scope.
+7. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` — current development sequencing / architecture integration.
+8. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 / AI-readiness architecture detail; never runtime authorization by itself.
+9. Accepted scoped ADR governing the assigned boundary.
+10. Current task / implementation contract, including `docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md` where applicable.
+11. `docs/VALORA_PROJECT_HANDOFF.md` and current acceptance evidence.
+12. Design Book v1.2-final plus v1.3/v1.4, sprint, audit, remediation and research material — historical/domain evidence where not superseded.
+
+This file is a supersession/navigation map for the authority above; it does not create a higher
+authority tier of its own.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
@@ -37,7 +41,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0030 | Column Mapping Memory and Adaptive Workbook Intake | Historical implementation foundation; current product placement is under `OS-G1` Pre-case/intake slices where required, not an S13 sequencing gate |
 | ADR 0031 | Asset Identity Memory and human-confirmed feedback | Historical implementation foundation; current product placement is under `OS-G2` Asset Review/Workbench where required, not an S14 sequencing gate |
 | ADR 0032 | Paired dossier aggregate, extraction and row alignment | Historical/domain foundation; activate only when a current Unified Roadmap slice requires it, not through the old S15 sequencing gate |
-| ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Domain provenance foundation remains valid; broad AI runtime/learning expansion belongs to `OS-G7`, with only bounded earlier use when a current slice explicitly requires it |
+| ADR 0033 | Audited AI task runs, Decision Episodes and learning evidence | Domain provenance foundation remains valid; provider-backed AI runtime/learning expansion belongs to `OS-G7`. Earlier OS-G5 work may define UX/task contracts or deterministic candidate logic, but provider/model execution requires the AI Master Plan gate unless separately and explicitly authorized |
 | ADR 0034 | Risk-tiered Execution Policy and reliable autonomous commands | Defines extension point only; no autonomous capability is promoted by historical S13–S16. Controlled automation belongs to `OS-G7` unless separately authorized earlier |
 | ADR 0036 | Computed Global Case State projection | Accepted foundation; PR-01 computed-on-read runtime is implemented and accepted; resume persistence remains deferred |
 | ADR 0037 | Durable Official Intake commit | Accepted foundation; the durable official-intake fact and command feed the implemented PR-01 provider |
@@ -74,7 +78,7 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 
 ```text
 Accepted merged baseline: origin/main 27d1cc6… (PR #31)
-Active integration candidate: Draft PR #32 / feat/operational-frontend-m365
+Active integration candidate: Draft PR #32 / `feat/operational-frontend-m365` at reconciliation head `d725bbc6…` after F2-PR-001…003 merged on that branch; CI #454 SUCCESS; not merged to main
 G6 Local immutable storage: ACCEPTED
 G8 OneDrive Personal Exchange offline implementation: COMPLETE at f896f15…
 ADR 0045 / Working Change Observation design authority: ACCEPTED
@@ -86,7 +90,7 @@ Authority cleanup
 → Document Workspace with automatic observation/revalidation + Change Candidate + Human Commit
 → Release/Publishing
 → traceability/state/fidelity/E2E
-→ bounded AI expansion
+→ Valora Intelligence Platform & Assistant (OS-G7)
 
 Original direct OneDrive replacement PR-07 write path: BLOCKED/HISTORICAL.
 Protected Old/V/W and explicit conflict semantics remain reusable.

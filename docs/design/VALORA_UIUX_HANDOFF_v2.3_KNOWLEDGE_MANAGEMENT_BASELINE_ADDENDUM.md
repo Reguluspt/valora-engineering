@@ -39,7 +39,7 @@ The list is table/list-first and supports search/filter. Selecting an asset open
 
 ### 2.2 Cần rà soát
 
-Review queue for candidates that require a user decision, including identity candidates, contextual-alias candidates and knowledge candidates extracted from historical dossiers.
+Domain-local `Cần rà soát` review queue for candidates that require a user decision, including identity candidates, contextual-alias candidates and knowledge candidates extracted from historical dossiers. This is not the deprecated global Review Queue product route/workflow.
 
 No high-confidence candidate may become active knowledge without an explicit user decision.
 
