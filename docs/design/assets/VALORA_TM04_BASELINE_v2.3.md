@@ -117,4 +117,4 @@ Chuỗi baseline module template tại thời điểm này:
 
 TM02 và TM05 hiện giữ IA/capability đã mô tả trong Handoff v2.3; không tự suy diễn visual baseline chi tiết nếu chưa có mockup được duyệt.
 
-Sau khi TM04 được chốt, nhiệm vụ UI/UX tiếp theo là `S17 — Hoàn tất hồ sơ`, dùng readiness từ checkpoint báo giá NCC + template/output để tổng hợp blocking/warning trước khi hoàn tất hồ sơ.
+Historical note: when TM04 was approved, the next design task was labeled `S17 — Hoàn tất hồ sơ`. Current routing is superseded by the newer Final Result authority: after completing individual NCC quotes and selecting the confirmed NCC, the flow proceeds directly to `Kết quả thẩm định giá`. The approved S17 Iteration 3 artifact remains authority only for the child screen `Hoàn tất một báo giá NCC`; it does not authorize a standalone whole-case S17 readiness dashboard/checkpoint.

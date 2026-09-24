@@ -56,18 +56,16 @@ TM01 Danh sách mẫu
 
 TM02/TM05 tiếp tục giữ IA/capability đã mô tả; chưa tự suy diễn visual baseline riêng.
 
-## E. Nhiệm vụ UI/UX tiếp theo
+## E. Historical next-task note / current routing disposition
 
-Sau khi TM04 được chốt baseline, **nhiệm vụ thiết kế tiếp theo chuyển sang `S17 — Hoàn tất hồ sơ`**.
+At the time TM04 was approved, the next design task was labeled `S17 — Hoàn tất hồ sơ`. That sequencing note is **historical only**.
 
-S17 cần tổng hợp readiness/blocking/warning từ các bước trước, đặc biệt:
+Current routing is governed by the newer Final Result authority:
 
-- tài sản/Đơn giá hiện hành;
-- nguồn giá & chứng cứ;
-- trạng thái báo giá NCC;
-- coverage NCC đã xác nhận;
-- file ký/đóng dấu và selection NCC/báo giá dùng trong hồ sơ;
-- khả năng tạo file báo giá theo template Word đã sẵn sàng;
-- thay đổi chưa lưu/commit và dependency bắt buộc khác.
+```text
+Hoàn tất từng báo giá NCC
+→ Chọn nhà cung cấp đã xác nhận giá
+→ Kết quả thẩm định giá
+```
 
-Không tạo checkpoint Kiểm tra hồ sơ hoặc KSCL riêng; validation tiếp tục phân tán và S17 chỉ tổng hợp readiness để người dùng quyết định hoàn tất.
+The approved S17 Iteration 3 baseline remains valid only as the child screen `Hoàn tất một báo giá NCC`. Do not create or revive a standalone whole-case `S17 — Hoàn tất hồ sơ` readiness dashboard/checkpoint between NCC Selection and Final Result. If a future whole-case completion action is needed for state/audit, it must preserve the locked routing and requires explicit newer authority.
