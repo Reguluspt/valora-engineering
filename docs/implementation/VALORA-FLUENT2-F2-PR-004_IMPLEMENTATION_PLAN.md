@@ -1,6 +1,8 @@
 # F2-PR-004 — Case Overview & Project List Golden Remediation
 
-**Status:** READY FOR DEV
+**Status:** MERGED ON INTEGRATION — PR #40 / `54cf769c89cc4f7601e8ffb89e25f925f6500483`
+**Browser acceptance:** PASS — [evidence](evidence/F2-PR-004/BROWSER_ACCEPTANCE.md)
+**Exact-head integration CI:** #461 — SUCCESS
 **Depends on:** F2-PR-003
 **Authority:** Orchestration Hub Iteration 2 + current shell authority
 
