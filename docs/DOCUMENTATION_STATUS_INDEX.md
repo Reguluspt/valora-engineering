@@ -1,9 +1,9 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-23
+**Date:** 2026-09-24
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 379 documentation/config-document artifacts at the 2026-09-23 exact-tree sweep: 368 Markdown files + 11 supporting documentation artifacts (JSON/config evidence) across the root governance set and `docs/**`.
+**Inventory reconciliation:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
 ## 1. Why this index exists
 
@@ -77,12 +77,13 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Microsoft Fluent 2 light is current product visual authority.
 - S10/S12/S13/NCCQ/NCC Selection/Không gian tài liệu approved baselines are golden visual references.
 - Astryx mapping/package records are historical/low-level implementation evidence only.
-- Existing dark/cyan/glassmorphic frontend is remediation debt, not visual acceptance.
+- F2-PR-001…003 already moved production routing, shared Fluent 2 tokens/styles and shell/login/shared-state primitives toward the current authority. F2-PR-004…008 own the remaining feature-surface, residual stylesheet/package and visual-regression closure. Historical `Astryx`/dark/cyan/glass mentions or prohibition text do not imply current visual direction.
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
-- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
+- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
+- Final documentation reconciliation record: `docs/audits/2026-09-24__AI_MASTER_PLAN_UNIFIED_ROADMAP_DOCUMENTATION_RECONCILIATION.md`.
 
-### 2.2 2026-09-23 inventory by lifecycle/category
+### 2.2 2026-09-24 inventory by lifecycle/category
 
 Exact-tree inventory used for this reconciliation:
 
@@ -92,7 +93,7 @@ Exact-tree inventory used for this reconciliation:
 | `docs/` root files | 9 |
 | ADR | 45 |
 | Architecture | 1 |
-| Audits | 150 |
+| Audits | 151 |
 | Design (including design assets) | 70 |
 | Handoff | 4 |
 | Implementation | 57 |
@@ -101,7 +102,7 @@ Exact-tree inventory used for this reconciliation:
 | Remediation | 4 |
 | Research | 8 |
 | Sprint 1–8 history | 17 |
-| **Total** | **379** |
+| **Total** | **380** |
 
 Lifecycle rule: current/living authority and active engineering documents receive substantive review; audits, old handoffs, sprint plans, research and superseded remediation are preserved as historical evidence and marker-scanned for misleading current-authority wording. Presence in the tree does not promote historical evidence to current authority.
 
@@ -183,6 +184,8 @@ Everything under:
 is immutable historical evidence unless a file explicitly states it is a current remediation task.
 Do not rewrite test counts, historical verdicts or old assumptions. If a later decision supersedes an
 audit conclusion, add a current disposition outside the evidence or in this status index.
+
+The 2026-09-21 documentation reconciliation audits are historical snapshots of their recorded branch/head/inventory. Their older roadmap labels, counts and implementation states do not override the 2026-09-24 status index, Unified Roadmap, current UI/UX authority or AI Master Plan.
 
 ## 8. Research / provider evidence
 
