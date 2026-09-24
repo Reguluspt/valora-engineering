@@ -64,7 +64,6 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
     label: "neon cyan literals",
     pattern: /(?:#(?:66fcf1|45f3ff)(?:[0-9a-f]{2})?\b|rgba?\(\s*(?:102(?:\s*,\s*|\s+)252(?:\s*,\s*|\s+)241|69(?:\s*,\s*|\s+)243(?:\s*,\s*|\s+)255)\b[^)]*\))/gi,
     allowedOccurrences: {
-      "components/case-overview/caseOverview.css": 2,
       "components/m365/m365Workspace.css": 1,
       "components/workbench/AssetGrid.tsx": 2,
       "components/workbench/panels/PriceEvidencePanel.tsx": 1,
@@ -109,9 +108,7 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   {
     label: "legacy dark surface declarations",
     pattern: /["']?--(?!valora-)[a-z0-9-]*(?:bg|background|canvas|surface)[a-z0-9-]*["']?\s*:\s*["']?(?:#[0-3](?:[0-9a-f]{2}|[0-9a-f]{3}|[0-9a-f]{5}|[0-9a-f]{7})\b|rgba?\s*\()/gi,
-    allowedOccurrences: {
-      "components/case-overview/caseOverview.css": 2,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ["--legacy-surface: #111", '"--panel-bg": "rgba(0, 0, 0, 0.8)"'],
   },
 ];
