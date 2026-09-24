@@ -94,7 +94,7 @@ export function CaseOverviewContent({
   const actionCopy = nextActionCopy(projection.next_action);
   const actionPath = mappedNextActionPath(projection.next_action, workbenchPath);
   const completeCount = projection.stages.filter((stage) => stage.result === "COMPLETE").length;
-  const availableCount = projection.capabilities.filter((capability) => capability.available).length;
+  const unavailableCount = projection.stages.filter((stage) => stage.result === "NOT_AVAILABLE").length;
 
   return (
     <main className="case-overview-page">
@@ -106,19 +106,17 @@ export function CaseOverviewContent({
             Theo dõi các bước bắt buộc và mở đúng việc cần xử lý tiếp theo.
           </p>
         </div>
-        <div className="case-overview-current-stage" aria-label="Giai đoạn hiện tại" role="group">
-          <span>Giai đoạn hiện tại</span>
-          <strong>{currentStageLabel}</strong>
-          <small>{projection.current_stage}</small>
-        </div>
       </header>
 
-      <section className="case-overview-summary" aria-label="Tóm tắt trạng thái">
-        <SummaryMetric label="Bước đã hoàn tất" value={`${completeCount}/${projection.stages.length}`} />
-        <SummaryMetric label="Nguồn trạng thái sẵn sàng" value={`${availableCount}/${projection.capabilities.length}`} />
-        <SummaryMetric label="Vấn đề bắt buộc" value={String(projection.blockers.length)} tone={projection.blockers.length ? "danger" : "neutral"} />
+      <section className="case-overview-summary" aria-label="Trạng thái hồ sơ">
+        <div className="case-state-summary">
+          <span>Trạng thái hồ sơ</span>
+          <strong>{currentStageLabel}</strong>
+          <small>{completeCount}/{projection.stages.length} bước đã xác nhận hoàn tất{unavailableCount > 0 ? ` · ${unavailableCount} bước chưa khả dụng` : ""}</small>
+        </div>
+        <SummaryMetric label="Vấn đề ngăn bước" value={String(projection.blockers.length)} tone={projection.blockers.length ? "danger" : "neutral"} />
         <SummaryMetric label="Cảnh báo" value={String(projection.warnings.length)} tone={projection.warnings.length ? "warning" : "neutral"} />
-        <SummaryMetric label="Cần xem lại" value={String(projection.stale.length)} tone={projection.stale.length ? "warning" : "neutral"} />
+        <SummaryMetric label="Cần xem lại" value={String(projection.stale.length)} tone={projection.stale.length ? "stale" : "neutral"} />
       </section>
 
       <div className="case-overview-layout">
@@ -129,7 +127,7 @@ export function CaseOverviewContent({
                 <p>Luồng hồ sơ</p>
                 <h2 id="case-progress-title">Tiến độ các bước bắt buộc</h2>
               </div>
-              <span>16 giai đoạn chuẩn</span>
+              <span>{projection.stages.length} bước theo thứ tự hệ thống</span>
             </div>
             <div className="case-stage-list">
               {projection.stages.map((stage, index) => {
@@ -143,11 +141,10 @@ export function CaseOverviewContent({
                     <span className="case-stage-index">{String(index + 1).padStart(2, "0")}</span>
                     <div className="case-stage-copy">
                       <strong>{CASE_STAGE_LABELS[stage.stage]}</strong>
-                      <small>{stage.stage}</small>
+                      {!capability?.available && <small>Chưa có nguồn trạng thái được xác nhận</small>}
                     </div>
-                    <span className="case-stage-result">{CASE_RESULT_LABELS[stage.result]}</span>
-                    <span className="case-stage-capability">
-                      {capability?.available ? "Có nguồn dữ liệu" : "Chưa có nguồn dữ liệu"}
+                    <span className={`valora-status case-stage-result case-stage-result--${stage.result.toLowerCase().replace(/_/g, "-")}`}>
+                      {CASE_RESULT_LABELS[stage.result]}
                     </span>
                   </div>
                 );
@@ -180,7 +177,7 @@ export function CaseOverviewContent({
                   {projection.stale.map((item) => (
                     <li data-issue-kind="stale" key={String(item.id ?? item.target_id ?? JSON.stringify(item))}>
                       <strong>Dữ liệu cần xem lại</strong>
-                      <span>{String(item.target_type ?? "Nguồn trạng thái hồ sơ")}</span>
+                      <span>Hệ thống đã đánh dấu nguồn dữ liệu này cần được xem lại.</span>
                     </li>
                   ))}
                 </ul>
@@ -196,7 +193,7 @@ export function CaseOverviewContent({
             <span>{actionCopy.description}</span>
             {actionPath && (
               <button
-                className="case-primary-action"
+                className="valora-button valora-button--primary case-primary-action"
                 data-primary-action={true}
                 onClick={() => onNavigate(actionPath)}
                 type="button"
@@ -214,13 +211,13 @@ export function CaseOverviewContent({
           <section className="case-rail-section">
             <p>Ngữ cảnh hồ sơ</p>
             <h3>Chưa được ghi nhận</h3>
-            <span>Resume Target chưa có nguồn dữ liệu được phê duyệt trong phiên bản này.</span>
+            <span>Hệ thống chưa cung cấp vị trí làm việc gần nhất cho hồ sơ này.</span>
           </section>
 
           <section className="case-rail-section">
             <p>Hoạt động gần đây</p>
             <h3>Chưa được ghi nhận</h3>
-            <span>Projection hiện tại chưa cung cấp lịch sử hoạt động của hồ sơ.</span>
+            <span>Hệ thống chưa cung cấp hoạt động gần đây của hồ sơ.</span>
           </section>
 
           <footer className="case-version">
@@ -240,7 +237,7 @@ function SummaryMetric({
 }: {
   label: string;
   value: string;
-  tone?: "neutral" | "warning" | "danger";
+  tone?: "neutral" | "warning" | "danger" | "stale";
 }) {
   return (
     <div className={`case-summary-metric case-summary-metric--${tone}`}>
@@ -274,7 +271,7 @@ function IssueSection({
           {issues.map((issue) => (
             <li data-issue-kind={kind} key={issue.id}>
               <strong>{kind === "blocking" ? "Cần xử lý bắt buộc" : "Cần chú ý"}</strong>
-              <span>Mã vấn đề {issue.id.slice(0, 8)} · {issue.target_type}</span>
+              <span>Mã tham chiếu {issue.id.slice(0, 8)}</span>
             </li>
           ))}
         </ul>
@@ -286,14 +283,14 @@ function IssueSection({
 function CaseOverviewSkeleton() {
   return (
     <main className="case-overview-page case-overview-skeleton" role="status" aria-live="polite" aria-label="Đang tải trạng thái hồ sơ">
-      <div className="case-skeleton-line case-skeleton-line--title" />
-      <div className="case-skeleton-line case-skeleton-line--subtitle" />
+      <div className="valora-skeleton case-skeleton-line case-skeleton-line--title" />
+      <div className="valora-skeleton case-skeleton-line case-skeleton-line--subtitle" />
       <div className="case-skeleton-metrics">
-        {Array.from({ length: 4 }, (_, index) => <div key={index} />)}
+        {Array.from({ length: 4 }, (_, index) => <div className="valora-skeleton" key={index} />)}
       </div>
       <div className="case-skeleton-body">
-        <div />
-        <div />
+        <div className="valora-skeleton" />
+        <div className="valora-skeleton" />
       </div>
     </main>
   );
@@ -313,12 +310,12 @@ function CaseOverviewError({
   onRetry: () => void;
 }) {
   return (
-    <main className="case-overview-error" data-state={dataState}>
+    <main className="case-overview-error" data-state={dataState} role="alert">
       <p>Tổng quan hồ sơ</p>
       <h1>{title}</h1>
       <span>{message}</span>
       <small>{nextAction}</small>
-      <button type="button" onClick={onRetry}>Tải lại trạng thái</button>
+      <button className="valora-button valora-button--primary" type="button" onClick={onRetry}>Tải lại trạng thái</button>
     </main>
   );
 }
