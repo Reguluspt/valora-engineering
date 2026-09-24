@@ -1,5 +1,7 @@
 # 2026-09-21 — Documentation Reconciliation Audit — Handoff v2.3 / Unified Roadmap / Fluent 2
 
+> **Historical reconciliation snapshot — current disposition (2026-09-23):** This audit preserves the exact branch/head/inventory/status evidence from 2026-09-21. It is not current product/development authority. Current authority/status comes from `docs/DOCUMENTATION_STATUS_INDEX.md`, `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`, current UI/UX v2.3 authority, accepted scoped ADRs and `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`. Historical roadmap labels such as `Controlled AI Expansion`, old branch heads, counts or implementation states below must not be promoted to current truth. This snapshot does not authorize runtime AI.
+
 **Status:** COMPLETE — CURRENT-LIVING-DOC RECONCILIATION
 **Branch:** `feat/operational-frontend-m365` / Draft PR #32
 **Inventory:** 350 documentation/config-document files enumerated from the branch tree.

@@ -1,5 +1,7 @@
 # 2026-09-21 — Documentation Reconciliation Audit — Live Tree Final
 
+> **Historical reconciliation snapshot — current disposition (2026-09-23):** This audit preserves the exact branch/head/inventory/status evidence from 2026-09-21. It is not current product/development authority. Current authority/status comes from `docs/DOCUMENTATION_STATUS_INDEX.md`, `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`, current UI/UX v2.3 authority, accepted scoped ADRs and `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`. Historical roadmap labels such as `Controlled AI Expansion`, old branch heads, counts or implementation states below must not be promoted to current truth. This snapshot does not authorize runtime AI.
+
 **Status:** COMPLETE — LIVE-TREE CONSISTENCY SWEEP
 **Branch:** `feat/operational-frontend-m365` / Draft PR #32
 **Pre-fix head:** `b9b6610a502f17ac143bf9b72b2653770bcc0e32`
