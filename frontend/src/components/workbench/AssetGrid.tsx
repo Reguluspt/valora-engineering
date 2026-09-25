@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, UIEvent } from "react";
+import React, { useState, useMemo, UIEvent } from "react";
 import { AssetLineGridRow, GridSortState, SortField } from "./AssetGridTypes";
 import { AssetGridToolbar } from "./AssetGridToolbar";
 import { StatusBadge } from "../common/StatusBadge";
@@ -175,7 +175,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
   }
 
   return (
-    <div className="asset-grid-container" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="asset-grid-container">
       <AssetGridToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -187,65 +187,67 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
       />
 
       {filteredAndSortedRows.length === 0 ? (
-        <EmptyState />
+        <EmptyState title="Không có tài sản phù hợp" message="Hãy thay đổi từ khóa hoặc bộ lọc để xem các dòng tài sản khác." />
       ) : (
         <div
-          className="grid-scroll-viewport"
+          className="grid-scroll-viewport valora-table-shell"
           onScroll={handleScroll}
-          style={{
-            height: `${containerHeight}px`,
-            overflowY: "auto",
-            border: "1px solid var(--border-color)",
-            borderRadius: "var(--radius-md)",
-            position: "relative",
-            backgroundColor: "rgba(255, 255, 255, 0.01)"
-          }}
+          style={{ height: `${containerHeight}px` }}
         >
           {/* Table Container */}
-          <table style={{ width: "100%", borderCollapse: "collapse", position: "relative" }}>
-            <thead style={{ position: "sticky", top: 0, backgroundColor: "var(--bg-secondary)", zIndex: 10, borderBottom: "2px solid var(--border-color)" }}>
-              <tr style={{ height: "45px" }}>
-                <th style={{ padding: "var(--space-sm)", textAlign: "left", width: "40px" }}>
+          <table className="valora-table asset-grid-table asset-grid-table--header" aria-label="Tiêu đề danh sách tài sản">
+            <thead>
+              <tr>
+                <th className="asset-grid-col-check">
                   <input
                     type="checkbox"
+                    aria-label="Chọn tất cả dòng đang hiển thị"
                     checked={selectedIds.size > 0 && selectedIds.size === filteredAndSortedRows.length}
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left", width: "60px" }} onClick={() => handleSortChange("line_no")}>
-                  # {sortState.field === "line_no" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                <th className="asset-grid-col-number" aria-sort={sortState.field === "line_no" ? (sortState.order === "asc" ? "ascending" : "descending") : "none"}>
+                  <button type="button" className="asset-grid-sort" onClick={() => handleSortChange("line_no")}>
+                    # {sortState.field === "line_no" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  </button>
                 </th>
-                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "left" }} onClick={() => handleSortChange("raw_name")}>
-                    Tên gốc {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  <th aria-sort={sortState.field === "raw_name" ? (sortState.order === "asc" ? "ascending" : "descending") : "none"}>
+                    <button type="button" className="asset-grid-sort" onClick={() => handleSortChange("raw_name")}>
+                      Tên gốc {sortState.field === "raw_name" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                    </button>
                   </th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tên chuẩn hóa</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Tài sản chuẩn</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Biến thể</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "left" }}>Phân loại</th>
-                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "80px" }} onClick={() => handleSortChange("quantity")}>
-                    SL {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  <th>Tên chuẩn hóa</th>
+                  <th>Tài sản chuẩn</th>
+                  <th>Biến thể</th>
+                  <th>Phân loại</th>
+                  <th className="asset-grid-col-quantity" aria-sort={sortState.field === "quantity" ? (sortState.order === "asc" ? "ascending" : "descending") : "none"}>
+                    <button type="button" className="asset-grid-sort asset-grid-sort--numeric" onClick={() => handleSortChange("quantity")}>
+                      SL {sortState.field === "quantity" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                    </button>
                   </th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Đơn vị</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 1</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 2</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "right", width: "100px" }}>Báo giá 3</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px" }}>Tiền tệ</th>
-                  <th style={{ cursor: "pointer", padding: "var(--space-sm)", textAlign: "right", width: "120px" }} onClick={() => handleSortChange("appraised_price")}>
-                    Giá TĐ {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                  <th className="asset-grid-col-unit">Đơn vị</th>
+                  <th className="asset-grid-col-quote">Báo giá 1</th>
+                  <th className="asset-grid-col-quote">Báo giá 2</th>
+                  <th className="asset-grid-col-quote">Báo giá 3</th>
+                  <th className="asset-grid-col-unit">Tiền tệ</th>
+                  <th className="asset-grid-col-price" aria-sort={sortState.field === "appraised_price" ? (sortState.order === "asc" ? "ascending" : "descending") : "none"}>
+                    <button type="button" className="asset-grid-sort asset-grid-sort--numeric" onClick={() => handleSortChange("appraised_price")}>
+                      Giá TĐ {sortState.field === "appraised_price" ? (sortState.order === "asc" ? "▲" : "▼") : ""}
+                    </button>
                   </th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>Trạng thái nháp</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra DL</th>
-                  <th style={{ padding: "var(--space-sm)", textAlign: "center" }}>K.tra</th>
+                  <th>Trạng thái nháp</th>
+                  <th>Kiểm tra dữ liệu</th>
+                  <th>Trạng thái rà soát</th>
               </tr>
             </thead>
           </table>
 
           {/* Virtual height spacers */}
-          <div style={{ height: `${totalHeight}px`, width: "100%", position: "absolute", top: 0, left: 0, pointerEvents: "none" }} />
+          <div className="asset-grid-virtual-spacer" style={{ height: `${totalHeight}px` }} />
 
           {/* Absolute offset container for actual table rows */}
-          <div style={{ transform: `translateY(${offsetY}px)`, position: "absolute", left: 0, right: 0, top: 0 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="asset-grid-virtual-rows" style={{ transform: `translateY(${offsetY}px)` }}>
+            <table className="valora-table asset-grid-table" aria-label="Danh sách tài sản">
               <tbody>
                 {visibleRows.map((row) => {
                   const isSelected = selectedIds.has(row.project_asset_line_id);
@@ -266,59 +268,61 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       key={row.project_asset_line_id}
                       className={rowClass}
                       onClick={() => handleRowClick(row.project_asset_line_id)}
-                      data-row-version={row.row_version}
-                      style={{
-                        height: `${rowHeight}px`,
-                        borderBottom: "1px solid var(--border-color)",
-                        cursor: "pointer",
-                        backgroundColor: isActive
-                          ? "rgba(102, 252, 241, 0.12)"
-                          : isSelected
-                          ? "rgba(102, 252, 241, 0.04)"
-                          : "transparent"
+                      onKeyDown={(event) => {
+                        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                          event.preventDefault();
+                          handleRowClick(row.project_asset_line_id);
+                        }
                       }}
+                      tabIndex={0}
+                      aria-label={`Tài sản dòng ${row.line_no}: ${row.raw_name}`}
+                      aria-selected={isSelected}
+                      data-active={isActive}
+                      data-row-version={row.row_version}
                     >
-                      <td style={{ padding: "var(--space-sm)", textAlign: "left", width: "40px" }}>
+                      <td className="asset-grid-col-check">
                         <input
                           type="checkbox"
+                          aria-label={`Chọn dòng ${row.line_no}: ${row.raw_name}`}
                           checked={isSelected}
                           onChange={(e) => {}}
                           onClick={(e) => handleCheckboxClick(e, row.project_asset_line_id)}
                         />
                       </td>
-                      <td style={{ padding: "var(--space-sm)", width: "60px", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
+                      <td className="asset-grid-col-number asset-grid-muted">
                         {row.line_no}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", fontWeight: 600, color: "#fff", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.raw_name}>
+                      <td className="asset-grid-name" title={row.raw_name}>
                         {row.raw_name}
+                        {isActive && <span className="asset-grid-active-label">Đang xem</span>}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-muted">
                         {nameValue ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", color: "var(--accent-cyan)" }}>
+                      <td>
                         {row.canonical_asset?.standard_name ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", color: "var(--text-muted)" }}>{row.asset_variant?.display_name ?? "—"}</td>
-                      <td style={{ padding: "var(--space-sm)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.taxonomy_node?.path ?? ""}>
+                      <td className="asset-grid-muted">{row.asset_variant?.display_name ?? "—"}</td>
+                      <td className="asset-grid-taxonomy asset-grid-muted" title={row.taxonomy_node?.path ?? ""}>
                         {row.taxonomy_node?.path ?? "Chưa phân loại"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "right", width: "80px" }}>{row.quantity}</td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-col-quantity">{row.quantity}</td>
+                      <td className="asset-grid-col-unit asset-grid-muted">
                         {row.unit?.name_vi ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-col-quote asset-grid-muted">
                         {row.supplier_quote_1 != null ? row.supplier_quote_1.toLocaleString() : "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-col-quote asset-grid-muted">
                         {row.supplier_quote_2 != null ? row.supplier_quote_2.toLocaleString() : "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "right", fontSize: "var(--font-size-xs)", width: "100px", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-col-quote asset-grid-muted">
                         {row.supplier_quote_3 != null ? row.supplier_quote_3.toLocaleString() : "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "center", width: "60px", color: "var(--text-muted)" }}>
+                      <td className="asset-grid-col-unit asset-grid-muted">
                         {row.currency?.code ?? "—"}
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "right", fontWeight: 600, width: "120px", color: "var(--accent-blue)" }}>
+                      <td className="asset-grid-col-price">
                         <InlineDraftCell
                           value={priceValue != null ? (typeof priceValue === "number" ? priceValue.toString() : priceValue) : "—"}
                           isDirty={isPriceDirty}
@@ -330,15 +334,16 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                           }}
                         />
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                      <td className="asset-grid-status-cell">
+                        <div className="asset-grid-draft-status">
                           <StatusBadge
                             status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                             label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                           />
                           {draftStates[row.project_asset_line_id]?.has_saved_draft && row.row_version != null && (
                             <button
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 if (row.row_version == null) return;
                                 executeDraftCommit(
                                   (msg) => window.confirm(msg),
@@ -349,28 +354,20 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                                   "Xác nhận áp dụng nháp\n\nThao tác này sẽ cập nhật dữ liệu chính thức của dòng tài sản bằng giá trị nháp đã lưu."
                                 )
                               }}
-                              style={{
-                                fontSize: "10px",
-                                padding: "2px 6px",
-                                backgroundColor: "var(--status-review)",
-                                border: "none",
-                                borderRadius: "3px",
-                                color: "#fff",
-                                cursor: "pointer"
-                              }}
+                              className="valora-button valora-button--secondary asset-grid-commit"
                             >
                               Áp dụng nháp
                             </button>
                           )}
                         </div>
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
+                      <td className="asset-grid-status-cell">
                         <StatusBadge
                           status={row.validation_status === "valid" ? "approved" : row.validation_status}
                           label={validationLabel(row.validation_status)}
                         />
                       </td>
-                      <td style={{ padding: "var(--space-sm)", textAlign: "center" }}>
+                      <td className="asset-grid-status-cell">
                         <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={reviewLabel(row.review_status)} />
                       </td>
                     </tr>
