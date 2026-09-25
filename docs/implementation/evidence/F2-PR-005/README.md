@@ -5,7 +5,7 @@ Run on 2026-09-25 in the Codex in-app Browser against the repository's existing 
 | Evidence | Observation |
 | --- | --- |
 | `01-workbench-grid.png` | Normal loaded grid, with no permanent right rail. |
-| `02-active-asset-drawer.png` | Selecting asset line 1 opens its contextual drawer and shows its identity. |
+| `02-active-asset-drawer.png` | Selecting asset line 1 opens its contextual drawer and shows its identity. The “Đang xem” label remains visible beside the truncated asset name. |
 | `03-price-evidence-section.png` | Price Evidence section is reachable in the selected asset context. The current context hook supplies no evidence data, so the section shows its truthful empty state. |
 | `04-lineage-section.png` | Lineage section is reachable and shows the truthful empty state for this fixture. |
 | `05-drawer-closed-selected-grid.png` | Closing the drawer restores focus to its trigger and keeps the active asset selected in the grid. |

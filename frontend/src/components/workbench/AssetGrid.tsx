@@ -293,8 +293,10 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                         {row.line_no}
                       </td>
                       <td className="asset-grid-name" title={row.raw_name}>
-                        {row.raw_name}
-                        {isActive && <span className="asset-grid-active-label">Đang xem</span>}
+                        <span className="asset-grid-name-content">
+                          <span className="asset-grid-name-text">{row.raw_name}</span>
+                          {isActive && <span className="asset-grid-active-label">Đang xem</span>}
+                        </span>
                       </td>
                       <td className="asset-grid-muted">
                         {nameValue ?? "—"}

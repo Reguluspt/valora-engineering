@@ -202,14 +202,27 @@
   font-weight: var(--valora-font-weight-semibold);
 }
 
+.asset-grid-name-content {
+  display: flex;
+  min-width: 0;
+  gap: var(--valora-space-xs);
+  align-items: center;
+}
+
+.asset-grid-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .asset-grid-taxonomy {
   font-size: var(--valora-font-size-caption);
 }
 
 .asset-grid-active-label {
   display: inline-block;
+  flex: none;
   padding: 0 var(--valora-space-xs);
-  margin-left: var(--valora-space-xs);
   border: 1px solid var(--valora-color-status-info-border);
   border-radius: var(--valora-radius-pill);
   background: var(--valora-color-status-info-background);
