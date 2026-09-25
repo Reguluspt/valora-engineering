@@ -6,6 +6,27 @@ let classification = "no_change";
 let documents = [makeDocument("document-1", "Báo cáo hiện trạng")];
 let caseScenario = "normal";
 let projectScenario = "populated";
+let workbenchScenario = "normal";
+let workbenchDraftSaved = false;
+
+const workbenchProjectId = "a1b2c3d4-1234-4123-8123-123456789abc";
+const workbenchLines = Array.from({ length: 18 }, (_, index) => ({
+  id: `asset-line-${index + 1}`,
+  project_id: workbenchProjectId,
+  asset_name: index === 0 ? "Máy cắt kim loại CNC" : `Thiết bị cơ khí ${index + 1}`,
+  description: null,
+  quantity: index + 1,
+  unit_id: null,
+  raw_price: null,
+  raw_price_currency_id: null,
+  appraised_unit_price: 125000000 + index * 1000000,
+  appraised_currency_id: null,
+  review_status: index % 3 === 0 ? "parsed" : "raw",
+  validation_status: index % 4 === 0 ? "needs_review" : "valid",
+  brand_id: null,
+  manufacturer_id: null,
+  version_token: "3",
+}));
 
 const caseStages = [
   "PRELIMINARY_REQUEST", "PRELIMINARY_ANALYSIS", "PRELIMINARY_READY",
@@ -117,7 +138,7 @@ function send(response, status, body, extraHeaders = {}) {
   response.writeHead(status, {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "Content-Type,X-CSRF-Token",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
     "Access-Control-Allow-Origin": "http://localhost:5173",
     "Content-Type": "application/json; charset=utf-8",
     ...extraHeaders,
@@ -137,15 +158,23 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/__fixture/scenario" && request.method === "GET") {
     const nextCase = url.searchParams.get("case");
     const nextProjects = url.searchParams.get("projects");
+    const nextWorkbench = url.searchParams.get("workbench");
     if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
       return send(response, 400, { detail: "Unknown case fixture" });
     }
     if (nextProjects && !["populated", "empty", "loading", "error"].includes(nextProjects)) {
       return send(response, 400, { detail: "Unknown project fixture" });
     }
+    if (nextWorkbench && !["normal", "loading", "error", "conflict", "locked"].includes(nextWorkbench)) {
+      return send(response, 400, { detail: "Unknown workbench fixture" });
+    }
     if (nextCase) caseScenario = nextCase;
     if (nextProjects) projectScenario = nextProjects;
-    return send(response, 200, { case: caseScenario, projects: projectScenario });
+    if (nextWorkbench) {
+      workbenchScenario = nextWorkbench;
+      workbenchDraftSaved = false;
+    }
+    return send(response, 200, { case: caseScenario, projects: projectScenario, workbench: workbenchScenario });
   }
   if (url.pathname === "/api/v1/auth/login" && request.method === "POST") {
     const body = await readJson(request);
@@ -177,6 +206,77 @@ const server = http.createServer(async (request, response) => {
   }
   if (!authenticated) return send(response, 401, { detail: "No session" });
 
+  if (url.pathname === "/health" && request.method === "GET") {
+    return send(response, 200, { status: "healthy" });
+  }
+
+  if (url.pathname === "/api/v1/workbench/sessions" && request.method === "POST") {
+    if (workbenchScenario === "locked") return send(response, 403, { detail: "Fixture permission denied" });
+    return send(response, 200, {
+      id: "session-workbench-acceptance",
+      user_id: "user-acceptance",
+      project_id: workbenchProjectId,
+      status: "active",
+      row_version: 1,
+      created_at: "2026-09-24T00:00:00Z",
+      last_active_at: "2026-09-24T00:00:00Z",
+      current_selection: null,
+    });
+  }
+  if (url.pathname === "/api/v1/workbench/sessions/session-workbench-acceptance/heartbeat" && request.method === "POST") {
+    return send(response, 200, {
+      id: "session-workbench-acceptance",
+      user_id: "user-acceptance",
+      project_id: workbenchProjectId,
+      status: "active",
+      row_version: 1,
+      created_at: "2026-09-24T00:00:00Z",
+      last_active_at: "2026-09-24T00:00:00Z",
+      current_selection: null,
+    });
+  }
+  if (url.pathname.startsWith("/api/v1/workbench/sessions/session-workbench-acceptance/") && request.method === "POST") {
+    return send(response, 200, { status: "ok" });
+  }
+  if (url.pathname === `/api/v1/projects/${workbenchProjectId}/asset-lines/draft-state` && request.method === "GET") {
+    const items = workbenchDraftSaved ? [{
+      asset_line_id: "asset-line-1",
+      has_saved_draft: true,
+      has_unsaved_changes: false,
+      is_locked: false,
+      is_stale: false,
+      draft_status: "saved_draft",
+      changed_fields: ["appraised_unit_price"],
+      last_saved_at: "2026-09-24T00:00:00Z",
+      last_saved_by: "user-acceptance",
+    }] : [];
+    return send(response, 200, { project_id: workbenchProjectId, items, total: items.length });
+  }
+  if (url.pathname === `/api/v1/projects/${workbenchProjectId}/asset-lines` && request.method === "GET") {
+    if (workbenchScenario === "loading") {
+      setTimeout(() => { if (!response.destroyed) send(response, 200, { project_id: workbenchProjectId, items: workbenchLines, total: workbenchLines.length, limit: 50, offset: 0 }); }, 30_000);
+      return;
+    }
+    if (workbenchScenario === "error") return send(response, 503, { detail: "Fixture asset-line read unavailable" });
+    return send(response, 200, { project_id: workbenchProjectId, items: workbenchLines, total: workbenchLines.length, limit: 50, offset: 0 });
+  }
+  if (url.pathname.startsWith(`/api/v1/projects/${workbenchProjectId}/asset-lines/`) && url.pathname.endsWith("/draft") && request.method === "PATCH") {
+    if (workbenchScenario === "conflict") return send(response, 409, { detail: "Fixture draft version conflict" });
+    const body = await readJson(request);
+    workbenchDraftSaved = true;
+    return send(response, 200, {
+      project_id: workbenchProjectId,
+      asset_line_id: "asset-line-1",
+      draft_status: "saved_draft",
+      field_key: body.field_key,
+      has_saved_draft: true,
+      has_unsaved_changes: false,
+      is_stale: false,
+      changed_fields: [body.field_key],
+      saved_at: "2026-09-24T00:00:00Z",
+    });
+  }
+
   if (url.pathname === "/api/v1/projects" && request.method === "GET") {
     if (projectScenario === "loading") {
       setTimeout(() => { if (!response.destroyed) send(response, 200, [projectFixture]); }, 30_000);
@@ -186,6 +286,13 @@ const server = http.createServer(async (request, response) => {
     return send(response, 200, projectScenario === "empty" ? [] : [projectFixture]);
   }
   if (url.pathname === "/api/v1/projects/resolve" && request.method === "GET") {
+    if (url.searchParams.get("ref") === "workbench-acceptance") {
+      return send(response, 200, {
+        project_id: workbenchProjectId,
+        display_name: "Hồ sơ nghiệm thu Workbench",
+        matched_by: "code",
+      });
+    }
     return send(response, 200, {
       project_id: "project-acceptance",
       display_name: "Nhà máy Cơ khí An Phú",
