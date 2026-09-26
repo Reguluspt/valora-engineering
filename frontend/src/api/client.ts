@@ -97,7 +97,7 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
     if (err instanceof ApiError) {
       throw err;
     }
-    throw new ApiError(`Network connection error: ${err.message}`, 0);
+    throw new ApiError(`Không thể kết nối mạng: ${err.message}`, 0);
   }
 }
 

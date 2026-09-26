@@ -41,7 +41,7 @@ export function useWorkbenchDraftState(projectId: string) {
       });
       setDraftStates(mapped);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to load draft states");
+      setErrorMsg(err.message || "Không thể tải trạng thái bản nháp");
       setFriendlyError(getFriendlyErrorFromUnknown(err));
     } finally {
       setLoading(false);

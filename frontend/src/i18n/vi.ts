@@ -27,8 +27,6 @@ export const vi = {
   "nav.workbench": "Bàn làm việc hồ sơ",
   "nav.caseOverview": "Tổng quan hồ sơ",
   "nav.import": "Nhập dữ liệu",
-  "nav.validate": "Kiểm tra dữ liệu",
-  "nav.errorDashboard": "Bảng lỗi cần xử lý",
   "nav.submitReview": "Gửi duyệt",
   "nav.exportReport": "Xuất báo cáo nháp",
   "nav.settings": "Thiết lập",
@@ -146,21 +144,6 @@ export const vi = {
   "assistant.analyzing": "Trợ lý Valora đang phân tích",
   "assistant.unavailable": "Trợ lý Valora tạm thời không khả dụng",
   "assistant.disclaimer": "Gợi ý chỉ mang tính hỗ trợ, người dùng cần kiểm tra trước khi sử dụng",
-
-  // Review/Approval
-  "review.queue": "Hàng chờ kiểm tra",
-  "review.submitQc": "Gửi kiểm soát chất lượng",
-  "review.inspectProject": "Kiểm tra hồ sơ",
-  "review.list": "Danh sách chờ duyệt",
-  "review.inspector": "Người kiểm tra",
-  "review.notes": "Nhận xét kiểm tra",
-  "review.returnCorrection": "Trả về chỉnh sửa",
-  "review.approve": "Phê duyệt",
-  "review.approved": "Đã duyệt",
-  "review.notEligible": "Chưa đủ điều kiện duyệt",
-  "review.confirmApprove": "Xác nhận phê duyệt",
-  "review.returnReason": "Lý do trả về",
-  "review.enterReturnReason": "Vui lòng nhập lý do trả về",
 
   // Draft Report Generation
   "report.exportDraft": "Xuất báo cáo nháp",
