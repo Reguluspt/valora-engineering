@@ -169,15 +169,6 @@ body {
   overflow-y: auto;
 }
 
-.workbench-right-drawer {
-  display: flex;
-  width: 380px;
-  flex-direction: column;
-  padding: var(--valora-space-lg);
-  overflow-y: auto;
-  background-color: var(--valora-color-surface-secondary);
-}
-
 .workbench-footer {
   display: flex;
   height: 60px;

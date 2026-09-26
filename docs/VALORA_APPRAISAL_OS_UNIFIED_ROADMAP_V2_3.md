@@ -1,10 +1,10 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-09-23
+**Last reconciled:** 2026-09-24
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
-**Repository state (reconciled 2026-09-23):** `origin/main` remains merged through PR #31 at `27d1cc6…`; active Draft PR #32 remains against `main`, while integration branch `feat/operational-frontend-m365` is at `d725bbc6…` after F2-PR-001 (#34), F2-PR-002 (#36) and F2-PR-003 (#38) merged into that integration branch. This is not claimed as merged to `main`.
+**Repository state (reconciled 2026-09-24):** `origin/main` remains merged through PR #31 at `27d1cc6…`; active Draft PR #32 remains against `main`, while integration branch `feat/operational-frontend-m365` is at `54cf769c89cc4f7601e8ffb89e25f925f6500483` after F2-PR-001 (#34), F2-PR-002 (#36), F2-PR-003 (#38) and F2-PR-004 (#40) merged into that integration branch. Exact-head integration CI #461 succeeded. This is not claimed as merged to `main`.
 
 ## 1. Executive decision
 
@@ -77,7 +77,7 @@ Conflict resolution / role split:
 
 ### Active Draft PR #32 / integration branch
 
-PR #32 remains open/draft against `main`. Integration branch exact head is `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`; exact-head CI #454 is SUCCESS. F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 are merged into that integration branch only.
+PR #32 remains open/draft against `main`. Integration branch exact head is `54cf769c89cc4f7601e8ffb89e25f925f6500483`; exact-head CI #461 is SUCCESS. F2-PR-001/#34, F2-PR-002/#36, F2-PR-003/#38 and F2-PR-004/#40 are merged into that integration branch only.
 
 Contains:
 - Operational Frontend candidate;
