@@ -2,6 +2,8 @@ import React from "react";
 import { act, create } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "../../../api/client";
+
 const api = vi.hoisted(() => ({
   beginOneDriveAuthorization: vi.fn(),
   createExchangeCopy: vi.fn(),
@@ -138,6 +140,51 @@ describe("M365WorkspacePage", () => {
     api.reimportExchangeArtifact.mockResolvedValue({ artifact_id: "exchange-reimport" });
   });
 
+  it("selects a document context without changing its revision", async () => {
+    api.listOperationalDocuments.mockResolvedValue([
+      document("no_change", 1),
+      { ...document("external_change_in_managed", 2), readiness: { ...document("external_change_in_managed", 2).readiness, document_revision: 4 } },
+    ]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const cards = root.root.findAllByType("article");
+    const selectSecond = cards[1].findAllByType("button").find((button: any) =>
+      button.children.includes("Xem chi tiết"),
+    );
+    act(() => selectSecond.props.onClick());
+
+    const context = root.root.findByProps({ "aria-label": "Tài liệu đang xem" });
+    expect(context.findByType("h3").children).toContain("Báo cáo 2");
+    expect(context.findAllByType("dd")[0].children).toContain("4");
+    expect(api.revalidateOperationalDocument).not.toHaveBeenCalled();
+    expect(api.reimportExchangeArtifact).not.toHaveBeenCalled();
+  });
+
+  it("renders provider-neutral h1, case identity, and no retired QC/PDF/lock workflows", async () => {
+    api.listOperationalDocuments.mockResolvedValue([]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const h1 = root.root.findByType("h1");
+    expect(h1.children).toEqual(["Không gian tài liệu"]);
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("Hồ sơ · ");
+    expect(text).toContain("Nhà máy An Phú");
+    expect(text).toContain("Mở trong Word, quay lại Valora và kiểm tra thay đổi có kiểm soát.");
+
+    expect(text).not.toContain("Khóa phiên bản");
+    expect(text).not.toContain("Xuất PDF");
+    expect(text).not.toContain("phê duyệt");
+    expect(text).not.toContain("QC");
+    expect(text).not.toContain("reviewer");
+  });
+
   it("renders all five server classifications without deriving a conflict", async () => {
     api.listOperationalDocuments.mockResolvedValue([
       document("no_change", 1),
@@ -157,7 +204,47 @@ describe("M365WorkspacePage", () => {
     expect(text).toContain("Thay đổi trong vùng quản lý");
     expect(text).toContain("Không xác minh được tệp gốc");
     expect(text).toContain("Chưa thể truy cập OneDrive");
-    expect(text).toContain("đây không phải conflict mặc định");
+    expect(text).toContain("không mặc định là xung đột");
+    expect(text).not.toContain("xung đột phiên bản");
+  });
+
+  it("preserves returned document list when connection is disconnected", async () => {
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: null,
+      drive_id: null,
+      status: "not_connected",
+      last_verified_at: null,
+      capability_state: "read-only",
+      read_available: false,
+      appfolder_write_available: false,
+    });
+    api.listOperationalDocuments.mockResolvedValue([
+      document("no_change", 1),
+      document("file_replaced_or_moved", 2),
+    ]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("Kết nối OneDrive hiện chưa sẵn sàng. Các tài liệu trong hồ sơ vẫn được hiển thị bên dưới.");
+    expect(text).toContain("Báo cáo 1");
+    expect(text).toContain("Báo cáo 2");
+  });
+
+  it("distinguishes permission denied (403) from empty documents", async () => {
+    api.listOperationalDocuments.mockRejectedValue(new ApiError("Forbidden", 403));
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("Không có quyền xem tài liệu hồ sơ");
+    expect(text).toContain("Tài khoản hiện tại chưa có quyền truy cập không gian tài liệu này.");
+    expect(text).not.toContain("Chưa có tài liệu trong hồ sơ");
+    expect(text).not.toContain("Bộ tài liệu hồ sơ");
   });
 
   it("adopts one selected DOCX with the unchanged server snapshot", async () => {
@@ -174,7 +261,7 @@ describe("M365WorkspacePage", () => {
     const titleInput = root.root.findByType("input");
     act(() => titleInput.props.onChange({ target: { value: "Báo cáo canonical" } }));
     const adoptButton = root.root.findAllByType("button").find((button: any) =>
-      button.children.includes("Nhận làm tài liệu canonical"),
+      button.children.includes("Nhận làm tài liệu hồ sơ"),
     );
     await act(async () => adoptButton.props.onClick());
 
@@ -276,6 +363,56 @@ describe("M365WorkspacePage", () => {
     expect(sessionStorage.removeItem).toHaveBeenCalledWith("valora:m365-word-handoff");
   });
 
+  it("keeps usable documents visible during background revalidation check and on failure", async () => {
+    const doc = document("no_change", 1);
+    api.listOperationalDocuments.mockResolvedValue([doc]);
+    api.revalidateOperationalDocument.mockRejectedValueOnce(new Error("Network glitch"));
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    expect(JSON.stringify(root.toJSON())).toContain("Báo cáo 1");
+
+    const checkButton = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Kiểm tra lại"),
+    );
+    await act(async () => checkButton.props.onClick());
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("Chưa thể kiểm tra thay đổi. Thông tin hiện tại được giữ ở trạng thái cũ.");
+    expect(text).toContain("Báo cáo 1");
+  });
+
+  it("handles next_action variants for check_changes and review_managed_changes", async () => {
+    const checkDoc = document("external_change_in_managed", 1);
+    checkDoc.readiness.next_action = "check_changes";
+
+    const reviewDoc = document("external_change_in_managed", 2);
+    reviewDoc.readiness.next_action = "review_managed_changes";
+
+    api.listOperationalDocuments.mockResolvedValue([checkDoc, reviewDoc]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const checkBtn = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Kiểm tra thay đổi"),
+    );
+    expect(checkBtn).toBeDefined();
+    await act(async () => checkBtn.props.onClick());
+    expect(api.revalidateOperationalDocument).toHaveBeenCalledWith("project-1", checkDoc.readiness);
+
+    const reviewBtn = root.root.findAllByType("article")[1].findAllByType("button").find((button: any) =>
+      button.children.includes("Mở trong Word"),
+    );
+    expect(reviewBtn).toBeDefined();
+    act(() => reviewBtn.props.onClick());
+    expect(sessionStorage.setItem).toHaveBeenCalledWith("valora:m365-word-handoff", "document-2");
+    expect(window.open).toHaveBeenCalledWith(reviewDoc.readiness.web_url, "_blank", "noopener,noreferrer");
+  });
+
   it("uses server next_action for the primary recovery action", async () => {
     const untrusted = document("file_replaced_or_moved", 1);
     untrusted.readiness.next_action = "reconnect_or_rebind";
@@ -321,11 +458,11 @@ describe("M365WorkspacePage", () => {
       root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
     });
     const text = JSON.stringify(root.toJSON());
-    expect(text).toContain("READ + REVALIDATION");
-    expect(text).toContain("Cần cấp quyền Exchange");
-    expect(text).toContain("Lưu trong Word/Excel chưa cập nhật VALORA");
+    expect(text).toContain("OneDrive Personal");
+    expect(text).toContain("Cấp quyền trao đổi tệp");
+    expect(text).toContain("Lưu trong Word chưa cập nhật phiên bản chính thức trong VALORA.");
     const upgrade = root.root.findAllByType("button").find((button: any) =>
-      button.children.includes("Cần cấp quyền Exchange"),
+      button.children.includes("Cấp quyền trao đổi tệp"),
     );
     await act(async () => upgrade.props.onClick());
     expect(api.beginOneDriveAuthorization).toHaveBeenCalledWith("exchange_write");
@@ -347,11 +484,12 @@ describe("M365WorkspacePage", () => {
       root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
     });
     const text = JSON.stringify(root.toJSON());
-    expect(text).toContain("EXCHANGE WRITE READY");
+    expect(text).toContain("Thư mục trao đổi AppFolder đã sẵn sàng cho các thao tác bên dưới.");
+    expect(text).toContain("Trao đổi tệp có kiểm soát");
     expect(text).toContain("Bản làm việc");
-    expect(text).toContain("Nhập thay đổi");
+    expect(text).toContain("Nhập nguồn Excel");
     expect(text).toContain("Xuất sang OneDrive");
-    expect(text).not.toContain("Cần cấp quyền Exchange");
+    expect(text).not.toContain("Cấp quyền trao đổi tệp");
   });
 
   it("wires AppFolder actions to bounded Exchange API commands", async () => {
@@ -369,10 +507,10 @@ describe("M365WorkspacePage", () => {
       {
         artifact_id: "working-1",
         connection_id: "connection-1",
-        role: "working",
-        media: "docx",
+        role: "inbox",
+        media: "xlsx",
         state: "AVAILABLE",
-        display_name: "Bao-cao-working.docx",
+        display_name: "Bang-tinh-working.xlsx",
         document_id: "document-1",
         document_revision_id: "revision-1",
         excel_import_batch_id: null,
@@ -396,13 +534,183 @@ describe("M365WorkspacePage", () => {
     );
 
     const reimport = root.root.findAllByType("button").find((button: any) =>
-      button.children.includes("Nhập thay đổi"),
+      button.children.includes("Nhập nguồn Excel"),
     );
     await act(async () => reimport.props.onClick());
     expect(api.reimportExchangeArtifact).toHaveBeenCalledWith(
       "project-1",
       "working-1",
-      "template-1",
+      null,
     );
+  });
+
+  it("prohibits DOCX working copy from re-import and excludes DOCX from Excel re-import select", async () => {
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "exchange-write-ready",
+      read_available: true,
+      appfolder_write_available: true,
+    });
+    api.listOperationalDocuments.mockResolvedValue([document("no_change", 1)]);
+    api.listExchangeArtifacts.mockResolvedValue([
+      {
+        artifact_id: "working-docx-1",
+        connection_id: "connection-1",
+        role: "working",
+        media: "docx",
+        state: "AVAILABLE",
+        display_name: "Bao-cao-working.docx",
+        document_id: "document-1",
+        document_revision_id: "revision-1",
+        excel_import_batch_id: null,
+        excel_source_artifact_id: null,
+      },
+    ]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const select = root.root.findAllByType("select").find((sel: any) =>
+      sel.findAllByType("option").some((opt: any) => opt.children.includes("Chưa có tệp Excel nguồn")),
+    );
+    expect(select).toBeDefined();
+
+    const optionsText = JSON.stringify(select.findAllByType("option").map((opt: any) => opt.children));
+    expect(optionsText).not.toContain("Bao-cao-working.docx");
+
+    const reimportBtn = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Nhập nguồn Excel"),
+    );
+    expect(reimportBtn.props.disabled).toBe(true);
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).not.toContain("Nhập thay đổi");
+    expect(text).not.toContain("Nhập lại DOCX");
+
+    expect(api.reimportExchangeArtifact).not.toHaveBeenCalled();
+  });
+
+  it("allows XLSX artifact to call reimportExchangeArtifact with null template while excluding DOCX from that select", async () => {
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "exchange-write-ready",
+      read_available: true,
+      appfolder_write_available: true,
+    });
+    api.listOperationalDocuments.mockResolvedValue([document("no_change", 1)]);
+    api.listExchangeArtifacts.mockResolvedValue([
+      {
+        artifact_id: "docx-artifact-1",
+        connection_id: "connection-1",
+        role: "working",
+        media: "docx",
+        state: "AVAILABLE",
+        display_name: "Bao-cao-working.docx",
+        document_id: "document-1",
+        document_revision_id: "revision-1",
+        excel_import_batch_id: null,
+        excel_source_artifact_id: null,
+      },
+      {
+        artifact_id: "xlsx-artifact-1",
+        connection_id: "connection-1",
+        role: "inbox",
+        media: "xlsx",
+        state: "AVAILABLE",
+        display_name: "So-lieu.xlsx",
+        document_id: "document-1",
+        document_revision_id: "revision-1",
+        excel_import_batch_id: null,
+        excel_source_artifact_id: null,
+      },
+    ]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const select = root.root.findAllByType("select").find((sel: any) =>
+      sel.findAllByType("option").some((opt: any) => opt.children.some((c: any) => typeof c === "string" && c.includes("So-lieu.xlsx"))),
+    );
+    expect(select).toBeDefined();
+
+    const optionsLabels = select.findAllByType("option").map((opt: any) => opt.children.join(""));
+    expect(optionsLabels).toContain("So-lieu.xlsx · XLSX");
+    expect(optionsLabels.some((label: string) => label.includes("Bao-cao-working.docx"))).toBe(false);
+
+    const reimportBtn = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Nhập nguồn Excel"),
+    );
+    expect(reimportBtn.props.disabled).toBe(false);
+
+    await act(async () => reimportBtn.props.onClick());
+    expect(api.reimportExchangeArtifact).toHaveBeenCalledWith(
+      "project-1",
+      "xlsx-artifact-1",
+      null,
+    );
+  });
+
+  it("Working copy copy states Word save or check is not an official revision", async () => {
+    api.listOperationalDocuments.mockResolvedValue([]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).toContain("Lưu trong Word chưa cập nhật phiên bản chính thức trong VALORA.");
+    expect(text).toContain(
+      "Quy trình rà soát và xác nhận thay đổi từ bản làm việc Word chưa khả dụng trên giao diện này. Lưu hoặc kiểm tra thay đổi từ bản làm việc không tạo phiên bản chính thức mới.",
+    );
+  });
+
+  it("gates Exchange actions panel behind project:update permission", async () => {
+    session.permissions = ["project:read"];
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "exchange-write-ready",
+      read_available: true,
+      appfolder_write_available: true,
+    });
+    api.listOperationalDocuments.mockResolvedValue([]);
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+
+    const text = JSON.stringify(root.toJSON());
+    expect(text).not.toContain("Trao đổi tệp có kiểm soát");
+    expect(api.listExchangeArtifacts).not.toHaveBeenCalled();
+
+    api.getOneDriveConnection.mockResolvedValue({
+      connection_id: "connection-1",
+      drive_id: "drive-1",
+      status: "active",
+      last_verified_at: "2026-09-13T00:00:00Z",
+      capability_state: "read-only",
+      read_available: true,
+      appfolder_write_available: false,
+    });
+    await act(async () => {
+      root = create(React.createElement(M365WorkspacePage, { projectRef: "project-1" }));
+    });
+    const readOnlyText = JSON.stringify(root.toJSON());
+    expect(readOnlyText).toContain("Cần cấp quyền trao đổi từ người có quyền cập nhật hồ sơ.");
+    expect(
+      root.root.findAllByType("button").some((button: any) =>
+        button.children.includes("Cấp quyền trao đổi tệp"),
+      ),
+    ).toBe(false);
   });
 });

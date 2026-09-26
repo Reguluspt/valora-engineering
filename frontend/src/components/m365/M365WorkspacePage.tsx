@@ -22,6 +22,7 @@ import {
 } from "../../api/m365";
 import { APP_ROUTES } from "../../contracts/valoraV23";
 import { useSession } from "../../auth/SessionProvider";
+import { ApiError } from "../../api/client";
 import { useResolvedProject } from "../workbench/project-context";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
@@ -36,17 +37,17 @@ const CLASSIFICATION_COPY: Record<
 > = {
   no_change: {
     label: "Không có thay đổi",
-    detail: "Tệp OneDrive vẫn khớp baseline đã xác minh.",
+    detail: "Tệp được liên kết vẫn khớp với lần xác minh gần nhất.",
     tone: "safe",
   },
   external_change_outside_managed: {
     label: "Thay đổi ngoài vùng quản lý",
-    detail: "Nội dung diễn giải bên ngoài vùng Valora đã thay đổi; đây không phải conflict mặc định.",
+    detail: "Nội dung ngoài vùng VALORA quản lý đã thay đổi; không mặc định là xung đột.",
     tone: "notice",
   },
   external_change_in_managed: {
     label: "Thay đổi trong vùng quản lý",
-    detail: "Có thay đổi cần được xem xét. Sync/conflict vẫn chưa được phép trong PR-07.",
+    detail: "Có nội dung cần xem lại trước khi cập nhật tài liệu. Thay đổi chưa được chấp nhận thành phiên bản mới.",
     tone: "warning",
   },
   file_replaced_or_moved: {
@@ -89,11 +90,12 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
   const canAdopt = account?.permissions.includes("project:update") ?? false;
   const [connection, setConnection] = useState<OneDriveConnection | null>(null);
   const [documents, setDocuments] = useState<OperationalDocument[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [options, setOptions] = useState<AdoptionOptions | null>(null);
   const [folderTrail, setFolderTrail] = useState<Array<{ id?: string; name: string }>>([
     { name: "OneDrive" },
   ]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error" | "denied">("loading");
   const [sectionError, setSectionError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<OneDriveEntry | null>(null);
   const [templateId, setTemplateId] = useState("");
@@ -120,20 +122,28 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
       setConnection(currentConnection);
       setDocuments(currentDocuments);
       if (currentConnection.appfolder_write_available && canAdopt) {
-        setExchangeArtifacts(await listExchangeArtifacts(projectId));
-      } else {
-        setExchangeArtifacts([]);
-      }
+        try {
+          setExchangeArtifacts(await listExchangeArtifacts(projectId));
+        } catch {
+          setExchangeArtifacts([]);
+          setSectionError("Chưa thể tải khu vực trao đổi tệp. Tài liệu hồ sơ vẫn có thể xem.");
+        }
+      } else setExchangeArtifacts([]);
       if (currentConnection.status === "active" && canAdopt) {
-        const currentOptions = await getAdoptionOptions(projectId);
-        setOptions(currentOptions);
-        setTemplateId((existing) => existing || currentOptions.templates[0]?.template_version_id || "");
+        try {
+          const currentOptions = await getAdoptionOptions(projectId);
+          setOptions(currentOptions);
+          setTemplateId((existing) => existing || currentOptions.templates[0]?.template_version_id || "");
+        } catch {
+          setOptions(null);
+          setSectionError("Chưa thể duyệt tệp OneDrive. Tài liệu hồ sơ vẫn có thể xem.");
+        }
       } else {
         setOptions(null);
       }
       setState("ready");
-    } catch {
-      setState("error");
+    } catch (error) {
+      setState(error instanceof ApiError && error.status === 403 ? "denied" : "error");
     }
   }, [canAdopt, projectId]);
 
@@ -251,13 +261,13 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
   };
 
   const selectedExchangeDocumentId = exchangeDocumentId || documents[0]?.document_id || "";
-  const importableExchangeArtifacts = exchangeArtifacts.filter(
-    (artifact) => artifact.role !== "export",
+  const selectedDocument = documents.find((item) => item.document_id === selectedDocumentId);
+  const importableXlsxArtifacts = exchangeArtifacts.filter(
+    (artifact) => artifact.role !== "export" && artifact.media === "xlsx",
   );
-  const selectedExchangeArtifact = importableExchangeArtifacts.find(
+  const selectedExchangeXlsx = importableXlsxArtifacts.find(
     (artifact) => artifact.artifact_id === exchangeArtifactId,
-  ) || importableExchangeArtifacts.find((artifact) => artifact.role === "working") ||
-    importableExchangeArtifacts[0];
+  ) || importableXlsxArtifacts[0];
 
   const finishExchangeAction = async () => {
     await Promise.all([refreshDocuments(), refreshExchangeArtifacts()]);
@@ -316,28 +326,31 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
   };
 
   const importExchangeChanges = async () => {
-    if (!selectedExchangeArtifact) return;
+    if (!selectedExchangeXlsx || selectedExchangeXlsx.media !== "xlsx") return;
     setExchangeBusy("reimport");
     setSectionError(null);
     try {
       await reimportExchangeArtifact(
         projectId,
-        selectedExchangeArtifact.artifact_id,
-        selectedExchangeArtifact.media === "docx" ? templateId || null : null,
+        selectedExchangeXlsx.artifact_id,
+        null,
       );
       await finishExchangeAction();
     } catch {
-      setSectionError("Không thể nhập thay đổi. Authority hiện tại của VALORA được giữ nguyên.");
+      setSectionError("Không thể nhập tệp nguồn Excel. Authority hiện tại của VALORA được giữ nguyên.");
     } finally {
       setExchangeBusy(null);
     }
   };
 
   if (state === "loading") return <LoadingState message="Đang tải trạng thái OneDrive…" />;
+  if (state === "denied") {
+    return <ErrorState title="Không có quyền xem tài liệu hồ sơ" message="Tài khoản hiện tại chưa có quyền truy cập không gian tài liệu này." />;
+  }
   if (state === "error" || !connection) {
     return (
       <ErrorState
-        title="Chưa thể tải không gian OneDrive"
+        title="Chưa thể tải không gian tài liệu"
         message="Không thể đọc trạng thái kết nối hoặc tài liệu của hồ sơ."
         onRetry={() => void load()}
       />
@@ -348,12 +361,8 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
     <main className="m365-page">
       <header className="m365-header">
         <div>
-          <p>
-            {connection.appfolder_write_available
-              ? "ONEDRIVE PERSONAL · EXCHANGE WRITE READY"
-              : "ONEDRIVE PERSONAL · READ + REVALIDATION"}
-          </p>
-          <h1>{projectName}</h1>
+          <p>Hồ sơ · {projectName}</p>
+          <h1>Không gian tài liệu</h1>
           <span>Mở trong Word, quay lại Valora và kiểm tra thay đổi có kiểm soát.</span>
         </div>
         <ConnectionBadge connection={connection} />
@@ -361,20 +370,169 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
 
       {sectionError && <div className="m365-inline-error" role="alert">{sectionError}</div>}
 
-      {connection.status === "active" && (
-        <section className="m365-exchange-notice" aria-label="Quy tắc Exchange">
+      {connection.status !== "active" && (
+        <section className="m365-connect-panel" aria-label="Trạng thái kết nối lưu trữ">
           <div>
-            <strong>Lưu trong Word/Excel chưa cập nhật VALORA.</strong>
-            <span>Chỉ “Nhập thay đổi” mới bắt đầu kiểm tra và ghi nhận.</span>
+            <p>Dịch vụ lưu trữ ngoài</p>
+            <h2>Kết nối OneDrive Personal</h2>
+            <span>
+              Kết nối OneDrive hiện chưa sẵn sàng. Các tài liệu trong hồ sơ vẫn được hiển thị bên dưới. Hãy kết nối lại tài khoản Microsoft để duyệt tệp mới hoặc kiểm tra thay đổi.
+            </span>
           </div>
-          {connection.appfolder_write_available ? (
-            <span>Exchange AppFolder đã sẵn sàng cho các lệnh bên dưới.</span>
+          {canAdopt ? (
+            <button onClick={() => void connect()} type="button">Kết nối Microsoft</button>
+          ) : (
+            <p className="m365-permission-note">Tài khoản cần quyền cập nhật hồ sơ để kết nối.</p>
+          )}
+        </section>
+      )}
+
+      <div className="m365-layout">
+        <section className="m365-documents" aria-labelledby="m365-documents-title">
+          <div className="m365-section-heading">
+            <div>
+              <h2 id="m365-documents-title">Bộ tài liệu hồ sơ</h2>
+            </div>
+            <span>{documents.length}</span>
+          </div>
+          {documents.length === 0 ? (
+            <div className="m365-empty-copy">
+              <strong>Chưa có tài liệu trong hồ sơ</strong>
+              <span>
+                {connection.status === "active"
+                  ? "Chọn một tệp DOCX từ khu vực bên cạnh để nhận làm tài liệu hồ sơ."
+                  : "Kết nối lưu trữ chưa sẵn sàng. Hãy kết nối lại OneDrive Personal để duyệt và nhận tài liệu cho hồ sơ."}
+              </span>
+            </div>
+          ) : (
+            <div className="m365-document-list">
+              {documents.map((document) => (
+                <DocumentCard
+                  canManageConnection={canAdopt}
+                  checking={checkingDocumentId === document.document_id}
+                  document={document}
+                  isSelected={selectedDocument?.document_id === document.document_id}
+                  key={document.document_id}
+                  onCheck={() => void checkDocument(document)}
+                  onOpen={() => openInWord(document)}
+                  onReconnect={() => void connect()}
+                  onSelect={() => setSelectedDocumentId((current) => current === document.document_id ? null : document.document_id)}
+                />
+              ))}
+            </div>
+          )}
+          {selectedDocument && (
+            <div className="m365-document-context" aria-label="Tài liệu đang xem">
+              <div>
+                <span>Tài liệu đang xem</span>
+                <h3>{selectedDocument.title}</h3>
+              </div>
+              <dl>
+                <div><dt>Phiên bản VALORA</dt><dd>{selectedDocument.readiness.document_revision}</dd></div>
+                <div><dt>Tệp liên kết</dt><dd>{selectedDocument.readiness.file_name}</dd></div>
+                <div><dt>Trạng thái kiểm tra</dt><dd>{selectedDocument.readiness.classification ? CLASSIFICATION_COPY[selectedDocument.readiness.classification].label : "Chưa kiểm tra"}</dd></div>
+              </dl>
+            </div>
+          )}
+        </section>
+
+        <aside className="m365-adoption" aria-labelledby="m365-adoption-title">
+          <div className="m365-section-heading">
+            <div>
+              <p>Tệp nguồn OneDrive</p>
+              <h2 id="m365-adoption-title">Nhận tệp DOCX</h2>
+            </div>
+          </div>
+          {!canAdopt ? (
+            <p className="m365-permission-note">Bạn có quyền xem nhưng chưa có quyền nhận tài liệu.</p>
+          ) : connection.status !== "active" ? (
+            <div className="m365-empty-copy">
+              <strong>Chưa kết nối OneDrive Personal</strong>
+              <span>Kết nối tài khoản Microsoft để duyệt thư mục và nhận tệp DOCX vào hồ sơ.</span>
+            </div>
+          ) : options ? (
+            <>
+              <nav className="m365-breadcrumb" aria-label="Đường dẫn thư mục">
+                {folderTrail.map((folder, index) => (
+                  <button key={`${folder.id || "root"}-${index}`} onClick={() => void navigateTrail(index)} type="button">
+                    {folder.name}
+                  </button>
+                ))}
+              </nav>
+              <div className="m365-file-list">
+                {options.items.length === 0 && <span>Thư mục này không có DOCX hoặc thư mục con.</span>}
+                {options.items.map((item) => (
+                  <button
+                    className={selectedFile?.drive_item_id === item.drive_item_id ? "is-selected" : ""}
+                    key={item.drive_item_id}
+                    onClick={() => item.kind === "folder" ? void navigateFolder(item) : setSelectedFile(item)}
+                    type="button"
+                  >
+                    <span>{item.kind === "folder" ? "THƯ MỤC" : "DOCX"}</span>
+                    <strong>{item.name}</strong>
+                    {item.size_bytes != null && <small>{formatBytes(item.size_bytes)}</small>}
+                  </button>
+                ))}
+              </div>
+              {options.truncated && <p className="m365-truncated">Danh sách đã đạt giới hạn 100 mục.</p>}
+              <div className="m365-adoption-form">
+                <label>
+                  Mẫu và vùng quản lý
+                  <select onChange={(event) => setTemplateId(event.target.value)} value={templateId}>
+                    {options.templates.map((template) => (
+                      <option key={template.template_version_id} value={template.template_version_id}>
+                        {template.template_name} · v{template.version_number}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Tên tài liệu trong Valora
+                  <input
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder={selectedFile?.name.replace(/\.docx$/i, "") || "Chọn một tệp DOCX trước"}
+                    value={title}
+                  />
+                </label>
+                <div className="m365-selected-file">
+                  <span>Tệp đã chọn</span>
+                  <strong>{selectedFile?.name || "Chưa chọn"}</strong>
+                </div>
+                <button
+                  className="m365-primary-action"
+                  disabled={!selectedFile || !templateId || !title.trim() || adopting}
+                  onClick={() => void adopt()}
+                  type="button"
+                >
+                  {adopting ? "Đang xác minh và nhận…" : "Nhận làm tài liệu hồ sơ"}
+                </button>
+                <small>
+                  Thao tác chỉ đọc tệp để xác minh baseline ban đầu; không ghi đè nội dung lên OneDrive.
+                </small>
+              </div>
+            </>
+          ) : (
+            <div className="m365-empty-copy">Chưa có lựa chọn OneDrive khả dụng.</div>
+          )}
+        </aside>
+      </div>
+
+      {connection.status === "active" && (
+        <section className="m365-exchange-notice" aria-label="Quy tắc bản làm việc">
+          <div>
+            <strong>Lưu trong Word chưa cập nhật phiên bản chính thức trong VALORA.</strong>
+            <span>
+              Quy trình rà soát và xác nhận thay đổi từ bản làm việc Word chưa khả dụng trên giao diện này. Lưu hoặc kiểm tra thay đổi từ bản làm việc không tạo phiên bản chính thức mới.
+            </span>
+          </div>
+          {connection.appfolder_write_available && canAdopt ? (
+            <span>Thư mục trao đổi AppFolder đã sẵn sàng cho các thao tác bên dưới.</span>
           ) : canAdopt ? (
             <button onClick={() => void upgradeExchange()} type="button">
-              Cần cấp quyền Exchange
+              Cấp quyền trao đổi tệp
             </button>
           ) : (
-            <span>Cần cấp quyền Exchange từ người có quyền cập nhật hồ sơ.</span>
+            <span>Cần cấp quyền trao đổi từ người có quyền cập nhật hồ sơ.</span>
           )}
         </section>
       )}
@@ -383,7 +541,7 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
         <section className="m365-exchange-actions" aria-labelledby="m365-exchange-actions-title">
           <div className="m365-section-heading">
             <div>
-              <p>EXCHANGE · CREATE-NEW ONLY</p>
+              <p>Khu vực trao đổi tệp</p>
               <h2 id="m365-exchange-actions-title">Trao đổi tệp có kiểm soát</h2>
             </div>
           </div>
@@ -438,17 +596,17 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
               </select>
             </label>
             <label>
-              Tệp để nhập thay đổi
+              Tệp Excel nguồn để nhập lại
               <select
                 onChange={(event) => setExchangeArtifactId(event.target.value)}
-                value={selectedExchangeArtifact?.artifact_id || ""}
+                value={selectedExchangeXlsx?.artifact_id || ""}
               >
-                {importableExchangeArtifacts.length === 0 && (
-                  <option value="">Chưa có tệp Exchange</option>
+                {importableXlsxArtifacts.length === 0 && (
+                  <option value="">Chưa có tệp Excel nguồn</option>
                 )}
-                {importableExchangeArtifacts.map((artifact) => (
+                {importableXlsxArtifacts.map((artifact) => (
                   <option key={artifact.artifact_id} value={artifact.artifact_id}>
-                    {artifact.display_name} · {artifact.media.toUpperCase()}
+                    {artifact.display_name} · XLSX
                   </option>
                 ))}
               </select>
@@ -469,10 +627,10 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
               type="button"
             >Bản làm việc</button>
             <button
-              disabled={exchangeBusy != null || !selectedExchangeArtifact}
+              disabled={exchangeBusy != null || !selectedExchangeXlsx}
               onClick={() => void importExchangeChanges()}
               type="button"
-            >Nhập thay đổi</button>
+            >Nhập nguồn Excel</button>
             <button
               disabled={exchangeBusy != null || !selectedExchangeDocumentId}
               onClick={() => void createExchangeDocumentCopy("export")}
@@ -480,131 +638,6 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
             >Xuất sang OneDrive</button>
           </div>
         </section>
-      )}
-
-      {connection.status !== "active" ? (
-        <section className="m365-connect-panel">
-          <div>
-            <p>BƯỚC 01</p>
-            <h2>Kết nối OneDrive Personal</h2>
-            <span>
-              Valora chỉ yêu cầu quyền đọc tệp. Tài khoản Business và SharePoint không nằm trong
-              phạm vi này.
-            </span>
-          </div>
-          {canAdopt ? (
-            <button onClick={() => void connect()} type="button">Kết nối Microsoft</button>
-          ) : (
-            <p className="m365-permission-note">Tài khoản cần quyền cập nhật hồ sơ để kết nối.</p>
-          )}
-        </section>
-      ) : (
-        <div className="m365-layout">
-          <section className="m365-documents" aria-labelledby="m365-documents-title">
-            <div className="m365-section-heading">
-              <div>
-                <p>TÀI LIỆU CANONICAL</p>
-                <h2 id="m365-documents-title">Tài liệu của hồ sơ</h2>
-              </div>
-              <span>{documents.length}</span>
-            </div>
-            {documents.length === 0 ? (
-              <div className="m365-empty-copy">
-                <strong>Chưa có tài liệu OneDrive được nhận</strong>
-                <span>Chọn một DOCX ở khu vực bên phải để tạo lineage đầu tiên.</span>
-              </div>
-            ) : (
-              <div className="m365-document-list">
-                {documents.map((document) => (
-                  <DocumentCard
-                    canManageConnection={canAdopt}
-                    checking={checkingDocumentId === document.document_id}
-                    document={document}
-                    key={document.document_id}
-                    onCheck={() => void checkDocument(document)}
-                    onOpen={() => openInWord(document)}
-                    onReconnect={() => void connect()}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <aside className="m365-adoption" aria-labelledby="m365-adoption-title">
-            <div className="m365-section-heading">
-              <div>
-                <p>BƯỚC 02 · NHẬN TỆP HIỆN CÓ</p>
-                <h2 id="m365-adoption-title">Chọn DOCX từ OneDrive</h2>
-              </div>
-            </div>
-            {!canAdopt ? (
-              <p className="m365-permission-note">Bạn có quyền xem nhưng chưa có quyền nhận tài liệu.</p>
-            ) : options ? (
-              <>
-                <nav className="m365-breadcrumb" aria-label="Đường dẫn thư mục">
-                  {folderTrail.map((folder, index) => (
-                    <button key={`${folder.id || "root"}-${index}`} onClick={() => void navigateTrail(index)} type="button">
-                      {folder.name}
-                    </button>
-                  ))}
-                </nav>
-                <div className="m365-file-list">
-                  {options.items.length === 0 && <span>Thư mục này không có DOCX hoặc thư mục con.</span>}
-                  {options.items.map((item) => (
-                    <button
-                      className={selectedFile?.drive_item_id === item.drive_item_id ? "is-selected" : ""}
-                      key={item.drive_item_id}
-                      onClick={() => item.kind === "folder" ? void navigateFolder(item) : setSelectedFile(item)}
-                      type="button"
-                    >
-                      <span>{item.kind === "folder" ? "THƯ MỤC" : "DOCX"}</span>
-                      <strong>{item.name}</strong>
-                      {item.size_bytes != null && <small>{formatBytes(item.size_bytes)}</small>}
-                    </button>
-                  ))}
-                </div>
-                {options.truncated && <p className="m365-truncated">Danh sách đã đạt giới hạn 100 mục.</p>}
-                <div className="m365-adoption-form">
-                  <label>
-                    Mẫu và vùng quản lý
-                    <select onChange={(event) => setTemplateId(event.target.value)} value={templateId}>
-                      {options.templates.map((template) => (
-                        <option key={template.template_version_id} value={template.template_version_id}>
-                          {template.template_name} · v{template.version_number}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Tên tài liệu trong Valora
-                    <input
-                      onChange={(event) => setTitle(event.target.value)}
-                      placeholder={selectedFile?.name.replace(/\.docx$/i, "") || "Chọn một tệp DOCX trước"}
-                      value={title}
-                    />
-                  </label>
-                  <div className="m365-selected-file">
-                    <span>Tệp đã chọn</span>
-                    <strong>{selectedFile?.name || "Chưa chọn"}</strong>
-                  </div>
-                  <button
-                    className="m365-primary-action"
-                    disabled={!selectedFile || !templateId || !title.trim() || adopting}
-                    onClick={() => void adopt()}
-                    type="button"
-                  >
-                    {adopting ? "Đang xác minh và nhận…" : "Nhận làm tài liệu canonical"}
-                  </button>
-                  <small>
-                    Thao tác chỉ đọc tệp để xác minh baseline; không ghi nội dung trở lại OneDrive.
-                  </small>
-                </div>
-              </>
-            ) : (
-              <div className="m365-empty-copy">Chưa có lựa chọn OneDrive khả dụng.</div>
-            )}
-          </aside>
-        </div>
       )}
     </main>
   );
@@ -615,7 +648,7 @@ function ConnectionBadge({ connection }: { connection: OneDriveConnection }) {
   return (
     <div className={`m365-connection-badge ${connected ? "is-active" : ""}`}>
       <span>{connected ? "ĐÃ KẾT NỐI" : "CHƯA SẴN SÀNG"}</span>
-      <strong>{connected ? "OneDrive Personal" : connection.status}</strong>
+      <strong>OneDrive Personal</strong>
       <small>{connection.last_verified_at ? `Xác minh ${formatDate(connection.last_verified_at)}` : "Chưa xác minh"}</small>
     </div>
   );
@@ -625,16 +658,20 @@ function DocumentCard({
   canManageConnection,
   document,
   checking,
+  isSelected,
   onOpen,
   onCheck,
   onReconnect,
+  onSelect,
 }: {
   canManageConnection: boolean;
   document: OperationalDocument;
   checking: boolean;
+  isSelected: boolean;
   onOpen: () => void;
   onCheck: () => void;
   onReconnect: () => void;
+  onSelect: () => void;
 }) {
   const presentation = document.readiness.classification
     ? CLASSIFICATION_COPY[document.readiness.classification]
@@ -650,18 +687,18 @@ function DocumentCard({
       ? canManageConnection
         ? { label: "Kết nối lại OneDrive", run: onReconnect, disabled: false }
         : { label: "Cần quyền kết nối lại", run: onReconnect, disabled: true }
-      : { label: nextAction === "review_managed_changes" ? "Mở trong Word để xem" : "Mở trong Word", run: onOpen, disabled: false };
+      : { label: "Mở trong Word", run: onOpen, disabled: false };
   const primaryIsOpen = primaryAction.run === onOpen;
   const primaryIsCheck = primaryAction.run === onCheck;
   return (
     <article
-      className="m365-document-card"
+      className={`m365-document-card ${isSelected ? "is-selected" : ""}`}
       data-recovery-code={document.readiness.recovery_code || undefined}
     >
       <div className="m365-document-title">
-        <span>{document.document_type}</span>
+        <span>Tài liệu hồ sơ</span>
         <h3>{document.title}</h3>
-        <p>{document.readiness.file_name} · Revision {document.readiness.document_revision}</p>
+        <p>{document.readiness.file_name} · Phiên bản VALORA {document.readiness.document_revision}</p>
       </div>
       <div className={`m365-classification m365-classification--${presentation.tone}`}>
         <strong>{presentation.label}</strong>
@@ -681,6 +718,7 @@ function DocumentCard({
           {primaryAction.label}
         </button>
         {!primaryIsOpen && <button onClick={onOpen} type="button">Mở trong Word</button>}
+        <button aria-pressed={isSelected} onClick={onSelect} type="button">Xem chi tiết</button>
         {!primaryIsCheck && document.readiness.baseline_eligible && (
           <button disabled={checking} onClick={onCheck} type="button">
             {checking ? "Đang kiểm tra…" : "Kiểm tra lại"}
@@ -705,7 +743,7 @@ export function M365ReturnPage({ currentPath, onNavigate }: { currentPath: strin
   const connected = connection?.status === "active" && !failed;
   return (
     <main className="m365-return-page">
-      <p>MICROSOFT CALLBACK · SERVER VERIFIED</p>
+      <p>Xác thực Microsoft · Máy chủ xác nhận</p>
       <h1>{connected ? "OneDrive Personal đã sẵn sàng." : "Kết nối chưa hoàn tất."}</h1>
       <span>
         {connected

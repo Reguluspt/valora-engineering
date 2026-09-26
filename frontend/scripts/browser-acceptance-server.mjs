@@ -3,7 +3,35 @@ import http from "node:http";
 const port = 8000;
 let authenticated = false;
 let classification = "no_change";
+let m365Scenario = "normal";
+let m365Classification = "no_change";
 let documents = [makeDocument("document-1", "Báo cáo hiện trạng")];
+let exchangeArtifacts = [
+  {
+    artifact_id: "working-docx-acceptance",
+    connection_id: "connection-acceptance",
+    role: "working",
+    media: "docx",
+    state: "ready",
+    display_name: "Báo cáo hiện trạng-working.docx",
+    document_id: "document-1",
+    document_revision_id: "revision-document-1",
+    excel_import_batch_id: null,
+    excel_source_artifact_id: null,
+  },
+  {
+    artifact_id: "inbox-xlsx-acceptance",
+    connection_id: "connection-acceptance",
+    role: "inbox",
+    media: "xlsx",
+    state: "ready",
+    display_name: "Nguồn dữ liệu.xlsx",
+    document_id: null,
+    document_revision_id: null,
+    excel_import_batch_id: "batch-acceptance",
+    excel_source_artifact_id: null,
+  },
+];
 let caseScenario = "normal";
 let projectScenario = "populated";
 let workbenchScenario = "normal";
@@ -529,14 +557,16 @@ function makeDocument(id, title) {
       web_url: "https://onedrive.live.com/",
       baseline_eligible: true,
       recovery_code: null,
-      classification,
+      classification: m365Classification,
       completed_at: "2026-09-13T01:00:00Z",
       affected_region_keys: [],
-      is_fresh: classification !== "access_unavailable",
-      is_safe_for_freshness_required_action: classification === "no_change",
+      is_fresh: m365Classification !== "access_unavailable",
+      is_safe_for_freshness_required_action: m365Classification === "no_change",
       stale_reason: null,
       blocking_reason: null,
-      next_action: null,
+      next_action: m365Classification === "file_replaced_or_moved" ? "reconnect_or_rebind"
+        : m365Classification === "access_unavailable" ? "retry_revalidation"
+          : m365Classification === "external_change_in_managed" ? "review_managed_changes" : "check_changes",
       retryable: false,
     },
   };
@@ -568,6 +598,8 @@ const server = http.createServer(async (request, response) => {
     const nextProjects = url.searchParams.get("projects");
     const nextWorkbench = url.searchParams.get("workbench");
     const nextNcc = url.searchParams.get("ncc");
+    const nextM365 = url.searchParams.get("m365");
+    const nextM365Classification = url.searchParams.get("m365_classification");
     if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
       return send(response, 400, { detail: "Unknown case fixture" });
     }
@@ -580,6 +612,12 @@ const server = http.createServer(async (request, response) => {
     if (nextNcc && !["normal", "empty", "loading", "error", "conflict", "processing", "no-candidates"].includes(nextNcc)) {
       return send(response, 400, { detail: "Unknown ncc fixture" });
     }
+    if (nextM365 && !["normal", "disconnected", "empty", "error", "denied", "limited", "read-only", "adoption-error", "exchange-error"].includes(nextM365)) {
+      return send(response, 400, { detail: "Unknown M365 fixture" });
+    }
+    if (nextM365Classification && !["no_change", "external_change_outside_managed", "external_change_in_managed", "file_replaced_or_moved", "access_unavailable"].includes(nextM365Classification)) {
+      return send(response, 400, { detail: "Unknown M365 classification fixture" });
+    }
     if (nextCase) caseScenario = nextCase;
     if (nextProjects) projectScenario = nextProjects;
     if (nextWorkbench) {
@@ -590,11 +628,18 @@ const server = http.createServer(async (request, response) => {
       nccScenario = nextNcc;
       resetNccData();
     }
+    if (nextM365) {
+      m365Scenario = nextM365;
+      documents = nextM365 === "empty" ? [] : [makeDocument("document-1", "Báo cáo hiện trạng")];
+    }
+    if (nextM365Classification) m365Classification = nextM365Classification;
     return send(response, 200, {
       case: caseScenario,
       projects: projectScenario,
       workbench: workbenchScenario,
       ncc: nccScenario,
+      m365: m365Scenario,
+      m365_classification: m365Classification,
     });
   }
   if (url.pathname === "/api/v1/auth/login" && request.method === "POST") {
@@ -618,7 +663,7 @@ const server = http.createServer(async (request, response) => {
       organization_slug: "chi-nhanh-gia-lai",
       status: "active",
       roles: ["operator"],
-      permissions: ["project:read", "project:update"],
+      permissions: m365Scenario === "limited" ? ["project:read"] : ["project:read", "project:update"],
     });
   }
   if (url.pathname === "/api/v1/auth/logout" && request.method === "POST") {
@@ -911,13 +956,18 @@ const server = http.createServer(async (request, response) => {
   }
   if (url.pathname === "/api/v1/m365/onedrive/connection" && request.method === "GET") {
     return send(response, 200, {
-      connection_id: "connection-acceptance",
-      drive_id: "personal-drive-fixture",
-      status: "active",
+      connection_id: m365Scenario === "disconnected" ? null : "connection-acceptance",
+      drive_id: m365Scenario === "disconnected" ? null : "personal-drive-fixture",
+      status: m365Scenario === "disconnected" ? "not_connected" : "active",
       last_verified_at: "2026-09-13T01:00:00Z",
+      capability_state: m365Scenario === "disconnected" ? "reconsent-required"
+        : m365Scenario === "read-only" ? "read-only" : "exchange-write-ready",
+      read_available: m365Scenario !== "disconnected",
+      appfolder_write_available: m365Scenario !== "disconnected" && m365Scenario !== "read-only",
     });
   }
   if (url.pathname.endsWith("/adoption-options") && request.method === "GET") {
+    if (m365Scenario === "adoption-error") return send(response, 503, { detail: "Fixture adoption options unavailable" });
     const insideFolder = url.searchParams.has("parent_item_id");
     return send(response, 200, {
       project_id: "project-acceptance",
@@ -960,8 +1010,35 @@ const server = http.createServer(async (request, response) => {
     });
   }
   if (url.pathname.endsWith("/documents") && request.method === "GET") {
+    if (m365Scenario === "error") return send(response, 503, { detail: "Fixture document read unavailable" });
+    if (m365Scenario === "denied") return send(response, 403, { detail: "Fixture document access denied" });
     documents = documents.map((item) => makeDocument(item.document_id, item.title));
     return send(response, 200, documents);
+  }
+  if (url.pathname.endsWith("/exchange/artifacts") && request.method === "GET") {
+    if (m365Scenario === "exchange-error") return send(response, 503, { detail: "Fixture exchange unavailable" });
+    return send(response, 200, exchangeArtifacts);
+  }
+  if (/\/documents\/[^/]+\/exchange\/(working|export)$/.test(url.pathname) && request.method === "POST") {
+    const role = url.pathname.endsWith("/working") ? "working" : "export";
+    const body = await readJson(request);
+    const artifact = {
+      artifact_id: `${role}-copy-${exchangeArtifacts.length}`,
+      connection_id: body.connection_id,
+      role,
+      media: "docx",
+      state: "ready",
+      display_name: body.destination_name,
+      document_id: "document-1",
+      document_revision_id: "revision-document-1",
+      excel_import_batch_id: null,
+      excel_source_artifact_id: null,
+    };
+    exchangeArtifacts = [...exchangeArtifacts, artifact];
+    return send(response, 201, artifact);
+  }
+  if (url.pathname.endsWith("/exchange/artifacts/inbox-xlsx-acceptance/reimport") && request.method === "POST") {
+    return send(response, 200, exchangeArtifacts.find((item) => item.artifact_id === "inbox-xlsx-acceptance"));
   }
   if (url.pathname.endsWith("/documents/provision") && request.method === "POST") {
     const body = await readJson(request);
@@ -983,8 +1060,8 @@ const server = http.createServer(async (request, response) => {
     });
   }
   if (url.pathname.endsWith("/revalidation") && request.method === "POST") {
-    classification = "external_change_outside_managed";
-    return send(response, 200, { classification });
+    m365Classification = "external_change_outside_managed";
+    return send(response, 200, { classification: m365Classification });
   }
   return send(response, 404, { detail: "Fixture route not found" });
 });
