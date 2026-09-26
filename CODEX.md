@@ -1,24 +1,30 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
+**Last reconciled:** 2026-09-26 (main/integration authority alignment and F2 progress)
 **Applies to:** All agent-generated work in the Valora repository
+**v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Source of Truth
 
 Domain behavior must come from this read order:
 
 ```text
-1. CODEX.md (this file) — live task gate and agent operating rules
-2. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
-3. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
-4. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
-5. The v2.3 addendum directly governing the assigned PR
-6. docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md — lightweight runtime guard
-7. docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md — earlier-version relationship and history
-8. docs/VALORA_PROJECT_HANDOFF.md — implementation history and verified baseline context
-9. Valora Design Book v1.2-final plus v1.3/v1.4 addenda — established domain foundation
-10. Feature contracts under docs/design/ and accepted docs/adr/* decisions
+1. Explicit current Product Owner decision — wins only in the scope it names
+2. CODEX.md (this file) — live task gate and agent operating rules
+3. ENGINEERING_GUARDRAILS.md — permanent security, tenant, audit, mutation invariants
+4. docs/design/VALORA_UIUX_HANDOFF_v2.3.md — canonical UI/UX master
+5. docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md — v2.3 reading order and scope
+6. The current v2.3 addendum directly governing the assigned scope
+7. docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md — current product/development ordering
+8. docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 / AI-readiness architecture detail; never runtime authorization by itself
+9. Accepted scoped ADR governing the assigned boundary
+10. Current task / implementation contract, including the lightweight v2.3 runtime guard where applicable
+11. Current handoff / acceptance evidence
+12. Historical Design Book / sprint / audit / remediation / research evidence
+
+docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md is a supersession/navigation map for these sources; it
+does not outrank the authority listed above.
 ```
 
 Do **not** invent domain behavior. If ambiguous: stop and request an ADR or Design Change Request.
@@ -31,34 +37,75 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 ```
 
-### Live task gate (fetch origin/main before acting)
+### Live task gate (fetch main and integration before acting)
 
 ```text
-Accepted code baseline: `origin/main` at
-`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
-Canonical UI/UX authority branch: `docs/uiux-handoff-v2.2` at
-`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`.
+`origin/main` is the accepted merged code baseline. Fetch and verify its live HEAD before acting.
+The active integration candidate is Draft PR #32 / `feat/operational-frontend-m365`; fetch and verify
+its live HEAD and PR state separately. The integration branch is not merged-main authority. Record
+the exact implementation baseline and its exact-head CI in each task packet; never infer current
+branch state or a later HEAD's CI result from a SHA recorded here.
 
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-PR-02 through PR-04 were implemented together by GitHub PR #28 from base
-`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
-`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
-PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
-PR #28 remains open and Draft; it is not merged, released or deployed.
-The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
-local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
-upgrade/downgrade/upgrade CI regression is committed at
-`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
-reviewed remote head above and do not change PR #28's Draft/unmerged status.
-PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This task does not change PR #28's remote Draft head.
-PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
-Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
-The earlier S13-PR-004/005 execution sequence is historical implementation context, not the current
-owner-authorized UI/UX track.
+Last verified before this authority synchronization (2026-09-26): main was
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` after PR #31; integration was
+`d297cefe910de6070bb574de26abfb0a5a4db9ee` after F2-PR-006/#43 merged,
+with exact-head CI #469 SUCCESS. These SHAs and the CI result are dated evidence only.
+
+PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
+canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
+PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
+PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
+
+Operational Frontend — IMPLEMENTED ON DRAFT PR #32. F2-PR-001 removed the legacy global Review
+Queue/Validation Dashboard production routes; F2-PR-002 established Fluent 2 light tokens;
+F2-PR-003 replaced the production Astryx shell/login/shared-state primitives.
+F2-PR-001 — CLOSED ON INTEGRATION.
+F2-PR-002 — CLOSED ON INTEGRATION.
+F2-PR-003 — CLOSED ON INTEGRATION.
+F2-PR-004 — CLOSED ON INTEGRATION (Case Overview / Project List).
+F2-PR-005 — CLOSED ON INTEGRATION (Workbench asset context / drawer).
+F2-PR-006 — CLOSED ON INTEGRATION (NCC selection).
+F2-PR-007 — NEXT REMEDIATION SLICE / NOT YET STARTED.
+F2-PR-008 — PENDING AFTER F2-PR-007.
+The branch is not merged to main and does not prove the full North-star E2E or OS-G0 visual closeout.
+
+VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
+`d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
+`VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json`. Local immutable blobs are the current VPS pilot
+document-byte provider; PostgreSQL + DocumentRevision/CurrentHead remain authority.
+
+VALORA-ONEDRIVE-EXCHANGE-001 — G8 OFFLINE IMPLEMENTATION COMPLETE at code milestone
+`f896f15b0b18e8eb3a32619bee2418f3a4b92da4`. Exact-head CI run #302 passed all jobs; backend
+reported 1659 passed and frontend 140 passed. G8 proves offline Exchange/storage behavior only;
+live Files.ReadWrite.AppFolder/provider conformance remains a separately authorized G9 decision.
+
+ADR 0045 + the Working Change Observation design addendum are now current authority for DOCX
+Working-copy changes:
+Word Save/provider notification -> observation/revalidation -> DocumentChangeCandidate -> Old/V/W review
+-> explicit human-confirmed revision command -> G8 NEXT_REVISION storage boundary.
+Word Save, notification, revalidation and DocumentChangeCandidate creation never create DocumentRevision
+or mutate authoritative business data automatically.
+
+The original PR-07 direct OneDrive replacement/write path remains blocked/historical. Its protected
+value and three-way comparison semantics remain reusable, but new document-change runtime must be
+re-baselined around ADR 0045 and a task-specific implementation contract before coding. Do not start
+webhook/subscription/delta watcher runtime from ADR 0045 alone.
+
+PR-08 through PR-13 remain not implemented as complete product stages. Software Completion still
+requires the North-star product path, release/publishing, traceability/state/fidelity and exact-SHA
+E2E acceptance before Windows Preview.
+
+Legacy global Review Queue / standalone Validation Dashboard production routing was removed by
+F2-PR-001. Workbench asset context / drawer IA was remediated by F2-PR-005; none of the retired
+legacy concepts may be revived as product authority.
+
+OneDrive Exchange is non-authoritative. Encrypted off-site Backup remains a separate unopened task.
+No AWS live activity, live Exchange reconsent/provider probe, production deploy or release is
+authorized unless the Product Owner explicitly opens that gate.
 ```
 
-Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
+Agents must `git fetch origin` and verify live `origin/main` and active integration HEADs. Listed
+SHAs are **evidence**, not evergreen truth.
 
 ### Permanent S12 Apply v1 (frozen)
 
@@ -85,7 +132,7 @@ Human, system and ai_service principals remain distinct; AI/system never imperso
 AITaskRun/DecisionEpisode are provenance around authoritative domain decisions, not replacement truth.
 Workflow patterns derive from domain commands and committed outcomes, never UI clickstream.
 Temporary selections, autosave, failed/stale runs and unreviewed output are not positive feedback.
-Long-running production AI/extraction tasks require durable outbox/job/attempt execution and stale-result protection.
+Long-running production AI/extraction tasks must reuse the existing durable `TaskJob`/`TaskJobAttempt`/worker execution boundary, including lease/retry/dead-letter/stale-generation protection; do not create a second AI queue.
 ADR 0028 restricted Workbench fields (description, appraised_unit_price,
   review_status, validation_status) require draft-commit command path + authorization
   + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
@@ -103,7 +150,7 @@ No skipped tests to hide failures.
 No unrelated refactors or formatting churn.
 No deleting or weakening guardrails.
 Vietnamese client-facing copy must keep correct diacritics.
-Astryx compliance for Workbench UI.
+Microsoft Fluent 2 light compliance for Workbench/product UI; desktop-first, Vietnamese-first, data-heavy/table-first. Astryx is not current product visual authority.
 No client-identifying data or real customer files in the public repository.
 No direct bulk SQL into active knowledge from historical dossiers.
 ```
@@ -175,6 +222,34 @@ User/owner controls Draft PR creation, Ready, squash, and merge
 unless a task explicitly authorizes otherwise.
 ```
 
+### 8.1 Exact-head baseline and dependent-task gate
+
+```text
+A task may be handed to implementation only from an explicitly recorded baseline SHA whose required
+CI has completed SUCCESS on that exact SHA.
+
+A successful CI run on a parent/earlier commit does not certify a later HEAD. There is no
+"green by inheritance", including for docs-only commits when they become the execution baseline.
+
+Every implementation task packet must record:
+- baseline branch;
+- exact baseline SHA;
+- exact-head CI run number/status;
+- dependency/predecessor task state.
+
+Normal delivery sequence:
+green exact-head baseline
+→ bounded implementation
+→ focused tests/static/browser/visual gates required by the task
+→ review on a frozen snapshot where required
+→ resulting exact-head CI SUCCESS
+→ task/PR closeout
+→ only then release dependent task(s) to implementation.
+
+If HEAD changes after CI/review, the prior evidence remains historical evidence only; re-run or
+revalidate the gates required for the new exact HEAD before closeout or dependent-task handoff.
+```
+
 ## 9. Security Requirement
 
 ```text
@@ -182,3 +257,141 @@ Fail closed on missing identity, inactive user/org, cross-tenant access.
 Frontend visibility is not security.
 No production secrets in repository content or fixtures.
 ```
+
+## 10. Project AI Execution Policy
+
+This section is the canonical reusable execution policy for AI-assisted VALORA work. Task-specific
+instructions may narrow or override routing only when they are explicit, documented and consistent
+with accepted architecture and security authority. A task override never grants cloud, credential,
+merge, deploy or release authority that the task does not already have.
+
+### 10.1 Roles and current implementations
+
+```text
+Lead / Architect / Product Owner
+  -> Codex: writer, orchestrator, authority interpreter and final gate owner
+  -> MECHANICAL_WORKER: Gemini 3.8 Flash High through Antigravity CLI
+  -> Codex verification
+  -> INDEPENDENT_REVIEWER_A: DeepSeek v4.1 Flash through OpenCode CLI
+  +  INDEPENDENT_REVIEWER_B: Gemini 3.1 Pro High through Antigravity CLI
+  -> Codex final gate, commit and push
+```
+
+Role semantics are stable; model IDs and CLIs are current implementations and may change. At the
+start of a delegated run, query the CLI-supported model list and use the exact current ID rather
+than inventing or assuming one. Current implementations on 2026-09-19 are:
+
+| Role | Current implementation | Authority |
+|---|---|---|
+| Writer/orchestrator/final gate | Codex | Interprets authority, plans, writes, verifies, accepts/rejects findings, commits and pushes when authorized |
+| `MECHANICAL_WORKER` | `gemini-3.8-flash-high` via `agy` | May edit only exact bounded files in its task packet; never commits or pushes |
+| `INDEPENDENT_REVIEWER_A` | `opencode-go/deepseek-v4.1-flash` via `opencode` | Read-only independent review |
+| `INDEPENDENT_REVIEWER_B` | `gemini-3.1-pro-high` via `agy` | Read-only independent review |
+
+Only Codex may commit or push delegated output unless the Product Owner explicitly changes this
+policy. A worker must never merge, change PR state, deploy, release, use cloud credentials, mutate a
+live provider, broaden scope or reinterpret accepted ADR semantics.
+
+### 10.2 Routing rule
+
+```text
+HIGH MECHANICAL LOAD + LOW ARCHITECTURE AMBIGUITY
+  -> delegate to MECHANICAL_WORKER
+
+LOW CODE VOLUME + HIGH DECISION IMPACT
+  -> Codex retains the work
+```
+
+Delegate boilerplate, repetitive tests from a locked matrix, fixtures, DTO/request plumbing,
+deterministic transformations, documentation synchronization, mechanical refactors, renames,
+lint/import/type corrections and targeted test execution. Codex retains architecture, ADR meaning,
+security boundaries, transaction and concurrency semantics, idempotency, lost-response recovery,
+authorization, storage authority, IAM/KMS policy, migration strategy and production gates.
+
+For `VALORA-STORAGE-S3-SPIKE-001` G4, the task-specific instruction that Codex is the sole writer
+overrides mechanical-worker write authority. DeepSeek and Gemini remain read-only reviewers.
+
+### 10.3 Required worker task packet
+
+Every delegated implementation uses a bounded packet with all of these fields:
+
+```text
+TASK ID
+GOAL
+AUTHORITY
+CONTEXT
+ALLOWED FILES
+FORBIDDEN FILES
+IMPLEMENTATION INSTRUCTIONS
+INVARIANTS
+TESTS TO RUN
+STOP CONDITIONS
+OUTPUT FORMAT
+```
+
+The packet must name exact files, invariants, tests and stop conditions. Prompts such as `fix
+project`, `complete everything` or `solve all issues` are prohibited. The default workspace is
+`F:\Project Valora\valora-operational-frontend`.
+
+After worker execution, Codex must inspect the actual `git diff`; a worker summary is not acceptance
+evidence. Codex then runs relevant tests and static gates before seeking independent review.
+
+### 10.4 Review independence and snapshot discipline
+
+Worker self-checks are labeled `WORKER SELF-CHECK`. If Gemini 3.8 Flash High implemented a change,
+its own self-review is not independent acceptance evidence for that change. Independent acceptance
+uses both configured reviewers unless a task explicitly defines another accepted gate.
+
+DeepSeek and Gemini 3.1 Pro High are read-only. They must not modify/create files, apply patches,
+commit, push, use credentials, run cloud commands, mutate networks/resources or decide a Product
+Owner gate. Codex verifies every finding before applying it and classifies findings as `VALID`,
+`INVALID`, `DUPLICATE`, `OUT_OF_SCOPE` or `ADVISORY`.
+
+Both reviewers must receive the same frozen snapshot: Git HEAD, relevant-file manifest, SHA-256
+hashes and governing docs/code. If any reviewed file changes, both reviews are invalid and must be
+rerun on a new manifest. Do not report Codex review or worker self-review as independent evidence.
+If a required provider is unavailable, record `INDEPENDENT REVIEW INCOMPLETE`; never fabricate or
+substitute a verdict.
+
+### 10.5 Stop and escalation rules
+
+A worker stops on conflicting authority, undefined contract, architecture or security ambiguity,
+persistence-semantic change, cloud credential/live-provider requirement, production migration or
+unexpected blast radius. It must not work around the conflict. Codex escalates to the Lead/Architect
+when a decision exceeds accepted authority.
+
+The normal sequence is:
+
+```text
+Codex plans
+  -> bounded worker implementation when routing permits
+  -> Codex inspects diff and verifies/tests
+  -> both independent reviewers inspect one exact snapshot
+  -> Codex resolves verified findings and reruns invalidated reviews
+  -> Codex commits
+  -> Codex pushes only when authorized
+```
+
+### 10.6 Current provider command forms
+
+DeepSeek read-only reviewer:
+
+```text
+opencode run -m opencode-go/deepseek-v4.1-flash "<strict read-only review prompt>"
+```
+
+Gemini read-only reviewer:
+
+```text
+agy -p "<strict read-only review prompt>" --mode plan --model gemini-3.1-pro-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
+```
+
+Gemini mechanical worker, after `agy models` confirms the exact ID:
+
+```text
+agy -p "<bounded worker task packet>" --mode accept-edits --model gemini-3.8-flash-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
+```
+
+If Antigravity headless read permissions block a reviewer, `--dangerously-skip-permissions` may be
+used only to bypass the read gate with the same strict read-only prompt. It never grants repository,
+credential, network or cloud mutation authority.
