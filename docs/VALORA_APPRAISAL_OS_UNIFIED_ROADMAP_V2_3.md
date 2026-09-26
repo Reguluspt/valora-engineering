@@ -4,7 +4,7 @@
 **Last reconciled:** 2026-09-24
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
-**Repository state (reconciled 2026-09-26):** `origin/main` is at `8190ae885c4168e2d54c62fbb4a8e9b066d56522`. Draft PR #32 remains the active integration candidate against `main`; `feat/operational-frontend-m365` is at `c9decc3026b6dbcd1f60a96aaab17792aaa6d390` after F2-PR-001 through F2-PR-008 closed on integration. Exact-head integration CI #479 succeeded. OS-G0 Fluent 2 engineering closeout is complete on integration but is not yet merged to `main`; OS-G1 is not started.
+**Repository state (reconciled 2026-09-26):** `origin/main` is at `8190ae885c4168e2d54c62fbb4a8e9b066d56522`. Draft PR #32 remains the active integration candidate against `main`. The last verified integration HEAD before this closeout documentation update was `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`, after F2-PR-001 through F2-PR-008 closed on integration, with exact-head CI #479 SUCCESS. Treat that SHA/CI as dated baseline evidence and verify the live PR #32 / integration HEAD before acting. OS-G0 Fluent 2 engineering closeout is complete on integration but is not yet merged to `main`; OS-G1 is not started.
 
 ## 1. Executive decision
 
@@ -77,7 +77,7 @@ Conflict resolution / role split:
 
 ### Active Draft PR #32 / integration branch
 
-PR #32 remains open/draft against `main`. Integration branch exact head is `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`; exact-head CI #479 is SUCCESS. F2-PR-001 through F2-PR-008 are closed on that integration branch only. OS-G0 Fluent 2 engineering closeout is complete on integration; PR #32 main reconciliation remains the final OS-G0 branch-closeout gate. OS-G1 is not started.
+PR #32 remains open/draft against `main`. The last verified integration HEAD before this closeout documentation update was `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`, with exact-head CI #479 SUCCESS; this is dated baseline evidence, not an evergreen current-HEAD claim. F2-PR-001 through F2-PR-008 are closed on integration. Verify the live PR #32 / integration HEAD before acting. OS-G0 Fluent 2 engineering closeout is complete on integration; PR #32 main reconciliation remains the final OS-G0 branch-closeout gate. OS-G1 is not started.
 
 Contains:
 - Operational Frontend candidate;
