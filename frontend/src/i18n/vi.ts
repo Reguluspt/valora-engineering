@@ -281,6 +281,8 @@ export const vi = {
   "ncc.drawer.tab.history": "Xem lịch sử thay đổi",
   "ncc.drawer.assetSummary": "Tóm tắt tài sản",
   "ncc.drawer.noCandidates": "Chưa có báo giá đủ điều kiện cho dòng này.",
+  "ncc.drawer.ineligible": "Không đủ điều kiện chọn",
+  "ncc.drawer.quotePrice": "Giá báo giá NCC",
   "ncc.drawer.noCurrent": "Dòng này chưa có NCC được chọn.",
   "ncc.drawer.noHistory": "Chưa có lịch sử chọn.",
   "ncc.drawer.selectCandidate": "Chọn báo giá này",

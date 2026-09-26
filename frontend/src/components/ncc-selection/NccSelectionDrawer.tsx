@@ -46,6 +46,8 @@ export function NccSelectionDrawer({
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const asideRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Drawer accessibility: focus the close control on open, keep keyboard
   // focus within the drawer while open (dependency-free trap), close on
@@ -57,7 +59,7 @@ export function NccSelectionDrawer({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -78,7 +80,7 @@ export function NccSelectionDrawer({
       if (event.shiftKey && (active === first || !aside.contains(active))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
+      } else if (!event.shiftKey && (active === last || !aside.contains(active))) {
         event.preventDefault();
         first.focus();
       }
@@ -94,7 +96,7 @@ export function NccSelectionDrawer({
         previouslyFocused.focus();
       }
     };
-  }, [onClose]);
+  }, []);
 
   const selectedCandidate =
     line.candidates.find((candidate) => candidate.quote_line_id === selectedCandidateId) ??
@@ -177,8 +179,22 @@ export function NccSelectionDrawer({
         {tab === "history" && <NccHistoryTab history={line.history} />}
       </div>
 
-      {tab === "candidates" && selectedCandidate && (
+      {tab === "candidates" && selectedCandidate?.eligible && (
         <div className="ncc-drawer-confirm">
+          <dl className="ncc-selection-comparison">
+            <dt>{t("ncc.table.currentPrice")}</dt>
+            <dd>{formatPrice(line.appraised_unit_price)}</dd>
+            <dt>{t("ncc.drawer.quotePrice")}</dt>
+            <dd>{formatPrice(selectedCandidate.quoted_unit_price)} {selectedCandidate.currency}</dd>
+            <dt>{t("ncc.table.difference")}</dt>
+            <dd>{formatPrice(selectedCandidate.difference_amount)}</dd>
+            <dt>{t("ncc.table.differencePercent")}</dt>
+            <dd>{selectedCandidate.difference_percent === null ? NULL_VALUE : `${selectedCandidate.difference_percent}%`}</dd>
+            <dt>{t("ncc.drawer.evidenceFilename")}</dt>
+            <dd>{selectedCandidate.evidence.filename ?? NULL_VALUE}</dd>
+            <dt>{t("ncc.drawer.evidenceStatus")}</dt>
+            <dd>{selectedCandidate.evidence.status ?? NULL_VALUE}</dd>
+          </dl>
           {selectedCandidate.warnings.length > 0 && (
             <div className="ncc-warning-summary" data-warning="true">
               <strong>{t("ncc.table.warnings")}</strong>
@@ -223,26 +239,56 @@ function NccCandidatesTab({
   }
   return (
     <ul className="ncc-candidate-list">
-      {candidates.map((candidate) => (
-        <li key={candidate.quote_line_id}>
-          <label className="ncc-candidate" data-candidate-id={candidate.quote_line_id}>
-            <input
-              type="radio"
-              name={`candidate-${candidates.length}`}
-              checked={selectedCandidateId === candidate.quote_line_id}
-              onChange={() => onSelect(candidate.quote_line_id)}
-            />
-            <div>
-              <strong>{candidate.supplier_name}</strong>
-              <span>{formatPrice(candidate.quoted_unit_price)} {candidate.currency}</span>
-              <small>
-                {t("ncc.table.difference")}: {formatPrice(candidate.difference_amount)} ·{" "}
-                {candidate.difference_percent === null ? NULL_VALUE : `${candidate.difference_percent}%`}
-              </small>
-            </div>
-          </label>
-        </li>
-      ))}
+      {candidates.map((candidate) => {
+        const isSelected = selectedCandidateId === candidate.quote_line_id;
+        const isEligible = candidate.eligible;
+        return (
+          <li key={candidate.quote_line_id}>
+            <label
+              className={`ncc-candidate ${isSelected ? "ncc-candidate--selected" : ""} ${!isEligible ? "ncc-candidate--ineligible" : ""}`}
+              data-candidate-id={candidate.quote_line_id}
+            >
+              <input
+                type="radio"
+                name={`candidate-${candidates.length}`}
+                disabled={!isEligible}
+                checked={isSelected}
+                onChange={() => {
+                  if (isEligible) {
+                    onSelect(candidate.quote_line_id);
+                  }
+                }}
+              />
+              <div className="ncc-candidate-info">
+                <div className="ncc-candidate-header">
+                  <strong>{candidate.supplier_name}</strong>
+                  <span className="ncc-candidate-price">
+                    {formatPrice(candidate.quoted_unit_price)} {candidate.currency}
+                  </span>
+                </div>
+                <small className="ncc-candidate-diff">
+                  {t("ncc.table.difference")}: {formatPrice(candidate.difference_amount)} ·{" "}
+                  {candidate.difference_percent === null ? NULL_VALUE : `${candidate.difference_percent}%`}
+                </small>
+                {candidate.warnings.length > 0 && (
+                  <div className="ncc-candidate-warnings">
+                    {candidate.warnings.map((code) => (
+                      <span key={code} className="ncc-candidate-warning-tag" data-warning="true">
+                        ⚠ {warningLabel(code)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {!isEligible && (
+                  <span className="ncc-candidate-ineligible-tag">
+                    {t("ncc.drawer.ineligible")}
+                  </span>
+                )}
+              </div>
+            </label>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -256,6 +302,12 @@ function NccCurrentTab({ line }: { line: NccSelectionAssetLine }) {
   const evidenceRegionId = `ncc-evidence-${line.asset_line_id}`;
   return (
     <div className="ncc-current-detail" data-current="true">
+      {current.stale && (
+        <div className="ncc-drawer-stale-notice" data-stale="true">
+          <strong>⚠ {t("ncc.stale.title")}</strong>
+          <p>{t("ncc.stale.message")}</p>
+        </div>
+      )}
       <dl>
         <dt>{t("ncc.table.selectedSupplier")}</dt>
         <dd>{current.supplier_name}</dd>
@@ -302,8 +354,10 @@ function NccHistoryTab({ history }: { history: NccSelectionAssetLine["history"] 
     <ul className="ncc-history-list">
       {history.map((item) => (
         <li key={item.selection_revision} data-revision={item.selection_revision}>
-          <strong>{historyRevisionLabel(item.selection_revision)}</strong>
-          <span>{item.supplier_name}</span>
+          <div className="ncc-history-item-header">
+            <strong>{historyRevisionLabel(item.selection_revision)}</strong>
+            <span>{item.supplier_name}</span>
+          </div>
           <small>{formatPrice(item.quoted_unit_price)} {item.currency}</small>
         </li>
       ))}

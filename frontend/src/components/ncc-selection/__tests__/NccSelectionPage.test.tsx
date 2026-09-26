@@ -221,6 +221,10 @@ describe("NccSelectionPage", () => {
     const radio = candidate.findAllByProps({ type: "radio" })[0];
     act(() => { radio.props.onChange(); });
 
+    // Warning is visible before confirmation and its code is acknowledged in mockConfirm
+    expect(root.root.findAllByProps({ "data-warning": "true" }).length).toBeGreaterThan(0);
+    expect(root.root.findByProps({ className: "ncc-warning-summary" })).toBeDefined();
+
     const confirmBtn = root.root.findByProps({ "data-primary-action": "true" });
     await act(async () => { confirmBtn.props.onClick(); });
 
@@ -419,6 +423,11 @@ describe("NccSelectionPage", () => {
 
     let root: any;
     await act(async () => { root = renderPage(); });
+
+    // Stale line is labeled "Cần xem lại" in the table
+    const stateBadge = root.root.findByProps({ "data-state": "stale" });
+    expect(stateBadge.props.children).toBe("Cần xem lại");
+
     openDrawer(root);
 
     // No silent preselect: no radio is checked and no confirm CTA is shown
@@ -429,6 +438,13 @@ describe("NccSelectionPage", () => {
       expect(radio.props.checked).toBe(false);
     }
     expect(root.root.findAllByProps({ "data-primary-action": "true" }).length).toBe(0);
+
+    // Current selection tab also labels stale decision
+    switchTab(root, 1);
+    const staleNotice = root.root.findByProps({ "data-stale": "true" });
+    expect(staleNotice).toBeDefined();
+    const noticeTitle = staleNotice.findAll((node: any) => node.type === "strong")[0];
+    expect(String(noticeTitle.props.children)).toContain("Cần xem lại");
   });
 
   it("reveals server-provided evidence metadata through an accessible disclosure", async () => {
@@ -498,6 +514,143 @@ describe("NccSelectionPage", () => {
     const label = items[0].findAll((node: any) => node.type === "strong")[0];
     expect(String(label.props.children)).toContain("Lần chọn 1");
     expect(String(label.props.children)).not.toContain("Rev");
+  });
+
+  it("disables ineligible candidate radio and prevents confirmation CTA or execution", async () => {
+    const ineligibleCandidate = makeCandidate({
+      quote_line_id: "quote-ineligible",
+      supplier_name: "Ineligible Supplier",
+      eligible: false,
+    });
+    mockUseNccSelection.mockReturnValue({
+      aggregate: makeAggregate([makeLine({ candidates: [ineligibleCandidate] })]),
+      state: "READY",
+      error: null,
+      retry: vi.fn(),
+      reload: vi.fn(),
+    });
+
+    let root: any;
+    await act(async () => { root = renderPage(); });
+    openDrawer(root);
+
+    const candidate = root.root.findByProps({ "data-candidate-id": "quote-ineligible" });
+    const radio = candidate.findAllByProps({ type: "radio" })[0];
+    expect(radio.props.disabled).toBe(true);
+
+    // Attempting selection on disabled candidate does not show confirmation CTA
+    act(() => { radio.props.onChange(); });
+    expect(root.root.findAllByProps({ "data-primary-action": "true" })).toHaveLength(0);
+    expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  it("displays candidate comparison with server prices, delta, em dash percent, evidence summary, and exactly one primary confirmation CTA", async () => {
+    const candidate = makeCandidate({
+      quoted_unit_price: 850,
+      currency: "USD",
+      difference_amount: -150,
+      difference_percent: null,
+      evidence: { evidence_file_id: "ev-1", filename: "quote_doc.pdf", status: "verified" },
+      eligible: true,
+    });
+    mockUseNccSelection.mockReturnValue({
+      aggregate: makeAggregate([makeLine({ appraised_unit_price: 1000, candidates: [candidate] })]),
+      state: "READY",
+      error: null,
+      retry: vi.fn(),
+      reload: vi.fn(),
+    });
+
+    let root: any;
+    await act(async () => { root = renderPage(); });
+    openDrawer(root);
+
+    // Initially no primary action
+    expect(root.root.findAllByProps({ "data-primary-action": "true" })).toHaveLength(0);
+
+    const candidateNode = root.root.findByProps({ "data-candidate-id": "quote-1" });
+    const radio = candidateNode.findAllByProps({ type: "radio" })[0];
+    act(() => { radio.props.onChange(); });
+
+    // Exactly one primary confirmation CTA when eligible selected
+    const primaryCta = root.root.findAllByProps({ "data-primary-action": "true" });
+    expect(primaryCta).toHaveLength(1);
+    expect(primaryCta[0].type).toBe("button");
+
+    // Comparison dl displays server prices, delta, em dash percent, evidence filename and status
+    const comparison = root.root.findByProps({ className: "ncc-selection-comparison" });
+    const dds = comparison.findAll((node: any) => node.type === "dd");
+    const getDdText = (dd: any) => {
+      const c = dd.props.children;
+      return Array.isArray(c) ? c.join("") : String(c ?? "");
+    };
+
+    expect(getDdText(dds[0])).toBe(new Intl.NumberFormat("vi-VN").format(1000));
+    expect(getDdText(dds[1])).toContain("850");
+    expect(getDdText(dds[1])).toContain("USD");
+    expect(getDdText(dds[2])).toBe(new Intl.NumberFormat("vi-VN").format(-150));
+    expect(getDdText(dds[3])).toBe("—");
+    expect(getDdText(dds[4])).toBe("quote_doc.pdf");
+    expect(getDdText(dds[5])).toBe("verified");
+  });
+
+  it("updates row aria-selected state and activates selection via Space key", async () => {
+    mockUseNccSelection.mockReturnValue({
+      aggregate: makeAggregate([makeLine()]),
+      state: "READY",
+      error: null,
+      retry: vi.fn(),
+      reload: vi.fn(),
+    });
+
+    let root: any;
+    await act(async () => { root = renderPage(); });
+
+    let row = root.root.findByProps({ "data-asset-line-id": "line-1" });
+    expect(row.props["aria-selected"]).toBeUndefined();
+
+    // Activate row via Space key
+    act(() => {
+      row.props.onKeyDown({ key: " ", preventDefault: () => {} });
+    });
+
+    row = root.root.findByProps({ "data-asset-line-id": "line-1" });
+    expect(row.props["aria-selected"]).toBe("true");
+    expect(root.root.findAllByProps({ role: "dialog" })).toHaveLength(1);
+
+    // Closing the drawer deselects the line and clears aria-selected
+    act(() => {
+      root.root.findByProps({ className: "ncc-drawer-close" }).props.onClick();
+    });
+    row = root.root.findByProps({ "data-asset-line-id": "line-1" });
+    expect(row.props["aria-selected"]).toBeUndefined();
+    expect(root.root.findAllByProps({ role: "dialog" })).toHaveLength(0);
+  });
+
+  it("provides accessible drawer dialog semantics and close action", async () => {
+    mockUseNccSelection.mockReturnValue({
+      aggregate: makeAggregate([makeLine()]),
+      state: "READY",
+      error: null,
+      retry: vi.fn(),
+      reload: vi.fn(),
+    });
+
+    let root: any;
+    await act(async () => { root = renderPage(); });
+    openDrawer(root);
+
+    const dialog = root.root.findByProps({ role: "dialog" });
+    expect(dialog.props["aria-modal"]).toBe("true");
+    expect(dialog.props["aria-label"]).toBe("Chi tiết dòng tài sản");
+    expect(dialog.props["data-open"]).toBe("true");
+
+    const closeBtn = root.root.findByProps({ className: "ncc-drawer-close" });
+    expect(closeBtn.props["aria-label"]).toBe("Đóng");
+    expect(closeBtn.props.type).toBe("button");
+
+    act(() => { closeBtn.props.onClick(); });
+    expect(root.root.findAllByProps({ role: "dialog" })).toHaveLength(0);
   });
 });
 
