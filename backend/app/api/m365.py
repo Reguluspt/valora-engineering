@@ -676,6 +676,14 @@ async def reimport_exchange_artifact(
                 "detail": "Không tìm thấy tệp Exchange.",
             },
         )
+    if artifact.media == "docx" and artifact.role == "working":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Thay đổi trong bản DOCX Working cần được xem xét và xác nhận "
+                "trước khi tạo phiên bản mới."
+            ),
+        )
     vault, oauth, graph = _components(db)
     runtime = acquire_exchange_runtime(
         db,
