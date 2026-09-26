@@ -15,16 +15,33 @@ from app.core.rbac import get_current_user
 from app.db import get_db
 from app.main import app
 from app.modules.m365_integration.infrastructure.credential_vault import DatabaseCredentialVault
+from app.modules.document_workspace.models import (
+    DocumentRevision,
+    DocumentRevisionCurrentHead,
+    DocumentStorageExecutionIntent,
+)
+from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.project_master_data.models import (
     DocumentTemplate,
     DocumentTemplateStatus,
+    ProjectAssetImportStagingRow,
     TemplateVersion,
     TemplateVersionStatus,
+)
+from tests.test_g8_onedrive_exchange import (
+    _head,
+    _import_xlsx,
+    _new_excel_batch,
+    _working,
+    _xlsx,
 )
 from tests.test_pr05_m365_foundation import _seed
 from tests.test_pr06_m365_revalidation import _setup
 
-pytest_plugins = ("tests.test_pr06_m365_revalidation",)
+pytest_plugins = (
+    "tests.test_pr06_m365_revalidation",
+    "tests.test_g8_onedrive_exchange",
+)
 
 
 def _authority(db: Session, context: dict[str, object]) -> TemplateVersion:
@@ -90,6 +107,119 @@ def operational_api(pr06_db: Session, monkeypatch: pytest.MonkeyPatch):
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def exchange_api(exchange_context, monkeypatch: pytest.MonkeyPatch):
+    context = exchange_context
+
+    def override_get_db():
+        yield context["db"]
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: context["seeded"]["actor"]
+    monkeypatch.setattr(
+        "app.api.m365._components",
+        lambda db: (object(), object(), context["graph"]),
+    )
+    monkeypatch.setattr(
+        "app.api.m365.acquire_exchange_runtime",
+        lambda *args, **kwargs: SimpleNamespace(
+            connection=context["connection"], access_token="offline-token"
+        ),
+    )
+    try:
+        yield context, TestClient(app, follow_redirects=False)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.pop(get_db, None)
+
+
+def _reimport_url(context, artifact_id, *, project_id=None):
+    project_id = project_id or context["seeded"]["project"].id
+    return (
+        f"/api/v1/m365/onedrive/projects/{project_id}"
+        f"/exchange/artifacts/{artifact_id}/reimport"
+    )
+
+
+def test_working_docx_reimport_fails_before_provider_or_revision(
+    exchange_api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context, client = exchange_api
+    revision, _, working = _working(context)
+    original_head = _head(context, revision.document_id).current_revision_id
+    original_revision_count = context["db"].query(DocumentRevision).count()
+    original_intent_count = context["db"].query(DocumentStorageExecutionIntent).count()
+    monkeypatch.setattr(
+        "app.api.m365._components",
+        lambda db: pytest.fail("Provider components loaded for blocked DOCX re-import"),
+    )
+    monkeypatch.setattr(
+        "app.api.m365.reimport_working_docx",
+        lambda *args, **kwargs: pytest.fail("DOCX revision promotion invoked"),
+    )
+
+    response = client.post(_reimport_url(context, working.id), json={})
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": (
+            "Thay đổi trong bản DOCX Working cần được xem xét và xác nhận "
+            "trước khi tạo phiên bản mới."
+        )
+    }
+    assert context["db"].query(DocumentRevision).count() == original_revision_count
+    assert context["db"].query(DocumentStorageExecutionIntent).count() == original_intent_count
+    assert _head(context, revision.document_id).current_revision_id == original_head
+
+
+def test_working_docx_reimport_preserves_permission_and_tenant_scope(exchange_api) -> None:
+    context, client = exchange_api
+    _, _, working = _working(context)
+    actor = context["seeded"]["actor"]
+    role = actor.roles[0].role
+    original_permissions = role.permissions
+    role.permissions = ["project:read"]
+    denied = client.post(_reimport_url(context, working.id), json={})
+    role.permissions = original_permissions
+    other_project = client.post(
+        _reimport_url(context, working.id, project_id=uuid.uuid4()), json={}
+    )
+    other_actor = _seed(context["db"], suffix="exchange-other-tenant")["actor"]
+    app.dependency_overrides[get_current_user] = lambda: other_actor
+    other_tenant = client.post(_reimport_url(context, working.id), json={})
+    app.dependency_overrides[get_current_user] = lambda: actor
+
+    assert denied.status_code == 403
+    assert other_project.status_code == 404
+    assert other_tenant.status_code == 404
+    assert other_project.json()["detail"]["error_code"] == "exchange_artifact_not_found"
+    assert other_tenant.json()["detail"]["error_code"] == "exchange_artifact_not_found"
+
+
+def test_xlsx_reimport_remains_staging_only(exchange_api) -> None:
+    context, client = exchange_api
+    batch = _new_excel_batch(context)
+    artifact, item = _import_xlsx(context, content=_xlsx(), batch=batch)
+    context["graph"].replace_file_content(
+        drive_item_id=item.drive_item_id,
+        content=_xlsx(asset_name="Máy phát thế hệ 2"),
+    )
+
+    response = client.post(_reimport_url(context, artifact.id), json={})
+
+    assert response.status_code == 200
+    source = context["db"].get(
+        ImportSourceArtifact, uuid.UUID(response.json()["excel_source_artifact_id"])
+    )
+    rows = context["db"].query(ProjectAssetImportStagingRow).filter_by(
+        import_batch_id=batch.id
+    ).all()
+    assert source is not None and source.generation == 2
+    assert [row.proposed_asset_name for row in rows] == ["Máy phát thế hệ 2"]
+    assert context["db"].query(DocumentRevision).count() == 0
+    assert context["db"].query(DocumentRevisionCurrentHead).count() == 0
 
 
 def test_connection_status_and_tenant_safe_adoption_options(operational_api) -> None:
