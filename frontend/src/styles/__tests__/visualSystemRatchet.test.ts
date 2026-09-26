@@ -64,7 +64,6 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
     label: "neon cyan literals",
     pattern: /(?:#(?:66fcf1|45f3ff)(?:[0-9a-f]{2})?\b|rgba?\(\s*(?:102(?:\s*,\s*|\s+)252(?:\s*,\s*|\s+)241|69(?:\s*,\s*|\s+)243(?:\s*,\s*|\s+)255)\b[^)]*\))/gi,
     allowedOccurrences: {
-      "components/m365/m365Workspace.css": 1,
       "components/workbench/review/ReviewQueueDashboard.tsx": 1,
     },
     forbiddenExamples: ["#66fcf1", "#45f3ffff", "rgba(102, 252, 241, 0.1)", "rgb(69 243 255 / 8%)"],
