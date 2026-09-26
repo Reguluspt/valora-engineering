@@ -96,8 +96,9 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
       "/workbench/validation",
     ]));
     const registeredRoutes = Object.values(APP_ROUTES);
-    expect(registeredRoutes).not.toContain("/workbench/queue");
-    expect(registeredRoutes).not.toContain("/workbench/validation");
+    for (const retiredRoute of ["/queue", "/validation", "/workbench/queue", "/workbench/validation"]) {
+      expect(registeredRoutes).not.toContain(retiredRoute);
+    }
 
     const unapprovedForbiddenRoutes = registeredRoutes.filter((route) => {
       if ((FORBIDDEN_NEW_STANDALONE_ROUTES as readonly string[]).includes(route)) return true;

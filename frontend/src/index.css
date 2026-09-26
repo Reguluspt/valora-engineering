@@ -1,22 +1,7 @@
-@import "@astryxdesign/core/reset.css";
-@import "@astryxdesign/core/astryx.css";
-@import "@astryxdesign/theme-neutral/theme.css";
 @import "./styles/fluent2-tokens.css";
 @import "./styles/fluent2-primitives.css";
 
 :root {
-  /* Temporary compatibility aliases. Later migration PRs must shrink this block. */
-  --bg-primary: var(--valora-color-canvas);
-  --bg-secondary: var(--valora-color-surface-primary);
-  --text-primary: var(--valora-color-text-primary);
-  --text-muted: var(--valora-color-text-secondary);
-  --accent-cyan: var(--valora-color-brand-background);
-  --accent-blue: var(--valora-color-brand-background);
-  --border-color: var(--valora-color-border-default);
-  --shadow-sm: var(--valora-shadow-rest);
-  --shadow-md: var(--valora-shadow-elevated);
-  --shadow-lg: var(--valora-shadow-overlay);
-
   --status-draft: var(--valora-color-status-warning-foreground);
   --status-review: var(--valora-color-status-info-foreground);
   --status-approved: var(--valora-color-status-success-foreground);
@@ -45,10 +30,6 @@
   --radius-md: var(--valora-radius-surface);
   --radius-lg: var(--valora-radius-large);
   --radius-xl: 16px;
-
-  --glass-bg: var(--valora-color-surface-elevated);
-  --glass-blur: none;
-  --glass-border: 1px solid var(--valora-color-border-subtle);
 }
 
 * {

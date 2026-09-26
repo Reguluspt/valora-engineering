@@ -55,17 +55,13 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   {
     label: "Astryx imports",
     pattern: /@astryxdesign\/[a-z0-9@/_-]+/gi,
-    allowedOccurrences: {
-      "index.css": 3,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ['@import "@astryxdesign/core/astryx.css";'],
   },
   {
     label: "neon cyan literals",
     pattern: /(?:#(?:66fcf1|45f3ff)(?:[0-9a-f]{2})?\b|rgba?\(\s*(?:102(?:\s*,\s*|\s+)252(?:\s*,\s*|\s+)241|69(?:\s*,\s*|\s+)243(?:\s*,\s*|\s+)255)\b[^)]*\))/gi,
-    allowedOccurrences: {
-      "components/workbench/review/ReviewQueueDashboard.tsx": 1,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ["#66fcf1", "#45f3ffff", "rgba(102, 252, 241, 0.1)", "rgb(69 243 255 / 8%)"],
   },
   {
@@ -77,9 +73,7 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   {
     label: "glass compatibility declarations",
     pattern: /--glass-[a-z0-9-]+\s*:/gi,
-    allowedOccurrences: {
-      "index.css": 3,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ["--glass-bg: transparent;"],
   },
   {
@@ -97,9 +91,7 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   {
     label: "legacy visual-token declarations",
     pattern: /["']?--(?:bg-primary|bg-secondary|text-primary|text-muted|accent-cyan|accent-blue|border-color|shadow-sm|shadow-md|shadow-lg)["']?\s*:/gi,
-    allowedOccurrences: {
-      "index.css": 10,
-    },
+    allowedOccurrences: {},
     forbiddenExamples: ["--accent-cyan: red;", 'style={{ "--bg-primary": "#000" }}'],
   },
   {
@@ -184,15 +176,14 @@ const REQUIRED_PRIMITIVES = [
 ] as const;
 
 describe("Fluent 2 light visual-system foundation", () => {
-  it("composes temporary Astryx compatibility before authoritative Fluent styles", () => {
+  it("loads canonical Fluent tokens and primitives without Astryx imports", () => {
     const source = readFileSync(INDEX_STYLES, "utf8");
-    const astryxTheme = source.indexOf('@import "@astryxdesign/theme-neutral/theme.css";');
     const tokens = source.indexOf('@import "./styles/fluent2-tokens.css";');
     const primitives = source.indexOf('@import "./styles/fluent2-primitives.css";');
 
-    expect(astryxTheme).toBeGreaterThanOrEqual(0);
-    expect(tokens).toBeGreaterThan(astryxTheme);
+    expect(tokens).toBeGreaterThanOrEqual(0);
     expect(primitives).toBeGreaterThan(tokens);
+    expect(source).not.toMatch(/@astryxdesign\//i);
   });
 
   it("defines the required semantic token families", () => {
@@ -203,27 +194,9 @@ describe("Fluent 2 light visual-system foundation", () => {
     expect(source).toContain('"Segoe UI"');
   });
 
-  it("keeps legacy aliases inside the compatibility layer and mapped to semantics", () => {
+  it("does not require legacy migration aliases", () => {
     const source = readFileSync(INDEX_STYLES, "utf8");
-    const mappings = {
-      "--bg-primary": "--valora-color-canvas",
-      "--bg-secondary": "--valora-color-surface-primary",
-      "--text-primary": "--valora-color-text-primary",
-      "--text-muted": "--valora-color-text-secondary",
-      "--accent-cyan": "--valora-color-brand-background",
-      "--accent-blue": "--valora-color-brand-background",
-      "--border-color": "--valora-color-border-default",
-      "--shadow-sm": "--valora-shadow-rest",
-      "--shadow-md": "--valora-shadow-elevated",
-      "--shadow-lg": "--valora-shadow-overlay",
-    } as const;
-
-    for (const [legacy, semantic] of Object.entries(mappings)) {
-      expect(source).toMatch(new RegExp(`${legacy}:\\s*var\\(${semantic}\\);`));
-    }
-    expect(source).toMatch(/--glass-bg:\s*var\(--valora-color-surface-elevated\);/);
-    expect(source).toMatch(/--glass-blur:\s*none;/);
-    expect(source).toMatch(/--glass-border:\s*1px solid var\(--valora-color-border-subtle\);/);
+    expect(source).not.toMatch(/--(?:bg-primary|bg-secondary|text-primary|text-muted|accent-cyan|accent-blue|border-color|shadow-sm|shadow-md|shadow-lg|glass-[a-z0-9-]+)\s*:/i);
   });
 
   it("provides reusable shared primitive classes and visible keyboard focus", () => {
@@ -242,7 +215,7 @@ describe("Fluent 2 light visual-system foundation", () => {
       }
     });
 
-    it(`does not expand ${rule.label}`, () => {
+    it(`keeps ${rule.label} at zero`, () => {
       expect(occurrenceMap(rule)).toEqual(rule.allowedOccurrences);
     });
   }
