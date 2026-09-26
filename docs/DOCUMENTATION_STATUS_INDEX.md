@@ -1,7 +1,7 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-24
+**Date:** 2026-09-26
 **Scope:** Classification and reading rules for repository documentation.
 **Inventory reconciliation:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
@@ -77,7 +77,7 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Microsoft Fluent 2 light is current product visual authority.
 - S10/S12/S13/NCCQ/NCC Selection/Không gian tài liệu approved baselines are golden visual references.
 - Astryx mapping/package records are historical/low-level implementation evidence only.
-- F2-PR-001…003 already moved production routing, shared Fluent 2 tokens/styles and shell/login/shared-state primitives toward the current authority. F2-PR-004…008 own the remaining feature-surface, residual stylesheet/package and visual-regression closure. Historical `Astryx`/dark/cyan/glass mentions or prohibition text do not imply current visual direction.
+- F2-PR-001…008 are closed on the active integration candidate. Their accumulated result establishes the OS-G0 Fluent 2 engineering closeout on integration, including golden-surface remediation, provider-neutral Document Workspace, Astryx/package retirement, zero-debt visual ratchets and cross-surface regression evidence. PR #32 remains Draft and unmerged to `main`; historical `Astryx`/dark/cyan/glass mentions or prohibition text do not imply current visual direction.
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
 - Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
@@ -122,12 +122,14 @@ Use for current implementation truth, always checking the live Git/PR SHA:
 
 Current candidate facts as of this reconciliation:
 
-- merged main: through PR #31 at `27d1cc6...`;
-- Draft PR #32: active integration candidate; `feat/operational-frontend-m365` exact head is `d725bbc6...` after F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into that branch; this is not merged-main authority;
+- merged `main`: `8190ae885c4168e2d54c62fbb4a8e9b066d56522`;
+- Draft PR #32: active OS-G0 integration candidate; `feat/operational-frontend-m365` exact head was `c9decc3026b6dbcd1f60a96aaab17792aaa6d390` with exact-head CI #479 SUCCESS before this closeout documentation update; F2-PR-001…008 are closed on integration; this is not merged-main authority;
+- OS-G0 Fluent 2 engineering closeout: complete on integration, awaiting PR #32 main reconciliation;
 - Local immutable storage: G6 accepted;
 - OneDrive Exchange: G8 offline complete at code milestone `f896f15...`;
-- Working Change Observation: design/ADR accepted, runtime implementation contract still required;
+- Working Change Observation: design/ADR accepted; the full ADR 0045 observation/candidate runtime is not implied complete by OS-G0;
 - canonical Case State stages 5–16: not yet product-complete;
+- OS-G1: not started;
 - Release/Publishing and full North-star E2E: not implemented.
 
 ## 4. Historical design handoffs
