@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-23 (integration head/F2 progress + AI Master Plan authority reconciliation)
+**Last reconciled:** 2026-09-26 (main/integration authority alignment and F2 progress)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -37,27 +37,37 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 ```
 
-### Live task gate (fetch origin/main before acting)
+### Live task gate (fetch main and integration before acting)
 
 ```text
-Accepted merged code baseline remains `origin/main` at
-`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31). Always fetch and verify live main.
+`origin/main` is the accepted merged code baseline. Fetch and verify its live HEAD before acting.
+The active integration candidate is Draft PR #32 / `feat/operational-frontend-m365`; fetch and verify
+its live HEAD and PR state separately. The integration branch is not merged-main authority. Record
+the exact implementation baseline and its exact-head CI in each task packet; never infer current
+branch state or a later HEAD's CI result from a SHA recorded here.
 
-Active integration candidate: Draft PR #32 / `feat/operational-frontend-m365`.
-At the 2026-09-23 reconciliation it is at exact head `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`
-after F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into the integration branch; exact-head
-CI #454 is SUCCESS. This is not merged-main authority. Treat the live PR head as mutable; milestone
-SHAs below are evidence, not evergreen branch heads.
+Last verified before this authority synchronization (2026-09-26): main was
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` after PR #31; integration was
+`d297cefe910de6070bb574de26abfb0a5a4db9ee` after F2-PR-006/#43 merged,
+with exact-head CI #469 SUCCESS. These SHAs and the CI result are dated evidence only.
 
 PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
 canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
 
-Operational Frontend — IMPLEMENTED ON DRAFT PR #32. F2-PR-001…003 have removed the legacy global
-Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens and replaced
-the production Astryx shell/login/shared-state primitives. F2-PR-004…008 remain before OS-G0 visual
-closeout. The branch is not merged to main and does not prove the full North-star E2E.
+Operational Frontend — IMPLEMENTED ON DRAFT PR #32. F2-PR-001 removed the legacy global Review
+Queue/Validation Dashboard production routes; F2-PR-002 established Fluent 2 light tokens;
+F2-PR-003 replaced the production Astryx shell/login/shared-state primitives.
+F2-PR-001 — CLOSED ON INTEGRATION.
+F2-PR-002 — CLOSED ON INTEGRATION.
+F2-PR-003 — CLOSED ON INTEGRATION.
+F2-PR-004 — CLOSED ON INTEGRATION (Case Overview / Project List).
+F2-PR-005 — CLOSED ON INTEGRATION (Workbench asset context / drawer).
+F2-PR-006 — CLOSED ON INTEGRATION (NCC selection).
+F2-PR-007 — NEXT REMEDIATION SLICE / NOT YET STARTED.
+F2-PR-008 — PENDING AFTER F2-PR-007.
+The branch is not merged to main and does not prove the full North-star E2E or OS-G0 visual closeout.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
@@ -86,15 +96,16 @@ requires the North-star product path, release/publishing, traceability/state/fid
 E2E acceptance before Windows Preview.
 
 Legacy global Review Queue / standalone Validation Dashboard production routing was removed by
-F2-PR-001. The old Workbench right-panel IA remains remediation debt until its owning Fluent 2 slice;
-none of these legacy concepts may be revived as product authority.
+F2-PR-001. Workbench asset context / drawer IA was remediated by F2-PR-005; none of the retired
+legacy concepts may be revived as product authority.
 
 OneDrive Exchange is non-authoritative. Encrypted off-site Backup remains a separate unopened task.
 No AWS live activity, live Exchange reconsent/provider probe, production deploy or release is
 authorized unless the Product Owner explicitly opens that gate.
 ```
 
-Agents must `git fetch origin` and verify live `origin/main`. Listed SHAs are **evidence**, not evergreen truth.
+Agents must `git fetch origin` and verify live `origin/main` and active integration HEADs. Listed
+SHAs are **evidence**, not evergreen truth.
 
 ### Permanent S12 Apply v1 (frozen)
 
