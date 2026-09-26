@@ -1,6 +1,7 @@
 """S13-PR-002 corrective: adapters + immutable source artifacts proof matrix."""
 from __future__ import annotations
 
+import hashlib
 import io
 import os
 import struct
@@ -27,6 +28,7 @@ from app.modules.excel_import.application.adapters.xls_safety import (
 from app.modules.excel_import.application.adapters.xlsx_adapter import XlsxWorkbookAdapter
 from app.modules.excel_import.application.adapters.xlsx_merge import parse_merge_ref
 from app.modules.excel_import.application.source_artifact_service import (
+    _sha256_object,
     count_staging_rows,
     reconcile_source_artifacts,
 )
@@ -538,9 +540,31 @@ def test_s3_integration_when_configured():
     )
     assert st.size == len(payload)
     assert store.head(key).size == len(payload)
-    assert store.open_stream(key).read() == payload
+    with store.open_stream(key) as stream:
+        assert stream.read() == payload
     store.delete(key)
     assert store.head(key) is None
+
+    multipart_key = f"integration/multipart/{uuid.uuid4()}"
+    multipart_payload = b"x" * (9 * 1024 * 1024) + b"tail"
+    multipart_stat = store.put_stream(
+        multipart_key,
+        io.BytesIO(multipart_payload),
+        content_type="application/octet-stream",
+        expected_size=len(multipart_payload),
+    )
+    assert multipart_stat.size == len(multipart_payload)
+    assert store.head(multipart_key).size == len(multipart_payload)
+    with store.open_stream(multipart_key) as stream:
+        assert stream.read() == multipart_payload
+    assert _sha256_object(
+        store,
+        multipart_key,
+        chunk_size=64 * 1024,
+        expected_size=len(multipart_payload),
+    ) == hashlib.sha256(multipart_payload).hexdigest()
+    store.delete(multipart_key)
+    assert store.head(multipart_key) is None
 
 
 def test_s3_head_not_found_vs_error():

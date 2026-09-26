@@ -57,26 +57,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Start MinIO (S3-compatible object storage)
+      - name: Start RustFS (S3-compatible object storage)
         run: |
-          docker run -d --name valora-minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=valora \
-            -e MINIO_ROOT_PASSWORD=valora_local_password \
-            quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          docker run -d --name valora-rustfs \
+            -p 127.0.0.1:9000:9000 \
+            -e RUSTFS_ACCESS_KEY=valora \
+            -e RUSTFS_SECRET_KEY=valora_local_password \
+            -e RUSTFS_REGION=us-east-1 \
+            -e RUSTFS_CONSOLE_ENABLE=false \
+            docker.io/rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:9000/minio/health/live >/dev/null; then
-              echo "minio healthy"
+            if curl -sf http://localhost:9000/health/ready >/dev/null; then
+              echo "rustfs ready"
               break
             fi
             sleep 2
           done
-          curl -sf http://localhost:9000/minio/health/live
+          curl -sf http://localhost:9000/health/ready
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      - name: Bootstrap MinIO bucket for object-storage integration
+      - name: Bootstrap RustFS bucket for object-storage integration
         env:
           S3_ENDPOINT_URL: http://localhost:9000
           S3_ACCESS_KEY_ID: valora
@@ -100,7 +102,7 @@ jobs:
           except Exception:
               pass
           c.head_bucket(Bucket="valora-local")
-          print("minio bucket ready")
+          print("rustfs bucket ready")
           PY
       - name: Run static checks and linting
         run: |
