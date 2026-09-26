@@ -8,6 +8,414 @@ let caseScenario = "normal";
 let projectScenario = "populated";
 let workbenchScenario = "normal";
 let workbenchDraftSaved = false;
+let nccScenario = "normal";
+let nccLines = [];
+let nccIdempotencyMap = new Map();
+
+function createNormalNccLines() {
+  return [
+    {
+      asset_line_id: "asset-line-1",
+      asset_name: "Máy phay CNC 3 trục",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 1,
+      appraised_unit_price: 150000000,
+      appraised_currency_id: null,
+      current_selection: {
+        selection_id: "sel-asset-line-1-1",
+        selection_revision: 1,
+        quote_line_id: "quote-line-101",
+        quote_batch_id: "batch-201",
+        quote_batch_revision_number: 1,
+        supplier_id: "sup-301",
+        supplier_name: "Công ty TNHH Cơ khí Tân Phát",
+        quoted_unit_price: 145000000,
+        currency: "VND",
+        quantity: 1,
+        unit_of_measure: "Chiếc",
+        quote_date: "2026-09-01T08:30:00Z",
+        evidence: {
+          evidence_file_id: "ev-401",
+          filename: "Bao_gia_Tan_Phat_CNC.pdf",
+          status: "active",
+        },
+        current_unit_price: 150000000,
+        current_unit_price_currency_id: null,
+        difference_amount: -5000000,
+        difference_percent: -3.33,
+        warnings: ["NCC_BELOW_CURRENT_PRICE"],
+        acknowledged_warning_codes: ["NCC_BELOW_CURRENT_PRICE"],
+        confirmed_by_user_id: "user-acceptance",
+        confirmed_at: "2026-09-02T09:00:00Z",
+        stale: false,
+      },
+      candidates: [
+        {
+          quote_line_id: "quote-line-101",
+          quote_batch_id: "batch-201",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-301",
+          supplier_name: "Công ty TNHH Cơ khí Tân Phát",
+          quoted_unit_price: 145000000,
+          currency: "VND",
+          quantity: 1,
+          unit_of_measure: "Chiếc",
+          quote_date: "2026-09-01T08:30:00Z",
+          evidence: {
+            evidence_file_id: "ev-401",
+            filename: "Bao_gia_Tan_Phat_CNC.pdf",
+            status: "active",
+          },
+          difference_amount: -5000000,
+          difference_percent: -3.33,
+          warnings: ["NCC_BELOW_CURRENT_PRICE"],
+          eligible: true,
+        },
+        {
+          quote_line_id: "quote-line-102",
+          quote_batch_id: "batch-202",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-302",
+          supplier_name: "Công ty CP Thiết bị Sao Mai",
+          quoted_unit_price: 160000000,
+          currency: "VND",
+          quantity: 1,
+          unit_of_measure: "Chiếc",
+          quote_date: "2026-09-02T10:15:00Z",
+          evidence: {
+            evidence_file_id: "ev-402",
+            filename: "Bao_gia_Sao_Mai_CNC.pdf",
+            status: "active",
+          },
+          difference_amount: 10000000,
+          difference_percent: 6.67,
+          warnings: [],
+          eligible: true,
+        },
+      ],
+      history: [
+        {
+          selection_revision: 1,
+          quote_line_id: "quote-line-101",
+          supplier_name: "Công ty TNHH Cơ khí Tân Phát",
+          quoted_unit_price: 145000000,
+          currency: "VND",
+          difference_amount: -5000000,
+          difference_percent: -3.33,
+          warnings: ["NCC_BELOW_CURRENT_PRICE"],
+          confirmed_by_user_id: "user-acceptance",
+          confirmed_at: "2026-09-02T09:00:00Z",
+        },
+      ],
+      state: "selected",
+    },
+    {
+      asset_line_id: "asset-line-2",
+      asset_name: "Máy tiện vạn năng",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 2,
+      appraised_unit_price: 85000000,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [
+        {
+          quote_line_id: "quote-line-103",
+          quote_batch_id: "batch-203",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-303",
+          supplier_name: "Công ty TNHH Kỹ thuật Á Châu",
+          quoted_unit_price: 98000000,
+          currency: "VND",
+          quantity: 2,
+          unit_of_measure: "Chiếc",
+          quote_date: "2026-09-03T14:00:00Z",
+          evidence: {
+            evidence_file_id: "ev-403",
+            filename: "Bao_gia_A_Chau_May_tien.pdf",
+            status: "active",
+          },
+          difference_amount: 13000000,
+          difference_percent: 15.29,
+          warnings: ["NCC_DIFFERENCE_OVER_15_PERCENT"],
+          eligible: true,
+        },
+        {
+          quote_line_id: "quote-line-104",
+          quote_batch_id: "batch-204",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-304",
+          supplier_name: "Công ty CP Cơ điện Hải Đăng",
+          quoted_unit_price: 82000000,
+          currency: "VND",
+          quantity: 2,
+          unit_of_measure: "Chiếc",
+          quote_date: "2026-09-03T16:20:00Z",
+          evidence: {
+            evidence_file_id: "ev-404",
+            filename: "Bao_gia_Hai_Dang_May_tien.pdf",
+            status: "active",
+          },
+          difference_amount: -3000000,
+          difference_percent: -3.53,
+          warnings: ["NCC_BELOW_CURRENT_PRICE"],
+          eligible: true,
+        },
+      ],
+      history: [],
+      state: "unselected",
+    },
+    {
+      asset_line_id: "asset-line-3",
+      asset_name: "Máy mài phẳng tự động",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 1,
+      appraised_unit_price: 65000000,
+      appraised_currency_id: null,
+      current_selection: {
+        selection_id: "sel-asset-line-3-1",
+        selection_revision: 1,
+        quote_line_id: "quote-line-105",
+        quote_batch_id: "batch-205",
+        quote_batch_revision_number: 1,
+        supplier_id: "sup-305",
+        supplier_name: "Công ty TNHH Cơ khí Đại Nam",
+        quoted_unit_price: 70000000,
+        currency: "VND",
+        quantity: 1,
+        unit_of_measure: "Chiếc",
+        quote_date: "2026-08-28T11:00:00Z",
+        evidence: {
+          evidence_file_id: "ev-405",
+          filename: "Bao_gia_Dai_Nam_cu.pdf",
+          status: "active",
+        },
+        current_unit_price: 65000000,
+        current_unit_price_currency_id: null,
+        difference_amount: 5000000,
+        difference_percent: 7.69,
+        warnings: [],
+        acknowledged_warning_codes: [],
+        confirmed_by_user_id: "user-acceptance",
+        confirmed_at: "2026-08-30T10:00:00Z",
+        stale: true,
+      },
+      candidates: [
+        {
+          quote_line_id: "quote-line-106",
+          quote_batch_id: "batch-206",
+          quote_batch_revision_number: 2,
+          supplier_id: "sup-305",
+          supplier_name: "Công ty TNHH Cơ khí Đại Nam",
+          quoted_unit_price: 72000000,
+          currency: "VND",
+          quantity: 1,
+          unit_of_measure: "Chiếc",
+          quote_date: "2026-09-04T09:00:00Z",
+          evidence: {
+            evidence_file_id: "ev-406",
+            filename: "Bao_gia_Dai_Nam_moi_R2.pdf",
+            status: "active",
+          },
+          difference_amount: 7000000,
+          difference_percent: 10.77,
+          warnings: [],
+          eligible: true,
+        },
+      ],
+      history: [
+        {
+          selection_revision: 1,
+          quote_line_id: "quote-line-105",
+          supplier_name: "Công ty TNHH Cơ khí Đại Nam",
+          quoted_unit_price: 70000000,
+          currency: "VND",
+          difference_amount: 5000000,
+          difference_percent: 7.69,
+          warnings: [],
+          confirmed_by_user_id: "user-acceptance",
+          confirmed_at: "2026-08-30T10:00:00Z",
+        },
+      ],
+      state: "stale",
+    },
+    {
+      asset_line_id: "asset-line-4",
+      asset_name: "Băng tải cấp phôi tự động",
+      unit_id: "unit-2",
+      unit_name: "Bộ",
+      quantity: 1,
+      appraised_unit_price: 40000000,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [],
+      history: [],
+      state: "unselected",
+    },
+    {
+      asset_line_id: "asset-line-5",
+      asset_name: "Bộ gá kẹp khí nén chuyên dụng",
+      unit_id: "unit-2",
+      unit_name: "Bộ",
+      quantity: 4,
+      appraised_unit_price: null,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [
+        {
+          quote_line_id: "quote-line-107",
+          quote_batch_id: "batch-207",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-307",
+          supplier_name: "Công ty TNHH Khí nén Vĩnh Thịnh",
+          quoted_unit_price: 25000000,
+          currency: "VND",
+          quantity: 4,
+          unit_of_measure: "Bộ",
+          quote_date: "2026-09-05T08:00:00Z",
+          evidence: {
+            evidence_file_id: "ev-407",
+            filename: "Bao_gia_Vinh_Thinh.pdf",
+            status: "active",
+          },
+          difference_amount: null,
+          difference_percent: null,
+          warnings: [],
+          eligible: true,
+        },
+      ],
+      history: [],
+      state: "unselected",
+    },
+    {
+      asset_line_id: "asset-line-6",
+      asset_name: "Hệ thống làm mát tuần hoàn",
+      unit_id: "unit-3",
+      unit_name: "Hệ thống",
+      quantity: 1,
+      appraised_unit_price: 0,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [
+        {
+          quote_line_id: "quote-line-108",
+          quote_batch_id: "batch-208",
+          quote_batch_revision_number: 1,
+          supplier_id: "sup-308",
+          supplier_name: "Công ty CP Kỹ thuật Môi trường Xanh",
+          quoted_unit_price: 35000000,
+          currency: "VND",
+          quantity: 1,
+          unit_of_measure: "Hệ thống",
+          quote_date: "2026-09-05T09:30:00Z",
+          evidence: {
+            evidence_file_id: "ev-408",
+            filename: "Bao_gia_Moi_Truong_Xanh.pdf",
+            status: "active",
+          },
+          difference_amount: 35000000,
+          difference_percent: null,
+          warnings: [],
+          eligible: true,
+        },
+      ],
+      history: [],
+      state: "unselected",
+    },
+  ];
+}
+
+function createNoCandidatesNccLines() {
+  return [
+    {
+      asset_line_id: "asset-line-1",
+      asset_name: "Máy phay CNC 3 trục",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 1,
+      appraised_unit_price: 150000000,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [],
+      history: [],
+      state: "unselected",
+    },
+    {
+      asset_line_id: "asset-line-2",
+      asset_name: "Máy tiện vạn năng",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 2,
+      appraised_unit_price: 85000000,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [],
+      history: [],
+      state: "unselected",
+    },
+    {
+      asset_line_id: "asset-line-3",
+      asset_name: "Máy mài phẳng tự động",
+      unit_id: "unit-1",
+      unit_name: "Chiếc",
+      quantity: 1,
+      appraised_unit_price: 65000000,
+      appraised_currency_id: null,
+      current_selection: null,
+      candidates: [],
+      history: [],
+      state: "unselected",
+    },
+  ];
+}
+
+function resetNccData() {
+  nccIdempotencyMap = new Map();
+  if (nccScenario === "empty") {
+    nccLines = [];
+  } else if (nccScenario === "no-candidates") {
+    nccLines = createNoCandidatesNccLines();
+  } else {
+    nccLines = createNormalNccLines();
+  }
+}
+
+function computeNccKpis(lines) {
+  let selected = 0;
+  let unselected = 0;
+  let stale = 0;
+  let eligible_quotes = 0;
+  for (const line of lines) {
+    if (line.current_selection) {
+      selected += 1;
+      if (line.current_selection.stale) {
+        stale += 1;
+      }
+    } else {
+      unselected += 1;
+    }
+    eligible_quotes += (line.candidates ? line.candidates.length : 0);
+  }
+  return {
+    total_asset_lines: lines.length,
+    selected,
+    unselected,
+    stale,
+    eligible_quotes,
+  };
+}
+
+function getNccAggregate() {
+  return {
+    project_id: "project-acceptance",
+    kpis: computeNccKpis(nccLines),
+    asset_lines: nccLines,
+  };
+}
+
+resetNccData();
 
 const workbenchProjectId = "a1b2c3d4-1234-4123-8123-123456789abc";
 const workbenchLines = Array.from({ length: 18 }, (_, index) => ({
@@ -159,6 +567,7 @@ const server = http.createServer(async (request, response) => {
     const nextCase = url.searchParams.get("case");
     const nextProjects = url.searchParams.get("projects");
     const nextWorkbench = url.searchParams.get("workbench");
+    const nextNcc = url.searchParams.get("ncc");
     if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
       return send(response, 400, { detail: "Unknown case fixture" });
     }
@@ -168,13 +577,25 @@ const server = http.createServer(async (request, response) => {
     if (nextWorkbench && !["normal", "loading", "error", "conflict", "locked"].includes(nextWorkbench)) {
       return send(response, 400, { detail: "Unknown workbench fixture" });
     }
+    if (nextNcc && !["normal", "empty", "loading", "error", "conflict", "processing", "no-candidates"].includes(nextNcc)) {
+      return send(response, 400, { detail: "Unknown ncc fixture" });
+    }
     if (nextCase) caseScenario = nextCase;
     if (nextProjects) projectScenario = nextProjects;
     if (nextWorkbench) {
       workbenchScenario = nextWorkbench;
       workbenchDraftSaved = false;
     }
-    return send(response, 200, { case: caseScenario, projects: projectScenario, workbench: workbenchScenario });
+    if (nextNcc) {
+      nccScenario = nextNcc;
+      resetNccData();
+    }
+    return send(response, 200, {
+      case: caseScenario,
+      projects: projectScenario,
+      workbench: workbenchScenario,
+      ncc: nccScenario,
+    });
   }
   if (url.pathname === "/api/v1/auth/login" && request.method === "POST") {
     const body = await readJson(request);
@@ -306,6 +727,187 @@ const server = http.createServer(async (request, response) => {
     }
     if (caseScenario === "error") return send(response, 503, { detail: "Fixture case state unavailable" });
     return send(response, 200, caseProjection());
+  }
+
+  const nccSelectionsMatch = url.pathname.match(/^\/api\/v1\/projects\/([^/]+)\/ncc-selections$/);
+  if (nccSelectionsMatch && request.method === "GET") {
+    const projectId = nccSelectionsMatch[1];
+    if (projectId !== "project-acceptance") {
+      return send(response, 404, { detail: { error_code: "project_not_found", detail: "Không tìm thấy hồ sơ." } });
+    }
+    if (nccScenario === "loading") {
+      setTimeout(() => {
+        if (!response.destroyed) send(response, 200, getNccAggregate());
+      }, 30_000);
+      return;
+    }
+    if (nccScenario === "error") {
+      return send(response, 503, { detail: "Fixture ncc selections unavailable" });
+    }
+    return send(response, 200, getNccAggregate());
+  }
+
+  const nccConfirmMatch = url.pathname.match(/^\/api\/v1\/projects\/([^/]+)\/asset-lines\/([^/]+)\/ncc-selection$/);
+  if (nccConfirmMatch && request.method === "POST") {
+    const projectId = nccConfirmMatch[1];
+    const lineId = nccConfirmMatch[2];
+    if (projectId !== "project-acceptance") {
+      return send(response, 404, { detail: { error_code: "project_not_found", detail: "Không tìm thấy hồ sơ." } });
+    }
+    if (nccScenario === "conflict") {
+      return send(response, 409, {
+        detail: {
+          error_code: "selection_revision_conflict",
+          detail: "Dữ liệu lựa chọn NCC đã thay đổi. Vui lòng tải lại và xác nhận lại.",
+        },
+      });
+    }
+
+    const body = await readJson(request);
+    const {
+      quote_line_id,
+      expected_selection_revision,
+      acknowledged_warning_codes,
+      idempotency_key,
+      confirmed,
+    } = body;
+
+    if (confirmed !== true) {
+      return send(response, 400, {
+        detail: {
+          error_code: "ncc_selection_confirmation_required",
+          detail: "Cần xác nhận thao tác.",
+        },
+      });
+    }
+
+    if (!idempotency_key || typeof idempotency_key !== "string" || !idempotency_key.trim() || idempotency_key.length > 128) {
+      return send(response, 422, {
+        detail: {
+          error_code: "invalid_idempotency_key",
+          detail: "Khóa idempotency không hợp lệ.",
+        },
+      });
+    }
+
+    if (typeof expected_selection_revision !== "number" || expected_selection_revision < 0) {
+      return send(response, 422, {
+        detail: {
+          error_code: "invalid_expected_selection_revision",
+          detail: "Phiên bản lựa chọn không hợp lệ.",
+        },
+      });
+    }
+
+    const requestFingerprint = JSON.stringify({
+      lineId,
+      quote_line_id,
+      expected_selection_revision,
+      acknowledged_warning_codes: [...(acknowledged_warning_codes ?? [])].sort(),
+    });
+    const priorAttempt = nccIdempotencyMap.get(idempotency_key);
+    if (priorAttempt) {
+      if (priorAttempt.fingerprint !== requestFingerprint) {
+        return send(response, 409, { detail: { error_code: "idempotency_key_reused" } });
+      }
+      return send(response, 200, priorAttempt.selection);
+    }
+
+    const targetLine = nccLines.find((line) => line.asset_line_id === lineId);
+    if (!targetLine) {
+      return send(response, 404, {
+        detail: {
+          error_code: "project_asset_line_not_found",
+          detail: "Không tìm thấy dòng tài sản.",
+        },
+      });
+    }
+
+    const currentRev = targetLine.current_selection ? targetLine.current_selection.selection_revision : 0;
+    if (expected_selection_revision !== currentRev) {
+      return send(response, 409, {
+        detail: {
+          error_code: "selection_revision_conflict",
+          detail: "Dữ liệu lựa chọn NCC đã thay đổi. Vui lòng tải lại và xác nhận lại.",
+        },
+      });
+    }
+
+    const candidate = targetLine.candidates.find((c) => c.quote_line_id === quote_line_id);
+    if (!candidate) {
+      return send(response, 404, {
+        detail: {
+          error_code: "quote_line_not_found",
+          detail: "Không tìm thấy dòng báo giá.",
+        },
+      });
+    }
+
+    const executeSuccess = () => {
+      const nextRev = currentRev + 1;
+      const confirmedAt = new Date().toISOString();
+      const currentSelection = {
+        selection_id: `sel-${targetLine.asset_line_id}-${nextRev}`,
+        selection_revision: nextRev,
+        quote_line_id: candidate.quote_line_id,
+        quote_batch_id: candidate.quote_batch_id,
+        quote_batch_revision_number: candidate.quote_batch_revision_number,
+        supplier_id: candidate.supplier_id,
+        supplier_name: candidate.supplier_name,
+        quoted_unit_price: candidate.quoted_unit_price,
+        currency: candidate.currency,
+        quantity: candidate.quantity,
+        unit_of_measure: candidate.unit_of_measure,
+        quote_date: candidate.quote_date,
+        evidence: {
+          evidence_file_id: candidate.evidence.evidence_file_id,
+          filename: candidate.evidence.filename,
+          status: candidate.evidence.status,
+        },
+        current_unit_price: targetLine.appraised_unit_price,
+        current_unit_price_currency_id: targetLine.appraised_currency_id,
+        difference_amount: candidate.difference_amount,
+        difference_percent: candidate.difference_percent,
+        warnings: candidate.warnings,
+        acknowledged_warning_codes: Array.isArray(acknowledged_warning_codes) ? acknowledged_warning_codes : [],
+        confirmed_by_user_id: "user-acceptance",
+        confirmed_at: confirmedAt,
+        stale: false,
+      };
+
+      const historyItem = {
+        selection_revision: nextRev,
+        quote_line_id: candidate.quote_line_id,
+        supplier_name: candidate.supplier_name,
+        quoted_unit_price: candidate.quoted_unit_price,
+        currency: candidate.currency,
+        difference_amount: candidate.difference_amount,
+        difference_percent: candidate.difference_percent,
+        warnings: candidate.warnings,
+        confirmed_by_user_id: "user-acceptance",
+        confirmed_at: confirmedAt,
+      };
+
+      targetLine.current_selection = currentSelection;
+      targetLine.history = [...(targetLine.history || []), historyItem];
+      targetLine.state = "selected";
+
+      nccIdempotencyMap.set(idempotency_key, { fingerprint: requestFingerprint, selection: currentSelection });
+      return currentSelection;
+    };
+
+    if (nccScenario === "processing") {
+      setTimeout(() => {
+        if (!response.destroyed) {
+          const result = executeSuccess();
+          send(response, 200, result);
+        }
+      }, 5000);
+      return;
+    }
+
+    const result = executeSuccess();
+    return send(response, 200, result);
   }
   if (url.pathname === "/api/v1/m365/onedrive/connection" && request.method === "GET") {
     return send(response, 200, {
