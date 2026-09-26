@@ -1,0 +1,47 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyNonTls",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001",
+        "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnexpectedWriterOnRunPrefix",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*",
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "${HARNESS_ROLE_ARN}"
+        }
+      }
+    },
+    {
+      "Sid": "DenyFinalCreateWithoutIfNoneMatch",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*",
+      "Condition": {
+        "Null": {
+          "s3:if-none-match": "true"
+        },
+        "Bool": {
+          "s3:ObjectCreationOperation": "true"
+        }
+      }
+    }
+  ]
+}

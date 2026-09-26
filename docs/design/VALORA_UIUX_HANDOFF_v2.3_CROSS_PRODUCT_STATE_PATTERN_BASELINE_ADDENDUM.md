@@ -3,7 +3,7 @@
 **Status:** Design Authority / Baseline
 **Baseline visual:** `Cross-product State Pattern Board — Iteration 1`
 **Date:** 01/09/2026
-**Scope:** Toàn bộ VALORA — Thẩm định giá, Workbench, Knowledge Management, Microsoft 365 Workspace, NCC Selection, Publishing.
+**Scope:** Toàn bộ VALORA — Thẩm định giá, Workbench, Knowledge Management, Không gian tài liệu / Microsoft 365 integration, NCC Selection, Publishing.
 
 ## 1. Purpose
 Khóa một contract xuyên suốt cho các trạng thái `Empty / Loading / Error / Retry / Processing / Conflict / Connectivity / Partial Success` để UI không tự phát sinh pattern riêng theo từng màn.
@@ -216,4 +216,4 @@ Board approved as Design Authority visualizes:
 The board is a cross-product design-system authority, not a standalone business workflow screen and not a north-star checkpoint.
 
 ## 20. Guardrails
-Single-user; Vietnamese-first; Fluent 2; desktop-first; data-heavy/table-first. AI advisory only. Không silent retry/overwrite/reconcile/commit. Không fake Word/Excel editor. Không Export PDF. Existing domain-specific stronger authorities continue to win within their scope.
+Single-user; Vietnamese-first; Fluent 2 light; desktop-first; data-heavy/table-first. AI advisory only. Không silent retry/overwrite/reconcile/commit. Không fake Word/Excel editor. Không Export PDF. Existing domain-specific stronger authorities continue to win within their scope.

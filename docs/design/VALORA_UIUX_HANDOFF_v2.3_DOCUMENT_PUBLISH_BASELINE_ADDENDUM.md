@@ -2,10 +2,25 @@
 
 **Screen:** Phát hành bộ tài liệu
 **Iteration:** 1
-**Status:** Baseline / Design Authority
-**Scope:** Microsoft 365 Document Workspace — release package selection, readiness, preview, confirmation, immutable release lineage.
+**Status:** SUPERSEDED VISUAL BASELINE / HISTORICAL REFERENCE — simplified 3-step Publishing authority is current
+**Scope:** Historical board for release package selection/readiness/preview. Current parent surface: `Không gian tài liệu`; current commit semantics are governed by Release Preparation/Exception/Confirmation/Post-Publish addenda.
 
-## 1. Mental model
+## 0. Supersession — 2026-09-21
+
+This Iteration 1 four-step publish board is retained as historical visual evidence only. Current Publishing authority is:
+
+```text
+Chuẩn bị bộ phát hành
+→ Xem lại & xử lý ngoại lệ
+→ Xác nhận phát hành [commit]
+→ ReleaseManifest bind exact accepted revisions
+→ immutable Published release
+→ Đã phát hành
+```
+
+There is no standalone `Khóa phiên bản` step. Product parent surface is provider-neutral `Không gian tài liệu`; Microsoft 365 is an integration.
+
+## 1. Historical mental model
 
 UI dùng ngôn ngữ nghiệp vụ, không yêu cầu người dùng hiểu Snapshot/Revision/DriveItem ID:
 
@@ -21,7 +36,7 @@ Không tạo workflow KSCL/phê duyệt nhiều cấp mới. Validation vẫn ph
 
 ## 2. Layout authority
 
-Desktop-first, Fluent 2, Vietnamese-first. Màn hình gồm:
+Desktop-first, Fluent 2 light, Vietnamese-first. Màn hình gồm:
 
 - breadcrumb + tiêu đề `Phát hành bộ tài liệu`;
 - stepper 4 bước;
@@ -109,9 +124,9 @@ Cho phép xem chi tiết package đã phát hành nhưng không dùng lịch s�
 - Không phơi thuật ngữ kỹ thuật lineage làm mental model chính.
 - Mỗi bước có một primary CTA nổi bật.
 
-## 9. Visual authority
+## 9. Historical visual reference
 
-Mockup `Phát hành bộ tài liệu — Iteration 1` được người dùng explicit nâng thành Baseline ngày 31/08/2026. Visual authority là mockup Fluent 2 với stepper 4 bước, bảng 6 tài liệu minh họa, readiness summary, lịch sử phát hành và publish CTA bị khóa khi còn tài liệu cần cập nhật.
+Mockup `Phát hành bộ tài liệu — Iteration 1` được người dùng explicit nâng thành Baseline ngày 31/08/2026. Historical visual reference là mockup Fluent 2 light với stepper 4 bước; current visual authority uses the simplified 3-step Publishing flow, bảng 6 tài liệu minh họa, readiness summary, lịch sử phát hành và publish CTA bị khóa khi còn tài liệu cần cập nhật.
 
 Dữ liệu minh họa trong mockup chỉ là placeholder thiết kế, không phải business fixture hay dữ liệu hồ sơ thật.
 

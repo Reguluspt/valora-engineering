@@ -3,8 +3,25 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Scope:** Microsoft 365 Document Workspace → Báo cáo thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
-**Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
+**Scope:** Không gian tài liệu → Microsoft 365 integration → Báo cáo thẩm định giá → sinh tài liệu từ template Word, Data Snapshot, Managed Regions, Document Revision và đồng bộ Microsoft 365.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first.
+
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
+## 2026-09-21 generation/revision amendment
+
+Generation/fill completion is not itself revision authority.
+
+```text
+Template Version + Data Snapshot
+→ deterministic GeneratedDocumentCandidate
+→ structural/visual verification
+→ explicit Generate / Accept Version command
+→ DocumentRevision
+→ optional Working / Export
+```
+
+Working-copy edits then follow ADR 0045 Auto Revalidation → `DocumentChangeCandidate` → Old/V/W → human-confirmed Revision. This addendum does not authorize direct in-place OneDrive replacement.
 
 ## 1. Quyết định baseline
 
@@ -23,11 +40,11 @@ Chọn template & phạm vi
 → Kết quả đồng bộ
 ```
 
-Không tạo workflow phê duyệt/KSCL mới. Đây là child flow của Microsoft 365 Document Workspace và phải tiếp tục dùng authority Sync/Version + Publishing hiện hành.
+Không tạo workflow phê duyệt/KSCL mới. Đây là child flow của Không gian tài liệu; Microsoft 365 là integration và phải tiếp tục dùng authority Sync/Version + Publishing hiện hành.
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 
-- Header/breadcrumb đặt trong context hồ sơ → Tài liệu & Workspace → Microsoft 365 Document Workspace → Báo cáo thẩm định giá.
+- Header/breadcrumb đặt trong context hồ sơ → Tài liệu & Workspace → Không gian tài liệu → Microsoft 365 integration → Báo cáo thẩm định giá.
 - Stepper 6 bước theo mental flow.
 - Cột trái: `Template & Phạm vi sinh tài liệu`, `Data Snapshot`, `Kiểm tra Managed Regions`.
 - Vùng trung tâm lớn nhất: preview tài liệu Word dạng view-only với overlay/nhãn vùng được quản lý.

@@ -19,7 +19,7 @@ Chuẩn bị bộ phát hành
    → xử lý hoặc loại khỏi release
    → hoàn tất các ngoại lệ bắt buộc
 → Xác nhận phát hành
-→ Release Manifest + khóa revision đã phát hành [system consequence]
+→ Release Manifest bind exact accepted revisions [system consequence]
 ```
 
 ## 4. Layout authority
@@ -53,7 +53,7 @@ CTA sang `Xác nhận phát hành` chỉ enabled khi:
 Nếu document/revision/readiness thay đổi trong lúc user review, VALORA phải revalidate trước khi cho tiếp tục.
 
 ## 8. Audit & release semantics
-Quyết định xử lý ngoại lệ phải audit được: tài liệu, revision, vấn đề, quyết định user, thời điểm. Màn này chưa publish, chưa tạo Release Manifest final và chưa khóa revision. Việc tạo Release Manifest + khóa revision chỉ xảy ra sau `Xác nhận phát hành` thành công.
+Quyết định xử lý ngoại lệ phải audit được: tài liệu, revision, vấn đề, quyết định user, thời điểm. Màn này chưa publish và chưa tạo Release Manifest final. Accepted `DocumentRevision` đã immutable trước Publishing; sau `Xác nhận phát hành` thành công hệ thống chỉ bind chính xác các accepted revision vào Release Manifest và finalize immutable release.
 
 ## 9. Guardrails
 - Single-user.
@@ -65,4 +65,4 @@ Quyết định xử lý ngoại lệ phải audit được: tài liệu, revisi
 - Một primary CTA mỗi context.
 
 ## 10. ADR
-Nếu implementation persist exception decisions, thay đổi release-plan stale detection, revalidation after Word edit, exclusion semantics, hoặc transaction boundary của Release Manifest/locking thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation persist exception decisions, thay đổi release-plan stale detection, revalidation after Word edit, exclusion semantics, hoặc transaction boundary của Release Manifest/publish thì phải đánh giá ADR riêng trước khi sửa product code.

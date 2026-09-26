@@ -4,7 +4,7 @@
 **Iteration:** 1
 **Date:** 31/08/2026
 **Scope:** Generic Template Management → Bảng tính → Fill Engine; UI/UX contract và format-specific fill semantics.
-**Visual language:** Microsoft Fluent 2, desktop-first, table/data-heavy, Vietnamese-first.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, table/data-heavy, Vietnamese-first.
 
 ## 1. Quyết định baseline
 
@@ -24,7 +24,7 @@ Chuẩn bị
 
 Mỗi context chỉ có một primary CTA. UI dùng thuật ngữ nghiệp vụ; không phơi internal ID, stack trace, HTTP/SQL hoặc raw engine terms cho người dùng cuối.
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 
 Desktop shell giữ navigation VALORA hiện hành. Main workspace gồm:
 
@@ -163,7 +163,7 @@ Nếu output được dùng trong Document Workspace hoặc release flow, lineag
 
 ## 12. Visual authority
 
-Visual baseline là mockup Fluent 2 đã được user nâng baseline ngày 31/08/2026, tiêu đề `Fill Engine — Implementation Contract v1.0`, với `Mapping` là trạng thái minh họa đang active; các bước khác dùng cùng layout/interaction model và thay primary CTA theo context.
+Visual baseline là mockup Fluent 2 light đã được user nâng baseline ngày 31/08/2026, tiêu đề `Fill Engine — Implementation Contract v1.0`, với `Mapping` là trạng thái minh họa đang active; các bước khác dùng cùng layout/interaction model và thay primary CTA theo context.
 
 Mockup dùng dữ liệu minh họa/synthetic; không phải dữ liệu khách hàng/NCC/hồ sơ thật.
 

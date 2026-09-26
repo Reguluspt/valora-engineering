@@ -4,7 +4,7 @@
 **Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`
 **Phạm vi:** Bước cuối sau thao tác `Chọn nhà cung cấp đã xác nhận giá`, dùng để dựng lại các bảng chính thức phục vụ Báo cáo thẩm định giá.
 
-> Authority rule quan trọng: **03 bảng nghiệp vụ là biểu mẫu do công ty ban hành và có layout bất biến.** Fluent Design 2 chỉ áp dụng cho application shell và các vùng điều khiển xung quanh; không được redesign cấu trúc biểu mẫu.
+> Authority rule quan trọng: **03 bảng nghiệp vụ là biểu mẫu do công ty ban hành và có layout bất biến.** Fluent Design 2 light chỉ áp dụng cho application shell và các vùng điều khiển xung quanh; không được redesign cấu trúc biểu mẫu.
 
 ## 1. Flow đã khóa
 
@@ -35,7 +35,7 @@ UI/UX không được tự ý:
 - đổi pattern `Tổng cộng`, `Làm tròn`, dòng bằng số hoặc bằng chữ;
 - thay bảng gốc bằng dashboard/KPI/chart hoặc một bảng có schema khác.
 
-Thông tin bổ sung như lineage, warning, chênh lệch, nguồn chứng cứ, audit chỉ được đặt **ngoài biểu mẫu** bằng Fluent 2 panel/drawer/tooltip/contextual surface.
+Thông tin bổ sung như lineage, warning, chênh lệch, nguồn chứng cứ, audit chỉ được đặt **ngoài biểu mẫu** bằng Fluent 2 light panel/drawer/tooltip/contextual surface.
 
 ## 3. Bảng 1 — Đặc điểm kinh tế - kỹ thuật
 
@@ -119,9 +119,9 @@ Cuối bảng phải giữ đúng mẫu:
 
 Không thay bằng schema kiểu `Nội dung | Công thức | Giá trị | Ghi chú` hoặc dashboard tổng hợp khác.
 
-## 6. Fluent Design 2 — phạm vi được phép
+## 6. Fluent Design 2 light — phạm vi được phép
 
-Fluent 2 được áp dụng cho:
+Fluent 2 light được áp dụng cho:
 
 - Valora application shell;
 - sidebar/navigation;
@@ -141,7 +141,7 @@ Không `card hóa`, bo góc hoặc styling lại 03 bảng theo cách làm thay 
 
 Visual baseline giữ:
 
-- desktop-first, Fluent 2 shell;
+- desktop-first, Fluent 2 light shell;
 - breadcrumb theo context hồ sơ;
 - progress compact: `Chọn NCC đã xác nhận giá → Dựng bảng Đặc điểm KTKT → Dựng bảng tổng hợp giá NCC → Dựng bảng kết quả thẩm định giá`;
 - command bar có các thao tác như `Xem trước báo cáo`, `Xuất ra Excel`, `Xuất ra Word` khi capability tương ứng được triển khai;
@@ -159,6 +159,6 @@ Các mockup trước bị **superseded** nếu chúng:
 - thêm `Thành tiền` cho từng NCC;
 - thêm cột phân tích không có trong mẫu;
 - dùng bảng kết quả thẩm định khác schema gốc;
-- tự điều chỉnh bố cục 03 bảng để bám Fluent 2.
+- tự điều chỉnh bố cục 03 bảng để bám Fluent 2 light.
 
 Authority hiện hành là tài liệu này cùng addendum tương ứng của `VALORA_UIUX_HANDOFF_v2.3`.

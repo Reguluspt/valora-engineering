@@ -1,10 +1,12 @@
 # Valora Design Book v1.4 — Adaptive Intake, Knowledge Memory and Historical Dossier Addendum
 
-- **Status:** Owner-requested design authority, accepted for phased implementation planning on 2026-07-14; reconciled for public repo under S13-PR-001 (2026-07-15); extended with bounded-AI automation readiness on 2026-07-16
+> **2026-09-21 roadmap reconciliation:** Adaptive Intake / Mapping Memory / Asset Identity Memory / dossier / AI-governance domain decisions remain usable where not superseded, but the S13–S16 sequencing in this document is historical. Current product/development ordering is `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`: Pre-case closure → Appraisal Core → Document Runtime → Release → Template Intelligence/Fidelity → E2E → Valora Intelligence Platform & Assistant.
+
+- **Status:** HISTORICAL DOMAIN/AI FOUNDATION — retained where not superseded by current v2.3 product, visual and roadmap authority
 - **Relationship to v1.2:** v1.2-final remains authoritative for established domain boundaries.
-- **Relationship to v1.3:** v1.3 remains authoritative for Vietnamese-first UX, Astryx, AI-provider architecture and MVP scope; this addendum supersedes v1.3 §7 roadmap sequencing (“AI Assistant first”).
+- **Relationship to v1.3:** retain compatible domain/UX foundation only; current roadmap sequencing is governed by the Unified Appraisal OS roadmap v2.3, not v1.3/v1.4 sprint order.
 - **Relationship to S12:** S12 upload, staging, validation and Apply v1 are **implemented and merged** (`s12-pr-004-v1`). This addendum defines an **additive** Adaptive Intake path and does not silently change Apply semantics.
-- **Implementation gate:** S13-PR-001 is merged. Before S13 runtime, the bounded-AI automation readiness extension in §20 and ADR 0033–0034 must be merged as Gate 0c. Runtime then requires a separate owner-assigned task ID, migrations, tests and independent audit. **No runtime or autonomous capability is authorized by this document alone.**
+- **Historical implementation gate:** the S13/Gate-0c wording below records the earlier implementation program only. It is not a current execution order. New work follows the Unified Roadmap v2.3 and requires the current task-specific authority/contract. **No runtime or autonomous capability is authorized by this historical document alone.**
 - **Privacy:** Public text uses anonymized fixture **PD-001** only. Real client workbooks and reports never enter the public repository.
 
 ---
@@ -667,7 +669,7 @@ Every registered task also follows ADR 0033–0034:
 
 ---
 
-## 12. Vietnamese-first Astryx UX
+## 12. Vietnamese-first UX — Astryx visual references superseded
 
 ### 12.1 Mapping review
 
@@ -698,7 +700,7 @@ Required elements:
 - `Xác nhận`, `Chọn tài sản khác`, `Tạo biến thể`, `Tạo tài sản mới`, `Để xử lý sau` actions;
 - explicit batch confirmation, never silent auto-approval.
 
-All components use Astryx patterns and i18n dictionaries. Technical confidence details may be available in an explanation drawer but must not replace plain Vietnamese guidance.
+All current product components use Microsoft Fluent 2 light patterns plus the Vietnamese i18n dictionaries. Historical Astryx references in this section are non-authoritative. Technical confidence details may be available in an explanation drawer but must not replace plain Vietnamese guidance.
 
 ---
 
@@ -760,7 +762,7 @@ Future automation must use the same application/domain commands as an authorized
 
 ---
 
-## 15. Revised Phase 2 roadmap
+## 15. Historical Phase 2 roadmap — superseded for sequencing
 
 This section supersedes v1.3 §7 sequencing.
 
@@ -856,7 +858,7 @@ Implementation may claim v1.4 completion only when:
 - ADR 0030–0034 are implemented to the phase-appropriate scope and audited;
 - each PR cites this addendum and its specific ADR/task contract;
 - `.xls`, header discovery, semantic mapping and row classification pass acceptance;
-- mapping and identity review UX is Vietnamese-first and Astryx-aligned;
+- mapping and identity review UX is Vietnamese-first and Microsoft Fluent 2 light-aligned;
 - paired dossier extraction/alignment is source-backed and reviewable;
 - feedback is append-only and human-confirmed;
 - deterministic baselines work without external AI;

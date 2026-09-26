@@ -51,7 +51,8 @@ def upload_excel_file_orchestrator(
     file: UploadFile,
     request: Request | None,
     current_user,
-    correlation_id: str | None = None
+    correlation_id: str | None = None,
+    expected_source_artifact_id: uuid.UUID | None = None,
 ) -> ProjectAssetImportBatch:
     # Lock order (ADR 0029 / Apply-compatible): Project → batch → staging mutation
     project = (
@@ -67,9 +68,25 @@ def upload_excel_file_orchestrator(
         ProjectAssetImportBatch.organization_id == org_id,
         ProjectAssetImportBatch.project_id == project_id,
         ProjectAssetImportBatch.id == batch_id
-    ).with_for_update().first()
+    ).populate_existing().with_for_update().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
+
+    if (
+        expected_source_artifact_id is not None
+        and batch.current_source_artifact_id != expected_source_artifact_id
+    ):
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "exchange_excel_source_conflict",
+                "detail": (
+                    "Nguồn Excel mới không còn là phiên bản hiện hành; "
+                    "staging chưa được thay đổi."
+                ),
+            },
+        )
 
     status_val = batch.status.value if hasattr(batch.status, "value") else str(batch.status)
     if status_val == "applied":

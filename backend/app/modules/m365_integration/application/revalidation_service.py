@@ -100,6 +100,7 @@ class RevalidationReadiness:
     file_path: str | None
     web_url: str
     baseline_eligible: bool
+    recovery_code: str | None
     classification: str | None
     completed_at: datetime | None
     affected_region_keys: tuple[str, ...]
@@ -141,7 +142,7 @@ def _digest(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _definition_set_from_template_manifest(
+def definition_set_from_template_manifest(
     *,
     template_version_id: uuid.UUID,
     manifest: object,
@@ -180,6 +181,11 @@ def _definition_set_from_template_manifest(
         ),
         definitions=tuple(definitions),
     )
+
+
+# Compatibility alias for the earlier internal callers; new runtime code uses
+# the public name above so template authority parsing has one implementation.
+_definition_set_from_template_manifest = definition_set_from_template_manifest
 
 
 def _require_actor(
@@ -472,7 +478,7 @@ def resolve_managed_region_definition_set(
             "Tài liệu chưa có cấu hình vùng quản lý đã phê duyệt.",
         )
     try:
-        return _definition_set_from_template_manifest(
+        return definition_set_from_template_manifest(
             template_version_id=template_version.id,
             manifest=template_version.placeholder_manifest,
         )
@@ -1142,6 +1148,7 @@ def get_revalidation_readiness(
             file_path=scope.binding_path,
             web_url=scope.binding_web_url,
             baseline_eligible=False,
+            recovery_code="baseline_required",
             classification=None,
             completed_at=None,
             affected_region_keys=(),
@@ -1180,6 +1187,7 @@ def get_revalidation_readiness(
             file_path=scope.binding_path,
             web_url=scope.binding_web_url,
             baseline_eligible=True,
+            recovery_code="revalidation_required",
             classification=None,
             completed_at=None,
             affected_region_keys=(),
@@ -1222,6 +1230,7 @@ def get_revalidation_readiness(
         ),
         web_url=latest.observed_web_url or scope.binding_web_url,
         baseline_eligible=True,
+        recovery_code=blocking,
         classification=latest.classification,
         completed_at=latest.completed_at,
         affected_region_keys=tuple(latest.affected_region_keys),

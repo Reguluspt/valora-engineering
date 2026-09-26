@@ -190,6 +190,76 @@ def test_idempotency_collision_is_rejected_before_provider_io(
     assert context["graph"].content_calls == content_calls
 
 
+def test_operational_snapshot_tampering_is_rejected_before_provider_io(
+    producer_context: dict[str, object],
+    pr06_db: Session,
+) -> None:
+    context = producer_context
+    graph_calls = context["graph"].item_calls
+    refresh_calls = context["oauth"].refresh_calls
+    forged_snapshot = {
+        "contract_version": "valora-operational-adoption-v1",
+        "project_id": str(context["project"].id),
+        "project_code": context["project"].code,
+        "project_name": "Tên hồ sơ đã bị sửa ở client",
+        "project_row_version": context["project"].row_version,
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        _provision(
+            pr06_db,
+            context,
+            context["version"],
+            key="producer-forged-operational-snapshot",
+            snapshot=forged_snapshot,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error_code"] == (
+        "operational_adoption_snapshot_stale"
+    )
+    assert context["graph"].item_calls == graph_calls
+    assert context["oauth"].refresh_calls == refresh_calls
+
+
+def test_operational_replay_precedes_current_snapshot_and_authority_staleness(
+    producer_context: dict[str, object],
+    pr06_db: Session,
+) -> None:
+    context = producer_context
+    snapshot = {
+        "contract_version": "valora-operational-adoption-v1",
+        "project_id": str(context["project"].id),
+        "project_code": context["project"].code,
+        "project_name": context["project"].name,
+        "project_row_version": context["project"].row_version,
+    }
+    first = _provision(
+        pr06_db,
+        context,
+        context["version"],
+        key="producer-operational-replay",
+        snapshot=snapshot,
+    )
+    graph_calls = context["graph"].item_calls
+    refresh_calls = context["oauth"].refresh_calls
+    context["project"].name = "Tên hồ sơ đã đổi sau lần nhận đầu tiên"
+    context["version"].status = TemplateVersionStatus.DEPRECATED
+    pr06_db.commit()
+
+    replay = _provision(
+        pr06_db,
+        context,
+        context["version"],
+        key="producer-operational-replay",
+        snapshot=snapshot,
+    )
+
+    assert replay == first
+    assert context["graph"].item_calls == graph_calls
+    assert context["oauth"].refresh_calls == refresh_calls
+
+
 def test_graph_race_leaves_no_partial_lineage(
     producer_context: dict[str, object],
     pr06_db: Session,

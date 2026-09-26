@@ -1,0 +1,217 @@
+{
+  "schema_version": "valora-storage-local-g6-closeout-v1",
+  "task": "VALORA-STORAGE-LOCAL-001",
+  "gate": "G6",
+  "branch": "feat/operational-frontend-m365",
+  "parent_head": "42e3e0df68250cb8d26ed7853516b058a954c4fa",
+  "reviewed_snapshot_commit": "d71a42e575f96d7cd8d9aac6c8aab2c60627c32f",
+  "reviewed_snapshot_tree": "1336bcdab46ee4bf0dbdc7a04a5a52b3e4d7381f",
+  "reviewed_snapshot": {
+    "file_count": 22,
+    "aggregate_sha256": "2c52b54fdbefb462d4afaa74898c5791b0de34de602bcb453d7301cebfbd8742",
+    "aggregate_algorithm": "SHA-256 of UTF-8 lines sorted by ordinal-ignore-case path, each formatted '<lowercase-file-sha256><two spaces><path><LF>', including the final LF",
+    "files": [
+      {
+        "path": ".env.example",
+        "sha256": "ed2824d78b2199470f342bb3d20ec330ea9bfae89fb0671b661fcc4c3c60c2ee"
+      },
+      {
+        "path": "backend/alembic/versions/b8d9e0f1a2b3_admit_local_document_blob_provider.py",
+        "sha256": "923773ff73c801d8c4b09a4e36bd38382a4286e40e62acae02083ac84a79524d"
+      },
+      {
+        "path": "backend/app/core/config.py",
+        "sha256": "7a769278ba371d9c37c7460bc288a33fc059f082257216fc17f1b84bfb330abf"
+      },
+      {
+        "path": "backend/app/main.py",
+        "sha256": "9edf2cbd49f56f08f21a396fbea6a1ddeb69123253609eb6a18a319391f05bfa"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/application/document_storage_service.py",
+        "sha256": "ea93a5be004787d58f98d093f56ae5cba7b1b936bce12c8d193ceb3fef6c7c95"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/domain/document_blob_store.py",
+        "sha256": "e00809b89fa38e891a107170c7ebb66f9102d1e821ee4809a5e2d95b2f8dda28"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/infrastructure/aws_s3_document_blob_store.py",
+        "sha256": "f3648b59c1cd98afaa9a10e1d4fb6ad1475a10e1c32585ae9fff9fcfa08532a5"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/infrastructure/document_blob_store_factory.py",
+        "sha256": "289d12580709dd4e131f4450530fb2cdf4fc47ff015d63426b2ad19d619663fc"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/infrastructure/local_filesystem_document_blob_store.py",
+        "sha256": "6aa27cfe6e8eff443f5a9a4e27c77d5122df5494e176d4c07a70efdcd6fc04f6"
+      },
+      {
+        "path": "backend/app/modules/document_workspace/models.py",
+        "sha256": "84c26d78ef30cf7dd44c38070bd6fbf13b9f990ec6ee9c9027b6285a08f65fb9"
+      },
+      {
+        "path": "backend/tests/test_document_blob_store_local.py",
+        "sha256": "73613f5ae8b5b3c94409e9204f5ab4067b32f3ea3fd97068280b96797c88a304"
+      },
+      {
+        "path": "backend/tests/test_document_storage_postgresql.py",
+        "sha256": "ba4ac03a21f3b4d8fb3cd9cb2fb800006caa4b90afd1bf9b8f49742f4cb5ef18"
+      },
+      {
+        "path": "backend/tests/test_document_storage_service.py",
+        "sha256": "13d8c1bcf18daa57a2068c61f5bc8bfc62607bfe3d791c77182851ce4dfa4452"
+      },
+      {
+        "path": "CODEX.md",
+        "sha256": "742de7ae4e06010f51d3c52d2c2480fa6c83767e9b2aaff1c45a1aa17bd07e07"
+      },
+      {
+        "path": "docker-compose.yml",
+        "sha256": "8f4eac80a8b4f43ca832f38d4990b509c7cc330610a8aa75e86b3ebefafbdff2"
+      },
+      {
+        "path": "docs/adr/0043-app-owned-immutable-document-storage.md",
+        "sha256": "240d96ed0584322310574e0aca8951e973e7d62789fbc429795a54974f77384a"
+      },
+      {
+        "path": "docs/implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md",
+        "sha256": "0bb98f2560ae01648739864079617a67c204c0037de7f2e7f1a08e2fc7313917"
+      },
+      {
+        "path": "docs/index.md",
+        "sha256": "1d05437b4d770a98ef0a1ecc4c34fa993d62f23ff9694417db8e5f3e943001ad"
+      },
+      {
+        "path": "docs/plan/valora-storage-local-001.md",
+        "sha256": "7bfebbcebf4961fdad0a78bdfa9f23a9ae4918ef33a0cfb4dde43774ee82a759"
+      },
+      {
+        "path": "docs/plan/valora-storage-s3-spike-001.md",
+        "sha256": "052cd1d721261937f8508832794ff7943d1582d2e807a17fa90b6b2f08817600"
+      },
+      {
+        "path": "docs/research/valora-storage-provider-selection-2.md",
+        "sha256": "b5cf08f704439c6b78a0779ff06e96238e74dc0865da534cb69138b713d7dd91"
+      },
+      {
+        "path": "docs/research/valora-storage-provider-selection.md",
+        "sha256": "dd7d059b94a4aa5ae9385ea7d1b7cdd030c29d2ea0e1ed05fb17eafb24a8ef7f"
+      }
+    ]
+  },
+  "identity_reconciliation": {
+    "pre_commit_worktree_aggregate_sha256": "1984168d0da42e12c82bb4139877d0cb9cff7c76bb6b89a35d5cd46de945fdd5",
+    "committed_aggregate_sha256": "2c52b54fdbefb462d4afaa74898c5791b0de34de602bcb453d7301cebfbd8742",
+    "cause": "Git clean/smudge attributes normalized line endings in six paths while staging: .env.example, backend/app/core/config.py, backend/app/main.py, backend/app/modules/document_workspace/models.py, CODEX.md, and docker-compose.yml.",
+    "treatment": "The committed Git object graph is authoritative. Both independent reviewers were rerun against the exact commit and reproduced all 22 per-file hashes plus the aggregate before accepting it.",
+    "semantic_change": "NONE"
+  },
+  "commit_plan": {
+    "reviewed_snapshot_commit": {
+      "message": "feat(storage): add immutable local filesystem blob store",
+      "paths": "the 22 reviewed_snapshot.files entries only"
+    },
+    "generated_evidence_commit": {
+      "message": "docs(storage): record durable G6 snapshot evidence",
+      "paths": [
+        "docs/implementation/VALORA_STORAGE_LOCAL_G6_CLOSEOUT_MANIFEST.json"
+      ]
+    }
+  },
+  "inventory_reconciliation": {
+    "tracked_modified": 16,
+    "reviewed_untracked": 6,
+    "reviewed_total": 22,
+    "excluded_untracked": [
+      {
+        "path": "scratch/github_search.py",
+        "classification": "untracked local-only artifact; not reviewed; excluded from both commits; outside backend/frontend/worker build and test roots"
+      }
+    ],
+    "git_visible_total_before_manifest": 23,
+    "reported_ui_count": 25,
+    "conclusion": "The reported UI count is not reproducible from authoritative Git inventory. Git proves 22 reviewed paths plus one excluded scratch artifact; no acceptance-affecting path exists outside the reviewed snapshot."
+  },
+  "verification": {
+    "full_backend": {
+      "result": "PASS",
+      "summary": "1597 passed, 10 skipped, 29 warnings in 361.59 seconds",
+      "environment": "Linux container with PostgreSQL and Node available"
+    },
+    "focused_storage": {
+      "result": "PASS",
+      "summary": "68 passed, 1 skipped",
+      "skip": "the root-run instance of the explicitly non-root L13 kernel-DAC proof"
+    },
+    "l13_nonroot": {
+      "result": "PASS",
+      "summary": "1 passed",
+      "runtime_user": "UID 65532"
+    },
+    "l1_l17": "PASS across the focused root run plus the separate non-root L13 run",
+    "postgresql": {
+      "result": "PASS",
+      "proofs": [
+        "T8 two-session competing writers",
+        "T9 CurrentHead CAS loss rollback",
+        "T14 replayed finalize idempotence",
+        "migration upgrade/downgrade/upgrade",
+        "downgrade refusal while local-provider rows exist"
+      ]
+    },
+    "ruff": "PASS",
+    "production_local_startup": "PASS",
+    "docker_compose_config": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "independent_reviews": [
+    {
+      "reviewer": "DeepSeek v4.1 Flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "snapshot_commit": "d71a42e575f96d7cd8d9aac6c8aab2c60627c32f",
+      "snapshot_aggregate_sha256": "2c52b54fdbefb462d4afaa74898c5791b0de34de602bcb453d7301cebfbd8742",
+      "snapshot": "MATCH",
+      "verdict": "ACCEPT",
+      "blocking_findings": "none (no P0/P1/P2)",
+      "p3_findings": "four non-blocking hardening notes: group-writable child directories, ctime semantics, OSError classification consistency, and root path replacement threat model"
+    },
+    {
+      "reviewer": "Gemini 3.1 Pro High",
+      "model": "gemini-3.1-pro-high",
+      "snapshot_commit": "d71a42e575f96d7cd8d9aac6c8aab2c60627c32f",
+      "snapshot_aggregate_sha256": "2c52b54fdbefb462d4afaa74898c5791b0de34de602bcb453d7301cebfbd8742",
+      "snapshot": "MATCH",
+      "verdict": "ACCEPT",
+      "blocking_findings": "none (no P0/P1/P2)",
+      "p3_findings": "none"
+    }
+  ],
+  "known_p3_follow_ups": [
+    "Reject group-writable pre-existing objects/staging child directories, not only a group/world-writable root.",
+    "Avoid treating inode ctime as true object creation time metadata.",
+    "Normalize the startup-probe final fsync failure into the configuration-error type while preserving fail-closed startup.",
+    "Add O_CLOEXEC where supported to local adapter file descriptors.",
+    "Do not treat device-plus-inode identity as globally unique over long retention horizons.",
+    "Reject a root beneath a broken .git symlink as being inside a Git worktree.",
+    "Operationalize bounded staging-orphan inventory and cleanup for the pilot without request-path sweeping.",
+    "Keep native Windows development on the documented Docker/WSL Linux boundary."
+  ],
+  "provider_activity": {
+    "external_provider_calls": "NONE",
+    "credentials_used": "NONE",
+    "aws": "NOT_ATTEMPTED",
+    "onedrive": "NOT_ATTEMPTED"
+  },
+  "exact_head_ci": {
+    "binding": "the pushed commit containing this manifest",
+    "status": "PENDING_AT_MANIFEST_CREATION",
+    "run_identity": "reported externally after GitHub completes the run because a run cannot predate the commit that triggers it"
+  },
+  "reproduction": {
+    "reviewed_files": "For each reviewed_snapshot.files entry, hash the bytes from the reviewed snapshot commit with SHA-256 and compare the lowercase digest.",
+    "aggregate": "Sort reviewed_snapshot.files by ordinal-ignore-case path, render each digest/path line using aggregate_algorithm and SHA-256 the resulting bytes.",
+    "generated_manifest": "The manifest is evidence about the reviewed snapshot and is intentionally not part of its self-referential 22-file digest. Verify its Git blob identity from the evidence commit tree."
+  }
+}

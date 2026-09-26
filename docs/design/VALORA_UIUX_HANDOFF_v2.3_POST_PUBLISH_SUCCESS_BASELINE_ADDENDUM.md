@@ -13,7 +13,7 @@ Authority flow:
 Chuẩn bị bộ phát hành
 → Xem lại & xử lý ngoại lệ
 → Xác nhận phát hành [commit boundary]
-→ Release Manifest + khóa Document Revision + audit/lineage [system consequence]
+→ Release Manifest bind exact accepted Document Revision + audit/lineage [system consequence]
 → Đã phát hành [success/read-only state]
 ```
 
@@ -25,7 +25,7 @@ Success state phải phản ánh artifact thật đã commit:
 - thời điểm phát hành;
 - người phát hành;
 - số tài liệu thuộc Release Manifest;
-- các Document Revision được bind và đã khóa;
+- các accepted Document Revision được bind chính xác vào Release Manifest;
 - M365 file/version tương ứng nếu có;
 - Warning retained/audited nếu có;
 - audit/lineage đã ghi nhận.
@@ -33,13 +33,13 @@ Success state phải phản ánh artifact thật đã commit:
 Nếu commit thất bại hoặc chưa xác định, không route sang success state và không hiển thị `Đã phát hành`.
 
 ## 3. Layout authority — Iteration 1
-Desktop Fluent 2, Vietnamese-first, read-only.
+Desktop Fluent 2 light, Vietnamese-first, read-only.
 
 ### Header / success banner
 - tiêu đề `Bộ tài liệu đã được phát hành`;
 - success banner `Phát hành thành công!`;
 - badge trạng thái `ĐÃ PHÁT HÀNH`;
-- Release ID, thời điểm phát hành, người phát hành, số tài liệu trong manifest, số Document Revision đã khóa.
+- Release ID, thời điểm phát hành, người phát hành, số tài liệu trong manifest, số accepted Document Revision được bind.
 
 ### Tiến độ phát hành
 Hiển thị 3 bước Publishing đã hoàn thành và result state `Đã phát hành`:
@@ -58,7 +58,7 @@ Tối thiểu:
 Table-first, tối thiểu:
 `Tên tài liệu | Loại tài liệu | Document Revision đã phát hành | Trạng thái | Phiên bản M365 | Lần đồng bộ cuối`.
 
-`Trạng thái` đối với revision thuộc release là read-only `Đã khóa`/equivalent. Không edit/unlock/replace revision từ màn này.
+`Trạng thái` đối với revision thuộc release là read-only `Đã phát hành`/equivalent. Accepted `DocumentRevision` đã immutable trước Publishing; màn này không tạo lock mutation và không edit/replace revision.
 
 ### Right rail
 - `Thông tin Release`;
@@ -116,6 +116,6 @@ Sau commit thành công:
 - Một primary CTA mỗi context.
 
 ## 9. Implementation direction
-Post-publish route nên resolve từ Release Manifest thực tế hoặc Global Case State `PUBLISHED`, không từ client-only flag. Read model cần đủ dữ liệu cho release summary, manifest items, locked revisions, M365 version references, integrity checks, warnings and release history.
+Post-publish route nên resolve từ Release Manifest thực tế hoặc Global Case State `PUBLISHED`, không từ client-only flag. Read model cần đủ dữ liệu cho release summary, manifest items, exact bound accepted revisions, M365 version references, integrity checks, warnings and release history.
 
-Nếu implementation thay đổi Release Manifest persistence, locking atomicity, idempotency/retry, partial failure recovery hoặc published-state projection thì cần ADR phù hợp.
+Nếu implementation thay đổi Release Manifest persistence, manifest/publish atomicity, idempotency/retry, partial failure recovery hoặc published-state projection thì cần ADR phù hợp.

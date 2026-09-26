@@ -1,25 +1,30 @@
 import React from "react";
+import { StateSurface } from "../ui/StateSurface";
 
 interface ErrorStateProps {
+  scope?: "section" | "page";
   title?: string;
   message?: string;
   onRetry?: () => void;
+  retryLabel?: string;
 }
 
 export function ErrorState({
-  title = "Error Loading Session",
-  message = "A communication or security validation error occurred.",
-  onRetry
+  scope = "page",
+  title = "Chưa thể tải dữ liệu",
+  message = "Hệ thống chưa thể tải nội dung này.",
+  onRetry,
+  retryLabel = "Thử lại",
 }: ErrorStateProps) {
   return (
-    <div className="state-container">
-      <h2 className="state-title" style={{ color: "var(--status-error)" }}>{title}</h2>
-      <p className="state-message">{message}</p>
-      {onRetry && (
-        <button className="action-btn" onClick={onRetry}>
-          Retry Action
-        </button>
-      )}
-    </div>
+    <StateSurface
+      actionLabel={retryLabel}
+      message={message}
+      onAction={onRetry}
+      role="alert"
+      state={scope === "section" ? "SECTION_ERROR" : "PAGE_ERROR"}
+      title={title}
+      tone="error"
+    />
   );
 }

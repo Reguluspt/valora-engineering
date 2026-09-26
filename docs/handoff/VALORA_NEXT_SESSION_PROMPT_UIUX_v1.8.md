@@ -1,3 +1,6 @@
+> **HISTORICAL DOCUMENT NOTICE — 2026-09-21**
+> Tài liệu này được giữ để bảo toàn lịch sử/evidence. Nó **không phải current authority hoặc roadmap**. Khi có mâu thuẫn, dùng `docs/DOCUMENTATION_STATUS_INDEX.md`, `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`, canonical UI/UX v2.3 authority và ADR hiện hành.
+
 # Prompt bàn giao phiên làm việc tiếp theo — VALORA UI/UX v1.8
 
 Bạn đang tiếp tục thiết kế sản phẩm **Valora** trong repository `Reguluspt/valora-engineering`.

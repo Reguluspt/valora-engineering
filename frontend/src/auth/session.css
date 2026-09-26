@@ -1,0 +1,108 @@
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  gap: clamp(48px, 8vw, 96px);
+  align-items: center;
+  padding: clamp(32px, 6vw, 80px);
+  background: var(--valora-color-canvas);
+}
+
+.login-intro {
+  max-width: 640px;
+}
+
+.login-eyebrow,
+.login-card header p {
+  color: var(--valora-color-brand-foreground);
+  font: var(--valora-font-weight-semibold) var(--valora-font-size-label) / var(--valora-line-height-compact) var(--valora-font-family-base);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-intro h1 {
+  max-width: 18ch;
+  margin: var(--valora-space-lg) 0 var(--valora-space-xl);
+  color: var(--valora-color-text-primary);
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.login-intro > p:not(.login-eyebrow) {
+  max-width: 560px;
+  color: var(--valora-color-text-secondary);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.login-trust-note {
+  display: grid;
+  gap: var(--valora-space-xs);
+  max-width: 520px;
+  margin-top: var(--valora-space-3xl);
+  padding: var(--valora-space-lg);
+  border: 1px solid var(--valora-color-status-info-border);
+  border-radius: var(--valora-radius-surface);
+  background: var(--valora-color-status-info-background);
+  color: var(--valora-color-status-info-foreground);
+}
+
+.login-trust-note p {
+  margin: 0;
+  color: var(--valora-color-text-secondary);
+  line-height: var(--valora-line-height-body);
+}
+
+.login-card {
+  display: grid;
+  gap: var(--valora-space-lg);
+  padding: var(--valora-space-3xl);
+}
+
+.login-card h2 {
+  margin: var(--valora-space-sm) 0 0;
+  color: var(--valora-color-text-primary);
+  font-size: var(--valora-font-size-page-title);
+  line-height: var(--valora-line-height-page-title);
+}
+
+.login-card label {
+  display: grid;
+  gap: var(--valora-space-sm);
+  color: var(--valora-color-text-primary);
+  font-size: var(--valora-font-size-body);
+  font-weight: var(--valora-font-weight-semibold);
+}
+
+.login-card input {
+  min-height: var(--valora-control-height-large);
+}
+
+.login-submit {
+  min-height: var(--valora-control-height-large);
+}
+
+.login-submit:disabled {
+  cursor: not-allowed;
+}
+
+.login-card small {
+  color: var(--valora-color-text-secondary);
+  line-height: 1.5;
+}
+
+.login-error {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    align-content: start;
+  }
+
+  .login-intro h1 {
+    font-size: clamp(34px, 9vw, 48px);
+  }
+}

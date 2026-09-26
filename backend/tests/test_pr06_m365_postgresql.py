@@ -115,7 +115,7 @@ def test_pr06_migration_round_trip_and_model_parity(postgres_database_url: URL) 
 def test_concurrent_same_revalidation_command_creates_one_fact_and_audit(
     postgres_database_url: URL,
 ) -> None:
-    _run_alembic(postgres_database_url, "upgrade", "a6d9e4c2b8f1")
+    _run_alembic(postgres_database_url, "upgrade", "head")
     engine = create_engine(postgres_database_url, pool_pre_ping=True)
     session_factory = sessionmaker(bind=engine)
     setup: Session = session_factory()
@@ -201,7 +201,7 @@ def test_concurrent_same_revalidation_command_creates_one_fact_and_audit(
 def test_concurrent_same_producer_command_creates_one_complete_lineage(
     postgres_database_url: URL,
 ) -> None:
-    _run_alembic(postgres_database_url, "upgrade", "a6d9e4c2b8f1")
+    _run_alembic(postgres_database_url, "upgrade", "head")
     engine = create_engine(postgres_database_url, pool_pre_ping=True)
     session_factory = sessionmaker(bind=engine)
     setup: Session = session_factory()

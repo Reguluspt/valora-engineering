@@ -37,7 +37,7 @@ Primary CTA của hub: `Tiếp tục xử lý` / contextual equivalent dẫn t�
 Meaningful context có thể là ProjectAssetLine, NCC Selection, document/revision, sync conflict hoặc publishing exception. Resume không phải completion/business commit và không bypass blocker.
 
 ## 5. Layout baseline — Iteration 2
-Desktop Fluent 2, Vietnamese-first. Cấu trúc:
+Desktop Fluent 2 light, Vietnamese-first. Cấu trúc:
 - header + thông tin hồ sơ;
 - card `Trạng thái hồ sơ` với nhãn giai đoạn nghiệp vụ, completion, Blocking, Warning, Cần xem lại;
 - `Tiến độ các bước bắt buộc` theo 16 canonical stages; có `Document Sync Review` và `Publishing Exception Review`;

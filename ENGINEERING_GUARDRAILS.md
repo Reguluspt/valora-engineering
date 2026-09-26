@@ -1,8 +1,32 @@
+## Unified roadmap guardrail
+
+`docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` is the current product/development ordering. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture and AI-readable-by-design requirements, but does not authorize runtime AI. Sub-domain plans (storage, M365, template/Office, AI) may not reorder the North-star roadmap unless a new Product Owner decision explicitly amends it.
+
+## Current document authority guardrail
+
+Word Save, provider notification, revalidation and Change Candidate creation are non-authoritative.
+They must never create a DocumentRevision or mutate business truth automatically.
+
+Canonical Working flow:
+
+```text
+observe/revalidate
+→ DocumentChangeCandidate
+→ Old / V / W
+→ review/conflict
+→ explicit human-confirmed command
+→ immutable DocumentRevision N+1
+```
+
+OneDrive is a non-authoritative port. App-owned immutable storage + PostgreSQL CurrentHead remain
+authoritative for accepted document revisions.
+
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-12 (PR-05 engineering and live-account gates passed)
+**Last reconciled:** 2026-09-23 (integration head/F2 progress + AI Master Plan authority reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
+**v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Engineering Mode
 
@@ -14,24 +38,18 @@ Valora is in the **Engineering Phase**.
 VALORA UI/UX v2.3 implementation alignment
 
 Accepted code baseline: `origin/main`
-`93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26).
+`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31).
 Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-PR-02 through PR-04 were implemented together by GitHub PR #28 from base
-`5ed0922f50ae1ef3b31346f7245423aae9c01cd2` to reviewed head
-`51db33ec7fc7a82b9abba151e13f268b5e875fc4`. The formal acceptance gate and current CI checks
-PASS with no P0, P1 or P2 findings. This disposition is exact-head evidence, not an evergreen claim.
-PR #28 remains open and Draft; it is not merged, released or deployed.
-The two residual evidence gaps are CLOSED locally. PR-02 browser acceptance PASS is recorded against
-local corrective commit `69ecd97a6383c10d5cb024c6bb06df87ebbc6d24`; migration `d4b7c9e2f1a6`
-upgrade/downgrade/upgrade CI regression is committed at
-`ad3faad4063de111bd6c5a45dc8b847329bfd9af`. These local closeout commits are not part of the
-reviewed remote head above and do not change PR #28's Draft/unmerged status.
-PR-05 — M365 Integration Foundation now has separate local task `VALORA-PR05-IMPL-001` on branch `integration/phase1c-pr05-m365-foundation`, based at local closeout head `839debf`. Its read-only survey and architecture challenge are complete, and ADR 0040 is accepted for delegated OneDrive Personal access only; OneDrive for Business and SharePoint integration are deferred. The bounded runtime implementation passed the fake-provider, full backend and live OneDrive Personal acceptance gates. This task does not change PR #28's remote Draft head.
-PR-01 remains the historical `OWNER-ASSIGNED` gate: ADR 0036 and ADR 0037 are accepted, with computed-on-read and no projection migration under ADR 0036.
+PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566859cb`; PR #28 is the merged integration precursor. PR-01 remains a bounded prefix foundation, not complete coverage of all 16 stages. PR-02 browser acceptance and the PR-03 migration round-trip regression are part of the rollup now on `main`.
+PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDrive Personal only. OneDrive for Business and SharePoint remain deferred.
+PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
+The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
+Operational Frontend — implemented on Draft PR #32. At reconciliation head `d725bbc6…`, F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 are merged on the integration branch and exact-head CI #454 is green; F2-PR-004…008 remain. The candidate is still unmerged to main and is not North-star product-completion evidence.
+The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
+Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
+Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```
@@ -64,18 +82,21 @@ S12-PR-003, S12-PR-004, S13-PR-002 and S13-PR-003 are **merged/complete** and mu
 ## 2. Design Authority
 
 ```text
-Valora Design Book v1.2-final
-+ v1.3 MVP completion addendum
-+ v1.4 Adaptive Intake / Knowledge Memory addendum
+Explicit current Product Owner decision — named scope only
+CODEX.md
+ENGINEERING_GUARDRAILS.md
 docs/design/VALORA_UIUX_HANDOFF_v2.3.md
 docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md
 directly relevant VALORA_UIUX_HANDOFF_v2.3_* addendum
-docs/implementation/VALORA_UIUX_V2_3_IMPLEMENTATION_CONTRACT.md
-docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md
-docs/design/* contracts (including Excel staging §15, frozen s12-pr-004-v1)
-docs/adr/* (including ADR 0028–0034)
-docs/remediation/S13_S16_ADAPTIVE_INTAKE_KNOWLEDGE_MEMORY_REMEDIATION_PLAN.md
-docs/VALORA_PROJECT_HANDOFF.md
+docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md
+docs/architecture/VALORA_AI_MASTER_PLAN_V1.md — OS-G7 / AI-readiness only; no runtime authorization
+accepted scoped ADR(s)
+task-specific implementation contract / current design contract
+docs/VALORA_PROJECT_HANDOFF.md + current acceptance evidence
+Historical reference only where not superseded:
+  docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md as supersession/navigation map
+  Design Book v1.2/v1.3/v1.4
+  sprint / audit / remediation / research evidence
 ```
 
 ## 3. Module Boundaries
@@ -98,7 +119,7 @@ No module should depend on another without a clear application service or domain
 
 ```text
 Valora Workbench is the main workspace.
-Vietnamese-first UX; Astryx design compliance.
+Vietnamese-first UX; Microsoft Fluent 2 light design compliance; desktop-first, data-heavy/table-first. Astryx may remain only as a low-level primitive if fully remapped and visually conformant.
 ```
 
 ### Word / Excel
@@ -112,7 +133,7 @@ S12 parser v1 remains `.xlsx` + fixed aliases for its historical upload path.
 S13-PR-002 adds bounded `.xls`/`.xlsx` source adapters and immutable source artifacts;
 S13-PR-003 adds deterministic structure discovery and row classification.
 S13-PR-004 mapping-memory persistence/application services are implemented historical foundation.
-The old S13-PR-005 API/UX sequence no longer authorizes current work; follow the v2.3 PR track.
+The old S13-PR-005 API/UX sequence no longer authorizes current work; follow the Unified Roadmap OS-G0→OS-G7.
 Any replacement of S12 Apply v1 still requires explicit authority and ADR review.
 ```
 
@@ -143,8 +164,7 @@ AITaskRun/DecisionEpisode provide task/learning provenance but do not replace do
 Workflow-pattern inputs are domain commands and committed outcomes, never UI clickstream.
 Temporary/autosave/unreviewed/failed/stale/rolled-back output is not positive learning evidence.
 Human, system and ai_service principals are distinct; AI/system cannot impersonate human approval.
-Gemini/DeepSeek (or other providers) are future gateway candidates only after
-deterministic S13–S15 foundations and ADR-governed provider integration.
+Gemini/DeepSeek (or other providers) are replaceable future gateway candidates only through the OS-G7 Task Registry/ModelPolicy/ProviderGateway gates in the AI Master Plan. Provider-backed runtime remains unauthorized until the applicable OS-G7 prerequisites and explicit task/provider authorization are satisfied.
 ```
 
 ### Adaptive Intake / Memory (v1.4 design authority and phased runtime)
@@ -169,8 +189,7 @@ No R2 auto-draft/auto-stage/exception-only-review promotion in S13–S16.
 Any future write-capable automation uses an allowlisted idempotent domain command
   with server tenant/RBAC/state/version checks and atomic required audit.
 Final price, QC approval, signature and report/certificate release remain human-only.
-Long-running production AI/extraction work requires durable outbox/job/attempt execution,
-  lease/retry/timeout/cancellation and stale-generation protection.
+Long-running production AI/extraction work must reuse the implemented durable `TaskJob`/`TaskJobAttempt`/worker boundary with lease/retry/timeout/cancellation/dead-letter and stale-generation protection; no second AI queue is permitted.
 Provider fallback is task-specific and evaluated; deterministic/manual fallback remains complete.
 Future agents use typed allowlisted tools and the same policy/command gates.
 ```
@@ -293,6 +312,21 @@ Before adding major dependencies, check purpose, license, security, maintenance,
 ## 11. Audit Expectations
 
 Every PR is auditable against scope, Design Book compliance, security, tests, file changes, migration impact.
+
+### Exact-head evidence guardrail
+
+```text
+Execution baseline = named branch + exact commit SHA + successful required CI on that exact SHA.
+Parent/earlier CI is never evidence for a changed HEAD.
+Docs-only changes are not exempt when the resulting commit becomes the baseline for downstream work.
+
+Dependent implementation work must not start until its predecessor/baseline gate is green.
+After implementation, the changed exact HEAD must pass all task-required focused gates and CI before
+the task is considered complete or its dependent task is released.
+
+If the reviewed/tested HEAD changes, previous CI/review evidence is retained as history but must not
+be reported as exact-head acceptance for the new commit.
+```
 
 ## 12. Merge Gate
 

@@ -1,5 +1,30 @@
 import { request } from "./client";
 
+export interface ProjectSummary {
+  id: string;
+  organization_id: string;
+  customer_id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  status: string;
+  knowledge_status: string;
+  fee_amount: number;
+  fee_currency_id: string | null;
+  signer_profile_id: string | null;
+  row_version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listProjects(): Promise<ProjectSummary[]> {
+  return request<ProjectSummary[]>("/api/v1/projects?page=1&page_size=100");
+}
+
+export async function getProject(projectId: string): Promise<ProjectSummary> {
+  return request<ProjectSummary>(`/api/v1/projects/${projectId}`);
+}
+
 export interface ProjectResolutionResponse {
   project_id: string;
   display_name: string;

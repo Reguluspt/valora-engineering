@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Mapping
+from typing import Literal, Mapping
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -14,7 +14,12 @@ from app.core.audit import log_audit_event
 from app.core.rbac import derive_effective_permissions
 from app.modules.m365_integration.domain.credential_vault import M365CredentialVault
 from app.modules.m365_integration.domain.graph_gateway import M365GraphGateway, M365OAuthClient
-from app.modules.m365_integration.models import M365OAuthState, OneDriveConnection
+from app.modules.m365_integration.models import (
+    M365ConnectionCapability,
+    M365ConnectionGrantedScope,
+    M365OAuthState,
+    OneDriveConnection,
+)
 from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
@@ -28,6 +33,17 @@ from app.modules.project_master_data.models import (
 ONEDRIVE_CONNECT_PERMISSION = "project:update"
 EVENT_ONEDRIVE_AUTHORIZATION_STARTED = "ONEDRIVE_AUTHORIZATION_STARTED"
 EVENT_ONEDRIVE_CONNECTION_ACTIVATED = "ONEDRIVE_CONNECTION_ACTIVATED"
+READ_CAPABILITY = "READ_AVAILABLE"
+APPFOLDER_WRITE_CAPABILITY = "APPFOLDER_WRITE_AVAILABLE"
+READ_SCOPE = "files.read"
+APPFOLDER_WRITE_SCOPE = "files.readwrite.appfolder"
+_FORBIDDEN_BROAD_SCOPES = {
+    "files.readwrite",
+    "files.readwrite.all",
+    "files.read.all",
+    "sites.read.all",
+    "sites.readwrite.all",
+}
 
 
 def _error(status: int, code: str, detail: str) -> HTTPException:
@@ -45,6 +61,87 @@ def _utc(value: datetime) -> datetime:
 
 def _state_hash(state: str) -> str:
     return hashlib.sha256(state.encode("utf-8")).hexdigest()
+
+
+def _normalized_scopes(scopes: frozenset[str]) -> frozenset[str]:
+    return frozenset(scope.strip().lower() for scope in scopes if scope.strip())
+
+
+def get_connection_capabilities(
+    db: Session, *, organization_id: uuid.UUID, connection_id: uuid.UUID
+) -> tuple[bool, bool]:
+    rows = (
+        db.query(M365ConnectionCapability)
+        .filter(
+            M365ConnectionCapability.organization_id == organization_id,
+            M365ConnectionCapability.connection_id == connection_id,
+            M365ConnectionCapability.available.is_(True),
+        )
+        .all()
+    )
+    available = {row.capability_code for row in rows}
+    granted_scopes = {
+        row.normalized_scope
+        for row in db.query(M365ConnectionGrantedScope)
+        .filter(
+            M365ConnectionGrantedScope.organization_id == organization_id,
+            M365ConnectionGrantedScope.connection_id == connection_id,
+        )
+        .all()
+    }
+    # Capability rows are a query-friendly projection, not independent grant
+    # authority. Require the exact persisted scope evidence as well so a
+    # partial/corrupt ledger always loses privilege rather than gaining it.
+    return (
+        READ_CAPABILITY in available and READ_SCOPE in granted_scopes,
+        APPFOLDER_WRITE_CAPABILITY in available
+        and APPFOLDER_WRITE_SCOPE in granted_scopes,
+    )
+
+
+def _replace_capability_ledger(
+    db: Session,
+    *,
+    connection: OneDriveConnection,
+    normalized_scopes: frozenset[str],
+) -> None:
+    db.query(M365ConnectionGrantedScope).filter(
+        M365ConnectionGrantedScope.organization_id == connection.organization_id,
+        M365ConnectionGrantedScope.connection_id == connection.id,
+    ).delete(synchronize_session=False)
+    db.query(M365ConnectionCapability).filter(
+        M365ConnectionCapability.organization_id == connection.organization_id,
+        M365ConnectionCapability.connection_id == connection.id,
+    ).delete(synchronize_session=False)
+    observed_at = datetime.now(timezone.utc)
+    for scope in sorted(normalized_scopes):
+        db.add(
+            M365ConnectionGrantedScope(
+                organization_id=connection.organization_id,
+                user_id=connection.user_id,
+                connection_id=connection.id,
+                normalized_scope=scope,
+                provenance="oauth_grant",
+                observed_at=observed_at,
+            )
+        )
+    for capability_code, evidence_scope in (
+        (READ_CAPABILITY, READ_SCOPE),
+        (APPFOLDER_WRITE_CAPABILITY, APPFOLDER_WRITE_SCOPE),
+    ):
+        available = evidence_scope in normalized_scopes
+        db.add(
+            M365ConnectionCapability(
+                organization_id=connection.organization_id,
+                user_id=connection.user_id,
+                connection_id=connection.id,
+                capability_code=capability_code,
+                available=available,
+                evidence_scope=evidence_scope if available else None,
+                provenance="oauth_grant",
+                observed_at=observed_at,
+            )
+        )
 
 
 def require_onedrive_actor(
@@ -80,6 +177,7 @@ def begin_onedrive_authorization(
     user_session: UserSession,
     oauth_client: M365OAuthClient,
     credential_vault: M365CredentialVault,
+    scope_profile: Literal["read_only", "exchange_write"] = "read_only",
     correlation_id: str | None = None,
 ) -> str:
     """Create a single-use state and return the Microsoft authorization URL."""
@@ -93,8 +191,14 @@ def begin_onedrive_authorization(
     actor = require_onedrive_actor(
         db, organization_id=organization_id, user_id=actor.id
     )
+    if scope_profile not in {"read_only", "exchange_write"}:
+        _abort(db, 422, "onedrive_scope_profile_invalid", "Yêu cầu cấp quyền không hợp lệ.")
     try:
-        start = oauth_client.begin()
+        start = (
+            oauth_client.begin()
+            if scope_profile == "read_only"
+            else oauth_client.begin(scope_profile="exchange_write")
+        )
     except Exception as exc:
         db.rollback()
         raise _error(
@@ -113,6 +217,7 @@ def begin_onedrive_authorization(
         user_session_id=user_session.id,
         state_hash=_state_hash(start.state),
         flow_credential_id=flow_credential_id,
+        requested_scope_profile=scope_profile,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
     )
     db.add(authorization_state)
@@ -142,7 +247,7 @@ def _consume_authorization_state(
     *,
     state: str,
     credential_vault: M365CredentialVault,
-) -> tuple[uuid.UUID, uuid.UUID, bytes]:
+) -> tuple[uuid.UUID, uuid.UUID, bytes, str]:
     authorization_state = (
         db.query(M365OAuthState)
         .filter(M365OAuthState.state_hash == _state_hash(state))
@@ -181,6 +286,7 @@ def _consume_authorization_state(
     )
     organization_id = authorization_state.organization_id
     user_id = authorization_state.user_id
+    requested_scope_profile = authorization_state.requested_scope_profile
     authorization_state.consumed_at = now
     authorization_state.flow_credential_id = None
     db.flush()
@@ -191,7 +297,7 @@ def _consume_authorization_state(
         purpose="oauth_flow",
     )
     db.commit()
-    return organization_id, user_id, material
+    return organization_id, user_id, material, requested_scope_profile
 
 
 def complete_onedrive_authorization(
@@ -208,13 +314,36 @@ def complete_onedrive_authorization(
     if not isinstance(state, str) or not state:
         _abort(db, 400, "onedrive_oauth_state_missing", "Thiếu trạng thái kết nối Microsoft.")
 
-    organization_id, user_id, flow_material = _consume_authorization_state(
+    organization_id, user_id, flow_material, requested_scope_profile = (
+        _consume_authorization_state(
         db, state=state, credential_vault=credential_vault
+        )
     )
     try:
         authorization = oauth_client.complete(
             flow_material=flow_material, auth_response=auth_response
         )
+        normalized_scopes = _normalized_scopes(authorization.granted_scopes)
+    except Exception as exc:
+        raise _error(
+            502, "onedrive_authorization_failed", "Không thể xác minh OneDrive Personal."
+        ) from exc
+    required_scopes = {READ_SCOPE}
+    if requested_scope_profile == "exchange_write":
+        required_scopes.add(APPFOLDER_WRITE_SCOPE)
+    if not required_scopes.issubset(normalized_scopes):
+        raise _error(
+            409,
+            "onedrive_required_scope_missing",
+            "Microsoft chưa cấp đủ quyền đã yêu cầu.",
+        )
+    if normalized_scopes.intersection(_FORBIDDEN_BROAD_SCOPES):
+        raise _error(
+            409,
+            "onedrive_broad_scope_rejected",
+            "Kết nối chứa quyền rộng hơn chính sách cho phép.",
+        )
+    try:
         drive = graph_gateway.get_default_drive(access_token=authorization.access_token)
     except Exception as exc:
         raise _error(
@@ -278,6 +407,11 @@ def complete_onedrive_authorization(
         connection.last_verified_at = datetime.now(timezone.utc)
 
     db.flush()
+    _replace_capability_ledger(
+        db,
+        connection=connection,
+        normalized_scopes=normalized_scopes,
+    )
     log_audit_event(
         db,
         event_name=EVENT_ONEDRIVE_CONNECTION_ACTIVATED,
@@ -287,7 +421,15 @@ def complete_onedrive_authorization(
         actor_user_id=actor.id,
         command_name="CompleteOneDriveAuthorization",
         correlation_id=correlation_id,
-        payload={"drive_id": drive.drive_id, "account_type": "personal"},
+        payload={
+            "drive_id": drive.drive_id,
+            "account_type": "personal",
+            "capability_state": (
+                "exchange-write-ready"
+                if APPFOLDER_WRITE_SCOPE in normalized_scopes
+                else "read-only"
+            ),
+        },
     )
     try:
         db.commit()

@@ -3,7 +3,7 @@
 ## Status
 
 Accepted — owner-requested design authority, 2026-07-14.
-**Runtime gate note:** S13-PR-001 is merged. Runtime implementation additionally requires Gate 0c (Design Book v1.4 §20 + ADR 0033–0034) owner merge/main CI, then an assigned Sprint 13 task ID (starting candidate S13-PR-002). No runtime is authorized by this ADR alone.
+**Runtime gate note — reconciled 2026-09-21:** the former Gate 0c/Sprint 13 ordering is historical. New runtime work must be opened by a current task-specific contract at the appropriate Unified Roadmap phase. This ADR remains authority for mapping-memory/adaptive-intake semantics only and does not authorize runtime by itself.
 
 ## Context
 
@@ -135,7 +135,7 @@ Audit payloads contain identifiers, versions and counts, not unrestricted raw ce
 - `VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md` §§6/12 remain historical S12-v1 descriptions.
 - This ADR and Design Book v1.4 govern new adaptive-intake implementation.
 - Mapping proposal/decision implementations also follow ADR 0033 task/version/Decision Episode provenance. The authoritative `ColumnMappingDecision` remains the business truth.
-- ADR 0034 creates a future policy extension point but does not remove this ADR's mapping confirmation, validation or Apply gates. No R2 auto-stage capability is promoted by S13–S16.
+- ADR 0034 creates a future policy extension point but does not remove this ADR's mapping confirmation, validation or Apply gates. No R2 auto-stage capability is promoted by this ADR or by the historical S13–S16 program.
 
 ## Acceptance gates
 
