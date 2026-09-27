@@ -19,6 +19,7 @@ from app.modules.project_master_data.models import (
     PreliminaryResultArtifact,
     Project,
     ProjectAssetLine,
+    ProjectAssetImportBatch,
     ProjectOfficialIntakeCommit,
     User,
     UserRole,
@@ -237,6 +238,23 @@ def get_official_intake_open_warnings(
     )
 
 
+def _lock_preliminary_batches(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID
+) -> None:
+    """Hold current-source pointers until the official-intake transaction commits."""
+    (
+        db.query(ProjectAssetImportBatch)
+        .filter(
+            ProjectAssetImportBatch.organization_id == org_id,
+            ProjectAssetImportBatch.project_id == project_id,
+        )
+        .order_by(ProjectAssetImportBatch.id)
+        .populate_existing()
+        .with_for_update()
+        .all()
+    )
+
+
 def commit_project_official_intake(
     db: Session,
     *,
@@ -323,6 +341,34 @@ def commit_project_official_intake(
             409,
             "preliminary_result_lineage_incomplete",
             "Nguồn gốc kết quả sơ bộ chưa đầy đủ.",
+        )
+    _lock_preliminary_batches(db, org_id=org_id, project_id=project.id)
+    # The read-only Case State providers are the sole PRELIMINARY_READY predicate.
+    # Keep their reads inside the same transaction as the held pointer/lineage locks.
+    from app.modules.project_master_data.application.case_state_projection import (
+        evaluate_preliminary_analysis_provider,
+        evaluate_preliminary_ready_provider,
+    )
+
+    analysis_result = evaluate_preliminary_analysis_provider(
+        db, org_id=org_id, project_id=project.id
+    )
+    ready_result = evaluate_preliminary_ready_provider(
+        db,
+        org_id=org_id,
+        project_id=project.id,
+        analysis_provider_result=analysis_result,
+    )
+    if (
+        ready_result.result != "COMPLETE"
+        or ready_result.authoritative_entity is None
+        or ready_result.authoritative_entity.id != artifact.id
+    ):
+        _abort(
+            db,
+            409,
+            "preliminary_result_not_current",
+            "Kết quả sơ bộ không còn phù hợp với dữ liệu hiện tại.",
         )
     if _has_open_blocker(db, org_id=org_id, project_id=project.id):
         _abort(

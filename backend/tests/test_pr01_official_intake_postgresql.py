@@ -12,6 +12,13 @@ from fastapi import HTTPException
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.excel_import.models import (
+    ColumnMappingDecision,
+    ColumnMappingProfileUsage,
+    ImportSourceArtifact,
+    ImportSourceArtifactState,
+    WorkbookStructureSnapshot,
+)
 from app.modules.project_master_data.application.official_intake_service import (
     commit_project_official_intake,
 )
@@ -19,9 +26,11 @@ from app.modules.project_master_data.models import (
     AuditEvent,
     Customer,
     OrganizationProfile,
+    PreliminaryAnalysisSnapshot,
     PreliminaryResultArtifact,
     Project,
     ProjectAssetLine,
+    ProjectAssetImportBatch,
     ProjectOfficialIntakeCommit,
     Role,
     User,
@@ -64,6 +73,31 @@ def _cleanup(SessionLocal, org_id: uuid.UUID) -> None:
             synchronize_session=False
         )
         db.query(PreliminaryResultArtifact).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(PreliminaryAnalysisSnapshot).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(ColumnMappingProfileUsage).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(ColumnMappingDecision).filter_by(
+            organization_id=org_id, decision_kind="confirmation"
+        ).delete(synchronize_session=False)
+        db.query(ColumnMappingDecision).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(WorkbookStructureSnapshot).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(ProjectAssetImportBatch).filter_by(organization_id=org_id).update(
+            {ProjectAssetImportBatch.current_source_artifact_id: None},
+            synchronize_session=False,
+        )
+        db.query(ImportSourceArtifact).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(ProjectAssetImportBatch).filter_by(organization_id=org_id).delete(
             synchronize_session=False
         )
         project_ids = [
@@ -162,6 +196,8 @@ def _seed_ids(setup: Session, *, suffix: str) -> tuple[dict[str, uuid.UUID], dic
             "actor": seeded["actor"].id,
             "project": seeded["project"].id,
             "artifact": seeded["artifact"].id,
+            "batch": seeded["batch"].id,
+            "source_artifact": seeded["source_artifact"].id,
         },
         seeded,
     )
@@ -200,6 +236,10 @@ def _classify_completed_official_intake_sql(statement: str) -> tuple[str, str] |
         r"\bfor\s+update\b", sql
     ):
         return "artifact_lock", sql
+    if selects_from("project_asset_import_batches") and re.search(
+        r"\bfor\s+update\b", sql
+    ):
+        return "batch_lock", sql
     if selects_from("project_official_intake_commits"):
         where_clause = sql.partition(" where ")[2]
         if re.search(r"(?:\b[a-z_][a-z0-9_]*\.)?idempotency_key\s*=", where_clause):
@@ -280,6 +320,31 @@ def _wait_for_project_row_lock_wait(
         "waiter was not observed on the holder's Project FOR UPDATE row-lock edge; "
         f"holder_pid={holder_pid}, waiter_pid={waiter_pid}, last={last}"
     )
+
+
+def _wait_for_batch_row_lock_wait(
+    engine, *, holder_pid: int, waiter_pid: int, timeout: float = 30.0
+) -> None:
+    deadline = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < deadline:
+        with engine.connect() as connection:
+            last = connection.execute(
+                text(
+                    "SELECT wait_event_type, query, pg_blocking_pids(pid) AS blocking_pids "
+                    "FROM pg_stat_activity WHERE pid = :waiter_pid"
+                ),
+                {"waiter_pid": waiter_pid},
+            ).mappings().one()
+        query = " ".join(str(last["query"]).lower().split())
+        if (
+            last["wait_event_type"] == "Lock"
+            and query.startswith("select project_asset_import_batches.id")
+            and holder_pid in last["blocking_pids"]
+        ):
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"batch row lock wait not observed: {last}")
 
 
 def test_postgresql_concurrent_same_request_observes_lock_order_and_replays() -> None:
@@ -403,12 +468,13 @@ def test_postgresql_concurrent_same_request_observes_lock_order_and_replays() ->
             "project_lock",
             "artifact_lock",
             "idempotency_resolution",
+            "batch_lock",
         ]
-        assert [kind for kind, _sql in completed_sql_traces["holder"]][:3] == (
+        assert [kind for kind, _sql in completed_sql_traces["holder"]][:4] == (
             expected_prefix
         ), completed_sql_traces["holder"]
         assert [kind for kind, _sql in completed_sql_traces["waiter"]][:3] == (
-            expected_prefix
+            expected_prefix[:3]
         ), completed_sql_traces["waiter"]
         _assert_one_fact_and_audit(SessionLocal, ids)
     finally:
@@ -500,6 +566,101 @@ def test_postgresql_concurrent_different_keys_have_one_typed_already_committed()
         assert errors[0].detail["error_code"] == "official_intake_already_committed"
         _assert_one_fact_and_audit(SessionLocal, ids)
     finally:
+        setup.close()
+        if ids is not None:
+            _cleanup(SessionLocal, ids["org"])
+        engine.dispose()
+
+
+def test_postgresql_pointer_change_wins_before_intake_validation() -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    holder: Session = SessionLocal()
+    ids = None
+    worker_thread = None
+    waiter_pid_ready = threading.Event()
+    waiter_pid: list[int] = []
+    errors: list[BaseException] = []
+    results: list[uuid.UUID] = []
+    try:
+        ids, seeded = _seed_ids(setup, suffix=f"pg-pointer-{uuid.uuid4().hex[:8]}")
+        previous = seeded["source_artifact"]
+        replacement = ImportSourceArtifact(
+            organization_id=ids["org"],
+            project_id=ids["project"],
+            import_batch_id=ids["batch"],
+            generation=previous.generation + 1,
+            original_filename="replacement.xlsx",
+            detected_format="xlsx",
+            content_type=previous.content_type,
+            file_size_bytes=previous.file_size_bytes,
+            checksum_sha256="d" * 64,
+            storage_object_key=f"key-src-replacement-{uuid.uuid4()}",
+            state=ImportSourceArtifactState.AVAILABLE.value,
+            created_by_user_id=ids["actor"],
+        )
+        setup.add(replacement)
+        setup.commit()
+        setup.close()
+
+        holder_pid = holder.execute(text("SELECT pg_backend_pid()")).scalar_one()
+        batch = (
+            holder.query(ProjectAssetImportBatch)
+            .filter_by(id=ids["batch"], organization_id=ids["org"])
+            .with_for_update()
+            .one()
+        )
+        batch.current_source_artifact_id = replacement.id
+        holder.flush()
+
+        def run_intake() -> None:
+            db: Session = SessionLocal()
+            try:
+                waiter_pid.append(db.execute(text("SELECT pg_backend_pid()")).scalar_one())
+                waiter_pid_ready.set()
+                results.append(
+                    _command(
+                        db,
+                        ids=ids,
+                        actor_id=ids["actor"],
+                        idempotency_key="pg-pointer-race",
+                    ).id
+                )
+            except BaseException as exc:  # thread transports evidence to parent assertion
+                errors.append(exc)
+            finally:
+                db.close()
+
+        worker_thread = threading.Thread(target=run_intake, daemon=True)
+        worker_thread.start()
+        assert waiter_pid_ready.wait(timeout=5)
+        _wait_for_batch_row_lock_wait(
+            engine, holder_pid=holder_pid, waiter_pid=waiter_pid[0]
+        )
+        holder.commit()
+        worker_thread.join(timeout=60)
+        assert not worker_thread.is_alive()
+        assert results == []
+        assert len(errors) == 1 and isinstance(errors[0], HTTPException)
+        assert errors[0].status_code == 409
+        assert errors[0].detail["error_code"] == "preliminary_result_not_current"
+        verify: Session = SessionLocal()
+        try:
+            assert verify.query(ProjectOfficialIntakeCommit).filter_by(
+                organization_id=ids["org"]
+            ).count() == 0
+            assert verify.query(AuditEvent).filter_by(
+                organization_id=ids["org"],
+                event_name="ProjectOfficialIntakeCommitted",
+            ).count() == 0
+        finally:
+            verify.close()
+    finally:
+        holder.rollback()
+        holder.close()
+        if worker_thread is not None:
+            worker_thread.join(timeout=60)
         setup.close()
         if ids is not None:
             _cleanup(SessionLocal, ids["org"])

@@ -599,7 +599,7 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         file_size_bytes=1024,
         checksum_sha256="c" * 64,
-        storage_object_key="key-src-1",
+        storage_object_key=f"key-src-{project_id}",
         state=ImportSourceArtifactState.AVAILABLE.value,
         created_by_user_id=actor_id,
     )
@@ -742,12 +742,13 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
         line_manifest_digest_sha256=line_manifest_digest,
         finalized_by_user_id=actor_id,
         finalized_at=datetime(2026, 9, 4, 13, 0, 0, tzinfo=timezone.utc),
-        idempotency_key="key-snap-ready-1",
+        idempotency_key=f"key-snap-ready-{project_id}",
         request_digest_sha256="2" * 64,
     )
     test_db.add(snapshot)
     test_db.flush()
 
+    test_db.refresh(snapshot)
     expected_digest = snapshot_canonical_digest(snapshot)
 
     full_lineage = _build_lineage_manifest(
@@ -776,7 +777,7 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         file_size_bytes=2048,
         content_checksum_sha256="9" * 64,
-        storage_object_key="key-res-1",
+        storage_object_key=f"key-res-{project_id}",
         source_snapshot_sha256=expected_digest,
         lineage_manifest=full_lineage,
         created_by_user_id=actor_id,
@@ -795,6 +796,73 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
         "expected_digest": expected_digest,
         "full_lineage": full_lineage,
     }
+
+
+def _append_unmaterialized_confirmation(
+    test_db: Session, ready: dict[str, Any], *, outcome: str
+) -> ColumnMappingDecision:
+    previous = ready["decision"]
+    confirmation = ColumnMappingDecision(
+        organization_id=previous.organization_id,
+        customer_id=previous.customer_id,
+        project_id=previous.project_id,
+        import_batch_id=previous.import_batch_id,
+        source_artifact_id=previous.source_artifact_id,
+        structure_snapshot_id=previous.structure_snapshot_id,
+        decision_kind=ColumnMappingDecisionKind.CONFIRMATION.value,
+        outcome=outcome,
+        memory_scope=previous.memory_scope,
+        proposal_decision_id=previous.proposal_decision_id,
+        actor_user_id=previous.actor_user_id,
+        command_id=uuid.uuid4(),
+        proposal_source_kind=ColumnMappingProposalSourceKind.HUMAN.value,
+        proposal_source_version=previous.proposal_source_version,
+        mapping_contract_version=previous.mapping_contract_version,
+        template_fingerprint_sha256=previous.template_fingerprint_sha256,
+        mapping_snapshot=previous.mapping_snapshot,
+        mapping_digest_sha256="f" * 64,
+        before_summary={},
+        after_summary={},
+    )
+    test_db.add(confirmation)
+    test_db.flush()
+    return confirmation
+
+
+@pytest.mark.parametrize("outcome", ["accepted", "corrected"])
+def test_later_unmaterialized_confirmation_keeps_current_provider_facts(
+    test_db: Session, outcome: str
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    test_db.commit()
+    before_analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
+    )
+    before_ready = evaluate_preliminary_ready_provider(
+        test_db,
+        org_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+        analysis_provider_result=before_analysis,
+    )
+    confirmation = _append_unmaterialized_confirmation(test_db, ready, outcome=outcome)
+    test_db.commit()
+
+    after_analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
+    )
+    after_ready = evaluate_preliminary_ready_provider(
+        test_db,
+        org_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+        analysis_provider_result=after_analysis,
+    )
+    assert confirmation.id != ready["usage"].confirmation_decision_id
+    assert before_analysis.result == after_analysis.result == "COMPLETE"
+    assert before_ready.result == after_ready.result == "COMPLETE"
+    assert before_analysis.fact_token == after_analysis.fact_token
+    assert before_ready.fact_token == after_ready.fact_token
+    assert after_ready.authoritative_entity.id == ready["artifact"].id
 
 
 def test_preliminary_ready_single_artifact_complete(test_db: Session) -> None:
