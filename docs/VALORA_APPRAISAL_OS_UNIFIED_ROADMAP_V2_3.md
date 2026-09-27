@@ -4,7 +4,7 @@
 **Last reconciled:** 2026-09-24
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
-**Repository state (reconciled 2026-09-26):** `origin/main` is at `8190ae885c4168e2d54c62fbb4a8e9b066d56522`. Draft PR #32 remains the active integration candidate against `main`. The last verified integration HEAD before this closeout documentation update was `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`, after F2-PR-001 through F2-PR-008 closed on integration, with exact-head CI #479 SUCCESS. Treat that SHA/CI as dated baseline evidence and verify the live PR #32 / integration HEAD before acting. OS-G0 Fluent 2 engineering closeout is complete on integration but is not yet merged to `main`; OS-G1 is not started.
+**Repository state (reconciled 2026-09-27):** `origin/main` is at `51eab8648005186197d2fbb37a19bde4332aeaa5`, the squash result of PR #32, with exact-head CI #485 SUCCESS. F2-PR-001 through F2-PR-008 and the OS-G0 Fluent 2 engineering closeout are merged to `main`. The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. OS-G1 is not started and requires an explicit Product Owner task before implementation.
 
 ## 1. Executive decision
 
@@ -73,11 +73,11 @@ Conflict resolution / role split:
 ### Merged main
 
 `origin/main` accepted merged baseline is currently
-`8190ae885c4168e2d54c62fbb4a8e9b066d56522`.
+`51eab8648005186197d2fbb37a19bde4332aeaa5`, with exact-head CI #485 SUCCESS.
 
-### Active Draft PR #32 / integration branch
+### Merged OS-G0 / PR #32 baseline
 
-PR #32 remains open/draft against `main`. The last verified integration HEAD before this closeout documentation update was `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`, with exact-head CI #479 SUCCESS; this is dated baseline evidence, not an evergreen current-HEAD claim. F2-PR-001 through F2-PR-008 are closed on integration. Verify the live PR #32 / integration HEAD before acting. OS-G0 Fluent 2 engineering closeout is complete on integration; PR #32 main reconciliation remains the final OS-G0 branch-closeout gate. OS-G1 is not started.
+PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the authoritative merged-main result is `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main and OS-G0 Fluent 2 engineering closeout is complete on main. OS-G1 is not started; its predecessor gate is satisfied, but implementation still requires an explicit Product Owner task.
 
 Contains:
 - Operational Frontend candidate;
@@ -258,7 +258,7 @@ A model/table/API alone is not product completion.
 
 ### OS-G0 — Authority, visual-system & branch reconciliation
 
-**Current disposition (2026-09-26):** F2-PR-001…008 are closed on integration and the Fluent 2 engineering closeout is complete there. Draft PR #32 remains unmerged to `main`; OS-G0 is not a merged-main baseline until PR #32 is reconciled and the resulting `main` exact-head CI succeeds. OS-G1 remains unopened until that gate.
+**Current disposition (2026-09-27):** F2-PR-001…008 and the Fluent 2 engineering closeout are merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is therefore a merged-main baseline. OS-G1 remains not started and requires an explicit Product Owner task before implementation.
 
 Execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`.
 Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
