@@ -128,9 +128,9 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ## 8. Progress snapshot
 
-### Current UI/UX integration track
+### Historical 2026-09-23 UI/UX integration track
 
-| Capability / gate | Current state | Evidence / next gate |
+| Capability / gate | State at 2026-09-23 snapshot | Evidence / next gate |
 |---|---|---|
 | PR-00–PR-04 | MERGED bounded foundations/slices | PR #29; PR-01 remains four-stage Case State prefix |
 | PR-05 | MERGED backend/provider foundation | PR #30; delegated OneDrive Personal read/OAuth |

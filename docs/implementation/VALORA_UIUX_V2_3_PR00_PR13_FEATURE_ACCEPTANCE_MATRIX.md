@@ -14,6 +14,15 @@
 > describes and must not be read as current repository state. OS-G1 is not started and still requires
 > an explicit Product Owner task before implementation.
 
+## Current OS-G0 merged-main disposition (2026-09-27)
+
+| Scope | Current status | Evidence / next gate |
+|---|---|---|
+| Operational Frontend / F2-PR-001…008 | MERGED/CLOSED on main; OS-G0 Fluent 2 engineering closeout complete | Squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS |
+| ADR 0045 Working-change runtime | NOT IMPLEMENTED by OS-G0 | Requires a task-specific implementation contract before coding |
+| OS-G1 | NOT STARTED / NOT AUTHORIZED | Requires an explicit Product Owner task |
+| Full North-star product path, Release/Publishing and exact-SHA E2E | INCOMPLETE | Separately gated under the Unified Roadmap v2.3 |
+
 This matrix separates design, runtime, integration and acceptance evidence. `MERGED` means only that
 the named pull request landed. It does not promote an absent frontend, browser check or end-to-end
 journey to complete.
@@ -50,15 +59,15 @@ journey to complete.
 
 This file keeps PR-00→PR-13 labels as historical acceptance evidence only. Current development ordering is OS-G0→OS-G7 in the Unified Roadmap v2.3. Product/UX/visual authority is the current UI/UX Handoff v2.3, which now requires Microsoft Fluent 2 light.
 
-Current Draft PR #32 remains in OS-G0 visual remediation, but F2-PR-001…003 have already removed the legacy global Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens/shared styles, and replaced production Astryx shell/login/shared-state TS/TSX usage. Residual Astryx global CSS/packages and feature-page dark/cyan debt remain for F2-PR-004…008. Historical functional/browser acceptance therefore still does not equal final current visual acceptance.
+At the 2026-09-23 snapshot, Draft PR #32 remained in OS-G0 visual remediation, but F2-PR-001…003 had already removed the legacy global Review Queue/Validation Dashboard production routes, established Fluent 2 light tokens/shared styles, and replaced production Astryx shell/login/shared-state TS/TSX usage. Residual Astryx global CSS/packages and feature-page dark/cyan debt remained for F2-PR-004…008. Historical functional/browser acceptance therefore still does not equal final current visual acceptance.
 
-## 2026-09-23 active Draft PR #32 reconciliation
+## Historical 2026-09-23 Draft PR #32 reconciliation
 
 The table below remains the verified **merged baseline** audit and must not be rewritten as though
-unmerged work had landed on `main`. For current candidate planning, this addendum supersedes older
+unmerged work had landed on `main`. At that snapshot, this addendum superseded older
 "current candidate" wording elsewhere in this file.
 
-Current Draft PR #32 contains:
+At the 2026-09-23 snapshot, Draft PR #32 contained:
 
 | Capability | Candidate status | Evidence / limitation |
 |---|---|---|
