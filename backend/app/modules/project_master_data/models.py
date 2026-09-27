@@ -1108,6 +1108,87 @@ class ProjectOfficialIntakeCommit(Base, UUIDMixin):
     )
 
 
+class PreliminaryProjectLifecycleCommandReceipt(Base, UUIDMixin):
+    """Immutable replay identity for the two Pre-case Project lifecycle commands."""
+
+    __tablename__ = "preliminary_project_lifecycle_command_receipts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    command_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    expected_project_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    committed_project_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    previous_import_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    target_import_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "idempotency_key", name="uq_preliminary_lifecycle_idempotency"
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_preliminary_lifecycle_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "actor_user_id"],
+            ["users.organization_id", "users.id"],
+            name="fk_preliminary_lifecycle_actor_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "target_customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_preliminary_lifecycle_customer_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "target_import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_preliminary_lifecycle_target_batch_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "previous_import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_preliminary_lifecycle_previous_batch_tenant", ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "(command_type = 'BindPreliminaryProjectCustomer' "
+            "AND target_customer_id IS NOT NULL AND target_import_batch_id IS NULL "
+            "AND previous_import_batch_id IS NULL) OR "
+            "(command_type = 'SwitchCurrentPreliminaryImportBatch' "
+            "AND target_customer_id IS NULL AND target_import_batch_id IS NOT NULL "
+            "AND previous_import_batch_id IS NOT NULL)",
+            name="chk_preliminary_lifecycle_outcome_shape",
+        ),
+        CheckConstraint(
+            "length(trim(idempotency_key)) > 0", name="chk_preliminary_lifecycle_key"
+        ),
+        CheckConstraint(
+            "request_digest_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_preliminary_lifecycle_digest",
+        ),
+        CheckConstraint(
+            "expected_project_version > 0 AND committed_project_version = expected_project_version + 1",
+            name="chk_preliminary_lifecycle_versions",
+        ),
+        Index("idx_preliminary_lifecycle_project", "organization_id", "project_id"),
+    )
+
+
 class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
     """Immutable, versioned authoritative fact for preliminary catalog/price analysis."""
 

@@ -73,7 +73,7 @@ class _GenerationContext:
     normalized_key: str
     request_digest: str
     snapshot_digest: str
-    customer_id: uuid.UUID
+    customer_id: uuid.UUID | None
     project_version: int
     snapshot: PreliminaryAnalysisSnapshot
     artifact: ImportSourceArtifact
@@ -499,7 +499,7 @@ def _build_lineage_manifest(
     *,
     org_id: uuid.UUID,
     project_id: uuid.UUID,
-    customer_id: uuid.UUID,
+    customer_id: uuid.UUID | None,
     snapshot: PreliminaryAnalysisSnapshot,
     artifact: ImportSourceArtifact,
     structure: WorkbookStructureSnapshot,
@@ -516,7 +516,7 @@ def _build_lineage_manifest(
         "generation_contract": "preliminary-result-generate-v1",
         "project_id": str(project_id),
         "organization_id": str(org_id),
-        "customer_id": str(customer_id),
+        "customer_id": str(customer_id) if customer_id is not None else None,
         "import_batch_id": str(snapshot.import_batch_id),
         "source_workbook": {
             "artifact_id": str(artifact.id),
