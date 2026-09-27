@@ -7,6 +7,8 @@
 through OpenCode
 **Authority:** `VALORA_UIUX_V2_3_PR04_NCC_SELECTION_API_UI_TASK_BRIEF.md`, ADR 0039, PR-03 persistence contract, Handoff v2.3 §2.1, NCC Selection Baseline Addendum, Cross-product State Pattern Addendum
 
+**2026-09-21 visual-authority amendment:** domain/API/human-confirmation semantics remain accepted. Current visual acceptance is Microsoft Fluent 2 light. Any Astryx/dark/cyan styling in the historical implementation is remediation debt, not accepted visual authority.
+
 ## Scope
 
 Expose the accepted PR-03 NCC Selection persistence as a tenant-safe project read aggregate and
@@ -64,7 +66,7 @@ state; it never derives workflow truth or monetary facts locally.
 - Canonical project route `/workbench/projects/{projectRef}/ncc-selection` centralized in
   `contracts/valoraV23.ts` and wired through `App.tsx` + `AppShell` navigation. No raw route
   literals in production `.tsx`.
-- Desktop-first, Fluent/Astryx-aligned, Vietnamese-first, data-heavy/table-first surface.
+- Desktop-first, Microsoft Fluent 2 light, Vietnamese-first, data-heavy/table-first surface.
 - KPI row, search + status filter (values preserved across retry), main table, right drawer with
   tabs (eligible quotes / current / history), single-choice candidate selection.
 - Primary action `Xác nhận NCC đã chọn cho dòng này`. Warning visible before commit and

@@ -113,6 +113,7 @@ function ResolvedNccSelection({
 
   const handleConfirm = async (candidate: NccSelectionCandidate) => {
     if (!selectedLine) return;
+    if (!candidate.eligible) return;
     if (state !== "READY" || conflict || confirmInFlightRef.current) return;
     const expectedRevision = selectedLine.current_selection?.selection_revision ?? 0;
     const attemptFingerprint = JSON.stringify({
@@ -217,6 +218,7 @@ function ResolvedNccSelection({
       {hasLines && filteredLines.length > 0 && (
         <NccSelectionTable
           lines={filteredLines}
+          selectedLineId={selectedLineId}
           onSelectRow={(line) => {
             idempotencyAttemptRef.current = null;
             setConfirmError(null);

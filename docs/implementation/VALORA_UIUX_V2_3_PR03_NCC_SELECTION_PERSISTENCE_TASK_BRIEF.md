@@ -1,9 +1,11 @@
 # VALORA UI/UX v2.3 — PR-03 NCC Selection Persistence Task Brief
 
 **Task:** `VALORA-PR03-IMPL-001`
-**Status:** OWNER-ASSIGNED / IMPLEMENTATION AUTHORIZED
+**Status:** HISTORICAL TASK BRIEF — IMPLEMENTATION COMPLETED / ENGINEERING GATE PASSED
 **Date:** 2026-09-05
 **Prerequisite:** PR-00 closed; ADR 0039 accepted by the Product Owner
+
+> **2026-09-23 current disposition:** This brief records the original assignment/survey gate. PR-03 persistence was subsequently implemented and accepted; current implementation truth is `VALORA_UIUX_V2_3_PR03_NCC_SELECTION_PERSISTENCE_CONTRACT.md` plus its audit. Do not re-execute this task brief as an open assignment.
 
 ## Objective
 

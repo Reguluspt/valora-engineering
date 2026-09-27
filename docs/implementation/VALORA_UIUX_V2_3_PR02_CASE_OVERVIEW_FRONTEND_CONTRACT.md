@@ -1,9 +1,11 @@
 # VALORA UI/UX v2.3 — PR-02 Case Overview Frontend Contract
 
-**Status:** LOCAL ENGINEERING GATE PASS — visual browser check pending
+**Status:** MERGED FUNCTIONAL FOUNDATION — CURRENT FLUENT 2 LIGHT VISUAL CONFORMANCE REQUIRED
 **Task:** `VALORA-PR02-IMPL-001` — Case State Frontend Hub Wiring
 **Date:** 2026-09-05
 **Prerequisite:** PR-01 read endpoint owner-closeout complete locally
+
+**2026-09-21 visual-authority amendment:** PR-02 functional semantics and Case State wiring remain accepted. Historical browser checks do not establish current visual acceptance because the active frontend uses superseded dark/Astryx styling. `Tổng quan hồ sơ` must conform to the approved S10/Orchestration Hub Microsoft Fluent 2 light baseline; screenshot/visual-regression acceptance is required during OS-G0 remediation.
 
 ## 1. Scope
 

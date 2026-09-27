@@ -3,8 +3,10 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first.
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Quyết định baseline
 Mockup `Tạo & Xem lại bộ tài liệu hồ sơ — Iteration 1`, phiên bản có **khu vực review tài liệu mở rộng**, được nâng thành Baseline / Design Authority.
 
@@ -24,7 +26,7 @@ Bộ mẫu áp dụng cho hồ sơ
 Báo cáo và Chứng thư vẫn giữ các baseline Managed Regions / Generation-Sync riêng đã khóa; màn bộ tài liệu là orchestration workspace, không xóa các child-flow chuyên sâu đó.
 
 ## 3. Layout authority
-- Header/breadcrumb trong `Tài liệu & Workspace → Microsoft 365 Document Workspace → Bộ tài liệu hồ sơ`.
+- Header/breadcrumb trong `Tài liệu & Workspace → Không gian tài liệu → Microsoft 365 integration → Bộ tài liệu hồ sơ`.
 - Summary phía trên: hồ sơ đang thao tác, Data Snapshot hiện tại, tổng quan tài liệu, thao tác nhanh.
 - Main workspace ưu tiên review: danh sách tài liệu bên trái, **preview tài liệu lớn ở trung tâm**, metadata/mapping/sync history bên phải.
 - Preview phải đủ lớn để đọc nội dung; phiên bản mockup review nhỏ trước đó bị supersede.

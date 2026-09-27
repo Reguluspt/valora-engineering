@@ -1,5 +1,3 @@
-import React from "react";
-
 interface UndoRedoControlsProps {
   undoDisabled: boolean;
   redoDisabled: boolean;
@@ -14,22 +12,24 @@ export function UndoRedoControls({
   onRedo
 }: UndoRedoControlsProps) {
   return (
-    <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+    <div className="workbench-undo-controls" role="group" aria-label="Thao tác nháp">
       <button
-        className="action-btn"
+        type="button"
+        className="valora-button valora-button--subtle"
         onClick={onUndo}
         disabled={undoDisabled}
-        title={undoDisabled ? "Undo stack empty" : "Undo last local draft change"}
+        title={undoDisabled ? "Không có thay đổi nháp để hoàn tác" : "Hoàn tác thay đổi nháp gần nhất"}
       >
-        ⎌ Undo
+        Hoàn tác
       </button>
       <button
-        className="action-btn"
+        type="button"
+        className="valora-button valora-button--subtle"
         onClick={onRedo}
         disabled={redoDisabled}
-        title={redoDisabled ? "Redo stack empty" : "Redo last local draft change"}
+        title={redoDisabled ? "Không có thay đổi nháp để làm lại" : "Làm lại thay đổi nháp gần nhất"}
       >
-        ⎌ Redo
+        Làm lại
       </button>
     </div>
   );

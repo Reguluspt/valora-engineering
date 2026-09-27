@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — owner-requested design authority, 2026-07-14. Runtime implementation requires Gate 0c closure, then assigned Sprint 14 task IDs and audit. No runtime or autonomous identity decision is authorized by this ADR alone.
+Accepted — owner-requested design authority, 2026-07-14. **2026-09-21 reconciliation:** the former Gate 0c/Sprint 14 implementation ordering is historical; current implementation timing follows the Unified Roadmap v2.3 and a task-specific contract. No runtime or autonomous identity decision is authorized by this ADR alone.
 
 ## Context
 

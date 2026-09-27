@@ -5,10 +5,12 @@
 **Date promoted:** 01/09/2026
 **Semantic authority:** `Microsoft 365 Return / Revalidation Contract v1`
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 ## 1. Baseline decision
 Mockup `M365 Return & Revalidation — Iteration 1` được người dùng explicit nâng thành Baseline / Design Authority.
 
-Visual này là cross-layer integration/state pattern cho Microsoft 365 Document Workspace; không phải workflow checkpoint hay business commit mới.
+Visual này là cross-layer integration/state pattern cho Không gian tài liệu khi dùng Microsoft 365 integration; không phải workflow checkpoint hay business commit mới.
 
 ## 2. Visual authority
 Approved board thể hiện các vùng chính:

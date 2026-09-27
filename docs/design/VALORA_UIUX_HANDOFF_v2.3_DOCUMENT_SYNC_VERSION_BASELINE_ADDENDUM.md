@@ -3,7 +3,29 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Ngày chốt:** 30/08/2026
-**Scope:** Microsoft 365 Document Workspace — UX đồng bộ dữ liệu và quản lý phiên bản tài liệu Word sau khi dữ liệu VALORA thay đổi.
+**Scope:** Không gian tài liệu — Microsoft 365 integration — UX đồng bộ dữ liệu và quản lý phiên bản tài liệu Word sau khi dữ liệu VALORA thay đổi.
+
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
+## 2026-09-21 execution-boundary amendment
+
+The visual/review semantics in this baseline remain valid, but the historical direct-write
+interpretation is amended by ADR 0043–0045 and the Unified Appraisal OS roadmap.
+
+Current default authority:
+
+```text
+reviewed document plan / candidate
+→ explicit human confirmation
+→ app-owned immutable DocumentRevision N+1
+→ CurrentHead CAS
+→ optional create-new Working / Export copy
+```
+
+A Microsoft 365 Working file is non-authoritative. Word Save, provider notification, revalidation,
+preview and conflict decisions do not create a revision. Direct replacement of an existing bound
+OneDrive item is historical/blocked and may not be reintroduced without separate Product Owner
+authority and independent provider-concurrency proof.
 
 ## 1. Mục tiêu
 

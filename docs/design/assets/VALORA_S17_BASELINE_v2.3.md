@@ -4,7 +4,7 @@
 **Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`
 **Phạm vi nghiệp vụ:** **01 báo giá cụ thể của 01 nhà cung cấp (NCC)** trong checkpoint `Tạo & quản lý báo giá nhà cung cấp`.
 
-> Quyết định authority quan trọng: Iteration 3 được duyệt về visual + interaction, nhưng scope nghiệp vụ được khóa là **hoàn tất một báo giá của một NCC**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định. Badge `S17` xuất hiện trên mockup được giữ như nhãn iteration lịch sử; khi triển khai/chuẩn hóa screen ID, màn hình này phải được phân loại là child screen của NCCQ. `S17 — Hoàn tất hồ sơ` ở cấp hồ sơ là một scope riêng và không được suy diễn từ baseline này.
+> Quyết định authority quan trọng: Iteration 3 được duyệt về visual + interaction, nhưng scope nghiệp vụ được khóa là **hoàn tất một báo giá của một NCC**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định. Badge `S17` xuất hiện trên mockup được giữ như nhãn iteration lịch sử; khi triển khai/chuẩn hóa screen ID, màn hình này phải được phân loại là child screen của NCCQ. Quyết định `Kết quả thẩm định giá` mới hơn supersede mọi suy diễn rằng còn một standalone `S17 — Hoàn tất hồ sơ` dashboard/checkpoint chen giữa NCC Selection và Final Result; action state/audit tương lai (nếu cần) không được đổi routing nếu chưa có explicit authority mới.
 
 ## 1. Mục tiêu
 
@@ -14,7 +14,7 @@ Màn hình không tổng hợp coverage 3 NCC và không đánh giá readiness t
 
 ## 2. Visual baseline — Iteration 3
 
-- Valora shell + Fluent 2, desktop-first.
+- Valora shell + Fluent 2 light, desktop-first.
 - Breadcrumb theo context hồ sơ và báo giá, ví dụ: `Hồ sơ thẩm định → [Hồ sơ] → Báo giá nhà cung cấp → [NCC / Mã báo giá]`.
 - Header `Hoàn tất báo giá nhà cung cấp`.
 - Primary CTA: `Hoàn tất báo giá`.

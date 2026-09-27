@@ -5,25 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:demo": "vite --mode demo --open /demo.html",
     "build": "tsc && vite build && node scripts/assert-production-bundle.mjs",
-    "build:demo": "tsc && vite build --mode demo",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "vitest run --globals",
-    "astryx": "node node_modules/@astryxdesign/cli/bin/astryx.mjs"
+    "browser:fixture": "node scripts/browser-acceptance-server.mjs"
   },
   "dependencies": {
-    "@astryxdesign/core": "^0.1.4",
-    "@astryxdesign/theme-neutral": "^0.1.4",
     "@vitejs/plugin-react": "^4.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "typescript": "^5.5.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "^0.1.4",
-    "@stylexjs/stylex": "0.18.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "esbuild": "^0.25.0",

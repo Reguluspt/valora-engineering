@@ -1,19 +1,23 @@
 # Valora Engineering
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
-**Accepted code baseline (not evergreen):** `93f50f9ac81ab93e2361fffa8b71fc3bcfca57f6` (R-GATE-001 / PR #26)
-**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` and
-`docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` from `docs/uiux-handoff-v2.2` at
-`1cf50460e54ba19d2f6a9d8f933ab123e4e615d6`
-**PR-00 status:** **COMPLETE / CLOSED locally**
-**PR-01 / PR-01a status:** **ACCEPTED foundation**
-**Active task:** **PR-02 through PR-04 integration in Draft PR #28; residual evidence CLOSED locally**
+**Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
+**Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`<br>
+**AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
+**Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
+**Documentation status map:** `docs/DOCUMENTATION_STATUS_INDEX.md`
+**PR-00 through PR-04:** **MERGED by PR #29**
+**PR-05 and PR-06:** **MERGED by PR #30 and PR #31; backend/provider slices only**
+**PR-00 alignment gate:** **CLOSED**
+**PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
+**PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
+**Current execution direction:** **OS-G0 authority + Fluent 2 light visual-system reconciliation, then OS-G1 Pre-case Product Closure per Unified Roadmap v2.3**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
 ## Product goal
 
-Valora is a **valuation / asset-identity workbench** for non-IT business users. Primary UX language is **Vietnamese**. Official UI/components follow the **Astryx** design system. Word/Excel are input/output only — they are **not** the source of truth.
+Valora is a **valuation / asset-identity workbench** for non-IT business users. Primary UX language is **Vietnamese**. Current product visual authority is **Microsoft Fluent 2 light**, desktop-first and data-heavy/table-first. Word/Excel are input/output only — they are **not** the source of truth.
 
 ## Current status (truthful)
 
@@ -28,25 +32,29 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | S12 parser capability | `.xlsx` fixed-alias staging + validate + Apply v1 remains frozen |
 | **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
 | **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
-| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current UI/UX work follows the v2.3 PR track |
-| Asset Identity Memory / dossiers / AI matching | **Design only** (v1.4 / ADR 0031–0032) — not implemented |
+| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current product work follows Unified Roadmap `OS-G0 → OS-G7` |
+| Asset Identity Memory / dossiers / AI matching | Identity-decision/feedback and dossier extraction/alignment foundations are implemented; provider-backed AI matching and the full OS-G7 assistant runtime are not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
-| Bounded-AI task/decision/policy/job architecture | Gate 0c **closed** (v1.4 §20 / ADR 0033–0034 on main); runtime not implemented |
+| Bounded-AI task/decision/policy architecture | ADR 0033–0034 accepted; `TaskJob`/worker durable execution foundation exists, but `AITaskRun`/`AIContextManifest`/`DecisionEpisode`/`ExecutionPolicy` runtime and provider gateway are not implemented |
+| UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
+| UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
+| UI/UX v2.3 downstream product stages | **Partially implemented on Draft PR #32**: Local G6 + OneDrive Exchange G8 are complete offline; F2-PR-001…003 are merged on integration head `d725bbc6…` with CI #454 green; F2-PR-004…008, canonical stages 5–16 and Release/Publishing remain incomplete. |
+| Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
 ### Live task gate
 
 ```text
-Accepted code baseline: origin/main 93f50f9… (R-GATE-001 / PR #26).
+Accepted code baseline: origin/main 27d1cc6… (PR #31).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
-VALORA_UIUX_V2_3_AUTHORITY_INDEX.md from docs/uiux-handoff-v2.2 at 1cf5046….
-PR-00 — Authority Alignment Guard: COMPLETE / CLOSED locally.
-PR-01 / PR-01a — Case State Projection Foundation and durable official intake: ACCEPTED foundation.
-ADR 0036 accepts computed-on-read with no projection migration; ADR 0037 accepts the durable
-official-intake fact and command used by the implemented PR-01 provider.
-PR-02 through PR-04 — IMPLEMENTED in Draft PR #28; exact-head CI remains the merge gate.
-Residual evidence gaps — CLOSED locally, including PR-02 browser acceptance and the NCC migration
-downgrade/upgrade round-trip regression.
+VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
+PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
+PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
+PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
+Operational frontend entry — REQUIRED before Software Completion.
+Draft PR #32 contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and the remaining canonical stages are still incomplete.
+Software Completion — REQUIRED before Windows Preview.
+Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
 Earlier S13 sequencing is historical context.
 ```
@@ -55,8 +63,8 @@ Earlier S13 sequencing is historical context.
 
 ```text
 backend/     FastAPI + SQLAlchemy + Alembic (Python ≥3.12)
-frontend/    React 18 + TypeScript + Vite + Astryx
-worker/      Python worker skeleton; planned reliable outbox/job runtime before long-running extraction/AI
+frontend/    React 18 + TypeScript + Vite; Fluent 2 light product visual authority
+worker/      Python reliable-job worker; durable TaskJob/attempt lease/retry/dead-letter runtime exists and is reused by document extraction/alignment; future AI must reuse it
 infra/       Local infra notes
 docs/        ADR, design contracts, audits, remediation, handoff
 .github/     CI workflows
@@ -74,7 +82,7 @@ ai_governance_security/        AI task/context/provider provenance + ExecutionPo
 excel_import/                  streaming parser + staging + Apply (S12 v1)
 ```
 
-Future ownership (design only until runtime PRs): Adaptive Intake + Column Mapping Memory → `excel_import`; Raw Asset Observation / Identity Memory → `taxonomy_asset_identity`; dossier extraction/alignment → `document_engine_intelligence`; task/context/attempt provenance and deny-by-default ExecutionPolicy → `ai_governance_security`; durable outbox/job execution → worker/runtime infrastructure.
+Future/continuing ownership follows current implementation state: mapping/identity memories remain in their existing bounded contexts; dossier extraction/alignment and durable job execution already have runtime foundations; future `AITaskRun`/context/attempt provenance, Task Registry/Gateway and deny-by-default `ExecutionPolicy` remain OS-G7 work under `ai_governance_security`/shared AI platform boundaries. AI must reuse the existing worker/runtime infrastructure.
 
 ### Non-negotiable invariants
 
@@ -92,9 +100,9 @@ Future ownership (design only until runtime PRs): Adaptive Intake + Column Mappi
 
 ## Authority hierarchy
 
-Read order: `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → `docs/design/VALORA_DESIGN_AUTHORITY_INDEX.md` → handoff → Design Book v1.2/v1.3/v1.4 → contracts/ADRs → S13–S16 plan.
+Read order: explicit current Product Owner decision (named scope only) → `CODEX.md` → `ENGINEERING_GUARDRAILS.md` → UI/UX Handoff v2.3 → UI/UX Authority Index → applicable current v2.3 addendum → Unified Roadmap v2.3 → AI Master Plan v1 for OS-G7/AI-readiness → accepted scoped ADR → current task/implementation contract → current handoff/acceptance evidence → historical Design Book/sprint/audit/remediation/research evidence.
 
-Roadmap (active after separate assignment): S13 Adaptive Intake + Column Mapping Memory → S14 Asset Identity Memory → S15 paired dossiers → S16 reliable audited AI suggestions + shadow evaluation → S17 reports → S18 auth/pilot.
+Historical roadmap only: S13 Adaptive Intake → S14 Asset Identity Memory → S15 dossiers → S16 AI suggestions → S17 reports → S18 pilot. **Do not execute this sequence as the current roadmap.** Current ordering is OS-G0 → OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 
 ## Local setup
 
@@ -129,14 +137,19 @@ Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not 
 
 ## What this repository is not yet
 
-- Adaptive `.xls`/`.xlsx` structure discovery and mapping-confirmation UX
-- Column Mapping Memory / Asset Identity Memory runtime
-- Paired Excel–Word/PDF extraction, row alignment, historical bootstrap
-- End-to-end AI column/identity matching
-- AI task/context/attempt/decision runtime and reliable background jobs
+- Current product-facing Adaptive Intake / mapping-confirmation UX completion (the historical workbook adapter and structure-discovery foundations already exist)
+- Current product-facing Column Mapping / Asset Identity review-loop completion beyond the implemented historical foundations
+- Productized paired Excel–Word/PDF dossier flow beyond the existing extraction/alignment foundations
+- End-to-end provider-backed AI column/identity matching
+- Full AI task/context/attempt/decision runtime; future AI must reuse the existing reliable `TaskJob`/worker background-job infrastructure
 - Bounded R2 automation or an open-ended agent orchestrator
 - Production certification
 
 ## License / ownership
 
 Engineering repository for Valora. Follow `PR_RULES.md` for every change.
+
+
+## Current roadmap
+
+Use `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` as the current product/development roadmap. Historical sprint plans, audit reports and earlier handoffs are evidence/reference only and do not override current v2.3 authority.

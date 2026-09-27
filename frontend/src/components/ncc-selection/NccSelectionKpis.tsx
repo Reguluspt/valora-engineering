@@ -25,7 +25,10 @@ function NccKpi({
 }) {
   return (
     <div className={`ncc-kpi ncc-kpi--${tone}`}>
-      <span>{label}</span>
+      <span>
+        {tone === "warning" ? "⚠ " : tone === "success" ? "✓ " : ""}
+        {label}
+      </span>
       <strong>{value}</strong>
     </div>
   );

@@ -13,7 +13,7 @@ IA giữ nguyên:
 Màn hình chiếu dữ liệu từ các primitive hiện hữu như `IdentityDecisionLog`, `KnowledgeVersion`, `KnowledgeLineage`, historical dossier/source locators và các review decisions liên quan.
 
 ## 2. Layout baseline
-Desktop-first, Microsoft Fluent 2, Vietnamese-first, data-heavy/table-first.
+Desktop-first, Microsoft Fluent 2 light, Vietnamese-first, data-heavy/table-first.
 
 ### 2.1 Filter area
 - Tìm kiếm toàn lịch sử.

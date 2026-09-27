@@ -1,9 +1,11 @@
 # Live Workbench Project Asset Lines API Contract
 
-- **Status**: Completed / Operational
+- **Status**: Completed backend/frontend foundation — current product UI/IA governed by v2.3 Handoff
 - **Sprint Target**: S11-PR-007 (Sprint 11 Final Acceptance)
 
 ---
+
+> **2026-09-21 current-product amendment:** This file remains authority for the existing asset-line API/draft/commit foundation, not for current Workbench visual composition. Product UI must use Microsoft Fluent 2 light and the approved S12/S13 authority. Historical `evidence/price/history/validation` drawer composition is superseded by exactly four S13 tabs: `Tổng quan | Thông số kỹ thuật | Nguồn giá & Chứng cứ | Lịch sử`. Validation is contextual and must not become a standalone/global workflow surface.
 
 ## 1. Purpose
 This document establishes the backend-to-frontend schema and route structure for loading project asset lines into the Live Workbench.
@@ -85,7 +87,7 @@ This document establishes the backend-to-frontend schema and route structure for
 - **S11-PR-001**: API Contract and Backend Endpoint (this PR).
 - **S11-PR-002**: Workbench Asset Grid Read Adapter — completed with limitation. The adapter and grid binding are implemented, but live loading from slug routes is gated by route slug → project UUID resolution.
 - **S11-PR-002A**: Workbench Route Project UUID Resolution (Completed — Resolves route slug to UUID via scoped backend endpoint).
-- **S11-PR-003**: Context Drawer Data Adapter — completed with limitation. Metadata is live from the selected asset row, while evidence/price/history/validation sections remain localized empty-state placeholders until supporting backend context domains are wired.
+- **S11-PR-003**: Context Drawer Data Adapter — completed historical foundation. Its old evidence/price/history/validation pane structure is not current IA; current S13 four-tab composition is defined by UI/UX Handoff v2.3.
 - **S11-PR-004**: Draft State Read Model — completed. Adds read-only backend/frontend draft state indicators without draft save, inline editing, or official commit.
 - **S11-PR-005**: Inline Draft Editing Contract — completed. Enables saving draft edits for description and appraised unit price, displaying Vietnamese badges without mutating official asset line database fields.
 - **S11-PR-006**: Human Commit / Review Gate — completed. Allows review of draft changes and explicitly applying them to official database fields after human confirmation.

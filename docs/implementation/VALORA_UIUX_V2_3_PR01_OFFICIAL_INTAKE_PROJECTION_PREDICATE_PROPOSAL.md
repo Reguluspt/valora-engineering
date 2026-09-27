@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — PR-01 Official Intake Projection Predicate
 
-**Status:** OWNER-ACCEPTED BOUNDED PREDICATE AUTHORITY — RUNTIME NOT AUTHORIZED
+**Status:** HISTORICAL DESIGN AUTHORITY — RUNTIME SUBSEQUENTLY IMPLEMENTED/WIRED
 
 **Task:** VALORA-PR01-DESIGN-002
 
@@ -9,6 +9,8 @@
 **Date:** 2026-09-03
 
 **Architecture:** ADR 0036 (computed-on-read, no projection migration) + ADR 0037 (durable official-intake fact)
+
+> **2026-09-23 current disposition:** This file preserves the original predicate-design gate. `official_intake_commit_v1` and the four-stage computed Case State runtime were subsequently authorized, implemented and wired. Later implementation contracts/audits and the Unified Roadmap govern current runtime status; the historical “runtime not authorized” wording below is not a present blocker.
 
 This document records the owner-approved bounded predicate for `OFFICIAL_INTAKE` (D1–D10, approved 2026-09-03). It does not authorize runtime wiring, endpoint implementation, frontend work, persistence changes, or reinterpretation of legacy status. The PR-01 projection runtime and `current_stage` publication remain blocked until a bounded contiguous prefix of canonical stages is accepted (D4).
 

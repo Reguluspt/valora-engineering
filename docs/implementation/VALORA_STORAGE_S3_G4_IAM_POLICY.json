@@ -1,0 +1,75 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "VerifyCallerIdentity",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadExactBucketConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001"
+    },
+    {
+      "Sid": "ListOnlyExactRunPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads"
+      ],
+      "Resource": "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "valora-spike/s3-g5-20260919-001/",
+            "valora-spike/s3-g5-20260919-001/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "OperateOnlyInsideExactRunPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:ListMultipartUploadParts",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*"
+    },
+    {
+      "Sid": "UseOnlyApprovedSpikeKmsKeyThroughS3",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "${KMS_KEY_ARN}",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.ap-southeast-1.amazonaws.com"
+        },
+        "StringLike": {
+          "kms:EncryptionContext:aws:s3:arn": [
+            "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001",
+            "arn:aws:s3:::valora-storage-spike-2c2a9f17-20260919-001/valora-spike/s3-g5-20260919-001/*"
+          ]
+        }
+      }
+    }
+  ]
+}

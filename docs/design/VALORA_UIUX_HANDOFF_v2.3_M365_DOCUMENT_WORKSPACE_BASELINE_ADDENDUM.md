@@ -1,4 +1,4 @@
-# VALORA UI/UX Handoff v2.3 — Addendum Baseline Microsoft 365 Document Workspace
+# VALORA UI/UX Handoff v2.3 — Không gian tài liệu / Microsoft 365 Integration Baseline Addendum
 
 **Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
 
@@ -6,15 +6,41 @@ Authority chi tiết: [`assets/VALORA_M365_DOCUMENT_WORKSPACE_BASELINE_v2.3.md`]
 
 Addendum này supersede mọi mô tả cũ mâu thuẫn với các quyết định dưới đây.
 
+## 2026-09-21 provider-neutral product-surface amendment
+
+User-facing parent surface is **`Không gian tài liệu` / `Bộ tài liệu hồ sơ`**. Microsoft 365/Word/OneDrive/SharePoint are integration surfaces/actions, not the domain workspace name. Older mockup labels remain visual evidence only where they do not conflict with this naming/IA amendment.
+
+There is no standalone `Khóa phiên bản` workflow stage. Accepted `DocumentRevision` is immutable after explicit version acceptance; Publishing binds exact accepted revisions into a `ReleaseManifest`.
+
+## 2026-09-21 execution-boundary amendment
+
+The visual/review semantics in this baseline remain valid, but the historical direct-write
+interpretation is amended by ADR 0043–0045 and the Unified Appraisal OS roadmap.
+
+Current default authority:
+
+```text
+reviewed document plan / candidate
+→ explicit human confirmation
+→ app-owned immutable DocumentRevision N+1
+→ CurrentHead CAS
+→ optional create-new Working / Export copy
+```
+
+A Microsoft 365 Working file is non-authoritative. Word Save, provider notification, revalidation,
+preview and conflict decisions do not create a revision. Direct replacement of an existing bound
+OneDrive item is historical/blocked and may not be reintroduced without separate Product Owner
+authority and independent provider-concurrency proof.
+
 ## A. Routing sau Kết quả thẩm định giá
 
 ```text
 Kết quả thẩm định giá
-→ Bộ tài liệu phát hành / Microsoft 365 Document Workspace
+→ Không gian tài liệu / Bộ tài liệu hồ sơ
 → Tạo và quản lý Báo cáo thẩm định giá + Chứng thư thẩm định giá
-→ Mở/chỉnh sửa trong Microsoft Word
-→ Đồng bộ Data Snapshot ↔ Document Revision ↔ Microsoft 365 version
-→ Khóa phiên bản
+→ GeneratedDocumentCandidate → explicit Xác nhận phiên bản → DocumentRevision
+→ optional Microsoft 365 Working copy → Mở/chỉnh sửa trong Word
+→ Return / Auto Revalidation → DocumentChangeCandidate → Rà soát thay đổi → Human Commit
 → Phát hành bộ tài liệu
 ```
 
@@ -80,11 +106,13 @@ Preview Word: **cuộn trang liên tục**.
 Command bar authority:
 
 - `Mở trong Word`;
-- `Đồng bộ dữ liệu`;
-- `Tạo phiên bản mới`;
+- `Kiểm tra thay đổi` — fallback khi automatic observation không khả dụng hoặc user muốn refresh;
+- `Xem & xác nhận thay đổi` — chỉ hiện khi có `DocumentChangeCandidate` cần review;
+- `Tạo/Xác nhận phiên bản` — explicit acceptance boundary cho `GeneratedDocumentCandidate`/accepted document plan;
 - `So sánh`;
-- `Khóa phiên bản`;
 - `...`.
+
+Không có command `Khóa phiên bản`. Accepted `DocumentRevision` đã immutable; Publishing chỉ bind exact accepted revisions vào `ReleaseManifest`.
 
 **Không có chức năng `Xuất PDF`.**
 
@@ -105,4 +133,4 @@ Không có `Gửi kiểm tra / Chờ kiểm tra` trong single-user workflow hi�
 
 ## I. Design authority
 
-Mockup Microsoft 365 Document Workspace mới nhất ngay trước lệnh `chốt baseline` cùng file authority companion là design authority hiện hành.
+Mockup lịch sử của Microsoft 365 Document Workspace vẫn là visual evidence về bố cục/tương tác, nhưng current product naming/IA phải tuân `Không gian tài liệu` provider-neutral và Fluent 2 light authority.

@@ -1,3 +1,6 @@
+> **HISTORICAL DOCUMENT NOTICE — 2026-09-21**
+> Tài liệu này được giữ để bảo toàn lịch sử/evidence. Nó **không phải current authority hoặc roadmap**. Khi có mâu thuẫn, dùng `docs/DOCUMENTATION_STATUS_INDEX.md`, `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`, canonical UI/UX v2.3 authority và ADR hiện hành.
+
 # Module Ownership Map
 
 **Reconciled:** 2026-07-16 (Gate 0c design extension) — adds future Adaptive Intake / Memory / bounded-AI ownership without creating duplicate bounded contexts.

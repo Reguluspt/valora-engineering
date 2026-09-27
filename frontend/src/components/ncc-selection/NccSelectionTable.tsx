@@ -29,10 +29,11 @@ export const STATE_LABEL: Record<NccSelectionState, string> = {
 
 export interface NccSelectionTableProps {
   lines: NccSelectionAssetLine[];
+  selectedLineId?: string | null;
   onSelectRow: (line: NccSelectionAssetLine) => void;
 }
 
-export function NccSelectionTable({ lines, onSelectRow }: NccSelectionTableProps) {
+export function NccSelectionTable({ lines, selectedLineId, onSelectRow }: NccSelectionTableProps) {
   return (
     <div className="ncc-table-wrap">
       <table className="ncc-table">
@@ -53,7 +54,13 @@ export function NccSelectionTable({ lines, onSelectRow }: NccSelectionTableProps
         </thead>
         <tbody>
           {lines.map((line, index) => (
-            <NccRow key={line.asset_line_id} line={line} index={index} onSelect={() => onSelectRow(line)} />
+            <NccRow
+              key={line.asset_line_id}
+              line={line}
+              index={index}
+              isSelected={selectedLineId === line.asset_line_id}
+              onSelect={() => onSelectRow(line)}
+            />
           ))}
         </tbody>
       </table>
@@ -64,10 +71,12 @@ export function NccSelectionTable({ lines, onSelectRow }: NccSelectionTableProps
 function NccRow({
   line,
   index,
+  isSelected = false,
   onSelect,
 }: {
   line: NccSelectionAssetLine;
   index: number;
+  isSelected?: boolean;
   onSelect: () => void;
 }) {
   const current = line.current_selection;
@@ -79,9 +88,10 @@ function NccRow({
   };
   return (
     <tr
-      className="ncc-table-row"
+      className={`ncc-table-row ${isSelected ? "ncc-table-row--selected" : ""}`}
       data-asset-line-id={line.asset_line_id}
       tabIndex={0}
+      aria-selected={isSelected ? "true" : undefined}
       aria-label={`${t("action.viewDetails")}: ${line.asset_name}`}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
@@ -98,7 +108,11 @@ function NccRow({
       <td>
         {line.candidates.some((candidate) => candidate.warnings.length > 0) ? (
           <span className="ncc-warning-dot" data-warning="true">
-            {line.candidates.flatMap((c) => c.warnings).filter((v, i, arr) => arr.indexOf(v) === i).map(warningLabel).join(", ")}
+            {line.candidates
+              .flatMap((c) => c.warnings)
+              .filter((v, i, arr) => arr.indexOf(v) === i)
+              .map(warningLabel)
+              .join(", ")}
           </span>
         ) : (
           <span data-warning="false">—</span>

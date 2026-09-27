@@ -10,7 +10,8 @@ import {
   CANONICAL_CROSS_PRODUCT_UI_STATES,
   FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS,
   FORBIDDEN_NEW_STANDALONE_ROUTES,
-  LEGACY_ROUTE_RATCHET,
+  UIUX_V23_AUTHORITY,
+  projectDocumentsPath,
   projectOverviewPath,
   projectWorkbenchPath,
   projectNccSelectionPath,
@@ -71,6 +72,14 @@ function productionTsxFiles(directory: string): string[] {
 }
 
 describe("VALORA UI/UX v2.3 implementation contract", () => {
+  it("references the stable current v2.3 authority documents", () => {
+    expect(UIUX_V23_AUTHORITY).toEqual({
+      version: "2.3",
+      master: "docs/design/VALORA_UIUX_HANDOFF_v2.3.md",
+      authorityIndex: "docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md",
+    });
+  });
+
   it("keeps the canonical case-stage and cross-product state vocabularies exact", () => {
     expect(CANONICAL_CASE_STAGES).toEqual(EXPECTED_CASE_STAGES);
     expect(new Set(CANONICAL_CASE_STAGES).size).toBe(16);
@@ -79,15 +88,19 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
     expect(new Set(CANONICAL_CROSS_PRODUCT_UI_STATES).size).toBe(17);
   });
 
-  it("allows only the two inventoried legacy routes", () => {
-    expect(LEGACY_ROUTE_RATCHET).toEqual([
+  it("keeps removed legacy routes forbidden and out of the production registry", () => {
+    expect(FORBIDDEN_NEW_STANDALONE_ROUTES).toEqual(expect.arrayContaining([
+      "/queue",
+      "/validation",
       "/workbench/queue",
-      "/workbench/validation"
-    ]);
-
+      "/workbench/validation",
+    ]));
     const registeredRoutes = Object.values(APP_ROUTES);
+    for (const retiredRoute of ["/queue", "/validation", "/workbench/queue", "/workbench/validation"]) {
+      expect(registeredRoutes).not.toContain(retiredRoute);
+    }
+
     const unapprovedForbiddenRoutes = registeredRoutes.filter((route) => {
-      if ((LEGACY_ROUTE_RATCHET as readonly string[]).includes(route)) return false;
       if ((FORBIDDEN_NEW_STANDALONE_ROUTES as readonly string[]).includes(route)) return true;
       return FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS.some((fragment) =>
         route.includes(fragment)
@@ -138,5 +151,15 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
     for (const route of Object.values(APP_ROUTES)) {
       expect(FORBIDDEN_NEW_STANDALONE_ROUTE_FRAGMENTS.some((fragment) => route.includes(fragment))).toBe(false);
     }
+  });
+
+  it("preserves the canonical project, document, and M365 return routes", () => {
+    expect(APP_ROUTES.projectList).toBe("/workbench/projects");
+    expect(projectDocumentsPath("HD 01")).toBe("/workbench/projects/HD%2001/documents");
+    expect(splitProjectRoute("/workbench/projects/HD%2001/documents")).toEqual({
+      projectRef: "HD 01",
+      view: "documents",
+    });
+    expect(APP_ROUTES.m365Return).toBe("/workbench/m365/return");
   });
 });

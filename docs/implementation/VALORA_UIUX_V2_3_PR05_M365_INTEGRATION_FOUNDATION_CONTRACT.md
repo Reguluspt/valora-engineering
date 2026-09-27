@@ -1,6 +1,8 @@
 # VALORA UI/UX v2.3 — PR-05 OneDrive Personal Integration Foundation Contract
 
-**Task:** `VALORA-PR05-IMPL-001` **Status:** IMPLEMENTED — ENGINEERING AND LIVE ACCOUNT ACCEPTANCE PASSED **Date:** 2026-09-12 **Authority:** ADR 0040 and the PR-05 task brief
+**Task:** `VALORA-PR05-IMPL-001` **Status:** IMPLEMENTED FOUNDATION — HISTORICAL BOUNDED ACCEPTANCE **Date:** 2026-09-12 **Authority:** ADR 0040 and the PR-05 task brief
+
+**2026-09-21 current-authority note:** PR-05 remains valid provider/identity/OAuth foundation only. Product parent surface is provider-neutral `Không gian tài liệu`; OneDrive Personal is an integration. PR-05 does not define current visual authority, Document Workspace naming, Working-change promotion or development sequencing. Those are governed by UI/UX Handoff v2.3, Unified Roadmap v2.3 and ADR 0043–0045.
 
 ## Scope
 

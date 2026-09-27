@@ -1,0 +1,150 @@
+{
+  "task": "VALORA-TASK-F2-PR-006",
+  "branch": "feat/f2-pr-006-ncc-selection-golden",
+  "git_head": "bb9c04b405bd15fe233f7a6c708c2f3741722108",
+  "reviewed_files": [
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/00-normal-overview.jpg",
+      "sha256": "e7a196a5149490240b8628e8463539ecf86d727a28a998db2945d5cddf824685"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/01-candidates-warning.jpg",
+      "sha256": "506dbe19590f8bcdf16c15b96e4bd31785e0a02366c68fc5414986cd415f3060"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/02-review-warning-evidence.jpg",
+      "sha256": "65a2588bb66d508806448c69b010649e09ee64ed662880b3c9b164755f9de45e"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/03-confirmed-overview.jpg",
+      "sha256": "2372a885c31d54bc22a113f6514389a6e539deadbfa5176fcf2c235bd32bd5b7"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/04-stale-decision.jpg",
+      "sha256": "7dddca2bd3061cc1ce9c71d8f6617f10aa1668f1a11388b76cf115a0a604fd67"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/05-selection-history.jpg",
+      "sha256": "dbcd0860b4422b002f97256f519241404d7833fe54c26d9e13297eb34c8682b1"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/06-no-eligible-candidate.jpg",
+      "sha256": "48e309d1bd013b33bf5ad0fb8ba06bd52e5eeadc1dff4c9a6d172576a6c838b2"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/07-no-results.jpg",
+      "sha256": "ddd5b41e0ff03da73342565298a79dce38fb088885615d4471970c4b4a7121eb"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/08-confirmation-processing.jpg",
+      "sha256": "a625c265b4fe799caf815ef70ab6ae21411cf8d254b8f60a8764026143b6de90"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/09-conflict-review.jpg",
+      "sha256": "468ef606b1d4d0344d9f83d9e9141275d562ebba9b6581d1e5e40f5442bc4184"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/10-first-use-empty.jpg",
+      "sha256": "f54b76a78b8f31659e8a5b27430c2b440dd433dd83cfecdab7ac578c7d0a55e6"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/11-loading.jpg",
+      "sha256": "025aa0b015d11e4f8baed0f2cbac2fb62887636fab118febd9d9038cd4ba1394"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/12-error-retry.jpg",
+      "sha256": "b7894afb402bbfebba9eb952d738ce36b433078d9d3ed0f33ce371d28a50f318"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/13-ineligible-unavailable.jpg",
+      "sha256": "dedf58043942160c853c1551728ba91b05bd1b22a9d759ce80983d539fe4e2b5"
+    },
+    {
+      "path": "docs/implementation/evidence/F2-PR-006/README.md",
+      "sha256": "662686717bceaa27e2f2e4079064da5f3d20d2a30dad46caf756f82d504fef65"
+    },
+    {
+      "path": "frontend/scripts/browser-acceptance-server.mjs",
+      "sha256": "762a0f316a609015f1a10ddba3a02125cb38fd987a227b24de54dbe5a93f2b85"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/NccSelectionDrawer.tsx",
+      "sha256": "534fb90e584e257c16e3f87d9954c3a2a2961208f5033cb165a7e0a097a3c670"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/NccSelectionKpis.tsx",
+      "sha256": "52047d0c5d06c9f9572eb0e94b687ca46ba671d9be4b95ee9803b60b08790df7"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/NccSelectionPage.tsx",
+      "sha256": "613a5a4094535f87d2f331dbe5b674e3fef6c13a41e83e450c4b3ae0db399e58"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/NccSelectionTable.tsx",
+      "sha256": "b1a79b1edfd3ed63d96293aedda53021eb55a03990ee33f42f028ee37664b051"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/__tests__/NccSelectionPage.test.tsx",
+      "sha256": "97873d3955e2fbd89ffe7bdd336b63af3d78aaa9e384d43909188b75a92e3763"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/nccSelection.css",
+      "sha256": "8adcb0d75707b6d19426cfd7607c9bb00079dd7e115078a2f8b419aeb49a5398"
+    },
+    {
+      "path": "frontend/src/i18n/vi.ts",
+      "sha256": "0fefb1f34d7e3f529f4a43a4da6d0c40013a58dfbaa57f4ce9ca477eed42b8b1"
+    }
+  ],
+  "authority_files": [
+    {
+      "path": "CODEX.md",
+      "sha256": "29bc1187e0f6f358de2edb539d48098cc8f7a2f279eae901a79dc83643d6fcbe"
+    },
+    {
+      "path": "ENGINEERING_GUARDRAILS.md",
+      "sha256": "ffa1343d58ef867f868a25f88c1a7c56f0912551a0b6d50438ad20a1f9aedfe9"
+    },
+    {
+      "path": "docs/design/VALORA_UIUX_HANDOFF_v2.3.md",
+      "sha256": "2864d66d42d2f7fb97e88d8ee22a925eeda1fe82de67e755078a080cb449f63c"
+    },
+    {
+      "path": "docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md",
+      "sha256": "de498a946c001124d634a0019276a698ea1783e7c163566bbe2498e80e02e905"
+    },
+    {
+      "path": "docs/design/VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md",
+      "sha256": "84189763d18b4860b9be5e9f91941e39e5b5cc8ae41d5495f5e15bb1cebaa3d9"
+    },
+    {
+      "path": "docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md",
+      "sha256": "b359c1ba546de8b64a617d924ee7e876ff0f728e22cbcf135925d2eff8ad66cb"
+    },
+    {
+      "path": "docs/adr/0039-tenant-safe-ncc-selection-revisions.md",
+      "sha256": "45dea148a88a63a0ccba607eb17055038b29b06045b3654d727a8047e58bb7f6"
+    },
+    {
+      "path": "docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md",
+      "sha256": "fc9788846392b1a386874672b56216b0b3c1be240765437ad50e237005e0bbd5"
+    },
+    {
+      "path": "docs/implementation/VALORA-FLUENT2-F2-PR-006_IMPLEMENTATION_PLAN.md",
+      "sha256": "948c46bef1297492de2f5914ca6f910a5879ebc2256fbe51524c8f40e282bae3"
+    },
+    {
+      "path": "docs/implementation/VALORA_UIUX_V2_3_PR04_NCC_SELECTION_API_UI_CONTRACT.md",
+      "sha256": "e29411418f91cc995817fa7b143a500f1dd9e80a93909b9c32b9f6ccf65e557a"
+    }
+  ],
+  "local_gates": {
+    "focused": "2 suites / 22 tests",
+    "full_frontend": "38 suites / 207 tests",
+    "lint": "pass",
+    "build": "pass; production bundle assertion pass",
+    "npm_audit_high": "0 vulnerabilities",
+    "git_diff_check": "pass",
+    "browser": "A-S fixture acceptance pass; 14 screenshots"
+  }
+}

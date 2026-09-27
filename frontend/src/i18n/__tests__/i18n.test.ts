@@ -5,7 +5,6 @@ describe("Vietnamese i18n label dictionary tests", () => {
   it("resolves known key translations to Vietnamese correctly", () => {
     expect(t("workbench.pageTitle")).toBe("Bàn làm việc hồ sơ");
     expect(t("nav.import")).toBe("Nhập dữ liệu");
-    expect(t("nav.validate")).toBe("Kiểm tra dữ liệu");
     expect(t("action.saveDraft")).toBe("Lưu nháp");
     expect(t("nav.submitReview")).toBe("Gửi duyệt");
     expect(t("report.exportDraft")).toBe("Xuất báo cáo nháp");

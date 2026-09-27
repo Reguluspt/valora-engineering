@@ -4,7 +4,7 @@
 
 **Nguồn visual:** TM04 — Iteration 1 đã được người dùng duyệt và chốt baseline.
 
-TM04 là màn hình kiểm thử cuối của luồng cấu hình template báo giá NCC Word `.docx`, dùng cùng Valora shell + Fluent 2 với TM01/TM03.
+TM04 là màn hình kiểm thử cuối của luồng cấu hình template báo giá NCC Word `.docx`, dùng cùng Valora shell + Fluent 2 light với TM01/TM03.
 
 > Authority rule: tài liệu này nâng TM04 Iteration 1 thành design authority. Mọi mô tả cũ ghi TM04 là `mockup chưa duyệt baseline` hoặc `working iteration` bị superseded kể từ baseline này.
 
@@ -16,7 +16,7 @@ Dữ liệu test chỉ phục vụ kiểm thử template; không trở thành d�
 
 ## 2. Visual baseline — Iteration 1
 
-- Valora shell + Fluent 2, desktop-first.
+- Valora shell + Fluent 2 light, desktop-first.
 - Breadcrumb: `Cấu hình → Mẫu báo giá nhà cung cấp → Preview / Test fill`.
 - Header: `Preview / Test fill dữ liệu Word`.
 - Step rail bên trái thể hiện 4 bước: `Upload file → Mapping bảng danh mục → Mapping thông tin chung → Preview / Test fill`.
@@ -117,4 +117,4 @@ Chuỗi baseline module template tại thời điểm này:
 
 TM02 và TM05 hiện giữ IA/capability đã mô tả trong Handoff v2.3; không tự suy diễn visual baseline chi tiết nếu chưa có mockup được duyệt.
 
-Sau khi TM04 được chốt, nhiệm vụ UI/UX tiếp theo là `S17 — Hoàn tất hồ sơ`, dùng readiness từ checkpoint báo giá NCC + template/output để tổng hợp blocking/warning trước khi hoàn tất hồ sơ.
+Historical note: when TM04 was approved, the next design task was labeled `S17 — Hoàn tất hồ sơ`. Current routing is superseded by the newer Final Result authority: after completing individual NCC quotes and selecting the confirmed NCC, the flow proceeds directly to `Kết quả thẩm định giá`. The approved S17 Iteration 3 artifact remains authority only for the child screen `Hoàn tất một báo giá NCC`; it does not authorize a standalone whole-case S17 readiness dashboard/checkpoint.

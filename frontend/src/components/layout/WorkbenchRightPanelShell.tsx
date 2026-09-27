@@ -1,78 +1,87 @@
-import React, { useState } from "react";
-import { AssetLineContext } from "../workbench/panels/ContextPanelTypes";
+import { useEffect, useRef, useState } from "react";
+import type { AssetLineGridRow } from "../workbench/AssetGridTypes";
+import type { AssetLineContext } from "../workbench/panels/ContextPanelTypes";
 import { KnowledgePanel } from "../workbench/panels/KnowledgePanel";
 import { PriceEvidencePanel } from "../workbench/panels/PriceEvidencePanel";
 import { LineagePanel } from "../workbench/panels/LineagePanel";
 import { ValidationPanel } from "../workbench/panels/ValidationPanel";
-import { t } from "../../i18n";
+type ContextSection = "information" | "price" | "lineage" | "validation";
+
+const sections: { id: ContextSection; label: string }[] = [
+  { id: "information", label: "Thông tin tài sản" },
+  { id: "price", label: "Nguồn giá & chứng cứ" },
+  { id: "lineage", label: "Nguồn gốc" },
+  { id: "validation", label: "Kiểm tra dữ liệu" },
+];
 
 interface WorkbenchRightPanelShellProps {
+  asset: AssetLineGridRow;
   contextData?: AssetLineContext;
+  loading?: boolean;
+  error?: string | null;
+  onClose: () => void;
 }
 
-type TabType = "knowledge" | "price" | "lineage" | "validation";
+export function WorkbenchRightPanelShell({ asset, contextData, loading, error, onClose }: WorkbenchRightPanelShellProps) {
+  const [section, setSection] = useState<ContextSection>("information");
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const currentContext = contextData?.project_asset_line_id === asset.project_asset_line_id ? contextData : undefined;
 
-export function WorkbenchRightPanelShell({ contextData }: WorkbenchRightPanelShellProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("knowledge");
+  useEffect(() => {
+    setSection("information");
+    closeRef.current?.focus();
+  }, [asset.project_asset_line_id]);
 
-  const tabStyle = (tab: TabType) => ({
-    flex: 1,
-    padding: "var(--space-sm)",
-    backgroundColor: activeTab === tab ? "var(--bg-primary)" : "var(--bg-secondary)",
-    border: "none",
-    borderBottom: activeTab === tab ? "2px solid var(--accent-cyan)" : "2px solid transparent",
-    color: activeTab === tab ? "var(--accent-cyan)" : "var(--text-muted)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs)",
-    fontWeight: 600,
-    outline: "none",
-    textAlign: "center" as const
-  });
+  const content = () => {
+    if (error) return <p className="valora-message valora-message--error" role="alert">Không thể tải ngữ cảnh tài sản. {error}</p>;
+    if (loading || !currentContext) return <p className="valora-loading" role="status">Đang tải ngữ cảnh tài sản...</p>;
 
-  const renderActivePanel = () => {
-    if (!contextData) {
-      return (
-        <div style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--text-muted)" }}>
-          {t("empty.selectAssetDesc")}
-        </div>
-      );
-    }
-
-    switch (activeTab) {
-      case "knowledge":
-        return <KnowledgePanel data={contextData.knowledge_panel} />;
+    switch (section) {
+      case "information":
+        return (
+          <>
+            <dl className="asset-context-facts">
+              <div><dt>Tên gốc</dt><dd>{asset.raw_name}</dd></div>
+              <div><dt>Tên chuẩn hóa</dt><dd>{asset.normalized_name || "Chưa được ghi nhận"}</dd></div>
+              <div><dt>Tài sản chuẩn</dt><dd>{asset.canonical_asset?.standard_name || "Chưa được ghi nhận"}</dd></div>
+              <div><dt>Số lượng</dt><dd>{asset.quantity} {asset.unit?.name_vi || ""}</dd></div>
+            </dl>
+            <KnowledgePanel data={currentContext.knowledge_panel} />
+          </>
+        );
       case "price":
-        return <PriceEvidencePanel data={contextData.price_evidence_panel} />;
+        return <PriceEvidencePanel data={currentContext.price_evidence_panel} />;
       case "lineage":
-        return <LineagePanel data={contextData.lineage} />;
+        return <LineagePanel data={currentContext.lineage} />;
       case "validation":
-        return <ValidationPanel issues={contextData.validation_issues} />;
-      default:
-        return null;
+        return <ValidationPanel issues={currentContext.validation_issues} />;
     }
   };
 
   return (
-    <aside className="workbench-right-drawer" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Tabs list container */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border-color)", marginBottom: "var(--space-md)" }}>
-        <button style={tabStyle("knowledge")} onClick={() => setActiveTab("knowledge")}>
-          {t("context.assetInfo")}
-        </button>
-        <button style={tabStyle("price")} onClick={() => setActiveTab("price")}>
-          {t("context.evidence")}
-        </button>
-        <button style={tabStyle("lineage")} onClick={() => setActiveTab("lineage")}>
-          {t("context.similarAssets")}
-        </button>
-        <button style={tabStyle("validation")} onClick={() => setActiveTab("validation")}>
-          {t("validation.checkError")}
-        </button>
+    <aside className="valora-drawer asset-context-drawer" aria-labelledby="asset-context-title">
+      <div className="valora-drawer__header asset-context-drawer__header">
+        <div>
+          <span className="asset-context-drawer__eyebrow">Ngữ cảnh tài sản · Dòng {asset.line_no}</span>
+          <h2 id="asset-context-title">{asset.raw_name}</h2>
+        </div>
+        <button ref={closeRef} type="button" className="valora-button valora-button--subtle" onClick={onClose} aria-label="Đóng ngữ cảnh tài sản">Đóng</button>
       </div>
-
-      {/* Pane viewport area */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {renderActivePanel()}
+      <div className="asset-context-drawer__sections" role="group" aria-label="Nội dung của tài sản đang chọn">
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className="asset-context-drawer__section"
+            aria-pressed={section === item.id}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="valora-drawer__body asset-context-drawer__body" role="region" aria-label={sections.find((item) => item.id === section)?.label}>
+        {content()}
       </div>
     </aside>
   );

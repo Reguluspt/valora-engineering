@@ -46,10 +46,10 @@ its live HEAD and PR state separately. The integration branch is not merged-main
 the exact implementation baseline and its exact-head CI in each task packet; never infer current
 branch state or a later HEAD's CI result from a SHA recorded here.
 
-Last verified before this authority synchronization (2026-09-26): main was
-`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` after PR #31; integration was
-`d297cefe910de6070bb574de26abfb0a5a4db9ee` after F2-PR-006/#43 merged,
-with exact-head CI #469 SUCCESS. These SHAs and the CI result are dated evidence only.
+Last verified for OS-G0 integration closeout (2026-09-26): main was
+`8190ae885c4168e2d54c62fbb4a8e9b066d56522`; integration was
+`c9decc3026b6dbcd1f60a96aaab17792aaa6d390` after F2-PR-008/#47 merged,
+with exact-head CI #479 SUCCESS. These SHAs and the CI result are dated evidence only.
 
 PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
 canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
@@ -65,9 +65,12 @@ F2-PR-003 — CLOSED ON INTEGRATION.
 F2-PR-004 — CLOSED ON INTEGRATION (Case Overview / Project List).
 F2-PR-005 — CLOSED ON INTEGRATION (Workbench asset context / drawer).
 F2-PR-006 — CLOSED ON INTEGRATION (NCC selection).
-F2-PR-007 — NEXT REMEDIATION SLICE / NOT YET STARTED.
-F2-PR-008 — PENDING AFTER F2-PR-007.
-The branch is not merged to main and does not prove the full North-star E2E or OS-G0 visual closeout.
+F2-PR-007 — CLOSED ON INTEGRATION (provider-neutral Document Workspace / M365 return).
+F2-PR-008 — CLOSED ON INTEGRATION (Fluent 2 residual sweep / Astryx retirement).
+OS-G0 Fluent 2 engineering closeout is COMPLETE ON INTEGRATION. PR #32 remains Draft and is not
+merged to main. OS-G1 is NOT STARTED and must not begin until PR #32 is reconciled into main and
+the resulting main exact-head CI is SUCCESS. This integration closeout does not prove the full
+North-star E2E or downstream OS-G1→OS-G7 completion.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by

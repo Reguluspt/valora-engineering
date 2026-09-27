@@ -3,9 +3,12 @@
 **Status:** Baseline / Design Authority
 **Iteration:** 1
 **Date:** 31/08/2026
-**Scope:** Microsoft 365 Document Workspace → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.
-**Visual language:** Microsoft Fluent 2, desktop-first, Vietnamese-first.
+**Scope:** Không gian tài liệu → Microsoft 365 integration → Bộ tài liệu hồ sơ → Mẫu tùy biến của hồ sơ → AI nhận diện & thiết lập mẫu từ tài liệu tải lên.
+**Visual language:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first.
 
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
+
+> **2026-09-23 runtime-boundary reconciliation:** This file is UX/domain Design Authority only. OS-G5 may implement provider-neutral task/interface contracts and deterministic/rule-based candidate mapping after the minimum deterministic Document Runtime exists. LLM/external-provider-backed recognition or mapping, model routing, `AITaskRun`, provider fallback and provider execution remain OS-G7 runtime under `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` and are not authorized by this baseline alone.
 ## 1. Quyết định baseline
 Mockup `AI nhận diện & thiết lập mẫu từ tài liệu tải lên — Iteration 1` được nâng thành **Baseline / Design Authority**.
 
@@ -19,7 +22,7 @@ Tải file & phân tích
 → Xác nhận & Lưu template
 ```
 
-## 3. Layout authority — Fluent 2
+## 3. Layout authority — Fluent 2 light
 - Header/breadcrumb trong context hồ sơ → Tài liệu & Workspace → Bộ tài liệu hồ sơ → Tải lên mẫu tùy biến.
 - Stepper 4 bước theo mental flow.
 - Cột trái: `Trường dữ liệu hồ sơ (Data Source)` với search/filter, nhóm `Tất cả / AI đề xuất / Chưa map`, confidence và giá trị hiện tại.

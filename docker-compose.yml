@@ -73,7 +73,11 @@ services:
       - S3_SECRET_ACCESS_KEY=valora_local_password
       - S3_BUCKET=valora-local
       - S3_REGION=us-east-1
+      - DOCUMENT_BLOB_PROVIDER=local
+      - DOCUMENT_BLOB_ROOT=/var/lib/valora/document-blobs
       - BACKEND_CORS_ORIGINS=http://localhost
+    volumes:
+      - valora_document_blobs:/var/lib/valora/document-blobs
     ports:
       - "8000:8000"
     healthcheck:
@@ -130,3 +134,4 @@ services:
 volumes:
   valora_postgres_data:
   valora_minio_data:
+  valora_document_blobs:

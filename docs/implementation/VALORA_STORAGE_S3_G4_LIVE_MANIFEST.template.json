@@ -1,0 +1,64 @@
+{
+  "schema_version": "valora-s3-g5-manifest-v1",
+  "run_id": "s3-g5-20260919-001",
+  "account_ref": "VALORA-NONPROD-AWS-STORAGE-SPIKE-01",
+  "region": "ap-southeast-1",
+  "bucket": "valora-storage-spike-2c2a9f17-20260919-001",
+  "prefix": "valora-spike/s3-g5-20260919-001/",
+  "approved_executable_commit": "REPLACE_AT_G5",
+  "approved_review_manifest_sha256": "REPLACE_AT_G5",
+  "approval_reference": "REPLACE_AT_G5",
+  "expected_account_id": "REPLACE_AT_G5",
+  "expected_principal_arn": "REPLACE_AT_G5",
+  "kms_key_arn": "REPLACE_AT_G5",
+  "bucket_policy_sha256": "REPLACE_AT_G5",
+  "iam_policy_sha256": "REPLACE_AT_G5",
+  "lifecycle_configuration_sha256": "REPLACE_AT_G5",
+  "action_time_checklist_sha256": "REPLACE_AT_G5",
+  "cleanup_owner": "REPLACE_AT_G5",
+  "runtime": {
+    "python": "3.14.7",
+    "boto3": "1.43.89",
+    "botocore": "1.43.89"
+  },
+  "retry": {
+    "signature_version": "s3v4",
+    "total_max_attempts": 1
+  },
+  "fixtures": {
+    "FIXTURE_A": {
+      "fixture_id": "FIXTURE_A",
+      "generator": "sha256-counter-v1",
+      "byte_length": 4096,
+      "sha256": "0cf110c493ab86b092c293078e3c7742c4bc2874f253c90253baec3c6719226e",
+      "expected_parts": 1
+    },
+    "FIXTURE_B": {
+      "fixture_id": "FIXTURE_B",
+      "generator": "sha256-counter-v1",
+      "byte_length": 4096,
+      "sha256": "57a2d94c0f5364d022b1a2deae4ba36c7c473335a575dc1da2ab4b63cec3d7fe",
+      "expected_parts": 1
+    },
+    "FIXTURE_M": {
+      "fixture_id": "FIXTURE_M",
+      "generator": "sha256-counter-v1",
+      "byte_length": 8392704,
+      "sha256": "bc6c5ce6422b75c18018933169b7847661a094ab9b635143fcdd529e6921aedf",
+      "expected_parts": 2
+    }
+  },
+  "limits": {
+    "one_invocation": true,
+    "max_s3_requests": 96,
+    "max_uploaded_bytes": 50331648,
+    "max_get_bytes": 25165824,
+    "max_committed_objects": 6,
+    "max_multipart_uploads": 5,
+    "max_parts": 9,
+    "max_delete_requests": 12,
+    "max_list_requests": 16,
+    "max_duration_seconds": 1200,
+    "modeled_hard_cost_usd": "0.10"
+  }
+}

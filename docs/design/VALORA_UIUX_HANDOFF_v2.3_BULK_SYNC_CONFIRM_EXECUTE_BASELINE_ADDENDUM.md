@@ -4,6 +4,22 @@
 **Iteration:** 1
 **Date:** 31/08/2026
 
+## 2026-09-21 execution-boundary amendment
+
+Bước này vẫn là **human execution gate**, nhưng execution target hiện tại là app-owned document authority, không phải direct replacement của bound OneDrive file.
+
+```text
+final review plan
+→ explicit human confirmation
+→ approved per-document revision command
+→ immutable app-owned bytes
+→ CurrentHead CAS
+→ Revision N+1
+→ optional create-new Working / Export
+```
+
+Nếu Working Word có external changes, ADR 0045 `DocumentChangeCandidate + Old/V/W` phải được giải quyết và revalidated fresh trước commit.
+
 ## 1. Quyết định baseline
 Mockup `Xác nhận & Đồng bộ hàng loạt — Iteration 1` được nâng thành Baseline / Design Authority. Đây là execution gate của Bulk Data Sync: các bước preview/conflict trước đó là zero-write; chỉ tại primary action của bước này VALORA mới được phép thực thi sync plan.
 
@@ -39,7 +55,7 @@ Khi user nhấn `Xác nhận & Đồng bộ`:
 - `Giữ nội dung Word` không bị overwrite;
 - `Bỏ qua lần này` không bị ghi và không được đánh dấu `Đã đồng bộ`;
 - tài liệu `Không thay đổi` không tạo Document Revision mới;
-- mỗi tài liệu thực sự cập nhật thành công tạo Document Revision mới và ghi nhận Microsoft 365 file/version tương ứng;
+- mỗi tài liệu thực sự cập nhật thành công tạo app-owned Document Revision mới; Microsoft 365 Working/Export/version là optional external lineage và không phải authority;
 - published revision/release immutable.
 
 Document Revision != Microsoft 365 file version.

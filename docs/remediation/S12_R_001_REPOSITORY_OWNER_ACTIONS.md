@@ -1,5 +1,7 @@
 # S12-R-001 — Repository Owner Actions Document
 
+> **HISTORICAL OWNER-ACTION CHECKLIST — 2026-09-23 disposition:** `main` is already the default/protected development authority in current repository governance. This file records the original manual setup procedure; do not reapply it blindly or treat its exact GitHub UI wording/settings as evergreen. Current repository/CI policy is governed by `CODEX.md`, `ENGINEERING_GUARDRAILS.md` and live GitHub rules.
+
 This document outlines the manual configurations that must be performed by a GitHub Repository Owner to finalize the baseline security gates.
 
 ## 1. Switch Default Branch to `main`

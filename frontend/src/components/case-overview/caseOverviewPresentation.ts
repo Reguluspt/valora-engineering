@@ -12,7 +12,7 @@ export const CASE_STAGE_LABELS: Record<CaseStage, string> = {
   SUPPLIER_SELECTION: "Chọn nhà cung cấp",
   APPRAISAL_RESULT: "Kết quả thẩm định",
   DOCUMENT_WORKSPACE: "Không gian tài liệu",
-  DOCUMENT_SYNC_REVIEW: "Rà soát đồng bộ tài liệu",
+  DOCUMENT_SYNC_REVIEW: "Rà soát thay đổi tài liệu",
   PUBLISHING_PREPARATION: "Chuẩn bị phát hành",
   PUBLISHING_EXCEPTION_REVIEW: "Xử lý ngoại lệ phát hành",
   PUBLISHING_CONFIRMATION: "Xác nhận phát hành",
@@ -60,7 +60,7 @@ export function nextActionCopy(nextAction: CaseStateNextAction | null): {
     return {
       eyebrow: "Trạng thái hiện tại",
       title: "Chưa có hành động tiếp theo được phép",
-      description: "Projection hiện tại không cung cấp hành động nghiệp vụ tiếp theo.",
+      description: "Hệ thống hiện chưa cung cấp hành động nghiệp vụ tiếp theo.",
     };
   }
   const stageLabel = nextAction.stage ? CASE_STAGE_LABELS[nextAction.stage] : null;

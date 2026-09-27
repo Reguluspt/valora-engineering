@@ -4,10 +4,10 @@
 **Mã slice:** `S12-R`
 **Trạng thái (historical slice):** Remediation R-001…R-007 **merged**; Validation Engine S12-PR-003 **merged** (PR #8)
 **S12-R-008 starting baseline:** `c2f154dda3ba9c9dd4bdbdb8ce23676315bba1b7` (label only; not evergreen current-main)
-**Live gate:** if `origin/main` lacks merged S12-R-008 / ADR 0029 → R008 active, PR-004 blocked; if present → R008 complete, PR-004 next authorized implementation
+**Historical live-gate snapshot:** at the time of this slice, missing S12-R-008 / ADR 0029 blocked PR-004; that gate is closed and must not be used as current sequencing
 **Base branch đề xuất (historical):** `s12-pr-002-excel-file-upload-parser-intake`
 **Ngày tạo:** 2026-07-11
-**Design authority:** Valora Design Book v1.3, Astryx Design System, Valora engineering guardrails và các ADR hiện hành (incl. ADR 0028/0029 for Apply).
+**Historical design authority at slice time:** Valora Design Book v1.3, Astryx Design System, engineering guardrails and ADR 0028/0029. **Current visual authority is Microsoft Fluent 2 light; current sequencing is Unified Roadmap v2.3.**
 
 ---
 

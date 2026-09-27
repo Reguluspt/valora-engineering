@@ -24,7 +24,7 @@ Ngôn ngữ user-facing ưu tiên:
 
 ## 2. Layout authority
 
-Desktop-first, Fluent 2. Màn hình gồm:
+Desktop-first, Fluent 2 light. Màn hình gồm:
 
 1. header + trạng thái tổng thể + CTA đồng bộ;
 2. hướng dẫn ngắn 4 bước cho người dùng mới;

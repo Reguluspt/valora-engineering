@@ -13,10 +13,10 @@ This localization contract defines a type-safe key dictionary mapping all client
 - Design Book v1.3 defines Vietnamese-first, non-IT UX, AI provider hiding, and MVP scope constraints.
 - This dictionary implements the label foundation required by that design contract.
 
-### 1.2 Relationship to Astryx Mapping
-- Astryx controls visual patterns and component layouts.
+### 1.2 Relationship to current visual authority
+- Microsoft Fluent 2 light controls current product visual patterns and component layouts.
 - i18n controls user-facing text.
-- Future Astryx component migrations must use this dictionary for all user-facing labels.
+- All current/future product components must use this dictionary for user-facing labels regardless of low-level component package.
 
 ---
 
@@ -63,7 +63,7 @@ Suggested grouping pattern:
 - **S10-PR-004**: Creates the dictionary foundation only — completed.
 - **S10-PR-005**: Handles full non-IT error message registry — completed (see [VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/design/VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md)).
 - **S10-PR-006**: Applied labels progressively to App Shell layouts, navigation menus, and status blocks. First active progressive adoption area.
-- **S11+**: Apply labels progressively during Astryx / Workbench migrations.
+- **Current:** Apply labels across Fluent 2 light product surfaces and Workbench remediation.
 
 ---
 

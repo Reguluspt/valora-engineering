@@ -3,9 +3,11 @@
 **Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
 **Baseline:** `Kiểm tra & hoàn tất template — Iteration 1`
 **Flow cha:** `Mapping Template tài liệu generic — Iteration 2`
-**Scope chính:** `Microsoft 365 Document Workspace / 03_Hợp đồng`
+**Scope chính:** `Không gian tài liệu / 03_Hợp đồng (Microsoft 365 integration)`
 **Ngày chốt:** 30/08/2026
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: mockup màn hình **Bước 3 — Kiểm tra & hoàn tất template** được nâng thành **Baseline / Design Authority**.
 
 Authority này là bước 3 của flow generic đã khóa:
@@ -24,7 +26,7 @@ Màn hình không yêu cầu người dùng hiểu Region ID, field path, source
 
 ## B. Bố cục authority
 
-Desktop-first, Fluent 2, cùng shell với Mapping Template tài liệu generic.
+Desktop-first, Fluent 2 light, cùng shell với Mapping Template tài liệu generic.
 
 Bố cục ba vùng:
 

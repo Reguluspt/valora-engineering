@@ -4,6 +4,19 @@
 **Iteration:** 1
 **Date:** 31/08/2026
 
+## 2026-09-21 execution-boundary amendment
+
+`Kết quả đồng bộ` phải báo truth theo **VALORA Revision outcome trước**, Microsoft 365 chỉ là external-copy/observation outcome nếu thao tác đó thực sự được thực hiện.
+
+```text
+Template Version
+→ Data Snapshot
+→ approved DocumentRevision N+1
+→ optional Working / Export artifact + observed provider version
+```
+
+Không được ghi `Đã đồng bộ` chỉ vì provider copy thành công nếu authoritative revision chưa finalize.
+
 ## 1. Quyết định baseline
 Mockup `Kết quả đồng bộ hàng loạt — Iteration 1`, phiên bản **đã bỏ luồng xuất file PDF**, được nâng thành Baseline / Design Authority.
 
@@ -35,7 +48,7 @@ Chọn nguồn dữ liệu mới
 Mỗi tài liệu có một kết quả riêng; không dùng success chung để che partial failure.
 
 Trạng thái authority:
-- `Đã đồng bộ`: Managed Regions trong sync plan đã được ghi thành công; tạo Document Revision mới và ghi nhận Microsoft 365 file/version.
+- `Đã đồng bộ`: approved document plan đã finalize thành app-owned Document Revision mới; nếu có external Working/Export operation thì provider outcome được báo riêng.
 - `Không thay đổi`: không ghi, không tạo revision mới.
 - `Bỏ qua`: không ghi trong lần sync này; không tạo revision mới; vùng/tài liệu liên quan vẫn cần trạng thái phù hợp để user biết chưa cập nhật.
 - `Lỗi`: chưa hoàn tất; không được giả định toàn bộ thay đổi đã được ghi. User có thể xem chi tiết và retry sau khi xử lý.
@@ -43,7 +56,7 @@ Trạng thái authority:
 ## 5. Version & lineage
 Chỉ tài liệu thực sự cập nhật thành công mới có lineage mới:
 ```text
-Template Version → Data Snapshot → Document Revision mới → Microsoft 365 file/version
+Template Version → Data Snapshot → Document Revision mới → optional Microsoft 365 Working/Export artifact/version
 ```
 `Document Revision != Microsoft 365 file version`. Published revision/release immutable.
 

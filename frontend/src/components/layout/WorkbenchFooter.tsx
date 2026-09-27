@@ -1,6 +1,7 @@
 import React from "react";
 import { AutosaveCheckpoint } from "../workbench/drafts/DraftStateTypes";
 import { t } from "../../i18n";
+import { StatusBadge } from "../common/StatusBadge";
 
 interface WorkbenchFooterProps {
   issuesCount?: number | null;
@@ -15,60 +16,37 @@ export function WorkbenchFooter({
   checkpoint = { id: "", timestamp: "—", status: "idle" },
   onAutosaveMock
 }: WorkbenchFooterProps) {
+  const checkpointStatus = checkpoint.status === "checkpointed"
+    ? { status: "approved" as const, label: "Đã lưu" }
+    : checkpoint.status === "dirty"
+      ? { status: "warning" as const, label: "Chưa lưu" }
+      : checkpoint.status === "conflict"
+        ? { status: "error" as const, label: "Xung đột" }
+        : { status: "review" as const, label: "Chờ" };
+
   return (
     <footer className="workbench-footer">
-      <div>
+      <div className="project-status-bar">
         <span>{t("workbench.issuesLabel")}</span>
-        <span style={{ fontWeight: 600, color: issuesCount != null && issuesCount > 0 ? "var(--status-warning)" : "var(--text-muted)", marginRight: "var(--space-md)" }}>
-          {issuesCount != null ? issuesCount : "—"}
-        </span>
-
+        <strong>{issuesCount != null ? issuesCount : "—"}</strong>
         {draftsCount > 0 && (
-          <span style={{ color: "var(--status-draft)", fontWeight: 600 }}>
-            ⚡ {draftsCount} {t("workbench.unsavedChangesCount")}
-          </span>
+          <StatusBadge status="draft" label={`${draftsCount} ${t("workbench.unsavedChangesCount")}`} />
         )}
       </div>
-      <div>
-        <button
-          className="action-btn"
-          disabled={draftsCount === 0}
-          style={{ marginRight: "var(--space-sm)" }}
-          title={draftsCount > 0 ? "Lưu các chỉnh sửa cục bộ vào hồ sơ chính thức" : "Không có bản nháp nào cần lưu"}
-        >
-          {t("workbench.saveOfficial")} {draftsCount > 0 ? `[${t("status.locked")}]` : ""}
-        </button>
-        <button className="action-btn" disabled style={{ marginRight: "var(--space-sm)" }} title="Yêu cầu phiên làm việc hệ thống">
-          Xem trước phê duyệt [{t("status.locked")}]
-        </button>
-        <button className="action-btn" disabled title="Yêu cầu phiên làm việc hệ thống">
-          Phân công [{t("status.locked")}]
-        </button>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+      <div className="project-status-bar">
         {onAutosaveMock && (
           <button
-            className="action-btn"
-            style={{ fontSize: "var(--font-size-xs)", padding: "2px 6px" }}
-            onClick={onAutosaveMock}
+            className="valora-button valora-button--secondary"
             disabled={draftsCount === 0}
+            onClick={onAutosaveMock}
+            type="button"
           >
             Điểm lưu nháp
           </button>
         )}
-        <span>
-          Trạng thái lưu nháp:{" "}
-          <strong style={{
-            color: checkpoint.status === "checkpointed"
-              ? "var(--status-approved)"
-              : checkpoint.status === "dirty"
-              ? "var(--status-draft)"
-              : "var(--text-muted)"
-          }}>
-            {checkpoint.status === "checkpointed" ? "ĐÃ LƯU" : checkpoint.status === "dirty" ? "CHƯA LƯU" : "CHỜ"}
-          </strong>{" "}
-          ({checkpoint.timestamp})
-        </span>
+        <span>Trạng thái lưu nháp:</span>
+        <StatusBadge status={checkpointStatus.status} label={checkpointStatus.label} />
+        <span>({checkpoint.timestamp})</span>
       </div>
     </footer>
   );

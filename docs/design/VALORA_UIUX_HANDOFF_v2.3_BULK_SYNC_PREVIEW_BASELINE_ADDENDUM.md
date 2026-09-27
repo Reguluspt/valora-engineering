@@ -4,6 +4,20 @@
 **Iteration:** 1
 **Date:** 31/08/2026
 
+## 2026-09-21 execution-boundary amendment
+
+Giữ nguyên UX preview/diff, nhưng target execution tuân ADR 0043–0045 và Unified Appraisal OS roadmap:
+
+```text
+preview / conflict decisions
+→ zero-write
+→ explicit human confirmation
+→ app-owned immutable DocumentRevision N+1
+→ optional create-new Working / Export copy
+```
+
+Preview không dự kiến một in-place Microsoft 365 overwrite. `Microsoft 365 version` nếu được hiển thị chỉ là observed external lineage của một optional external copy, không phải điều kiện tạo Revision.
+
 ## 1. Quyết định baseline
 Mockup `Xem trước kết quả đồng bộ — Iteration 1` được nâng thành Baseline / Design Authority. Đây là bước 3/4 của `Đồng bộ dữ liệu hàng loạt`, sau `Xem thay đổi & phạm vi cập nhật` và trước `Xác nhận & Đồng bộ`.
 
@@ -29,7 +43,7 @@ Bước preview là read-only simulation: **chưa ghi dữ liệu vào tài li�
 ## 4. Preview semantics
 - `Sẽ cập nhật` nghĩa là tài liệu sẽ được ghi nếu user xác nhận ở bước 4; không phải đã cập nhật.
 - `Không thay đổi` không tạo revision mới.
-- `Revision dự kiến` chỉ là preview; chỉ trở thành revision thực sau sync thành công.
+- `Revision dự kiến` chỉ là preview; chỉ trở thành revision thực sau approved human-confirmed revision command + immutable storage finalization thành công.
 - User phải xem được current value và value sau sync ở mức Managed Region.
 - Có thể lọc theo `Sẽ cập nhật / Không thay đổi / Cảnh báo / Lỗi chặn`.
 

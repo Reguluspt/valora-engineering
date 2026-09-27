@@ -2,9 +2,11 @@
 
 **Trạng thái:** `DESIGN AUTHORITY ADDENDUM`
 **Baseline:** `Mapping Template tài liệu generic — Iteration 2`
-**Scope chính:** `Microsoft 365 Document Workspace / 03_Hợp đồng`
+**Scope chính:** `Không gian tài liệu / 03_Hợp đồng (Microsoft 365 integration)`
 **Ngày chốt:** 30/08/2026
 
+
+> **2026-09-21 parent-surface amendment:** Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`. Microsoft 365/Word/OneDrive/SharePoint remain integration/editing surfaces only. Current product visual authority is Microsoft Fluent 2 light.
 Addendum này ghi nhận quyết định explicit mới nhất của người dùng: **mockup Iteration 2 — Mapping Template tài liệu generic, tối ưu cho người nghiệp vụ không rành IT — được nâng thành Baseline / Design Authority**.
 
 Khi có mâu thuẫn trong đúng scope Mapping Template tài liệu generic, addendum này supersede các working iteration/mô tả trước đó, bao gồm Iteration 1 thiên về giao diện kỹ thuật/admin.
@@ -38,7 +40,7 @@ Primary interaction tại bước 2 là **preview Word trực tiếp + chọn d�
 
 ## C. Bố cục visual authority — Iteration 2
 
-Desktop-first, Fluent 2, cùng Valora shell với Microsoft 365 Document Workspace.
+Desktop-first, Fluent 2 light, cùng VALORA shell của Không gian tài liệu.
 
 Bố cục chính:
 

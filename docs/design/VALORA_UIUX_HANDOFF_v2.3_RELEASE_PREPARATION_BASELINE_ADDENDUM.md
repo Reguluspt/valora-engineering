@@ -17,7 +17,7 @@ Chuẩn bị bộ phát hành
 → Xác nhận phát hành
 ```
 
-`Khóa phiên bản đã phát hành` không còn là một bước thao tác riêng; đó là hậu quả hệ thống của hành động phát hành thành công.
+`Khóa phiên bản đã phát hành` là nhãn lịch sử của flow cũ, không phải action/stage hay mutation hiện hành. Accepted `DocumentRevision` đã immutable trước Publishing; hành động phát hành chỉ bind exact accepted revisions vào immutable release/manifest.
 
 ## 2. Mental model
 VALORA tự chuẩn bị bộ phát hành từ revision mới nhất đủ điều kiện. User không phải chọn thủ công từng tài liệu bình thường; user chủ yếu review **ngoại lệ**.
@@ -55,7 +55,7 @@ Mục tiêu của bước này là giảm thao tác:
 - nếu không có ngoại lệ, flow có thể đi nhanh đến xác nhận phát hành theo readiness authority.
 
 ## 6. Publishing semantics
-Release vẫn bind chính xác các Document Revision được chọn vào Release Manifest. Sau phát hành thành công, các revision nằm trong release được khóa/immutable theo authority hiện hành.
+Release bind chính xác các accepted Document Revision được chọn vào Release Manifest. Accepted revisions đã immutable trước Publishing; phát hành tạo immutable release/manifest chứ không thêm một bước `lock revision` mới.
 
 Không có luồng `Xuất PDF` trong Publishing baseline.
 
@@ -72,4 +72,4 @@ Mockup `Chọn tài liệu để phát hành — Iteration 1` trước đó là 
 - Không export PDF.
 
 ## 9. ADR
-Nếu implementation thay đổi release-readiness computation, auto-selection persistence, Release Manifest binding, locking transaction, hoặc partial publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.
+Nếu implementation thay đổi release-readiness computation, auto-selection persistence, Release Manifest binding, publish transaction, hoặc partial publish semantics thì phải đánh giá ADR riêng trước khi sửa product code.

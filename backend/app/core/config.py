@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import List
+from typing import List, Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     s3_bucket: str = "valora-local"
     s3_region: str = "us-east-1"
 
+    document_blob_provider: Literal["fake", "local"] = "fake"
+    document_blob_root: str = ""
+
     backend_cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
     app_secret_key: str = "valora-local-secret-key-change-this-in-production"
@@ -30,6 +33,7 @@ class Settings(BaseSettings):
     m365_client_id: str = ""
     m365_client_secret: SecretStr = SecretStr("")
     m365_redirect_uri: str = ""
+    m365_frontend_return_uri: str = "http://localhost:5173/#/workbench/m365/return"
     m365_vault_keys_json: SecretStr = SecretStr("")
     m365_vault_active_key_version: str = ""
 

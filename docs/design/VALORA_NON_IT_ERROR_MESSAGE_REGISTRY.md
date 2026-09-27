@@ -20,10 +20,10 @@ The centralized Error Message Registry acts as a gateway proxy to translate raw 
 - Error message values must stay Vietnamese and user-friendly.
 - Future registry entries should reuse i18n labels where practical.
 
-### 1.3 Relationship to Astryx Feedback Surfaces
-- Astryx provides the visual surfaces: toast, inline alert, banner, modal/dialog, empty state.
+### 1.3 Relationship to current Fluent 2 feedback surfaces
+- Microsoft Fluent 2 light is the current visual authority for toast, inline alert, banner, modal/dialog and empty-state surfaces.
 - The error registry provides the text payload and severity.
-- Future UI components should render FriendlyError using Astryx feedback patterns.
+- Current/future UI components should render FriendlyError using Fluent 2 light feedback patterns and the cross-product state contract.
 
 ---
 

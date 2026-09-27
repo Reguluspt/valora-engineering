@@ -3,6 +3,8 @@
 ## Status
 Proposed
 
+**2026-09-21 UI note:** `Knowledge Queue` here is a domain-local knowledge-candidate review concept. It does not authorize the deprecated global Review Queue/reviewer workflow. Current UI uses `Quản lý Kho tri thức → Cần rà soát` under Handoff v2.3.
+
 ## Context
 AI-extracted specs and quotes serve as suggestions but must not pollute standard reviewer queues. We need to formalize automated rejection boundaries and verify that AI suggestions never approve catalog standards silently.
 

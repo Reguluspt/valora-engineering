@@ -87,7 +87,7 @@ Every result includes reason codes and `policy_version`. Unknown task, state, sc
 | R3 — official mutation | promote official data, material workflow transition | authenticated human command and existing domain gates |
 | R4 — professional approval | final price, QC approval, signature, report/certificate release | always human; automation prohibited |
 
-Current S13–S16 baseline remains R0/R1 plus explicit human confirmation. This ADR does not promote any R2 capability.
+The historical S13–S16 program remained R0/R1 plus explicit human confirmation. Current sequencing follows the Unified Roadmap v2.3. This ADR does not promote any R2 capability.
 
 ### 4. Preserve principal and delegation identity
 
@@ -289,7 +289,7 @@ StaleTaskResultDiscarded
 
 ## Non-goals
 
-- No R2 capability is promoted in S13–S16 by this ADR alone.
+- No R2 capability is promoted by this ADR alone; historical S13–S16 labels do not define current sequencing.
 - No AI price approval, QC approval, signature or release is allowed.
 - No open-ended autonomous agent is implemented.
 - No migration of every legacy API into a command bus is required at once; only paths selected for automation must be hardened before use.

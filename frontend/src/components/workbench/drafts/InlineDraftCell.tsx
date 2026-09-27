@@ -33,53 +33,40 @@ export function InlineDraftCell({ value, isDirty, onSave }: InlineDraftCellProps
   if (editing) {
     return (
       <input
+        className="valora-field asset-grid-draft-input"
         type="text"
+        aria-label="Giá thẩm định nháp"
+        onClick={(event) => event.stopPropagation()}
         value={currentValue}
         onChange={(e) => setCurrentValue(e.target.value)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         autoFocus
-        style={{
-          width: "100%",
-          backgroundColor: "var(--bg-primary)",
-          color: "#fff",
-          border: "1px solid var(--accent-cyan)",
-          borderRadius: "var(--radius-sm)",
-          padding: "2px 4px",
-          outline: "none"
-        }}
       />
     );
   }
 
   return (
-    <div
-      onClick={() => setEditing(true)}
-      style={{
-        padding: "4px",
-        borderRadius: "var(--radius-sm)",
-        border: isDirty ? "1px solid var(--status-draft)" : "1px solid transparent",
-        backgroundColor: isDirty ? "rgba(229, 193, 88, 0.05)" : "transparent",
-        minHeight: "24px",
-        display: "flex",
-        alignItems: "center"
+    <button
+      type="button"
+      className="asset-grid-draft-trigger"
+      onClick={(event) => {
+        event.stopPropagation();
+        setEditing(true);
       }}
-      title="Click to edit locally. Hit Enter to save, Esc to revert."
+      data-dirty={isDirty}
+      aria-label="Chỉnh sửa giá thẩm định nháp"
+      title="Chọn để sửa nháp. Enter để lưu nháp, Escape để hủy chỉnh sửa."
     >
-      {currentValue || <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>—</span>}
+      {currentValue || <span className="asset-context-muted">—</span>}
       {isDirty && (
         <span
-          style={{
-            marginLeft: "var(--space-xs)",
-            fontSize: "10px",
-            color: "var(--status-draft)",
-            fontWeight: "bold"
-          }}
-          title="Draft only — not committed to database"
+          className="asset-grid-draft-label"
+          title="Giá trị nháp, chưa áp dụng vào dữ liệu chính thức"
         >
-          ● Draft
+          Nháp chưa áp dụng
         </span>
       )}
-    </div>
+    </button>
   );
 }

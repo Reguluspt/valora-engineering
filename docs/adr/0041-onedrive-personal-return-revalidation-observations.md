@@ -1,6 +1,10 @@
 # ADR 0041 — OneDrive Personal return/revalidation observations and sealed content baselines
 
-**Status:** ACCEPTED — PRODUCT OWNER AUTHORIZED IMPLEMENTATION **Date:** 2026-09-12 **Task:** `VALORA-PR06-IMPL-001`
+**Status:** ACCEPTED FOUNDATION — CURRENT DOCUMENT-CHANGE SEMANTICS EXTENDED BY ADR 0045 **Date:** 2026-09-12 **Task:** `VALORA-PR06-IMPL-001`
+
+## 2026-09-21 authority note
+
+PR-06 return/revalidation remains valid read/integrity foundation. ADR 0045 extends it with automatic Working-change observation, non-authoritative `DocumentChangeCandidate`, and explicit human-confirmed Revision promotion. Revalidation/RenderJob completion alone must not be interpreted as a generic automatic Revision-creation rule outside an explicitly authorized command boundary.
 
 ## Context
 

@@ -1,5 +1,3 @@
-import React from "react";
-
 interface AssetGridToolbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -20,47 +18,31 @@ export function AssetGridToolbar({
   selectedCount
 }: AssetGridToolbarProps) {
   return (
-    <div className="grid-toolbar" style={{ display: "flex", gap: "var(--space-md)", alignItems: "center", marginBottom: "var(--space-md)", flexWrap: "wrap" }}>
+    <div className="valora-command-bar grid-toolbar" role="search" aria-label="Lọc danh sách tài sản">
       <input
+        className="valora-search-field"
         type="text"
+        aria-label="Tìm theo tên tài sản"
         placeholder="Tìm kiếm theo tên..."
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
-        style={{
-          backgroundColor: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
-          color: "var(--text-primary)",
-          padding: "var(--space-sm) var(--space-md)",
-          borderRadius: "var(--radius-md)",
-          minWidth: "240px"
-        }}
       />
       <select
+        className="valora-select"
+        aria-label="Lọc trạng thái rà soát"
         value={statusFilter}
         onChange={(e) => onStatusFilterChange(e.target.value)}
-        style={{
-          backgroundColor: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
-          color: "var(--text-primary)",
-          padding: "var(--space-sm)",
-          borderRadius: "var(--radius-md)"
-        }}
       >
-        <option value="All">Tất cả trạng thái kiểm tra</option>
+        <option value="All">Tất cả trạng thái rà soát</option>
         <option value="raw">Thô</option>
         <option value="parsed">Đã phân tích</option>
         <option value="approved">Đã duyệt</option>
       </select>
       <select
+        className="valora-select"
+        aria-label="Lọc trạng thái kiểm tra dữ liệu"
         value={validationFilter}
         onChange={(e) => onValidationFilterChange(e.target.value)}
-        style={{
-          backgroundColor: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
-          color: "var(--text-primary)",
-          padding: "var(--space-sm)",
-          borderRadius: "var(--radius-md)"
-        }}
       >
         <option value="All">Tất cả trạng thái kiểm tra dữ liệu</option>
         <option value="valid">Hợp lệ</option>
@@ -69,7 +51,7 @@ export function AssetGridToolbar({
         <option value="blocking">Chặn</option>
       </select>
       {selectedCount > 0 && (
-        <span style={{ fontSize: "var(--font-size-sm)", color: "var(--accent-cyan)" }}>
+        <span className="valora-status valora-status--info" role="status">
           Đã chọn {selectedCount} dòng
         </span>
       )}

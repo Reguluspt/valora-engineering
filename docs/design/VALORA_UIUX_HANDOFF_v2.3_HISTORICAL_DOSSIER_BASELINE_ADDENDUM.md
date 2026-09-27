@@ -3,7 +3,7 @@
 **Baseline:** `Hồ sơ cũ — Iteration 1`
 **Scope:** Knowledge Management / Historical paired-dossier bootstrap
 **Status:** Design Authority — Iteration 1
-**Visual:** Microsoft Fluent 2, desktop-first, Vietnamese-first
+**Visual:** Microsoft Fluent 2 light, desktop-first, Vietnamese-first
 
 ## 1. Vai trò
 `Hồ sơ cũ` là child-view của `Quản lý Kho tri thức`, dùng để quản lý các bộ hồ sơ thẩm định giá lịch sử và tạo knowledge candidates có lineage. Đây không phải active-case workflow và không được direct-inject dữ liệu vào active knowledge.
@@ -29,7 +29,7 @@ UI phải bám `DossierBundle` và giữ các source file trong cùng một hồ
 Mỗi file và dữ liệu trích xuất phải giữ source identity/locator/checksum/version metadata theo authority hiện hành. Không làm mất raw source khi chuẩn hóa hoặc ghép khớp.
 
 ## 4. Layout baseline
-Desktop Fluent 2:
+Desktop Fluent 2 light:
 - trái: `Danh sách hồ sơ cũ` + search/filter theo trạng thái, năm, loại tài sản;
 - giữa: hồ sơ đang chọn, progress pipeline, tabs `Tổng quan | Tài liệu & tệp tin | Dữ liệu trích xuất | Ghép khớp dòng | Ứng viên đã tạo | Lịch sử xử lý`;
 - phải: danh sách tài liệu nguồn, preview dữ liệu trích xuất, thông tin xử lý, ghi chú và lịch sử;

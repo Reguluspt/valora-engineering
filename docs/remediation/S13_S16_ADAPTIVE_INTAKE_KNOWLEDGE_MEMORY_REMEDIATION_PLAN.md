@@ -1,13 +1,15 @@
 # S13–S16 Adaptive Intake, Knowledge Memory and Historical Dossier Remediation Plan
 
-**Status:** Active implementation plan after S12-PR-004 engineering closure and S13-PR-001 design-authority merge; runtime tasks remain individually gated.
+**Status:** HISTORICAL REMEDIATION / IMPLEMENTATION EVIDENCE — sequencing superseded by Unified Roadmap v2.3 and VALORA AI Master Plan v1.0.
 **Design authority:** Design Book v1.4 adaptive-intake/bounded-automation addendum + ADR 0030–0034 + Design Authority Index.
 **Accepted main baseline evidence (not evergreen):** S13-PR-003 squash `2af753520ab6b7885555adc5b7945a28d32ee311` (PR #17); post-merge main CI `29676915010` PASS. Prior S13-PR-002: `137f8c5…` / CI `29641452155`.
 **Gate 0 (S12 engineering closure):** **satisfied**.
 **Gate 0b (S13-PR-001 documentation gate):** **satisfied**.
 **Gate 0c (bounded-AI automation readiness):** **satisfied** (main `99dfccbc7bf2893fa5b0dce8d52a01068655e39a`; CI `29504915362` PASS).
 **Runtime assignment state:** **S13-PR-004** assigned with branch name `s13-pr-004-column-mapping-memory` from accepted main `2af753520ab6b7885555adc5b7945a28d32ee311`; freeze its design/evidence gate before runtime.
-**Rule:** S13-PR-002 and S13-PR-003 are merged / closed. S13-PR-004 alone is owner-authorized. Do not start S13-PR-005+ without a separate explicit owner assignment. Branch runtime from the assigned accepted `origin/main` only.
+**Historical assignment snapshot:** S13-PR-002 and S13-PR-003 were merged/closed and S13-PR-004 was the then-authorized next task. This is no longer an executable current sequencing rule.
+
+> **2026-09-23 current disposition:** Current development order is OS-G0→OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`. Identity/dossier/reliable-job foundations from this program may remain valid implementation evidence, but provider-backed AI runtime must now enter through `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` and AI-PR-001…012 gates. The implemented durable `TaskJob`/worker boundary is reused; do not create the S16 AI runtime directly from this historical plan.
 
 ---
 

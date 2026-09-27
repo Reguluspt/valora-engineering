@@ -1,10 +1,10 @@
-# VALORA — Microsoft 365 Document Workspace / Bộ tài liệu phát hành — Baseline Authority v2.3
+# VALORA — Không gian tài liệu / Microsoft 365 Integration — Baseline Authority v2.3
 
 **Trạng thái:** `BASELINE ĐÃ DUYỆT / DESIGN AUTHORITY`
 
 ## 1. Vai trò
 
-`Microsoft 365 Document Workspace / Bộ tài liệu phát hành` là bề mặt quản lý tài liệu cuối của hồ sơ sau khi `Kết quả thẩm định giá` đã được khóa.
+`Không gian tài liệu / Bộ tài liệu hồ sơ` là bề mặt quản lý tài liệu sau `Kết quả thẩm định giá`. Microsoft 365/Word/OneDrive/SharePoint là integration/editing surfaces, không phải tên domain workspace.
 
 Nguyên tắc kiến trúc:
 
@@ -150,11 +150,12 @@ Bề mặt chính gồm:
 Command bar baseline gồm các capability:
 
 - `Mở trong Word`;
-- `Đồng bộ dữ liệu`;
-- `Tạo phiên bản mới`;
+- `Kiểm tra/Rà soát thay đổi`;
+- `Tạo/Xác nhận phiên bản mới` khi có candidate hợp lệ;
 - `So sánh`;
-- `Khóa phiên bản`;
 - menu `...` cho thao tác phụ.
+
+Không có command/business stage `Khóa phiên bản` riêng. Accepted `DocumentRevision` đã immutable; Publishing chỉ bind exact accepted revisions vào `ReleaseManifest`.
 
 **Không có `Xuất PDF`.**
 
@@ -217,4 +218,4 @@ Baseline này supersede các mockup/ý tưởng trước nếu chúng:
 - yêu cầu người dùng xác nhận riêng khi đưa file scan ký vào hệ thống;
 - coi file Word sinh ra và file scan đã ký là cùng một artifact.
 
-Mockup được người dùng duyệt ngay trước quyết định `chốt baseline` là visual authority cho baseline này.
+Mockup được người dùng duyệt là visual authority về bố cục/tương tác khi không mâu thuẫn amendment mới hơn. Product naming hiện hành là `Không gian tài liệu`; visual language hiện hành là Microsoft Fluent 2 light.

@@ -100,6 +100,28 @@ describe("CaseOverviewContent", () => {
     expect(root.root.findAllByProps({ "data-issue-kind": "warning" })).toHaveLength(1);
   });
 
+  it("keeps the stage order supplied by the projection", () => {
+    const projection = buildProjection();
+    const first = projection.stages[0];
+    projection.stages[0] = projection.stages[1];
+    projection.stages[1] = first;
+    let root: ReturnType<typeof create>;
+    act(() => {
+      root = create(
+        <CaseOverviewContent
+          projectName="Hồ sơ HD-01"
+          projection={projection}
+          workbenchPath="/workbench/projects/project-1"
+          onNavigate={vi.fn()}
+        />
+      );
+    });
+    const stageRows = root.root.findAll((node) => Boolean(node.props["data-case-stage"]));
+    expect(stageRows.map((node) => node.props["data-case-stage"])).toEqual(
+      projection.stages.map((stage) => stage.stage),
+    );
+  });
+
   it("renders stale projection entries in their own review section", () => {
     const projection = buildProjection();
     projection.stale = [{

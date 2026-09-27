@@ -1,6 +1,6 @@
 # VALORA UI/UX v2.3 — PR-01 Preliminary Prefix Predicate
 
-**Status:** OWNER-ACCEPTED BOUNDED PREDICATE AUTHORITY — RUNTIME NOT AUTHORIZED
+**Status:** HISTORICAL DESIGN AUTHORITY — RUNTIME SUBSEQUENTLY IMPLEMENTED/WIRED
 
 **Task:** VALORA-PR01-DESIGN-003
 
@@ -9,6 +9,8 @@
 **Date:** 2026-09-03
 
 **Architecture:** ADR 0036 (computed-on-read, no projection migration) + ADR 0037 (durable official-intake fact) + ADR 0038 (bounded preliminary-prefix predicates)
+
+> **2026-09-23 current disposition:** This file preserves the pre-runtime predicate design. The separately authorized source facts/providers and `GET /api/v1/projects/{project_id}/case-state` were later implemented and accepted for the four-stage prefix. Read `VALORA_UIUX_V2_3_PR01_CASE_STATE_PROVIDER_IMPLEMENTATION_CONTRACT.md` and the current Unified Roadmap for runtime truth; statements below that runtime is still blocked are historical gate snapshots.
 
 This document records the owner-approved bounded predicates for `PRELIMINARY_REQUEST`, `PRELIMINARY_ANALYSIS` and `PRELIMINARY_READY` (D1–D8, approved 2026-09-03). It does not authorize runtime wiring, endpoint implementation, frontend work, persistence changes, new migrations, or reinterpretation of legacy status. The source facts and providers described below remain unimplemented; the PR-01 projection runtime and `current_stage` publication remain blocked until a separately authorized implementation slice closes those gates.
 

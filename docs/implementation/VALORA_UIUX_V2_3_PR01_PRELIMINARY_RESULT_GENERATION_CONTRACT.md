@@ -1,8 +1,10 @@
 # VALORA UI/UX v2.3 — PR-01 PreliminaryResultArtifact Generation Contract
 
-**Status:** IMPLEMENTATION PACKET — VALORA-PR01-IMPL-002
+**Status:** IMPLEMENTED HISTORICAL SLICE — generation fact later consumed by accepted Case State providers
 **Scope:** Atomic generation of one immutable `PreliminaryResultArtifact` per project from a v2 `PreliminaryAnalysisSnapshot`. Includes authorization, lineage verification, deterministic XLSX transformation, object storage, idempotency and audit. Does not include HTTP endpoints, projection providers, case-state/current_stage publication, frontend or deployment.
 **Authority:** ADR 0038 D1–D10, ADR 0037/OFFICIAL_INTAKE commit pattern, Case State Projection Contract §5.
+
+> **2026-09-23 current disposition:** The scope/exit-gate text below records this generation slice at implementation time. The separately authorized preliminary providers and Case State endpoint were later implemented/wired; later implementation contracts/audits govern current runtime status.
 
 ## 1. Schema
 

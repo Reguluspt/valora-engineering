@@ -18,7 +18,9 @@ from app.modules.ai_governance_security.models import (
     SecurityEvent, SecurityAuditLog, TenantBoundaryCheck
 )
 from app.modules.document_workspace.models import (
-    DocumentRecord, DocumentRevision, DocumentRevisionCurrentHead
+    DocumentRecord, DocumentRevision, DocumentRevisionCurrentHead,
+    DocumentStorageExecutionIntent, DocumentStorageCandidate,
+    DocumentStorageExecutionEvent, DocumentStorageExecutionState, StorageObjectBinding,
 )
 from app.modules.m365_integration.models import (
     M365EncryptedCredential,
@@ -86,6 +88,11 @@ __all__ = [
     "DocumentRecord",
     "DocumentRevision",
     "DocumentRevisionCurrentHead",
+    "DocumentStorageExecutionIntent",
+    "DocumentStorageCandidate",
+    "DocumentStorageExecutionEvent",
+    "DocumentStorageExecutionState",
+    "StorageObjectBinding",
     "M365EncryptedCredential",
     "M365ManagedContentBaseline",
     "M365ManagedRegionBaseline",

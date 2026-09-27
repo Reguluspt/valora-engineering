@@ -1,0 +1,102 @@
+{
+  "schema_version": "valora-s3-g4-review-v1",
+  "task": "VALORA-STORAGE-S3-SPIKE-001",
+  "gate": "G4",
+  "executable_commit": "0f15c4acb98e05bdb918f151f5e1c68025253d6e",
+  "review_snapshot_parent": "0f15c4acb98e05bdb918f151f5e1c68025253d6e",
+  "review_head_definition": "the commit containing this manifest; reviewers must record the exact git HEAD supplied in the review prompt",
+  "live_aws_state": "NOT_RUN",
+  "runtime": {
+    "python": "3.14.7",
+    "boto3": "1.43.89",
+    "botocore": "1.43.89",
+    "signature_version": "s3v4",
+    "total_max_attempts": 1
+  },
+  "files": [
+    {
+      "path": "CODEX.md",
+      "sha256": "e4846d11db5924232388ba247434428acd5b4f5598af9a9d85e5a2ed379bb796"
+    },
+    {
+      "path": "ENGINEERING_GUARDRAILS.md",
+      "sha256": "5970826c586c1bcc205b52d1968f0d55c93659e8a1e94761972a746d256e1ab1"
+    },
+    {
+      "path": "PR_RULES.md",
+      "sha256": "ce10e088eef3a59e84fdd9f334680caa03b87eb7861a83e17e5fc998082bce03"
+    },
+    {
+      "path": "backend/app/modules/document_workspace/infrastructure/aws_s3_document_blob_store.py",
+      "sha256": "9f3398350fc26dd46a34b286ee562a62d094fb05263c188857961c1e1066570f"
+    },
+    {
+      "path": "backend/tests/test_document_blob_store_s3.py",
+      "sha256": "8863482416b8588a496028bbb8e3a3cba40755594157d2d0084c73fb752b8279"
+    },
+    {
+      "path": "backend/tests/test_valora_storage_s3_live_harness.py",
+      "sha256": "053feaf1a1b4610a603282933e115c95e844a54af7640d8f40dee11ec0f5c291"
+    },
+    {
+      "path": "backend/tools/valora_storage_s3_live_harness.py",
+      "sha256": "77cf9f2633a1eaee9c72ca893d4c78481cd7d97a103cc68f2ca55fef74e4fbb6"
+    },
+    {
+      "path": "docs/adr/0043-app-owned-immutable-document-storage.md",
+      "sha256": "b5a4547ea7d9c1226259957eb511280ef0ec66e13c7f934a52b270ad4b4c872a"
+    },
+    {
+      "path": "docs/implementation/VALORA_DOCUMENT_BLOB_STORAGE_CONTRACT.md",
+      "sha256": "6507039f1ce3518138b04f3bccef41436803d390245acb36db7206eb4abbd81e"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_ACTION_TIME_CHECKLIST.md",
+      "sha256": "d89e4189cabdfffde74e17231375a3c914af9ab6346f215717e51f110bb791ff"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_BUCKET_POLICY.json",
+      "sha256": "48f9ae52060bce628a6317b7739c11fa2a53c86accf33d740285f55b75107be9"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_CLEANUP_MANIFEST.json",
+      "sha256": "ca2ee3f424610738895f50c7c0e304b5bedfde3e44997cb452058b3de419e5a4"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_IAM_POLICY.json",
+      "sha256": "33e919833125e34d5babe638fc25d4286f6e4d86b0e440ed6ea5a6c2044e78f5"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_KMS_KEY_POLICY_FRAGMENT.json",
+      "sha256": "222fcb539ee163dc49e97f0294d7d4e18aafe676f71e1e0cca45fb968542b5ba"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_LIFECYCLE_CONFIGURATION.json",
+      "sha256": "302348c84474e3a2ff8157e47519b6ebd06d92a427771f3cf4a5b98de8e209be"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_LIVE_MANIFEST.template.json",
+      "sha256": "3b17ed837031d7eea762842c153ccacb9ffc67b09e26104dcacfecf410c0629c"
+    },
+    {
+      "path": "docs/implementation/VALORA_STORAGE_S3_G4_PREFLIGHT_PACKET.md",
+      "sha256": "113809025a89a44d66532a96b17a3257fac344a4afa57a6de82881e00ef68928"
+    },
+    {
+      "path": "docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md",
+      "sha256": "5fd93e0534dd7bc3277e9c85e4d545a17e757a31774e1aa842bbac21b4bc84cf"
+    },
+    {
+      "path": "docs/index.md",
+      "sha256": "cf08c8e584100c65420081ed0473ed821043318b962cce3671632818a56e105e"
+    },
+    {
+      "path": "docs/plan/valora-storage-s3-spike-001.md",
+      "sha256": "5ef9b2e7cab127dda976a076fc66ebc9cf756164d2fe29f0a565238c3a96f814"
+    },
+    {
+      "path": "docs/research/valora-storage-provider-selection.md",
+      "sha256": "68444922cd5aff94bb95fd44156b47eb1c10a9cf7094c20a7084be6b41d842e0"
+    }
+  ]
+}

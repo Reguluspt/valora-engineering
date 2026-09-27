@@ -233,7 +233,7 @@ def test_concurrent_same_document_command_creates_one_fact_and_audit(
 def test_concurrent_oauth_callback_consumes_state_once(
     postgres_database_url: URL,
 ) -> None:
-    _run_alembic(postgres_database_url, "upgrade", "f4c8d2a1b7e9")
+    _run_alembic(postgres_database_url, "upgrade", "head")
     engine = create_engine(postgres_database_url, pool_pre_ping=True)
     session_factory = sessionmaker(bind=engine)
     setup: Session = session_factory()
@@ -310,7 +310,7 @@ def test_concurrent_oauth_callback_consumes_state_once(
 def test_concurrent_same_binding_command_creates_one_fact_and_audit(
     postgres_database_url: URL,
 ) -> None:
-    _run_alembic(postgres_database_url, "upgrade", "f4c8d2a1b7e9")
+    _run_alembic(postgres_database_url, "upgrade", "head")
     engine = create_engine(postgres_database_url, pool_pre_ping=True)
     session_factory = sessionmaker(bind=engine)
     setup: Session = session_factory()

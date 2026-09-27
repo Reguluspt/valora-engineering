@@ -3,6 +3,8 @@
 ## Status
 Proposed
 
+**2026-09-21 UI note:** manual review gates in this ADR are domain-local knowledge/evidence decisions. They do not create a global Review Queue, reviewer assignment workflow or multi-level approval surface.
+
 ## Context
 Catalog integrity requires strict RBAC validation. We need to formalize roles, define manual review gates, and ensure all updates generate immutable audit logs.
 
