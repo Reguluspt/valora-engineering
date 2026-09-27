@@ -1,7 +1,7 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-26
+**Date:** 2026-09-27
 **Scope:** Classification and reading rules for repository documentation.
 **Inventory reconciliation:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
@@ -80,7 +80,7 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - F2-PR-001…008 are closed on merged `main` through squash PR #32. Their accumulated result establishes the OS-G0 Fluent 2 engineering closeout on main, including golden-surface remediation, provider-neutral Document Workspace, Astryx/package retirement, zero-debt visual ratchets and cross-surface regression evidence. Merged-main SHA is `51eab864…` with exact-head CI #485 SUCCESS; historical `Astryx`/dark/cyan/glass mentions or prohibition text do not imply current visual direction.
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
-- Active OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
+- Completed OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
 - Final documentation reconciliation record: `docs/audits/2026-09-24__AI_MASTER_PLAN_UNIFIED_ROADMAP_DOCUMENTATION_RECONCILIATION.md`.
 
 ### 2.2 2026-09-24 inventory by lifecycle/category

@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-09-24
+**Last reconciled:** 2026-09-27
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (reconciled 2026-09-27):** `origin/main` is at `51eab8648005186197d2fbb37a19bde4332aeaa5`, the squash result of PR #32, with exact-head CI #485 SUCCESS. F2-PR-001 through F2-PR-008 and the OS-G0 Fluent 2 engineering closeout are merged to `main`. The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. OS-G1 is not started and requires an explicit Product Owner task before implementation.
@@ -80,7 +80,7 @@ Conflict resolution / role split:
 PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the authoritative merged-main result is `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main and OS-G0 Fluent 2 engineering closeout is complete on main. OS-G1 is not started; its predecessor gate is satisfied, but implementation still requires an explicit Product Owner task.
 
 Contains:
-- Operational Frontend candidate;
+- Operational Frontend merged through PR #32;
 - Local immutable DocumentBlobStore;
 - OneDrive Personal Exchange;
 - current Design Authority/ADR reconciliation.

@@ -1,7 +1,7 @@
 # Valora Engineering
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
-**Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
+**Accepted code baseline (not evergreen):** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS)
 **Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`<br>
 **AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
@@ -45,7 +45,7 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 ### Live task gate
 
 ```text
-Accepted code baseline: origin/main 27d1cc6… (PR #31).
+Accepted code baseline: origin/main `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
 PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.

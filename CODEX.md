@@ -107,7 +107,7 @@ No AWS live activity, live Exchange reconsent/provider probe, production deploy 
 authorized unless the Product Owner explicitly opens that gate.
 ```
 
-Agents must `git fetch origin` and verify live `origin/main` and active integration HEADs. Listed
+Agents must `git fetch origin` and verify live `origin/main` and the assigned task branch HEAD. Listed
 SHAs are **evidence**, not evergreen truth.
 
 ### Permanent S12 Apply v1 (frozen)

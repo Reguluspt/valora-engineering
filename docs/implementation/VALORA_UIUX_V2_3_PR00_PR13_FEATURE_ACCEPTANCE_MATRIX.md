@@ -1,9 +1,10 @@
 # VALORA UI/UX v2.3 — PR-00 through PR-13 Feature/Acceptance Matrix
 
-**Status:** VERIFIED MERGED-BASELINE AUDIT + 2026-09-23 ACTIVE-CANDIDATE RECONCILIATION
+**Status:** HISTORICAL MERGED-BASELINE AUDIT + 2026-09-23 CANDIDATE RECONCILIATION; CURRENT OS-G0 STATE SUPERSEDED BELOW
 **Audit date:** 2026-09-12
-**Verified baseline:** `origin/main` at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`
-**Current candidate reconciliation:** 2026-09-23 — Draft PR #32 / `feat/operational-frontend-m365` at `d725bbc6…`; F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into integration; exact-head CI #454 SUCCESS
+**Historical verified baseline (2026-09-12):** `origin/main` at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`
+**Historical candidate reconciliation (2026-09-23):** Draft PR #32 / `feat/operational-frontend-m365` at `d725bbc6…`; F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into integration; exact-head CI #454 SUCCESS
+**Current merged-main OS-G0 baseline (2026-09-27):** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS)
 **Scope:** Repository, merged pull requests, exact-head CI, migrations, tests, frontend routes and browser evidence
 
 > **2026-09-27 merged-main supersession:** PR #32 is MERGED/CLOSED by squash. The authoritative

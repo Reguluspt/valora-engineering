@@ -24,7 +24,7 @@ authoritative for accepted document revisions.
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-23 (integration head/F2 progress + AI Master Plan authority reconciliation)
+**Last reconciled:** 2026-09-27 (OS-G0 merged-main authority reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -38,7 +38,7 @@ Valora is in the **Engineering Phase**.
 VALORA UI/UX v2.3 implementation alignment
 
 Accepted code baseline: `origin/main`
-`27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31).
+`51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS).
 Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
