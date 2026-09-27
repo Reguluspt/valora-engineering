@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.audit import log_audit_event
 from app.core.rbac import derive_effective_permissions
 from app.modules.project_master_data.models import (
+    Customer,
+    CustomerStatus,
     OrganizationProfile,
     OrganizationStatus,
     PreliminaryResultArtifact,
@@ -300,7 +302,6 @@ def commit_project_official_intake(
         .filter(
             PreliminaryResultArtifact.id == preliminary_result_artifact_id,
             PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.customer_id == project.customer_id,
             PreliminaryResultArtifact.project_id == project.id,
         )
         .with_for_update()
@@ -335,6 +336,19 @@ def commit_project_official_intake(
         _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
     if artifact.version != expected_preliminary_result_version:
         _abort(db, 409, "preliminary_result_version_conflict", "Kết quả sơ bộ đã thay đổi.")
+    if project.customer_id is None:
+        _abort(db, 409, "project_customer_unbound", "Hồ sơ chưa gắn khách hàng.")
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == project.customer_id, Customer.organization_id == org_id)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
+    if customer is None:
+        _abort(db, 404, "customer_not_found", "Không tìm thấy khách hàng.")
+    if _status_value(customer.status) != CustomerStatus.ACTIVE.value:
+        _abort(db, 409, "customer_not_active", "Khách hàng không còn hoạt động.")
     if not artifact.lineage_manifest:
         _abort(
             db,

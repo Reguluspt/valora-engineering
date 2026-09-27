@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G1.1A Pre-case persistence foundation)
+**Last reconciled:** 2026-09-27 (OS-G1.1B Pre-case lifecycle commands)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -74,9 +74,14 @@ OS-G1 authority work is active: ADR 0046 accepts optional Pre-case Customer, an 
 batch pointer and versioned analysis/result currentness. G1.1A implements only nullable Customer
 snapshots, the current-batch persistence pointer, null-safe lineage constraints and first-batch
 initialization under `VALORA-TASK-OS-G1-1A-PRECASE-IDENTITY-CURRENT-BATCH-FOUNDATION`.
-G1.1B+ binding, switching, regeneration and provider behavior are NOT STARTED; OS-G2 is NOT STARTED.
-Each runtime slice still
-requires an explicit Product Owner task packet. These SHAs are dated evidence, not a live-head claim.
+G1.1B implements internal `BindPreliminaryProjectCustomer` and
+`SwitchCurrentPreliminaryImportBatch` commands with durable replay receipts, Project-locked
+transactions and atomic audit under `VALORA-TASK-OS-G1-1B-PRECASE-LIFECYCLE-COMMANDS`. Official
+Intake accepts a valid historical result with a NULL Customer snapshot while requiring an ACTIVE
+same-tenant bound Customer for the first commit. G1.1C+ analysis/result regeneration, currentness
+provider changes, public Pre-case creation/API and UI are NOT STARTED; OS-G2 is NOT STARTED.
+Each runtime slice still requires an explicit Product Owner task packet. These SHAs are dated
+evidence, not a live-head claim.
 Neither G1.0 nor this authority closes the OS-G1 product journey or full North-star E2E.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
