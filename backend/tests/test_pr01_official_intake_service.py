@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 import app.modules.excel_import.models  # noqa: F401
+from app.modules.excel_import.models import ImportSourceArtifact, ImportSourceArtifactState
 import app.modules.project_master_data.application.official_intake_service as service
 from app.modules.project_master_data.application.official_intake_service import (
     commit_project_official_intake,
@@ -36,6 +37,10 @@ from app.modules.project_master_data.models import (
     ValidationIssueStatus,
     ValidationRule,
     ValidationRuleCategory,
+)
+from tests.test_pr01_case_state_projection_providers import (
+    _append_unmaterialized_confirmation,
+    _seed_complete_preliminary_ready,
 )
 
 
@@ -106,21 +111,11 @@ def _seed(
     )
     intake_db.add(project)
     intake_db.flush()
-    artifact = PreliminaryResultArtifact(
-        organization_id=org.id,
-        customer_id=customer.id,
-        project_id=project.id,
-        version=1,
-        original_filename="ket-qua-so-bo-v1.xlsx",
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        file_size_bytes=1024,
-        content_checksum_sha256="a" * 64,
-        storage_object_key=f"preliminary-results/{project.id}/v1.xlsx",
-        source_snapshot_sha256="b" * 64,
-        lineage_manifest={"contract": "preliminary-result-v1", "source_refs": ["fixture"]},
-        created_by_user_id=actor.id,
+    ready = _seed_complete_preliminary_ready(
+        intake_db,
+        {"org": org, "actor": actor, "customer": customer, "project": project},
     )
-    intake_db.add(artifact)
+    artifact = ready["artifact"]
     intake_db.commit()
     return {
         "org": org,
@@ -130,6 +125,7 @@ def _seed(
         "customer": customer,
         "project": project,
         "artifact": artifact,
+        **ready,
     }
 
 
@@ -149,6 +145,36 @@ def _commit(intake_db: Session, seeded: dict, **overrides):
     return commit_project_official_intake(intake_db, **values)
 
 
+def _replace_current_source(intake_db: Session, seeded: dict) -> ImportSourceArtifact:
+    previous = seeded["source_artifact"]
+    replacement = ImportSourceArtifact(
+        organization_id=previous.organization_id,
+        project_id=previous.project_id,
+        import_batch_id=previous.import_batch_id,
+        generation=previous.generation + 1,
+        original_filename="replacement.xlsx",
+        detected_format="xlsx",
+        content_type=previous.content_type,
+        file_size_bytes=previous.file_size_bytes,
+        checksum_sha256="d" * 64,
+        storage_object_key=f"key-src-replacement-{uuid.uuid4()}",
+        state=ImportSourceArtifactState.AVAILABLE.value,
+        created_by_user_id=seeded["actor"].id,
+    )
+    intake_db.add(replacement)
+    intake_db.flush()
+    seeded["batch"].current_source_artifact_id = replacement.id
+    intake_db.commit()
+    return replacement
+
+
+def _assert_no_official_success(intake_db: Session) -> None:
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
+    assert intake_db.query(AuditEvent).filter_by(
+        event_name="ProjectOfficialIntakeCommitted"
+    ).count() == 0
+
+
 def _assert_error(exc: pytest.ExceptionInfo[HTTPException], status: int, code: str) -> None:
     assert exc.value.status_code == status
     assert exc.value.detail["error_code"] == code
@@ -164,8 +190,8 @@ def test_commit_persists_one_fact_and_atomic_audit_without_legacy_status_change(
     assert committed.project_id == seeded["project"].id
     assert committed.preliminary_result_artifact_id == seeded["artifact"].id
     assert committed.preliminary_result_version == 1
-    assert committed.preliminary_result_sha256 == "a" * 64
-    assert committed.source_snapshot_sha256 == "b" * 64
+    assert committed.preliminary_result_sha256 == seeded["artifact"].content_checksum_sha256
+    assert committed.source_snapshot_sha256 == seeded["artifact"].source_snapshot_sha256
     assert committed.project_version_before == 1
     assert committed.committed_by_user_id == seeded["actor"].id
     assert intake_db.get(Project, seeded["project"].id).status == ProjectWorkflowStatus.DRAFT
@@ -178,6 +204,110 @@ def test_commit_persists_one_fact_and_atomic_audit_without_legacy_status_change(
     assert len(audits) == 1
     assert audits[0].entity_id == committed.id
     assert audits[0].command_name == "CommitProjectOfficialIntake"
+
+
+@pytest.mark.parametrize("outcome", ["accepted", "corrected"])
+def test_later_unmaterialized_confirmation_keeps_result_current_for_commit(
+    intake_db: Session, outcome: str
+) -> None:
+    seeded = _seed(intake_db)
+    later = _append_unmaterialized_confirmation(intake_db, seeded, outcome=outcome)
+    intake_db.commit()
+
+    committed = _commit(intake_db, seeded)
+
+    assert later.id != seeded["usage"].confirmation_decision_id
+    assert committed.preliminary_result_artifact_id == seeded["artifact"].id
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 1
+
+
+def test_new_current_source_generation_rejects_first_commit_without_audit(
+    intake_db: Session,
+) -> None:
+    seeded = _seed(intake_db)
+    replacement = _replace_current_source(intake_db, seeded)
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    assert replacement.id != seeded["source_artifact"].id
+    assert seeded["project"].row_version == 1
+    _assert_no_official_success(intake_db)
+
+
+@pytest.mark.parametrize(
+    ("entity", "field"),
+    [
+        ("usage", "mapping_digest_sha256"),
+        ("decision", "mapping_digest_sha256"),
+        ("structure", "source_checksum_sha256"),
+    ],
+)
+def test_referenced_lineage_mismatch_rejects_first_commit(
+    intake_db: Session, entity: str, field: str
+) -> None:
+    seeded = _seed(intake_db)
+    setattr(seeded[entity], field, "0" * 64)
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    _assert_no_official_success(intake_db)
+
+
+def test_analysis_manifest_no_longer_complete_rejects_first_commit(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    seeded["snapshot"].line_manifest_digest_sha256 = "0" * 64
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    _assert_no_official_success(intake_db)
+
+
+def test_result_digest_mismatch_rejects_first_commit(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    seeded["artifact"].source_snapshot_sha256 = "0" * 64
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    _assert_no_official_success(intake_db)
+
+
+def test_ambiguous_result_does_not_make_requested_artifact_current(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    previous = seeded["artifact"]
+    intake_db.add(
+        PreliminaryResultArtifact(
+            organization_id=previous.organization_id,
+            customer_id=previous.customer_id,
+            project_id=previous.project_id,
+            version=2,
+            original_filename="another-result.xlsx",
+            content_type=previous.content_type,
+            file_size_bytes=previous.file_size_bytes,
+            content_checksum_sha256=previous.content_checksum_sha256,
+            storage_object_key=f"key-res-other-{uuid.uuid4()}",
+            source_snapshot_sha256=previous.source_snapshot_sha256,
+            lineage_manifest=previous.lineage_manifest,
+            created_by_user_id=seeded["actor"].id,
+        )
+    )
+    intake_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    _assert_no_official_success(intake_db)
 
 
 def test_same_idempotency_key_and_request_replays_without_new_fact_or_audit(
@@ -196,6 +326,20 @@ def test_same_idempotency_key_and_request_replays_without_new_fact_or_audit(
         .count()
         == 1
     )
+
+
+def test_valid_replay_survives_later_source_change(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    first = _commit(intake_db, seeded)
+    _replace_current_source(intake_db, seeded)
+
+    replay = _commit(intake_db, seeded)
+
+    assert replay.id == first.id
+    assert intake_db.query(ProjectOfficialIntakeCommit).count() == 1
+    assert intake_db.query(AuditEvent).filter_by(
+        event_name="ProjectOfficialIntakeCommitted"
+    ).count() == 1
 
 
 def test_missing_permission_denies_without_fact_or_success_audit(intake_db: Session) -> None:
