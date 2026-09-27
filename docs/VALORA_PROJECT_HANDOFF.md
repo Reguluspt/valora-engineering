@@ -7,6 +7,12 @@
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`; Working-copy change semantics are governed by the 2026-09-21 addendum + ADR 0045
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
+> **2026-09-27 current-state supersession:** PR #32 is MERGED/CLOSED by squash at
+> `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is complete
+> on merged main. The older Draft/integration SHAs and “unmerged candidate” wording below are retained
+> as historical implementation context only. OS-G1 is not started and requires an explicit Product
+> Owner task before implementation.
+
 ### Live task gate
 
 ```text
