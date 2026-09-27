@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-26 (main/integration authority alignment and F2 progress)
+**Last reconciled:** 2026-09-27 (OS-G0 merged-main closeout and PR #32 post-merge authority alignment)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -37,40 +37,40 @@ Historical Sprint 0 planning docs under `docs/01_*` … `docs/05_*` and historic
 Engineering Phase / VALORA UI/UX v2.3 implementation alignment
 ```
 
-### Live task gate (fetch main and integration before acting)
+### Live task gate (fetch main and the assigned task branch before acting)
 
 ```text
 `origin/main` is the accepted merged code baseline. Fetch and verify its live HEAD before acting.
-The active integration candidate is Draft PR #32 / `feat/operational-frontend-m365`; fetch and verify
-its live HEAD and PR state separately. The integration branch is not merged-main authority. Record
-the exact implementation baseline and its exact-head CI in each task packet; never infer current
-branch state or a later HEAD's CI result from a SHA recorded here.
+OS-G0 / PR #32 is MERGED/CLOSED via squash. The source integration branch
+`feat/operational-frontend-m365` is completed historical branch evidence, not an active integration
+authority. Record the exact implementation baseline and its exact-head CI in each task packet; never
+infer current branch state or a later HEAD's CI result from a SHA recorded here.
 
-Last verified for OS-G0 integration closeout (2026-09-26): main was
-`8190ae885c4168e2d54c62fbb4a8e9b066d56522`; integration was
-`c9decc3026b6dbcd1f60a96aaab17792aaa6d390` after F2-PR-008/#47 merged,
-with exact-head CI #479 SUCCESS. These SHAs and the CI result are dated evidence only.
+Last verified merged-main OS-G0 closeout (2026-09-27): `origin/main` is
+`51eab8648005186197d2fbb37a19bde4332aeaa5`, the squash result of PR #32, with exact-head
+CI #485 SUCCESS. The pre-squash integration source head was
+`0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`. These SHAs and the CI result are dated evidence only.
 
 PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
 canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
 
-Operational Frontend — IMPLEMENTED ON DRAFT PR #32. F2-PR-001 removed the legacy global Review
+Operational Frontend — MERGED TO MAIN BY PR #32. F2-PR-001 removed the legacy global Review
 Queue/Validation Dashboard production routes; F2-PR-002 established Fluent 2 light tokens;
 F2-PR-003 replaced the production Astryx shell/login/shared-state primitives.
-F2-PR-001 — CLOSED ON INTEGRATION.
-F2-PR-002 — CLOSED ON INTEGRATION.
-F2-PR-003 — CLOSED ON INTEGRATION.
-F2-PR-004 — CLOSED ON INTEGRATION (Case Overview / Project List).
-F2-PR-005 — CLOSED ON INTEGRATION (Workbench asset context / drawer).
-F2-PR-006 — CLOSED ON INTEGRATION (NCC selection).
-F2-PR-007 — CLOSED ON INTEGRATION (provider-neutral Document Workspace / M365 return).
-F2-PR-008 — CLOSED ON INTEGRATION (Fluent 2 residual sweep / Astryx retirement).
-OS-G0 Fluent 2 engineering closeout is COMPLETE ON INTEGRATION. PR #32 remains Draft and is not
-merged to main. OS-G1 is NOT STARTED and must not begin until PR #32 is reconciled into main and
-the resulting main exact-head CI is SUCCESS. This integration closeout does not prove the full
-North-star E2E or downstream OS-G1→OS-G7 completion.
+F2-PR-001 — CLOSED ON MAIN THROUGH PR #32.
+F2-PR-002 — CLOSED ON MAIN THROUGH PR #32.
+F2-PR-003 — CLOSED ON MAIN THROUGH PR #32.
+F2-PR-004 — CLOSED ON MAIN THROUGH PR #32 (Case Overview / Project List).
+F2-PR-005 — CLOSED ON MAIN THROUGH PR #32 (Workbench asset context / drawer).
+F2-PR-006 — CLOSED ON MAIN THROUGH PR #32 (NCC selection).
+F2-PR-007 — CLOSED ON MAIN THROUGH PR #32 (provider-neutral Document Workspace / M365 return).
+F2-PR-008 — CLOSED ON MAIN THROUGH PR #32 (Fluent 2 residual sweep / Astryx retirement).
+OS-G0 Fluent 2 engineering closeout is COMPLETE ON MAIN at `51eab8648005186197d2fbb37a19bde4332aeaa5`,
+with exact-head CI #485 SUCCESS. OS-G1 is NOT STARTED. Its predecessor merge/CI gate is satisfied,
+but no OS-G1 implementation is authorized until the Product Owner opens an explicit task packet.
+This closeout does not prove the full North-star E2E or downstream OS-G1→OS-G7 completion.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
@@ -107,7 +107,7 @@ No AWS live activity, live Exchange reconsent/provider probe, production deploy 
 authorized unless the Product Owner explicitly opens that gate.
 ```
 
-Agents must `git fetch origin` and verify live `origin/main` and active integration HEADs. Listed
+Agents must `git fetch origin` and verify live `origin/main` and the assigned task branch HEAD. Listed
 SHAs are **evidence**, not evergreen truth.
 
 ### Permanent S12 Apply v1 (frozen)

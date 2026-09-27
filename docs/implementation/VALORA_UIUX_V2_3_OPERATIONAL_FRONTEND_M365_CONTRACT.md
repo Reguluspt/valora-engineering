@@ -1,10 +1,12 @@
 # VALORA UI/UX v2.3 — Operational Frontend and M365 Entry Contract
 
 **Task:** `VALORA-OPS-ENTRY-001`
-**Status:** IMPLEMENTED ON DRAFT PR #32 — HISTORICAL BOUNDED CONTRACT
+**Status:** IMPLEMENTED / MERGED TO MAIN VIA PR #32 — HISTORICAL BOUNDED CONTRACT
 **Date:** 2026-09-12
 **Authority:** Product Owner request, accepted ADR 0040/0041, accepted PR-05/PR-06 contracts,
 and the UI/UX v2.3 document-workspace and Return/Revalidation addenda
+
+**Merged-main disposition (2026-09-27):** squash PR #32 landed at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. This contract remains bounded historical implementation authority and does not imply OS-G1+, full ADR 0045 runtime, Release/Publishing or North-star completion.
 
 **2026-09-21 current-product amendment:** This is historical bounded implementation evidence. Current parent product surface is provider-neutral `Không gian tài liệu / Bộ tài liệu hồ sơ`; Microsoft 365/OneDrive/Word are integrations, not the domain workspace name. Current visual authority is Microsoft Fluent 2 light. Provider-centric labels and dark/cyan styling from the historical operational frontend are remediation debt, not accepted product UX.
 

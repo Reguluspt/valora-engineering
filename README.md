@@ -1,7 +1,7 @@
 # Valora Engineering
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
-**Accepted code baseline (not evergreen):** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31)
+**Accepted code baseline (not evergreen):** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS)
 **Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`<br>
 **AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
@@ -11,7 +11,7 @@
 **PR-00 alignment gate:** **CLOSED**
 **PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
 **PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
-**Current execution direction:** **OS-G0 authority + Fluent 2 light visual-system reconciliation, then OS-G1 Pre-case Product Closure per Unified Roadmap v2.3**
+**Current execution direction:** **OS-G0 is merged-main complete; OS-G1 Pre-case Product Closure is the next roadmap phase but remains unopened until an explicit Product Owner task**
 
 Agents must `git fetch origin` and verify live `origin/main`.
 
@@ -38,21 +38,21 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | Bounded-AI task/decision/policy architecture | ADR 0033–0034 accepted; `TaskJob`/worker durable execution foundation exists, but `AITaskRun`/`AIContextManifest`/`DecisionEpisode`/`ExecutionPolicy` runtime and provider gateway are not implemented |
 | UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
 | UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
-| UI/UX v2.3 downstream product stages | **Partially implemented on Draft PR #32**: Local G6 + OneDrive Exchange G8 are complete offline; F2-PR-001…003 are merged on integration head `d725bbc6…` with CI #454 green; F2-PR-004…008, canonical stages 5–16 and Release/Publishing remain incomplete. |
+| UI/UX v2.3 downstream product stages | **Partially implemented on merged main via squash PR #32**: OS-G0 / F2-PR-001…008 are merged at `51eab864…` with exact-head CI #485 green; Local G6 + OneDrive Exchange G8 remain accepted/offline-complete foundations. Canonical stages 5–16, OS-G1+ product closure and Release/Publishing remain incomplete. |
 | Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
 ### Live task gate
 
 ```text
-Accepted code baseline: origin/main 27d1cc6… (PR #31).
+Accepted code baseline: origin/main `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS).
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
 PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
 PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
 PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
-Operational frontend entry — REQUIRED before Software Completion.
-Draft PR #32 contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and the remaining canonical stages are still incomplete.
+Operational frontend entry — MERGED TO MAIN by squash PR #32 at `51eab864…`; exact-head CI #485 SUCCESS.
+The merged baseline contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and the remaining canonical stages are still incomplete.
 Software Completion — REQUIRED before Windows Preview.
 Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.

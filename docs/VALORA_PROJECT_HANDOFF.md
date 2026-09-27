@@ -1,13 +1,19 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
-**Reconciled:** 2026-09-23 — Draft PR #32 integration head `d725bbc6…` includes F2-PR-001…003, accepted Local G6 and completed G8 offline Exchange; ADR 0045 remains current document-change direction; AI architecture detail is `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
-**Accepted merged code baseline:** `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6` (PR #31); **active candidate:** Draft PR #32 / `feat/operational-frontend-m365` at reconciliation head `d725bbc6f60f2a21ec11a555d9565d2ab01470ae` (CI #454 SUCCESS)
+**Reconciled:** 2026-09-27 — PR #32 merged by squash; OS-G0 complete on main. ADR 0045 remains current document-change direction; AI architecture detail is `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
+**Accepted merged code baseline:** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS); **historical integration source head:** `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`
 **Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`; Working-copy change semantics are governed by the 2026-09-21 addendum + ADR 0045
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
-### Live task gate
+> **2026-09-27 current-state supersession:** PR #32 is MERGED/CLOSED by squash at
+> `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is complete
+> on merged main. The prior PR #31 baseline, Draft/integration SHAs and “unmerged candidate” wording
+> below are retained as dated historical implementation context only. OS-G1 is not started and
+> requires an explicit Product Owner task before implementation.
+
+### Historical 2026-09-23 task gate (superseded above)
 
 ```text
 Read the v2.3 master + authority index + directly relevant addendum before coding.
@@ -122,9 +128,9 @@ Current S12 v1 parser: **`.xlsx` only**, fixed aliases, positional `raw_values.c
 
 ## 8. Progress snapshot
 
-### Current UI/UX integration track
+### Historical 2026-09-23 UI/UX integration track
 
-| Capability / gate | Current state | Evidence / next gate |
+| Capability / gate | State at 2026-09-23 snapshot | Evidence / next gate |
 |---|---|---|
 | PR-00–PR-04 | MERGED bounded foundations/slices | PR #29; PR-01 remains four-stage Case State prefix |
 | PR-05 | MERGED backend/provider foundation | PR #30; delegated OneDrive Personal read/OAuth |

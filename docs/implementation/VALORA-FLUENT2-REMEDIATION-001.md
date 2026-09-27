@@ -1,11 +1,11 @@
 # VALORA-FLUENT2-REMEDIATION-001
 
-**Status:** IMPLEMENTATION COMPLETE ON INTEGRATION — AWAITING PR #32 MAIN RECONCILIATION
+**Status:** IMPLEMENTATION COMPLETE ON MAIN — PR #32 MERGED
 **Roadmap placement:** OS-G0 — Authority, visual-system & branch reconciliation
 **Baseline branch:** `feat/operational-frontend-m365`
 **Inventory baseline:** `bc31acd5eeb3742d9ecf0bb66a848704e3405a9a`
 **Audit:** `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`
-**Current integration evidence:** F2-PR-001/#34 through F2-PR-008/#47 are closed on integration. Last verified OS-G0 engineering closeout baseline: `c9decc3026b6dbcd1f60a96aaab17792aaa6d390`, exact-head CI #479 SUCCESS. PR #32 remains Draft and unmerged to `main`. Historical inventory findings already remediated by those PRs must not be read as current code state.
+**Current merged-main evidence:** F2-PR-001/#34 through F2-PR-008/#47 are closed through squash PR #32. OS-G0 merged-main baseline: `51eab8648005186197d2fbb37a19bde4332aeaa5`, exact-head CI #485 SUCCESS. The pre-squash integration head `0ccc9c14…` remains historical branch evidence. Historical inventory findings already remediated by those PRs must not be read as current code state.
 
 ## 1. Goal
 
