@@ -10,8 +10,11 @@
 > **2026-09-27 current-state supersession:** PR #32 is MERGED/CLOSED by squash at
 > `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is complete
 > on merged main. The prior PR #31 baseline, Draft/integration SHAs and “unmerged candidate” wording
-> below are retained as dated historical implementation context only. OS-G1 is not started and
-> requires an explicit Product Owner task before implementation.
+> below are retained as dated historical implementation context only. Subsequently G1.0 was
+> merged by PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS).
+> ADR 0046 now governs the G1.1 Pre-case identity/current-batch/versioned-result target.
+> OS-G1 authority work is active; G1.1 runtime and OS-G2 are not started. Each runtime slice
+> requires an explicit Product Owner task.
 
 ### Historical 2026-09-23 task gate (superseded above)
 

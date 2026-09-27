@@ -4,7 +4,7 @@
 **Last reconciled:** 2026-09-27
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
-**Repository state (reconciled 2026-09-27):** `origin/main` is at `51eab8648005186197d2fbb37a19bde4332aeaa5`, the squash result of PR #32, with exact-head CI #485 SUCCESS. F2-PR-001 through F2-PR-008 and the OS-G0 Fluent 2 engineering closeout are merged to `main`. The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. OS-G1 is not started and requires an explicit Product Owner task before implementation.
+**Repository state (dated evidence, 2026-09-27):** PR #32 closed OS-G0 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS); G1.0 closed by merged PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. ADR 0046 is accepted G1.1 design authority; G1.1 runtime and OS-G2 remain not started. Verify live main before implementation.
 
 ## 1. Executive decision
 
@@ -77,7 +77,7 @@ Conflict resolution / role split:
 
 ### Merged OS-G0 / PR #32 baseline
 
-PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the authoritative merged-main result is `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main and OS-G0 Fluent 2 engineering closeout is complete on main. OS-G1 is not started; its predecessor gate is satisfied, but implementation still requires an explicit Product Owner task.
+PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the merged-main OS-G0 result was `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main. G1.0 is also merged by PR #51; ADR 0046 governs the active G1.1 authority work. G1.1 runtime still requires an explicit Product Owner implementation task.
 
 Contains:
 - Operational Frontend merged through PR #32;
@@ -258,7 +258,7 @@ A model/table/API alone is not product completion.
 
 ### OS-G0 — Authority, visual-system & branch reconciliation
 
-**Current disposition (2026-09-27):** F2-PR-001…008 and the Fluent 2 engineering closeout are merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is therefore a merged-main baseline. OS-G1 remains not started and requires an explicit Product Owner task before implementation.
+**Current disposition (2026-09-27):** F2-PR-001…008 and the Fluent 2 engineering closeout are merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is closed. G1.0 is merged by PR #51 with exact-main CI #491 SUCCESS. ADR 0046 accepts the G1.1 design target; G1.1 runtime remains not started and requires an explicit Product Owner implementation task.
 
 Execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`.
 Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
@@ -277,6 +277,11 @@ Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTO
 - no broad Template/Office platform implementation yet.
 
 ### OS-G1 — Pre-case Product Closure
+
+G1.0's exact-current-result integrity gate is merged. ADR 0046 governs the next identity,
+current-batch and versioned-result lifecycle design. It preserves the same Project through
+Official Intake, permits an unbound Pre-case, and requires explicit Customer binding before
+the first commit. G1.1 runtime is not started; the ADR alone does not implement this journey.
 
 ```text
 Trang chủ

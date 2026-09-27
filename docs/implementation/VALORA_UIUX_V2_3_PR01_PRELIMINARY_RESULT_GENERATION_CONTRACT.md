@@ -4,6 +4,8 @@
 **Scope:** Atomic generation of one immutable `PreliminaryResultArtifact` per project from a v2 `PreliminaryAnalysisSnapshot`. Includes authorization, lineage verification, deterministic XLSX transformation, object storage, idempotency and audit. Does not include HTTP endpoints, projection providers, case-state/current_stage publication, frontend or deployment.
 **Authority:** ADR 0038 D1–D10, ADR 0037/OFFICIAL_INTAKE commit pattern, Case State Projection Contract §5.
 
+> **2026-09-27 scoped successor:** The one-artifact-per-Project and non-NULL Customer assumptions below describe implemented v1. ADR 0046 accepts immutable versioned regeneration before Official Intake and nullable historical Customer snapshot metadata; the current result is the highest valid version matching the selected current analysis. This note authorizes no generator/schema change; G1.1 runtime remains not started.
+
 > **2026-09-23 current disposition:** The scope/exit-gate text below records this generation slice at implementation time. The separately authorized preliminary providers and Case State endpoint were later implemented/wired; later implementation contracts/audits govern current runtime status.
 
 ## 1. Schema

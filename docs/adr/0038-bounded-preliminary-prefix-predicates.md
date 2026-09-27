@@ -8,6 +8,8 @@
 
 **Deciders:** Project Owner, Core Engineering Team
 
+**2026-09-27 scoped ratchet:** ADR 0046 makes the current preliminary batch pointer explicit and selects the highest valid lineage-matching analysis and result versions among immutable historical rows. This refines “current” in D1–D5 without weakening the accepted source, line-completeness, blocker or result-checksum predicates. PR-01's one-row provider remains current runtime until an authorized G1.1 implementation changes it.
+
 ## Context
 
 The PR-01 Global Case State projection requires a bounded contiguous prefix of canonical stages before `current_stage` can be truthfully published (ADR 0036; OFFICIAL_INTAKE predicate D4). The three preliminary stages `PRELIMINARY_REQUEST`, `PRELIMINARY_ANALYSIS` and `PRELIMINARY_READY` were previously classified as `MISSING` or `FACT_EXISTS_PREDICATE_UNAPPROVED` in the parent projection contract. This ADR records the owner-approved predicates for those stages and the minimum authoritative facts required.

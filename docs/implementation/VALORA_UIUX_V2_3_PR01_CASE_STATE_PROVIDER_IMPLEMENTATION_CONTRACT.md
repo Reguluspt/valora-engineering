@@ -5,6 +5,8 @@
 **Date:** 2026-09-04
 **Architecture:** ADR 0036 (computed-on-read, no projection migration) + ADR 0037 (durable official-intake fact) + ADR 0038 (bounded preliminary-prefix predicates)
 
+> **2026-09-27 scoped successor:** C2's batch/snapshot/artifact multiplicity → `NOT_AVAILABLE` is the implemented PR-01 v1 rule. ADR 0046 accepts a future explicit current-batch pointer and highest-valid-lineage version rule: valid historical rows alone will no longer be ambiguous. Actual duplicate current claims/corrupt lineage still fail closed. G1.1 runtime is not started; this contract remains accurate for current code.
+
 ---
 
 ## 1. Scope & Boundaries

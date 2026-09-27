@@ -4,6 +4,8 @@
 **Scope:** Immutable, versioned `PreliminaryAnalysisSnapshot` source fact, strict v2 line manifest, human-confirmed command and focused tests. Does not include artifact generation, projection providers, case-state/current_stage publication, HTTP endpoints, frontend or deployment.
 **Authority:** ADR 0038 D3–D4, ADR 0037/OFFICIAL_INTAKE commit pattern, Case State Projection Contract §5.
 
+> **2026-09-27 scoped successor:** The non-NULL Customer and one-snapshot-per-Project assumptions below describe implemented v1. ADR 0046 accepts nullable historical Customer snapshot metadata and immutable versioned successors selected by current batch/source/materialized mapping usage. No schema or generator change is made by this note; G1.1 runtime remains not started.
+
 > **2026-09-23 current disposition:** The scope/exit-gate text below records this slice at implementation time. The separately authorized `preliminary_analysis_v1` provider and Case State endpoint were later implemented/wired; those later contracts supersede any statement below that provider runtime remains blocked.
 
 ## 1. Schema

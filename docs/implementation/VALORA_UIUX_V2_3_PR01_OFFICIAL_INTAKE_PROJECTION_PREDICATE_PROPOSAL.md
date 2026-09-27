@@ -12,6 +12,8 @@
 
 > **2026-09-23 current disposition:** This file preserves the original predicate-design gate. `official_intake_commit_v1` and the four-stage computed Case State runtime were subsequently authorized, implemented and wired. Later implementation contracts/audits and the Unified Roadmap govern current runtime status; the historical “runtime not authorized” wording below is not a present blocker.
 
+> **2026-09-27 scoped successor:** ADR 0046 requires an explicitly bound ACTIVE same-tenant Customer and the exact current result for a future G1.1 Official Intake commit. This proposal remains historical v1 predicate evidence; G1.1 runtime is not started.
+
 This document records the owner-approved bounded predicate for `OFFICIAL_INTAKE` (D1–D10, approved 2026-09-03). It does not authorize runtime wiring, endpoint implementation, frontend work, persistence changes, or reinterpretation of legacy status. The PR-01 projection runtime and `current_stage` publication remain blocked until a bounded contiguous prefix of canonical stages is accepted (D4).
 
 ---
