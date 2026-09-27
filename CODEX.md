@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G1.1 Pre-case lifecycle authority; runtime not started)
+**Last reconciled:** 2026-09-27 (OS-G1.1A Pre-case persistence foundation)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -71,8 +71,11 @@ OS-G0 Fluent 2 engineering closeout is COMPLETE ON MAIN at `51eab8648005186197d2
 with exact-head CI #485 SUCCESS. G1.0 current-result integrity gate was subsequently merged by
 PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (exact-head CI #491 SUCCESS).
 OS-G1 authority work is active: ADR 0046 accepts optional Pre-case Customer, an explicit current
-batch pointer and versioned analysis/result currentness. G1.1 runtime implementation is NOT STARTED;
-ADR 0046 authorizes design/migration planning only. OS-G2 is NOT STARTED. Each runtime slice still
+batch pointer and versioned analysis/result currentness. G1.1A implements only nullable Customer
+snapshots, the current-batch persistence pointer, null-safe lineage constraints and first-batch
+initialization under `VALORA-TASK-OS-G1-1A-PRECASE-IDENTITY-CURRENT-BATCH-FOUNDATION`.
+G1.1B+ binding, switching, regeneration and provider behavior are NOT STARTED; OS-G2 is NOT STARTED.
+Each runtime slice still
 requires an explicit Product Owner task packet. These SHAs are dated evidence, not a live-head claim.
 Neither G1.0 nor this authority closes the OS-G1 product journey or full North-star E2E.
 

@@ -664,9 +664,9 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
         ForeignKey("organization_profiles.id", ondelete="CASCADE"),
         nullable=False
     )
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("customers.id", ondelete="RESTRICT"),
-        nullable=False
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    current_preliminary_import_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, nullable=True
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -700,7 +700,9 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     )
 
     organization: Mapped["OrganizationProfile"] = relationship("OrganizationProfile")
-    customer: Mapped["Customer"] = relationship("Customer")
+    customer: Mapped[Optional["Customer"]] = relationship(
+        "Customer", foreign_keys=[customer_id]
+    )
     currency: Mapped[Optional["Currency"]] = relationship("Currency")
     signer_profile: Mapped[Optional["SignerProfile"]] = relationship("SignerProfile")
 
@@ -724,6 +726,24 @@ class Project(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
             name="uq_s13_pr004_project_tenant_customer_id",
         ),
         UniqueConstraint("organization_id", "id", name="uq_projects_tenant_id"),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_project_customer_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "id", "current_preliminary_import_batch_id"],
+            [
+                "project_asset_import_batches.organization_id",
+                "project_asset_import_batches.project_id",
+                "project_asset_import_batches.id",
+            ],
+            name="fk_project_current_preliminary_batch_tenant",
+            ondelete="RESTRICT",
+            use_alter=True,
+        ),
+        Index("idx_project_current_preliminary_batch", "current_preliminary_import_batch_id"),
         CheckConstraint("fee_amount >= 0", name="chk_project_fee_positive"),
     )
 
@@ -904,7 +924,7 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
     __tablename__ = "preliminary_result_artifacts"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -939,11 +959,8 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
             "storage_object_key", name="uq_preliminary_result_storage_object"
         ),
         UniqueConstraint(
-            "organization_id",
-            "customer_id",
-            "project_id",
-            "id",
-            name="uq_preliminary_result_tenant_project_id",
+            "organization_id", "project_id", "id",
+            name="uq_preliminary_result_tenant_project_id_without_customer",
         ),
         Index(
             "uq_preliminary_result_idempotency",
@@ -954,9 +971,15 @@ class PreliminaryResultArtifact(Base, UUIDMixin):
             sqlite_where=text("idempotency_key IS NOT NULL"),
         ),
         ForeignKeyConstraint(
-            ["organization_id", "customer_id", "project_id"],
-            ["projects.organization_id", "projects.customer_id", "projects.id"],
-            name="fk_preliminary_result_project_tenant",
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_preliminary_result_project_without_customer",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_preliminary_result_customer_tenant",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -1037,17 +1060,15 @@ class ProjectOfficialIntakeCommit(Base, UUIDMixin):
         ForeignKeyConstraint(
             [
                 "organization_id",
-                "customer_id",
                 "project_id",
                 "preliminary_result_artifact_id",
             ],
             [
                 "preliminary_result_artifacts.organization_id",
-                "preliminary_result_artifacts.customer_id",
                 "preliminary_result_artifacts.project_id",
                 "preliminary_result_artifacts.id",
             ],
-            name="fk_official_intake_artifact_tenant",
+            name="fk_official_intake_artifact_without_customer",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -1093,7 +1114,7 @@ class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
     __tablename__ = "preliminary_analysis_snapshots"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    customer_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
@@ -1137,9 +1158,15 @@ class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
             name="uq_preliminary_analysis_idempotency",
         ),
         ForeignKeyConstraint(
-            ["organization_id", "customer_id", "project_id"],
-            ["projects.organization_id", "projects.customer_id", "projects.id"],
-            name="fk_preliminary_analysis_project_tenant",
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_preliminary_analysis_project_without_customer",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "customer_id"],
+            ["customers.organization_id", "customers.id"],
+            name="fk_preliminary_analysis_customer_tenant",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -1189,7 +1216,6 @@ class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
         ForeignKeyConstraint(
             [
                 "organization_id",
-                "customer_id",
                 "project_id",
                 "import_batch_id",
                 "source_artifact_id",
@@ -1198,14 +1224,13 @@ class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
             ],
             [
                 "column_mapping_decisions.organization_id",
-                "column_mapping_decisions.customer_id",
                 "column_mapping_decisions.project_id",
                 "column_mapping_decisions.import_batch_id",
                 "column_mapping_decisions.source_artifact_id",
                 "column_mapping_decisions.structure_snapshot_id",
                 "column_mapping_decisions.id",
             ],
-            name="fk_preliminary_analysis_decision_tenant",
+            name="fk_preliminary_analysis_decision_without_customer",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -4043,7 +4068,7 @@ class ProjectAssetImportBatch(Base, UUIDMixin, TimestampMixin):
     # S13-PR-002: current successful source generation (same-batch enforced via composite FK).
     current_source_artifact_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
 
-    project: Mapped["Project"] = relationship("Project")
+    project: Mapped["Project"] = relationship("Project", foreign_keys=[project_id])
     creator: Mapped["User"] = relationship("User")
 
     __table_args__ = (

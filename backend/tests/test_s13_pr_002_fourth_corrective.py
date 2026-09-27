@@ -879,11 +879,7 @@ def test_multi_item_later_error_keeps_earlier_failed(db_session: Session, fake_s
 
 
 def test_pg_migration_roundtrip_s13():
-    """S13 revision round-trip on the CI PostgreSQL database.
-
-    Uses the shared TEST_DATABASE_URL (already migrated to head by CI smoke).
-    Avoids CREATE DATABASE (not required) and keeps Alembic on the same URL
-    as POSTGRES_* / get_settings().database_url.
+    """S13 revision round-trip on an isolated representable PostgreSQL database.
 
     Sequence: head present → downgrade parent → table gone → upgrade f2a3 →
     columns present → upgrade head → single head.
@@ -900,7 +896,13 @@ def test_pg_migration_roundtrip_s13():
     from app.core.config import get_settings
     from sqlalchemy.engine.url import make_url
 
-    u = make_url(url)
+    source = make_url(url)
+    admin = create_engine(source.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    database_name = f"s13_roundtrip_{uuid.uuid4().hex}"
+    with admin.connect() as connection:
+        connection.execute(text(f'CREATE DATABASE "{database_name}"'))
+    u = source.set(database=database_name)
+    url = u.render_as_string(hide_password=False)
     prev = {
         k: os.environ.get(k)
         for k in (
@@ -978,6 +980,9 @@ def test_pg_migration_roundtrip_s13():
             else:
                 os.environ[k] = v
         get_settings.cache_clear()
+        with admin.connect() as connection:
+            connection.execute(text(f'DROP DATABASE IF EXISTS "{database_name}" WITH (FORCE)'))
+        admin.dispose()
 
 
 # --- MinIO CI ---

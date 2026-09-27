@@ -11,6 +11,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi import HTTPException
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import URL, make_url
@@ -913,8 +915,11 @@ def test_exchange_migration_up_down_up_when_empty(postgres_exchange_database: UR
         assert "m365_exchange_artifacts" not in tables
         assert "m365_exchange_operations" not in tables
     _run_alembic(postgres_exchange_database, "upgrade", "head")
+    expected_head = ScriptDirectory.from_config(
+        Config(str(Path(__file__).parents[1] / "alembic.ini"))
+    ).get_current_head()
     with engine.connect() as connection:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-            "c9d0e1f2a3b4"
+            expected_head
         )
     engine.dispose()

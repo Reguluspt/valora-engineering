@@ -603,10 +603,14 @@ def create_project_asset_import(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    first_batch = not db.query(ProjectAssetImportBatch.id).filter(
+        ProjectAssetImportBatch.organization_id == org_id,
+        ProjectAssetImportBatch.project_id == project_id,
+    ).first()
     batch = ProjectAssetImportBatch(
         organization_id=org_id,
         project_id=project_id,
@@ -619,20 +623,27 @@ def create_project_asset_import(
         warning_rows=0,
         created_by_user_id=current_user.id
     )
-    db.add(batch)
-    db.commit()
+    try:
+        db.add(batch)
+        db.flush()
+        # Ambiguous legacy Projects need explicit remediation, not an implicit switch.
+        if first_batch and project.current_preliminary_import_batch_id is None:
+            project.current_preliminary_import_batch_id = batch.id
+            db.flush()
+        log_audit_event(
+            db=db,
+            event_name="ProjectAssetImportBatchCreated",
+            entity_type="ProjectAssetImportBatch",
+            entity_id=batch.id,
+            organization_id=org_id,
+            actor_user_id=current_user.id,
+            command_name="CreateProjectAssetImportBatch",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(batch)
-
-    log_audit_event(
-        db=db,
-        event_name="ProjectAssetImportBatchCreated",
-        entity_type="ProjectAssetImportBatch",
-        entity_id=batch.id,
-        organization_id=org_id,
-        actor_user_id=current_user.id,
-        command_name="CreateProjectAssetImportBatch"
-    )
-    db.commit()
 
     return batch
 
