@@ -55,6 +55,10 @@ Current document-change authority:
 - ADR 0045 — Working Change Observation / DocumentChangeCandidate / Human Commit
 - `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md`
 
+Current Pre-case lifecycle design authority: ADR 0046 — optional Customer, explicit current
+preliminary batch and immutable versioned analysis/result selection. It ratchets ADR 0030,
+0037 and 0038 in that scope; G1.1 runtime remains separately gated.
+
 Current roadmap ordering:
 
 ```text
@@ -129,7 +133,8 @@ Current candidate facts as of this reconciliation:
 - OneDrive Exchange: G8 offline complete at code milestone `f896f15...`;
 - Working Change Observation: design/ADR accepted; the full ADR 0045 observation/candidate runtime is not implied complete by OS-G0;
 - canonical Case State stages 5–16: not yet product-complete;
-- OS-G1: not started; predecessor OS-G0 merge/CI gate is satisfied, but implementation requires an explicit Product Owner task;
+- OS-G1: G1.0 current-result gate merged by PR #51 (`7db69708…`, exact-head CI #491 SUCCESS); ADR 0046 is accepted G1.1 design authority; G1.1 runtime not started and requires an explicit Product Owner task;
+- OS-G2: not started;
 - Release/Publishing and full North-star E2E: not implemented.
 
 ## 4. Historical design handoffs

@@ -24,7 +24,7 @@ authoritative for accepted document revisions.
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G0 merged-main authority reconciliation)
+**Last reconciled:** 2026-09-27 (OS-G1.1 Pre-case lifecycle authority)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -47,6 +47,7 @@ PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDri
 PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
 Operational Frontend — merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`, with exact-head CI #485 SUCCESS. F2-PR-001…008 and the OS-G0 Fluent 2 engineering closeout are therefore merged-main evidence. This still is not North-star product-completion evidence; OS-G1+ capabilities, Release/Publishing and full exact-SHA E2E remain separately gated.
+G1.0 current-result integrity gate is merged by PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). ADR 0046 is the accepted G1.1 design for optional Pre-case Customer, explicit current batch and immutable versioned analysis/results. It does not authorize runtime changes; G1.1 runtime and OS-G2 remain not started. Preserve tenant/Project lineage, explicit human binding, immutable history and G1.0's fail-closed Official Intake gate in later slices.
 The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
 Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.

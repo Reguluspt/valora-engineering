@@ -5,6 +5,8 @@
 **Date:** 2026-09-01
 **Architecture:** ADR 0037
 
+> **2026-09-27 scoped successor:** ADR 0046 requires explicit ACTIVE same-tenant Project Customer binding before first commit and freezes the exact current applicable result, even if that result was generated while unbound and carries historical `customer_id=NULL`. The same Project and atomic/idempotent commit remain. This is a future G1.1 contract delta; current runtime and this historical implementation record are unchanged.
+
 ## 1. Authorized scope
 
 This slice may define the durable fact and command boundary for

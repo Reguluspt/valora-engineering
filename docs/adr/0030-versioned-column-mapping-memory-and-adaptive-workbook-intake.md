@@ -3,6 +3,7 @@
 ## Status
 
 Accepted — owner-requested design authority, 2026-07-14.
+**2026-09-27 scoped ratchet:** ADR 0046 permits an unbound Pre-case. Customer-scoped mapping memory is unavailable until explicit real Customer binding; organization templates and new deterministic mapping may still operate. Immutable historical usages are not restamped. The `.xlsx`/`.xls` requirement below remains in force. ADR 0046 is design only; G1.1 runtime is not started.
 **Runtime gate note — reconciled 2026-09-21:** the former Gate 0c/Sprint 13 ordering is historical. New runtime work must be opened by a current task-specific contract at the appropriate Unified Roadmap phase. This ADR remains authority for mapping-memory/adaptive-intake semantics only and does not authorize runtime by itself.
 
 ## Context

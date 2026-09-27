@@ -5,6 +5,8 @@
 **Date:** 2026-09-01
 **Architecture:** ADR 0036 — computed on read, no projection migration
 
+> **2026-09-27 scoped successor:** ADR 0046 defines future Pre-case optional Customer, explicit current batch and versioned analysis/result selection. Computed-on-read projection, canonical stages, contiguous prefix and blocker precedence remain. This is design authority, not a claim that PR-01 runtime has changed.
+
 ## 1. Scope
 
 This contract is the ratchet for the read-only Global Case State projection. The bounded first

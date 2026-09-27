@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G0 merged-main closeout and PR #32 post-merge authority alignment)
+**Last reconciled:** 2026-09-27 (OS-G1.1 Pre-case lifecycle authority; runtime not started)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -68,9 +68,13 @@ F2-PR-006 — CLOSED ON MAIN THROUGH PR #32 (NCC selection).
 F2-PR-007 — CLOSED ON MAIN THROUGH PR #32 (provider-neutral Document Workspace / M365 return).
 F2-PR-008 — CLOSED ON MAIN THROUGH PR #32 (Fluent 2 residual sweep / Astryx retirement).
 OS-G0 Fluent 2 engineering closeout is COMPLETE ON MAIN at `51eab8648005186197d2fbb37a19bde4332aeaa5`,
-with exact-head CI #485 SUCCESS. OS-G1 is NOT STARTED. Its predecessor merge/CI gate is satisfied,
-but no OS-G1 implementation is authorized until the Product Owner opens an explicit task packet.
-This closeout does not prove the full North-star E2E or downstream OS-G1→OS-G7 completion.
+with exact-head CI #485 SUCCESS. G1.0 current-result integrity gate was subsequently merged by
+PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (exact-head CI #491 SUCCESS).
+OS-G1 authority work is active: ADR 0046 accepts optional Pre-case Customer, an explicit current
+batch pointer and versioned analysis/result currentness. G1.1 runtime implementation is NOT STARTED;
+ADR 0046 authorizes design/migration planning only. OS-G2 is NOT STARTED. Each runtime slice still
+requires an explicit Product Owner task packet. These SHAs are dated evidence, not a live-head claim.
+Neither G1.0 nor this authority closes the OS-G1 product journey or full North-star E2E.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by

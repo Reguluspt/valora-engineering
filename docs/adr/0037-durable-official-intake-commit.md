@@ -5,6 +5,8 @@
 **Context:** VALORA UI/UX v2.3 PR-01 official-intake design slice
 **Deciders:** Product Owner, Core Engineering Team
 
+**2026-09-27 scoped ratchet:** ADR 0046 permits `Project.customer_id=NULL` during Pre-case and requires an explicit real ACTIVE same-tenant binding before the first Official Intake commit. The commit still freezes one exact current immutable result on the same Project. A pre-binding result may truthfully carry `customer_id=NULL`; its lineage is validated by tenant/Project, not equality to the later Project binding. This note changes future G1.1 design only; current runtime remains governed by its implemented contract until a separate task.
+
 ## Context
 
 The north-star flow crosses an explicit business boundary at `Chuyển sang thẩm định chính thức`.

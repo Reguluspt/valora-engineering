@@ -12,6 +12,8 @@
 
 > **2026-09-23 current disposition:** This file preserves the pre-runtime predicate design. The separately authorized source facts/providers and `GET /api/v1/projects/{project_id}/case-state` were later implemented and accepted for the four-stage prefix. Read `VALORA_UIUX_V2_3_PR01_CASE_STATE_PROVIDER_IMPLEMENTATION_CONTRACT.md` and the current Unified Roadmap for runtime truth; statements below that runtime is still blocked are historical gate snapshots.
 
+> **2026-09-27 scoped successor:** ADR 0046 refines current batch and analysis/result selection for future G1.1. The original predicates and this proposal remain historical v1 evidence; G1.1 runtime is not started.
+
 This document records the owner-approved bounded predicates for `PRELIMINARY_REQUEST`, `PRELIMINARY_ANALYSIS` and `PRELIMINARY_READY` (D1–D8, approved 2026-09-03). It does not authorize runtime wiring, endpoint implementation, frontend work, persistence changes, new migrations, or reinterpretation of legacy status. The source facts and providers described below remain unimplemented; the PR-01 projection runtime and `current_stage` publication remain blocked until a separately authorized implementation slice closes those gates.
 
 ---
