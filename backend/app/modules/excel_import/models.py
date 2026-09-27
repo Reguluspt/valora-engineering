@@ -549,8 +549,8 @@ class ColumnMappingDecision(Base, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
     )
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
@@ -601,13 +601,12 @@ class ColumnMappingDecision(Base, UUIDMixin):
     __table_args__ = (
         UniqueConstraint(
             "organization_id",
-            "customer_id",
             "project_id",
             "import_batch_id",
             "source_artifact_id",
             "structure_snapshot_id",
             "id",
-            name="uq_mapping_decision_tenant_lineage_id",
+            name="uq_mapping_decision_lineage_id_without_customer",
         ),
         ForeignKeyConstraint(
             ["organization_id", "customer_id"],
@@ -616,9 +615,9 @@ class ColumnMappingDecision(Base, UUIDMixin):
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
-            ["organization_id", "customer_id", "project_id"],
-            ["projects.organization_id", "projects.customer_id", "projects.id"],
-            name="fk_mapping_decision_project_customer_tenant",
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_mapping_decision_project_tenant",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -663,7 +662,6 @@ class ColumnMappingDecision(Base, UUIDMixin):
         ForeignKeyConstraint(
             [
                 "organization_id",
-                "customer_id",
                 "project_id",
                 "import_batch_id",
                 "source_artifact_id",
@@ -672,14 +670,13 @@ class ColumnMappingDecision(Base, UUIDMixin):
             ],
             [
                 "column_mapping_decisions.organization_id",
-                "column_mapping_decisions.customer_id",
                 "column_mapping_decisions.project_id",
                 "column_mapping_decisions.import_batch_id",
                 "column_mapping_decisions.source_artifact_id",
                 "column_mapping_decisions.structure_snapshot_id",
                 "column_mapping_decisions.id",
             ],
-            name="fk_mapping_decision_proposal_lineage",
+            name="fk_mapping_decision_proposal_without_customer",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -756,8 +753,8 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
     )
     project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
@@ -800,9 +797,9 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
-            ["organization_id", "customer_id", "project_id"],
-            ["projects.organization_id", "projects.customer_id", "projects.id"],
-            name="fk_mapping_usage_project_customer_tenant",
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_mapping_usage_project_tenant",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -847,7 +844,6 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
         ForeignKeyConstraint(
             [
                 "organization_id",
-                "customer_id",
                 "project_id",
                 "import_batch_id",
                 "source_artifact_id",
@@ -856,14 +852,13 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
             ],
             [
                 "column_mapping_decisions.organization_id",
-                "column_mapping_decisions.customer_id",
                 "column_mapping_decisions.project_id",
                 "column_mapping_decisions.import_batch_id",
                 "column_mapping_decisions.source_artifact_id",
                 "column_mapping_decisions.structure_snapshot_id",
                 "column_mapping_decisions.id",
             ],
-            name="fk_mapping_usage_confirmation_lineage",
+            name="fk_mapping_usage_confirmation_without_customer",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
@@ -938,8 +933,8 @@ class RawAssetObservation(Base, TimestampMixin, UUIDMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("organization_profiles.id", ondelete="RESTRICT"), nullable=False
     )
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
@@ -979,9 +974,9 @@ class RawAssetObservation(Base, TimestampMixin, UUIDMixin):
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
-            ["organization_id", "customer_id", "project_id"],
-            ["projects.organization_id", "projects.customer_id", "projects.id"],
-            name="fk_raw_obs_project_customer_tenant",
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_raw_obs_project_tenant",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(

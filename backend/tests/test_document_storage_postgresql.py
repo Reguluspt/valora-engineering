@@ -326,6 +326,7 @@ def test_local_provider_migration_refuses_downgrade_while_local_rows_exist(
     engine = create_engine(postgres_storage_database, connect_args={"connect_timeout": 5})
     try:
         with engine.begin() as connection:
+            head_before = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
             connection.execute(text("SET LOCAL session_replication_role = replica"))
             connection.execute(
                 text(
@@ -352,9 +353,7 @@ def test_local_provider_migration_refuses_downgrade_while_local_rows_exist(
         assert "cannot downgrade while local document blob rows exist" in output
 
         with engine.connect() as connection:
-            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-                "c9d0e1f2a3b4"
-            )
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == head_before
             checks = {
                 constraint["name"]: constraint["sqltext"]
                 for constraint in inspect(connection).get_check_constraints(

@@ -1023,6 +1023,10 @@ def _run_lineage_dml_proof(engine) -> None:
         )
         s.add(batch)
         s.commit()
+        # Keep the newer G1.1A pointer representable for the historical
+        # downgrade exercised below.
+        project.current_preliminary_import_batch_id = batch.id
+        s.commit()
         staging = ProjectAssetImportStagingRow(
             organization_id=org.id,
             project_id=project.id,

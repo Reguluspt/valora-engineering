@@ -418,7 +418,7 @@ def _table_signature(connection, table_name: str) -> dict:
     }
 
 
-def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity():
+def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
     engine = _postgres_engine_or_skip()
     schema = f"s13_pr004_{uuid.uuid4().hex}"
     migration_path = (
@@ -503,18 +503,35 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_and_full_model_parity()
                 if table is not None:
                     table.drop(connection, checkfirst=True)
             operations = Operations(MigrationContext.configure(connection))
+            # This historical migration owns the Customer unique target; the
+            # later G1.1A Project FK is outside its schema slice.
+            operations.drop_constraint(
+                "fk_project_customer_tenant", "projects", type_="foreignkey"
+            )
             operations.drop_constraint(
                 "uq_mapping_usage_generation_id",
                 "column_mapping_profile_usages",
                 type_="unique",
             )
+            migration.op = operations
+            migration.downgrade()
+            assert mapping_tables.isdisjoint(inspect(connection).get_table_names())
+            migration.upgrade()
             reference = {
                 table_name: _table_signature(connection, table_name)
                 for table_name in parity_tables
             }
-            migration.op = operations
+            assert {
+                "uq_mapping_decision_tenant_lineage_id",
+                "fk_mapping_decision_project_customer_tenant",
+            } <= {
+                constraint.get("name")
+                for constraint in (
+                    inspect(connection).get_unique_constraints("column_mapping_decisions")
+                    + inspect(connection).get_foreign_keys("column_mapping_decisions")
+                )
+            }
             migration.downgrade()
-            assert mapping_tables.isdisjoint(inspect(connection).get_table_names())
 
         for _cycle in range(2):
             with engine.begin() as connection:
