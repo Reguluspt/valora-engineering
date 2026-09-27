@@ -6,6 +6,13 @@
 **Current candidate reconciliation:** 2026-09-23 — Draft PR #32 / `feat/operational-frontend-m365` at `d725bbc6…`; F2-PR-001/#34, F2-PR-002/#36 and F2-PR-003/#38 merged into integration; exact-head CI #454 SUCCESS
 **Scope:** Repository, merged pull requests, exact-head CI, migrations, tests, frontend routes and browser evidence
 
+> **2026-09-27 merged-main supersession:** PR #32 is MERGED/CLOSED by squash. The authoritative
+> merged-main OS-G0 result is `51eab8648005186197d2fbb37a19bde4332aeaa5` with exact-head
+> CI #485 SUCCESS. F2-PR-001…008 are closed on main. Any “Draft PR #32”, “UNMERGED” or
+> “current candidate” wording below is retained as dated historical evidence for the snapshot it
+> describes and must not be read as current repository state. OS-G1 is not started and still requires
+> an explicit Product Owner task before implementation.
+
 This matrix separates design, runtime, integration and acceptance evidence. `MERGED` means only that
 the named pull request landed. It does not promote an absent frontend, browser check or end-to-end
 journey to complete.
