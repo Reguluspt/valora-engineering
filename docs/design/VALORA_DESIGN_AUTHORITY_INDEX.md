@@ -77,8 +77,8 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-Accepted merged baseline: origin/main 27d1cc6… (PR #31)
-Active integration candidate: Draft PR #32 / `feat/operational-frontend-m365` at reconciliation head `d725bbc6…` after F2-PR-001…003 merged on that branch; CI #454 SUCCESS; not merged to main
+Accepted merged baseline: origin/main `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32); exact-head CI #485 SUCCESS
+Completed integration source: `feat/operational-frontend-m365` / `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; historical branch evidence, not active authority
 G6 Local immutable storage: ACCEPTED
 G8 OneDrive Personal Exchange offline implementation: COMPLETE at f896f15…
 ADR 0045 / Working Change Observation design authority: ACCEPTED
@@ -150,7 +150,7 @@ Current v2.3 disposition:
 
 1. PR-00 through PR-04 — merged bounded foundations/slices.
 2. PR-05 / PR-06 — merged OneDrive Personal read/revalidation foundations.
-3. Draft PR #32 — operational frontend candidate + accepted Local G6 + completed G8 offline Exchange.
+3. PR #32 — MERGED/CLOSED on main; operational frontend + accepted Local G6 + completed G8 offline Exchange are part of the merged OS-G0 baseline.
 4. ADR 0045 — accepted target semantics for automatic Working observation, Change Candidate and
    explicit human-confirmed Revision N+1.
 5. Canonical stages 5-16 remain incomplete at OS/product level; Case State provider still only owns
