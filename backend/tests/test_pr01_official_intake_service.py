@@ -25,6 +25,7 @@ from app.modules.project_master_data.models import (
     OrganizationStatus,
     PreliminaryResultArtifact,
     Project,
+    ProjectAssetImportBatch,
     ProjectAssetLine,
     ProjectOfficialIntakeCommit,
     ProjectWorkflowStatus,
@@ -39,6 +40,7 @@ from app.modules.project_master_data.models import (
     ValidationRuleCategory,
 )
 from tests.test_pr01_case_state_projection_providers import (
+    _append_analysis_version,
     _append_unmaterialized_confirmation,
     _seed_complete_preliminary_ready,
 )
@@ -192,7 +194,7 @@ def test_commit_persists_one_fact_and_atomic_audit_without_legacy_status_change(
     assert committed.preliminary_result_version == 1
     assert committed.preliminary_result_sha256 == seeded["artifact"].content_checksum_sha256
     assert committed.source_snapshot_sha256 == seeded["artifact"].source_snapshot_sha256
-    assert committed.project_version_before == 1
+    assert committed.project_version_before == seeded["project"].row_version
     assert committed.committed_by_user_id == seeded["actor"].id
     assert intake_db.get(Project, seeded["project"].id).status == ProjectWorkflowStatus.DRAFT
 
@@ -221,6 +223,31 @@ def test_later_unmaterialized_confirmation_keeps_result_current_for_commit(
     assert intake_db.query(ProjectOfficialIntakeCommit).count() == 1
 
 
+def test_historical_batch_does_not_block_current_result_commit(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    historical = ProjectAssetImportBatch(
+        organization_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+        source_filename="historical.xlsx",
+        created_by_user_id=seeded["actor"].id,
+    )
+    intake_db.add(historical)
+    intake_db.commit()
+    assert historical.id != seeded["project"].current_preliminary_import_batch_id
+    committed = _commit(intake_db, seeded)
+    assert committed.preliminary_result_artifact_id == seeded["artifact"].id
+
+
+def test_old_result_fails_after_new_analysis_becomes_current(intake_db: Session) -> None:
+    seeded = _seed(intake_db)
+    current = _append_analysis_version(intake_db, seeded["snapshot"], version=2)
+    assert current.version == 2
+    with pytest.raises(HTTPException) as exc:
+        _commit(intake_db, seeded)
+    _assert_error(exc, 409, "preliminary_result_not_current")
+    _assert_no_official_success(intake_db)
+
+
 def test_new_current_source_generation_rejects_first_commit_without_audit(
     intake_db: Session,
 ) -> None:
@@ -232,7 +259,7 @@ def test_new_current_source_generation_rejects_first_commit_without_audit(
 
     _assert_error(exc, 409, "preliminary_result_not_current")
     assert replacement.id != seeded["source_artifact"].id
-    assert seeded["project"].row_version == 1
+    assert seeded["project"].row_version == 2
     _assert_no_official_success(intake_db)
 
 
@@ -447,7 +474,7 @@ def test_second_command_for_committed_project_is_rejected(intake_db: Session) ->
     ("overrides", "status", "code"),
     [
         ({"confirmed": False}, 400, "official_intake_confirmation_required"),
-        ({"expected_project_version": 2}, 409, "project_version_conflict"),
+        ({"expected_project_version": 999}, 409, "project_version_conflict"),
         (
             {"expected_preliminary_result_version": 2},
             409,

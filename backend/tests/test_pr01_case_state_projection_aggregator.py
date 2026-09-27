@@ -275,6 +275,7 @@ def test_case_version_determinism_and_sensitivity(test_db: Session) -> None:
     test_db.add(artifact)
     test_db.flush()
     batch.current_source_artifact_id = artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     p3 = get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
@@ -479,6 +480,7 @@ def test_all_four_complete_semantics(test_db: Session) -> None:
     test_db.add(source_artifact)
     test_db.flush()
     batch.current_source_artifact_id = source_artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     # 2. PRELIMINARY_ANALYSIS complete
@@ -722,9 +724,9 @@ def test_compute_case_version_golden_vector() -> None:
     project_id = uuid.UUID("22222222-2222-2222-2222-222222222222")
     facts = [
         "official_intake_commit_v1:null:absent-v1:absent",
-        "preliminary_analysis_v1:null:absent-v1:absent",
+        "preliminary_analysis_v2:null:absent-v2:absent",
         "preliminary_ready_v1:null:absent-v1:absent",
-        "preliminary_request_v1:null:absent-v1:absent",
+        "preliminary_request_v2:null:absent-v2:absent",
     ]
     token, sorted_facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
     assert sorted_facts == sorted(facts)
@@ -794,9 +796,8 @@ def test_aggregator_present_but_incomplete_snapshot_and_ready_artifact(test_db: 
     assert proj.stages[2].stage == "PRELIMINARY_READY"
     assert proj.stages[2].result == "INCOMPLETE"
 
-    # But their fact tokens contain their IDs and av1 tokens
-    assert f"preliminary_analysis_v1:{str(snapshot.id).lower()}:av1-" in proj.stages[1].fact_token
-    assert proj.stages[1].fact_token.endswith(":incomplete")
+    # A snapshot without current lineage is history and contributes no current analysis entity.
+    assert proj.stages[1].fact_token == "preliminary_analysis_v2:null:absent-v2:absent"
     assert f"preliminary_ready_v1:{str(artifact.id).lower()}:av1-" in proj.stages[2].fact_token
     assert proj.stages[2].fact_token.endswith(":incomplete")
 

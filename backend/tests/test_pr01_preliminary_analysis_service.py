@@ -155,6 +155,7 @@ def _seed(
     )
     analysis_db.add(batch)
     analysis_db.flush()
+    project.current_preliminary_import_batch_id = batch.id
     artifact = ImportSourceArtifact(
         organization_id=org.id,
         project_id=project.id,
@@ -323,7 +324,7 @@ def _finalize(
     line_manifest: list[dict] | None = None,
     idempotency_key: str = "analysis-key-1",
     confirmed: bool = True,
-    expected_project_version: int = 1,
+    expected_project_version: int | None = None,
     import_batch_id: uuid.UUID | None = None,
 ) -> PreliminaryAnalysisSnapshot:
     return finalize_preliminary_analysis(
@@ -331,7 +332,7 @@ def _finalize(
         actor=seeded["actor"],
         org_id=seeded["org"].id,
         project_id=seeded["project"].id,
-        expected_project_version=expected_project_version,
+        expected_project_version=expected_project_version if expected_project_version is not None else seeded["project"].row_version,
         import_batch_id=import_batch_id if import_batch_id is not None else seeded["batch"].id,
         source_artifact_id=seeded["artifact"].id,
         structure_snapshot_id=seeded["structure"].id,
@@ -576,7 +577,17 @@ def test_finalize_rejects_batch_mismatch(analysis_db: Session) -> None:
     analysis_db.flush()
     with pytest.raises(HTTPException) as exc:
         _finalize(analysis_db, seeded, import_batch_id=other_batch.id)
-    _assert_error(exc, 404, "import_batch_not_found")
+    _assert_error(exc, 409, "preliminary_analysis_batch_not_current")
+
+
+def test_finalize_rejects_historical_batch_pointer(analysis_db: Session) -> None:
+    seeded = _seed(analysis_db)
+    seeded["project"].current_preliminary_import_batch_id = None
+    analysis_db.commit()
+    with pytest.raises(HTTPException) as exc:
+        _finalize(analysis_db, seeded)
+    _assert_error(exc, 409, "preliminary_analysis_batch_not_current")
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 0
 
 
 # ---------------------------------------------------------------------------
@@ -598,6 +609,20 @@ def test_finalize_same_request_is_idempotent(analysis_db: Session) -> None:
     )
 
 
+def test_finalize_replay_keeps_original_version_after_batch_switch(analysis_db: Session) -> None:
+    seeded = _seed(analysis_db)
+    original_project_version = seeded["project"].row_version
+    first = _finalize(analysis_db, seeded, expected_project_version=original_project_version)
+    seeded["project"].current_preliminary_import_batch_id = None
+    analysis_db.commit()
+
+    replay = _finalize(analysis_db, seeded, expected_project_version=original_project_version)
+    assert replay.id == first.id
+    assert replay.version == 1
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 1
+    assert analysis_db.query(AuditEvent).filter_by(event_name="PreliminaryAnalysisSnapshotFinalized").count() == 1
+
+
 def test_finalize_same_key_different_content_is_reused(analysis_db: Session) -> None:
     seeded = _seed(analysis_db)
     _finalize(analysis_db, seeded)
@@ -607,14 +632,17 @@ def test_finalize_same_key_different_content_is_reused(analysis_db: Session) -> 
     assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 1
 
 
-def test_finalize_different_key_after_success_is_already_finalized(
+def test_finalize_different_key_allocates_next_version(
     analysis_db: Session,
 ) -> None:
     seeded = _seed(analysis_db)
-    _finalize(analysis_db, seeded)
-    with pytest.raises(HTTPException) as exc:
-        _finalize(analysis_db, seeded, idempotency_key="different-key")
-    _assert_error(exc, 409, "preliminary_analysis_already_finalized")
+    first = _finalize(analysis_db, seeded)
+    second = _finalize(analysis_db, seeded, idempotency_key="different-key")
+    third = _finalize(analysis_db, seeded, idempotency_key="third-key")
+    assert [first.version, second.version, third.version] == [1, 2, 3]
+    assert _finalize(analysis_db, seeded).id == first.id
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 3
+    assert analysis_db.query(AuditEvent).filter_by(event_name="PreliminaryAnalysisSnapshotFinalized").count() == 3
 
 
 def test_finalize_replay_with_empty_key_is_invalid_after_success(
@@ -743,7 +771,7 @@ def test_v2_request_using_old_v1_key_after_v2_snapshot_is_reused(analysis_db: Se
     _assert_error(exc, 409, "preliminary_analysis_idempotency_key_reused")
 
 
-def test_different_key_v2_against_existing_v1_snapshot_is_already_finalized(
+def test_different_key_v2_against_existing_v1_snapshot_allocates_next_version(
     analysis_db: Session,
 ) -> None:
     seeded = _seed(analysis_db)
@@ -770,10 +798,8 @@ def test_different_key_v2_against_existing_v1_snapshot_is_already_finalized(
     analysis_db.add(legacy)
     analysis_db.commit()
 
-    with pytest.raises(HTTPException) as exc:
-        _finalize(analysis_db, seeded, idempotency_key="v2-key")
-
-    _assert_error(exc, 409, "preliminary_analysis_already_finalized")
+    new = _finalize(analysis_db, seeded, idempotency_key="v2-key")
+    assert new.version == 2
 
 
 def test_v1_snapshot_cannot_generate_artifacts_is_invariant(analysis_db: Session) -> None:

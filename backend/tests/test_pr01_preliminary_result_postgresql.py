@@ -224,6 +224,7 @@ def _seed(setup: Session, *, suffix: str):
     setup.add(artifact)
     setup.flush()
     batch.current_source_artifact_id = artifact.id
+    project.current_preliminary_import_batch_id = batch.id
     setup.flush()
     structure = WorkbookStructureSnapshot(
         organization_id=org.id,
@@ -378,6 +379,7 @@ def _seed(setup: Session, *, suffix: str):
         "customer_id": customer.id,
         "actor_id": actor.id,
         "project_id": project.id,
+        "project_version": project.row_version,
         "snapshot_id": snapshot.id,
         "usage_id": usage.id,
         "expected_artifact_id": expected_artifact_id,
@@ -450,7 +452,7 @@ def test_postgresql_concurrent_same_request_replays_with_one_artifact() -> None:
                 org_id=ids["org_id"],
                 project_id=ids["project_id"],
                 preliminary_analysis_snapshot_id=ids["snapshot_id"],
-                expected_project_version=1,
+                expected_project_version=ids["project_version"],
                 idempotency_key="pg-preliminary-result-key",
                 confirmed=True,
                 correlation_id="pg-same",
@@ -511,7 +513,7 @@ def test_postgresql_concurrent_same_key_different_digest_is_typed_reuse() -> Non
                 org_id=ids["org_id"],
                 project_id=ids["project_id"],
                 preliminary_analysis_snapshot_id=ids["snapshot_id"],
-                expected_project_version=1,
+                expected_project_version=ids["project_version"],
                 idempotency_key="pg-preliminary-result-key",
                 confirmed=True,
                 correlation_id="pg-reuse",
@@ -553,7 +555,7 @@ def test_postgresql_concurrent_different_keys_have_one_typed_already_generated()
                 org_id=ids["org_id"],
                 project_id=ids["project_id"],
                 preliminary_analysis_snapshot_id=ids["snapshot_id"],
-                expected_project_version=1,
+                expected_project_version=ids["project_version"],
                 idempotency_key=key,
                 confirmed=True,
                 correlation_id="pg-project",
@@ -595,7 +597,7 @@ def test_postgresql_concurrent_generate_vs_official_intake_interleave() -> None:
                 org_id=ids["org_id"],
                 project_id=ids["project_id"],
                 preliminary_analysis_snapshot_id=ids["snapshot_id"],
-                expected_project_version=1,
+                expected_project_version=ids["project_version"],
                 idempotency_key="pg-preliminary-result-key",
                 confirmed=True,
                 correlation_id="pg-interleave-gen",
@@ -609,7 +611,7 @@ def test_postgresql_concurrent_generate_vs_official_intake_interleave() -> None:
                 org_id=ids["org_id"],
                 project_id=ids["project_id"],
                 preliminary_result_artifact_id=ids["expected_artifact_id"],
-                expected_project_version=1,
+                expected_project_version=ids["project_version"],
                 expected_preliminary_result_version=1,
                 idempotency_key="pg-official-intake-key",
                 confirmed=True,

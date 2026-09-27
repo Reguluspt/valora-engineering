@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -27,6 +28,7 @@ from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
     PreliminaryAnalysisSnapshot,
+    ProjectOfficialIntakeCommit,
     Project,
     ProjectAssetImportBatch,
     User,
@@ -304,7 +306,7 @@ def finalize_preliminary_analysis(
     confirmed: bool,
     correlation_id: str | None = None,
 ) -> PreliminaryAnalysisSnapshot:
-    """Create the one-per-project preliminary-analysis fact and atomic success audit."""
+    """Finalize an immutable, versioned preliminary analysis for the current batch."""
     if confirmed is not True:
         _abort(db, 400, "preliminary_analysis_confirmation_required", "Cần xác nhận thao tác.")
     normalized_key = idempotency_key.strip()
@@ -353,6 +355,44 @@ def finalize_preliminary_analysis(
     )
     if project is None:
         _abort(db, 404, "project_not_found", "Không tìm thấy hồ sơ.")
+
+    # Replay is tied to the original command, even after newer versions or a batch switch.
+    existing = (
+        db.query(PreliminaryAnalysisSnapshot)
+        .filter(
+            PreliminaryAnalysisSnapshot.organization_id == org_id,
+            PreliminaryAnalysisSnapshot.idempotency_key == normalized_key,
+        )
+        .populate_existing()
+        .first()
+    )
+    if existing is not None:
+        if not _same_request(
+            existing,
+            actor_id=actor.id,
+            project_id=project_id,
+            source_artifact_id=source_artifact_id,
+            mapping_decision_id=mapping_decision_id,
+            mapping_profile_usage_id=mapping_profile_usage_id,
+            request_digest=request_digest,
+        ):
+            _abort(db, 409, "preliminary_analysis_idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    if project.current_preliminary_import_batch_id != import_batch_id:
+        _abort(db, 409, "preliminary_analysis_batch_not_current", "Đợt nhập liệu không còn hiện hành.")
+    if (
+        db.query(ProjectOfficialIntakeCommit.id)
+        .filter(
+            ProjectOfficialIntakeCommit.organization_id == org_id,
+            ProjectOfficialIntakeCommit.project_id == project_id,
+        )
+        .first()
+        is not None
+    ):
+        _abort(db, 409, "preliminary_analysis_official_intake_closed", "Hồ sơ đã chuyển sang thẩm định chính thức.")
 
     artifact = (
         db.query(ImportSourceArtifact)
@@ -486,54 +526,23 @@ def finalize_preliminary_analysis(
             "Digest của bản ghi sử dụng mapping không khớp.",
         )
 
-    existing = (
-        db.query(PreliminaryAnalysisSnapshot)
-        .filter(
-            PreliminaryAnalysisSnapshot.organization_id == org_id,
-            PreliminaryAnalysisSnapshot.idempotency_key == normalized_key,
-        )
-        .populate_existing()
-        .first()
-    )
-    if existing is not None:
-        if not _same_request(
-            existing,
-            actor_id=actor.id,
-            project_id=project_id,
-            source_artifact_id=source_artifact_id,
-            mapping_decision_id=mapping_decision_id,
-            mapping_profile_usage_id=mapping_profile_usage_id,
-            request_digest=request_digest,
-        ):
-            _abort(db, 409, "preliminary_analysis_idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
-        db.commit()
-        db.refresh(existing)
-        return existing
-
     if project.row_version != expected_project_version:
         _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
 
-    already_finalized = (
-        db.query(PreliminaryAnalysisSnapshot.id)
+    current_version = (
+        db.query(func.max(PreliminaryAnalysisSnapshot.version))
         .filter(
             PreliminaryAnalysisSnapshot.organization_id == org_id,
             PreliminaryAnalysisSnapshot.project_id == project.id,
         )
-        .first()
+        .scalar()
     )
-    if already_finalized is not None:
-        _abort(
-            db,
-            409,
-            "preliminary_analysis_already_finalized",
-            "Hồ sơ đã được phân tích sơ bộ.",
-        )
 
     snapshot = PreliminaryAnalysisSnapshot(
         organization_id=org_id,
         customer_id=project.customer_id,
         project_id=project.id,
-        version=1,
+        version=(current_version or 0) + 1,
         import_batch_id=import_batch_id,
         source_artifact_id=artifact.id,
         structure_snapshot_id=structure.id,
@@ -569,6 +578,7 @@ def finalize_preliminary_analysis(
                 "mapping_profile_usage_id": str(usage.id),
                 "line_manifest_digest_sha256": line_manifest_digest_sha256,
                 "project_version_before": project.row_version,
+                "version": snapshot.version,
             },
         )
         db.commit()
@@ -600,20 +610,6 @@ def finalize_preliminary_analysis(
                 409,
                 "preliminary_analysis_idempotency_key_reused",
                 "Mã lệnh đã được dùng cho dữ liệu khác.",
-            ) from exc
-        raced_project = (
-            db.query(PreliminaryAnalysisSnapshot.id)
-            .filter(
-                PreliminaryAnalysisSnapshot.organization_id == org_id,
-                PreliminaryAnalysisSnapshot.project_id == project_id,
-            )
-            .first()
-        )
-        if raced_project is not None:
-            raise _error(
-                409,
-                "preliminary_analysis_already_finalized",
-                "Hồ sơ đã được phân tích sơ bộ.",
             ) from exc
         raise _error(
             409,
