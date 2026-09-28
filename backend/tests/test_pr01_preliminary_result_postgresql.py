@@ -537,7 +537,7 @@ def test_postgresql_concurrent_same_key_different_digest_is_typed_reuse() -> Non
         engine.dispose()
 
 
-def test_postgresql_concurrent_different_keys_have_one_typed_already_generated() -> None:
+def test_postgresql_concurrent_different_keys_allocate_distinct_versions() -> None:
     engine = _postgres_engine_or_skip()
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     setup: Session = SessionLocal()
@@ -569,12 +569,203 @@ def test_postgresql_concurrent_different_keys_have_one_typed_already_generated()
             ],
         )
 
-        assert len(results) == 1
+        assert len(results) == 2
+        assert errors == []
+        verify: Session = SessionLocal()
+        try:
+            versions = verify.query(PreliminaryResultArtifact.version).filter_by(
+                organization_id=ids["org_id"], project_id=ids["project_id"],
+            ).all()
+            assert sorted(version for (version,) in versions) == [1, 2]
+            assert verify.query(AuditEvent).filter_by(
+                organization_id=ids["org_id"],
+                event_name="PreliminaryResultArtifactGenerated",
+            ).count() == 2
+        finally:
+            verify.close()
+    finally:
+        setup.close()
+        engine.dispose()
+
+
+def test_postgresql_source_switch_during_object_io_cannot_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    ready = threading.Event()
+    resume = threading.Event()
+    results: list[PreliminaryResultArtifact] = []
+    errors: list[BaseException] = []
+    try:
+        ids = _seed(setup, suffix=f"pg-source-race-{uuid.uuid4().hex[:8]}")
+        set_object_storage_override(ids["fake_storage"])
+        setup.close()
+        original = result_service._t1_build_and_put_object
+
+        def pause_after_object(ctx, storage):
+            outcome = original(ctx, storage)
+            ready.set()
+            assert resume.wait(timeout=30)
+            return outcome
+
+        monkeypatch.setattr(result_service, "_t1_build_and_put_object", pause_after_object)
+
+        def generate() -> None:
+            db = SessionLocal()
+            try:
+                results.append(generate_preliminary_result_artifact(
+                    db, actor=db.get(User, ids["actor_id"]), org_id=ids["org_id"],
+                    project_id=ids["project_id"],
+                    preliminary_analysis_snapshot_id=ids["snapshot_id"],
+                    expected_project_version=ids["project_version"],
+                    idempotency_key="pg-source-race-key", confirmed=True,
+                ))
+            except BaseException as exc:
+                errors.append(exc)
+            finally:
+                db.close()
+
+        worker = threading.Thread(target=generate, daemon=True)
+        worker.start()
+        assert ready.wait(timeout=30)
+        with SessionLocal() as mutate:
+            batch = mutate.query(ProjectAssetImportBatch).filter_by(
+                organization_id=ids["org_id"], project_id=ids["project_id"],
+            ).with_for_update().one()
+            batch.current_source_artifact_id = None
+            mutate.commit()
+        resume.set()
+        worker.join(timeout=30)
+        assert not worker.is_alive()
+        assert results == []
         assert len(errors) == 1
         assert isinstance(errors[0], HTTPException)
-        assert errors[0].status_code == 409
-        assert errors[0].detail["error_code"] == "preliminary_result_already_generated"
+        assert errors[0].detail["error_code"] == "preliminary_analysis_not_current"
+        with SessionLocal() as verify:
+            assert verify.query(PreliminaryResultArtifact).filter_by(
+                organization_id=ids["org_id"], project_id=ids["project_id"],
+            ).count() == 0
+            assert verify.query(AuditEvent).filter_by(
+                organization_id=ids["org_id"], event_name="PreliminaryResultArtifactGenerated",
+            ).count() == 0
     finally:
+        resume.set()
+        setup.close()
+        engine.dispose()
+
+
+def test_postgresql_candidate_read_does_not_hold_project_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    try:
+        ids = _seed(setup, suffix=f"pg-object-lock-{uuid.uuid4().hex[:8]}")
+        storage = ids["fake_storage"]
+        set_object_storage_override(storage)
+        original_open = storage.open_stream
+        candidate_reads = []
+
+        def inspect_candidate_lock(object_key: str):
+            if "/preliminary-results/" in object_key:
+                with SessionLocal() as probe:
+                    project = probe.query(Project).filter_by(
+                        id=ids["project_id"], organization_id=ids["org_id"],
+                    ).with_for_update(nowait=True).one()
+                    assert project.id == ids["project_id"]
+                    probe.rollback()
+                candidate_reads.append(object_key)
+            return original_open(object_key)
+
+        monkeypatch.setattr(storage, "open_stream", inspect_candidate_lock)
+        result = generate_preliminary_result_artifact(
+            setup, actor=setup.get(User, ids["actor_id"]), org_id=ids["org_id"],
+            project_id=ids["project_id"], preliminary_analysis_snapshot_id=ids["snapshot_id"],
+            expected_project_version=ids["project_version"],
+            idempotency_key="pg-object-lock-key", confirmed=True,
+        )
+        assert result.version == 1
+        assert candidate_reads == [result.storage_object_key]
+    finally:
+        setup.close()
+        engine.dispose()
+
+
+def test_postgresql_intake_during_regeneration_closes_t2(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    ready = threading.Event()
+    resume = threading.Event()
+    errors: list[BaseException] = []
+    try:
+        ids = _seed(setup, suffix=f"pg-intake-race-{uuid.uuid4().hex[:8]}")
+        set_object_storage_override(ids["fake_storage"])
+        first = generate_preliminary_result_artifact(
+            setup, actor=setup.get(User, ids["actor_id"]), org_id=ids["org_id"],
+            project_id=ids["project_id"], preliminary_analysis_snapshot_id=ids["snapshot_id"],
+            expected_project_version=ids["project_version"],
+            idempotency_key="pg-preliminary-result-key", confirmed=True,
+        )
+        first_id = first.id
+        setup.close()
+        original = result_service._t1_build_and_put_object
+
+        def pause_after_object(ctx, storage):
+            outcome = original(ctx, storage)
+            ready.set()
+            assert resume.wait(timeout=30)
+            return outcome
+
+        monkeypatch.setattr(result_service, "_t1_build_and_put_object", pause_after_object)
+
+        def regenerate() -> None:
+            db = SessionLocal()
+            try:
+                generate_preliminary_result_artifact(
+                    db, actor=db.get(User, ids["actor_id"]), org_id=ids["org_id"],
+                    project_id=ids["project_id"], preliminary_analysis_snapshot_id=ids["snapshot_id"],
+                    expected_project_version=ids["project_version"],
+                    idempotency_key="pg-result-v2-race", confirmed=True,
+                )
+            except BaseException as exc:
+                errors.append(exc)
+            finally:
+                db.close()
+
+        worker = threading.Thread(target=regenerate, daemon=True)
+        worker.start()
+        assert ready.wait(timeout=30)
+        with SessionLocal() as intake_db:
+            committed = commit_project_official_intake(
+                intake_db, actor=intake_db.get(User, ids["actor_id"]),
+                org_id=ids["org_id"], project_id=ids["project_id"],
+                preliminary_result_artifact_id=first_id,
+                expected_project_version=ids["project_version"],
+                expected_preliminary_result_version=1,
+                idempotency_key="pg-intake-during-v2", confirmed=True,
+            )
+            assert committed.preliminary_result_artifact_id == first_id
+        resume.set()
+        worker.join(timeout=30)
+        assert not worker.is_alive()
+        assert len(errors) == 1
+        assert isinstance(errors[0], HTTPException)
+        assert errors[0].detail["error_code"] == "official_intake_already_committed"
+        with SessionLocal() as verify:
+            assert verify.query(PreliminaryResultArtifact).filter_by(
+                organization_id=ids["org_id"], project_id=ids["project_id"],
+            ).count() == 1
+            assert verify.query(AuditEvent).filter_by(
+                organization_id=ids["org_id"], event_name="PreliminaryResultArtifactGenerated",
+            ).count() == 1
+    finally:
+        resume.set()
         setup.close()
         engine.dispose()
 

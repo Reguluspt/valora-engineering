@@ -790,16 +790,15 @@ def test_aggregator_present_but_incomplete_snapshot_and_ready_artifact(test_db: 
     test_db.flush()
 
     proj = get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
-    # Both stages are INCOMPLETE
+    # Corrupt Result evidence is unavailable even without a current Analysis.
     assert proj.stages[1].stage == "PRELIMINARY_ANALYSIS"
     assert proj.stages[1].result == "INCOMPLETE"
     assert proj.stages[2].stage == "PRELIMINARY_READY"
-    assert proj.stages[2].result == "INCOMPLETE"
+    assert proj.stages[2].result == "NOT_AVAILABLE"
 
     # A snapshot without current lineage is history and contributes no current analysis entity.
     assert proj.stages[1].fact_token == "preliminary_analysis_v2:null:absent-v2:absent"
-    assert f"preliminary_ready_v1:{str(artifact.id).lower()}:av1-" in proj.stages[2].fact_token
-    assert proj.stages[2].fact_token.endswith(":incomplete")
+    assert proj.stages[2].fact_token == "preliminary_ready_v2:null:invalid-v2:not_available"
 
     # And those fact tokens are contributed into facts and case_version
     assert proj.stages[1].fact_token in proj.facts

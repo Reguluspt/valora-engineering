@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-28 (OS-G1.1C versioned Preliminary Analysis currentness)
+**Last reconciled:** 2026-09-28 (OS-G1.1D versioned Preliminary Result currentness)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -81,10 +81,12 @@ Intake accepts a valid historical result with a NULL Customer snapshot while req
 same-tenant bound Customer for the first commit. G1.1C makes the explicit Project current-batch pointer
 authoritative for PRELIMINARY_REQUEST, allocates immutable Preliminary Analysis versions under the
 Project lock, and selects the highest valid analysis version matching the current batch/source and
-materialized mapping lineage. Preliminary Result generation requires that selected analysis before
-object IO and before DB insert. The one-result-per-Project boundary remains until G1.1D; a historical
-Result makes PRELIMINARY_READY incomplete and blocks first Official Intake. G1.1D+ result
-regeneration, public Pre-case creation/API and UI are NOT STARTED; OS-G2 is NOT STARTED.
+materialized mapping lineage. G1.1D generates immutable Preliminary Result versions against that
+selected analysis, allocating `max(version)+1` under the Project lock after object IO and revalidation.
+`PRELIMINARY_READY` selects the highest valid Result version matching the current Analysis; valid
+historical Results do not create ambiguity. First Official Intake accepts exactly that selected
+Result, and new Result generation closes after Intake while true prior command replay remains valid.
+Public Pre-case creation/API and UI are NOT STARTED; G1.1E+ and OS-G2 are NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

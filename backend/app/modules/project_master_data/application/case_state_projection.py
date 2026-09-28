@@ -20,11 +20,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.contracts.uiux_v23 import CANONICAL_CASE_STAGES
 from app.core.rbac import derive_effective_permissions
 from app.modules.excel_import.models import (
-    ColumnMappingDecision,
-    ColumnMappingProfileUsage,
-    ImportSourceArtifact,
     ImportSourceArtifactState,
-    WorkbookStructureSnapshot,
 )
 from app.modules.project_master_data.application.official_intake_service import (
     get_official_intake_open_blockers,
@@ -38,16 +34,17 @@ from app.modules.project_master_data.application.preliminary_analysis_currentnes
     current_source,
     select_current_analysis,
 )
+from app.modules.project_master_data.application.preliminary_result_currentness import (
+    CurrentResultCorruption,
+    select_current_result,
+)
 from app.modules.project_master_data.application.preliminary_result_service import (
-    _build_lineage_manifest,
     snapshot_canonical_digest,
     validate_stored_v2_manifest,
 )
 from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
-    PreliminaryAnalysisSnapshot,
-    PreliminaryResultArtifact,
     Project,
     ProjectOfficialIntakeCommit,
     User,
@@ -107,7 +104,7 @@ CAPABILITY_REGISTRY_VERSION = "pr01-prefix-v2"
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_ANALYSIS", available=True, provider_key="preliminary_analysis_v2", version="pr01-prefix-v2"),
-    StageCapability("PRELIMINARY_READY", available=True, provider_key="preliminary_ready_v1"),
+    StageCapability("PRELIMINARY_READY", available=True, provider_key="preliminary_ready_v2", version="pr01-prefix-v2"),
     StageCapability("OFFICIAL_INTAKE", available=True, provider_key="official_intake_commit_v1"),
     *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[4:]),
 )
@@ -318,45 +315,6 @@ def evaluate_preliminary_analysis_provider(
     )
 
 
-def _extract_candidate_and_quantity(
-    usage: ColumnMappingProfileUsage,
-) -> tuple[dict, dict] | None:
-    mapping_snapshot = usage.mapping_snapshot
-    if not isinstance(mapping_snapshot, dict):
-        return None
-    candidate = mapping_snapshot.get("candidate")
-    if not isinstance(candidate, dict):
-        return None
-    required_candidate_keys = {
-        "sheet_name",
-        "header_start_row",
-        "header_end_row",
-        "data_start_row",
-        "min_row",
-        "max_row",
-        "min_column",
-        "max_column",
-    }
-    if required_candidate_keys - set(candidate.keys()):
-        return None
-    if not isinstance(candidate.get("max_column"), int) or isinstance(candidate.get("max_column"), bool):
-        return None
-    fields = mapping_snapshot.get("fields")
-    if not isinstance(fields, list):
-        return None
-    quantity_fields = [
-        f for f in fields if isinstance(f, dict) and f.get("semantic_role") == "quantity"
-    ]
-    if len(quantity_fields) != 1:
-        return None
-    q_field = quantity_fields[0]
-    if "source_column_index" not in q_field or "source_column_letter" not in q_field:
-        return None
-    if not isinstance(q_field["source_column_index"], int) or isinstance(q_field["source_column_index"], bool):
-        return None
-    return candidate, q_field
-
-
 def evaluate_preliminary_ready_provider(
     db: Session,
     *,
@@ -364,157 +322,50 @@ def evaluate_preliminary_ready_provider(
     project_id: uuid.UUID,
     analysis_provider_result: ProviderResult | None = None,
 ) -> ProviderResult:
-    """Raw provider for PRELIMINARY_READY."""
-    artifacts = (
-        db.query(PreliminaryResultArtifact)
-        .filter(
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.project_id == project_id,
+    """Select the highest valid Result for the selected current Analysis."""
+    if analysis_provider_result is not None and analysis_provider_result.result == "NOT_AVAILABLE":
+        return ProviderResult(
+            stage="PRELIMINARY_READY", result="NOT_AVAILABLE",
+            fact_token="preliminary_ready_v2:null:analysis-unavailable-v2:not_available",
+            provider_key="preliminary_ready_v2",
         )
-        .all()
+    current_analysis = (
+        analysis_provider_result.authoritative_entity
+        if analysis_provider_result is not None
+        and analysis_provider_result.result == "COMPLETE"
+        else None
     )
-
-    if len(artifacts) == 0:
-        return ProviderResult(
-            stage="PRELIMINARY_READY",
-            result="INCOMPLETE",
-            fact_token="preliminary_ready_v1:null:absent-v1:absent",
-            provider_key="preliminary_ready_v1",
-            authoritative_entity=None,
+    try:
+        selected = select_current_result(
+            db, org_id=org_id, project_id=project_id,
+            current_analysis=current_analysis,
         )
-
-    if len(artifacts) == 1:
-        artifact = artifacts[0]
-        manifest = artifact.lineage_manifest if isinstance(artifact.lineage_manifest, dict) else {}
-        canonical_lineage_digest = _sha256_hex(_canonical_json(manifest))
-        analysis_snap_info = manifest.get("analysis_snapshot") if isinstance(manifest.get("analysis_snapshot"), dict) else {}
-        analysis_snapshot_id = analysis_snap_info.get("id")
-        created_ts = _format_utc_timestamp(artifact.created_at)
-
-        payload = {
-            "analysis_snapshot_id": str(analysis_snapshot_id).lower() if analysis_snapshot_id else None,
-            "artifact_id": str(artifact.id).lower(),
-            "canonical_lineage_manifest_digest": canonical_lineage_digest,
-            "content_checksum_sha256": str(artifact.content_checksum_sha256).lower(),
-            "created_at": created_ts,
-            "schema": "preliminary-ready-provider-authoritative-version-v1",
-            "source_snapshot_sha256": str(artifact.source_snapshot_sha256).lower(),
-            "version": int(artifact.version),
-        }
-        av1_sha = _sha256_hex(_canonical_json(payload))
-
-        is_complete = False
-        if (
-            analysis_provider_result is not None
-            and analysis_provider_result.result == "COMPLETE"
-            and analysis_provider_result.authoritative_entity is not None
-        ):
-            snapshot: PreliminaryAnalysisSnapshot = analysis_provider_result.authoritative_entity
-            expected_snapshot_digest = snapshot_canonical_digest(snapshot)
-            if (
-                isinstance(manifest, dict)
-                and bool(manifest)
-                and artifact.source_snapshot_sha256 == expected_snapshot_digest
-            ):
-                source_artifact = (
-                    db.query(ImportSourceArtifact)
-                    .filter(
-                        ImportSourceArtifact.id == snapshot.source_artifact_id,
-                        ImportSourceArtifact.organization_id == org_id,
-                        ImportSourceArtifact.project_id == project_id,
-                    )
-                    .first()
-                )
-                structure = (
-                    db.query(WorkbookStructureSnapshot)
-                    .filter(
-                        WorkbookStructureSnapshot.id == snapshot.structure_snapshot_id,
-                        WorkbookStructureSnapshot.organization_id == org_id,
-                        WorkbookStructureSnapshot.project_id == project_id,
-                    )
-                    .first()
-                )
-                decision = (
-                    db.query(ColumnMappingDecision)
-                    .filter(
-                        ColumnMappingDecision.id == snapshot.mapping_decision_id,
-                        ColumnMappingDecision.organization_id == org_id,
-                        ColumnMappingDecision.project_id == project_id,
-                    )
-                    .first()
-                )
-                usage = (
-                    db.query(ColumnMappingProfileUsage)
-                    .filter(
-                        ColumnMappingProfileUsage.id == snapshot.mapping_profile_usage_id,
-                        ColumnMappingProfileUsage.organization_id == org_id,
-                        ColumnMappingProfileUsage.project_id == project_id,
-                    )
-                    .first()
-                )
-                if (
-                    source_artifact is not None
-                    and structure is not None
-                    and decision is not None
-                    and usage is not None
-                ):
-                    candidate_and_qty = _extract_candidate_and_quantity(usage)
-                    if candidate_and_qty is not None:
-                        candidate, quantity_field = candidate_and_qty
-                        price_col = candidate["max_column"] + 1
-                        amount_col = candidate["max_column"] + 2
-                        line_manifest = (
-                            snapshot.line_manifest
-                            if isinstance(snapshot.line_manifest, list)
-                            else []
-                        )
-                        try:
-                            expected_manifest = _build_lineage_manifest(
-                                org_id=org_id,
-                                project_id=project_id,
-                                customer_id=artifact.customer_id,
-                                snapshot=snapshot,
-                                artifact=source_artifact,
-                                structure=structure,
-                                decision=decision,
-                                usage=usage,
-                                candidate=candidate,
-                                quantity_field=quantity_field,
-                                price_col=price_col,
-                                amount_col=amount_col,
-                                snapshot_digest=expected_snapshot_digest,
-                                line_manifest=line_manifest,
-                            )
-                            if _canonical_json(manifest) == _canonical_json(expected_manifest):
-                                is_complete = True
-                        except Exception:
-                            is_complete = False
-
-        raw_result = "COMPLETE" if is_complete else "INCOMPLETE"
-        state_tag = "complete" if is_complete else "incomplete"
-        fact_token = f"preliminary_ready_v1:{str(artifact.id).lower()}:av1-{av1_sha}:{state_tag}"
+    except CurrentResultCorruption:
         return ProviderResult(
-            stage="PRELIMINARY_READY",
-            result=raw_result,
-            fact_token=fact_token,
-            provider_key="preliminary_ready_v1",
-            authoritative_entity=artifact,
+            stage="PRELIMINARY_READY", result="NOT_AVAILABLE",
+            fact_token="preliminary_ready_v2:null:invalid-v2:not_available",
+            provider_key="preliminary_ready_v2",
         )
-
-    # >= 2 artifacts: multiplicity produces ambiguity payload and NOT_AVAILABLE
-    identities = sorted(f"{str(a.id).lower()}@{a.version}" for a in artifacts)
-    amb_payload = {
-        "count": len(artifacts),
-        "identities": identities,
-        "schema": "preliminary-ready-ambiguity-v1",
+    if selected is None:
+        return ProviderResult(
+            stage="PRELIMINARY_READY", result="INCOMPLETE",
+            fact_token="preliminary_ready_v2:null:absent-v2:absent",
+            provider_key="preliminary_ready_v2",
+        )
+    payload = {
+        "analysis_snapshot_id": str(current_analysis.id).lower(),
+        "artifact_id": str(selected.id).lower(),
+        "content_checksum_sha256": selected.content_checksum_sha256,
+        "manifest_digest_sha256": _sha256_hex(_canonical_json(selected.lineage_manifest)),
+        "schema": "preliminary-ready-provider-authoritative-version-v2",
+        "source_snapshot_sha256": selected.source_snapshot_sha256,
+        "version": selected.version,
     }
-    amb_sha = _sha256_hex(_canonical_json(amb_payload))
+    av_sha = _sha256_hex(_canonical_json(payload))
     return ProviderResult(
-        stage="PRELIMINARY_READY",
-        result="NOT_AVAILABLE",
-        fact_token=f"preliminary_ready_v1:null:amb1-{amb_sha}:not_available",
-        provider_key="preliminary_ready_v1",
-        authoritative_entity=None,
+        stage="PRELIMINARY_READY", result="COMPLETE",
+        fact_token=f"preliminary_ready_v2:{str(selected.id).lower()}:av2-{av_sha}:complete",
+        provider_key="preliminary_ready_v2", authoritative_entity=selected,
     )
 
 
