@@ -17,6 +17,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.audit import log_audit_event
 from app.core.rbac import derive_effective_permissions
+from app.modules.project_master_data.application.preliminary_analysis_currentness import (
+    CurrentnessIntegrityError,
+    select_current_analysis,
+)
 from app.modules.excel_import.infrastructure.object_storage import (
     ObjectNotFound,
     ObjectStorageError,
@@ -284,6 +288,20 @@ def validate_stored_v2_manifest(line_manifest: Any) -> bool:
         if not _finite_number(proposed) or proposed < 0:
             return False
     return True
+
+
+def _require_current_analysis(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID, snapshot_id: uuid.UUID
+) -> None:
+    try:
+        selected = select_current_analysis(
+            db, org_id=org_id, project_id=project_id,
+            valid_manifest=validate_stored_v2_manifest,
+        )
+    except CurrentnessIntegrityError as exc:
+        _abort(db, 409, "preliminary_analysis_not_current", str(exc))
+    if selected is None or selected.id != snapshot_id:
+        _abort(db, 409, "preliminary_analysis_not_current", "Phân tích sơ bộ không còn hiện hành.")
 
 
 
@@ -805,6 +823,10 @@ def _t1_validate_and_lock(
             "Hồ sơ đã có kết quả sơ bộ.",
         )
 
+    _require_current_analysis(
+        db, org_id=org_id, project_id=project_id, snapshot_id=snapshot.id,
+    )
+
     price_col = candidate["max_column"] + 1
     amount_col = candidate["max_column"] + 2
     output_filename = f"ket-qua-so-bo-v1-{artifact_id}.xlsx"
@@ -1027,6 +1049,10 @@ def _t2_insert_artifact(
             "preliminary_result_already_generated",
             "Hồ sơ đã có kết quả sơ bộ.",
         )
+
+    _require_current_analysis(
+        db, org_id=org_id, project_id=project_id, snapshot_id=snapshot.id,
+    )
 
     lineage_manifest = _build_lineage_manifest(
         org_id=org_id,

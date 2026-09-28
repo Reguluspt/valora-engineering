@@ -135,7 +135,7 @@ def test_case_state_endpoint_returns_bounded_public_projection(
     assert payload["stages"][0] == {
         "stage": "PRELIMINARY_REQUEST",
         "result": "INCOMPLETE",
-        "provider_key": "preliminary_request_v1",
+        "provider_key": "preliminary_request_v2",
     }
     assert all(stage["result"] == "NOT_AVAILABLE" for stage in payload["stages"][4:])
     assert payload["blockers"] == []

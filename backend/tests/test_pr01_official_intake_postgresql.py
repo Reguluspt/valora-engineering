@@ -22,6 +22,9 @@ from app.modules.excel_import.models import (
 from app.modules.project_master_data.application.official_intake_service import (
     commit_project_official_intake,
 )
+from app.modules.project_master_data.application.preliminary_analysis_service import (
+    finalize_preliminary_analysis,
+)
 from app.modules.project_master_data.models import (
     AuditEvent,
     Customer,
@@ -90,6 +93,10 @@ def _cleanup(SessionLocal, org_id: uuid.UUID) -> None:
         db.query(WorkbookStructureSnapshot).filter_by(organization_id=org_id).delete(
             synchronize_session=False
         )
+        db.query(Project).filter_by(organization_id=org_id).update(
+            {Project.current_preliminary_import_batch_id: None},
+            synchronize_session=False,
+        )
         db.query(ProjectAssetImportBatch).filter_by(organization_id=org_id).update(
             {ProjectAssetImportBatch.current_source_artifact_id: None},
             synchronize_session=False,
@@ -137,7 +144,7 @@ def _command(
         org_id=ids["org"],
         project_id=ids["project"],
         preliminary_result_artifact_id=ids["artifact"],
-        expected_project_version=1,
+        expected_project_version=ids["project_version"],
         expected_preliminary_result_version=1,
         idempotency_key=idempotency_key,
         confirmed=True,
@@ -195,9 +202,16 @@ def _seed_ids(setup: Session, *, suffix: str) -> tuple[dict[str, uuid.UUID], dic
             "org": seeded["org"].id,
             "actor": seeded["actor"].id,
             "project": seeded["project"].id,
+            "project_version": seeded["project"].row_version,
             "artifact": seeded["artifact"].id,
             "batch": seeded["batch"].id,
             "source_artifact": seeded["source_artifact"].id,
+            "structure": seeded["structure"].id,
+            "decision": seeded["decision"].id,
+            "usage": seeded["usage"].id,
+            "decision_digest": seeded["decision"].mapping_digest_sha256,
+            "usage_digest": seeded["usage"].mapping_digest_sha256,
+            "line_manifest": seeded["snapshot"].line_manifest,
         },
         seeded,
     )
@@ -215,6 +229,82 @@ def _assert_one_fact_and_audit(SessionLocal, ids: dict[str, uuid.UUID]) -> None:
         ).count() == 1
     finally:
         verify.close()
+
+
+def test_postgresql_official_intake_closes_waiting_analysis_finalization() -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    holder: Session = SessionLocal()
+    ids = None
+    try:
+        ids, seeded = _seed_ids(setup, suffix=f"pg-close-analysis-{uuid.uuid4().hex[:8]}")
+        seeded["role"].permissions = [
+            "project:official_intake:commit", "project:preliminary_analysis:finalize",
+        ]
+        setup.commit()
+        holder.query(Project).filter(Project.id == ids["project"]).with_for_update().one()
+        waiting = threading.Event()
+        errors: list[BaseException] = []
+
+        def observe(_conn, _cursor, statement, _params, _context, _many):
+            if threading.current_thread().name == "analysis-intake-waiter" and "from projects" in statement.lower() and "for update" in statement.lower():
+                waiting.set()
+
+        event.listen(engine, "before_cursor_execute", observe)
+
+        def finalize_waiter() -> None:
+            db = SessionLocal()
+            try:
+                finalize_preliminary_analysis(
+                    db, actor=db.get(User, ids["actor"]),
+                    org_id=ids["org"], project_id=ids["project"],
+                    expected_project_version=ids["project_version"],
+                    import_batch_id=ids["batch"],
+                    source_artifact_id=ids["source_artifact"],
+                    structure_snapshot_id=ids["structure"],
+                    mapping_decision_id=ids["decision"],
+                    mapping_profile_usage_id=ids["usage"],
+                    mapping_decision_digest_sha256=ids["decision_digest"],
+                    profile_usage_mapping_digest_sha256=ids["usage_digest"],
+                    line_manifest=ids["line_manifest"],
+                    idempotency_key="pg-analysis-after-intake",
+                    confirmed=True,
+                )
+            except BaseException as exc:
+                errors.append(exc)
+            finally:
+                db.close()
+
+        worker = threading.Thread(target=finalize_waiter, name="analysis-intake-waiter", daemon=True)
+        worker.start()
+        assert waiting.wait(timeout=15)
+        _command(
+            holder, ids=ids, actor_id=ids["actor"],
+            idempotency_key="pg-intake-before-analysis",
+        )
+        worker.join(timeout=30)
+        assert not worker.is_alive()
+        assert len(errors) == 1
+        assert isinstance(errors[0], HTTPException)
+        assert errors[0].detail["error_code"] == "preliminary_analysis_official_intake_closed"
+        verify = SessionLocal()
+        try:
+            assert verify.query(PreliminaryAnalysisSnapshot).filter_by(
+                organization_id=ids["org"], project_id=ids["project"]
+            ).count() == 1
+            assert verify.query(ProjectOfficialIntakeCommit).filter_by(
+                organization_id=ids["org"], project_id=ids["project"]
+            ).count() == 1
+        finally:
+            verify.close()
+    finally:
+        holder.rollback()
+        holder.close()
+        setup.close()
+        if ids is not None:
+            _cleanup(SessionLocal, ids["org"])
+        engine.dispose()
 
 
 def _classify_completed_official_intake_sql(statement: str) -> tuple[str, str] | None:

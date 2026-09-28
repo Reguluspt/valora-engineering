@@ -18,6 +18,13 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base
 import app.modules.excel_import.models  # noqa: F401
 import app.modules.project_master_data.application.preliminary_result_service as service
+from app.modules.project_master_data.application.case_state_projection import (
+    evaluate_preliminary_analysis_provider,
+    evaluate_preliminary_ready_provider,
+)
+from app.modules.project_master_data.application.preliminary_project_lifecycle_service import (
+    bind_preliminary_project_customer,
+)
 from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
@@ -265,6 +272,7 @@ def _seed(
     result_db.add(artifact)
     result_db.flush()
     batch.current_source_artifact_id = artifact.id
+    project.current_preliminary_import_batch_id = batch.id
     result_db.flush()
     structure = WorkbookStructureSnapshot(
         organization_id=org.id,
@@ -420,6 +428,24 @@ def _generate(result_db: Session, seeded: dict, **overrides):
     return generate_preliminary_result_artifact(result_db, **values)
 
 
+def _append_analysis_version(
+    result_db: Session, original: PreliminaryAnalysisSnapshot, version: int,
+) -> PreliminaryAnalysisSnapshot:
+    fields = {
+        column.key: getattr(original, column.key)
+        for column in PreliminaryAnalysisSnapshot.__table__.columns
+        if column.key not in {"id", "version", "idempotency_key", "request_digest_sha256", "created_at"}
+    }
+    snapshot = PreliminaryAnalysisSnapshot(
+        **fields, version=version,
+        idempotency_key=f"result-analysis-version-{version}-{uuid.uuid4()}",
+        request_digest_sha256="a" * 64,
+    )
+    result_db.add(snapshot)
+    result_db.commit()
+    return snapshot
+
+
 def _assert_error(exc: pytest.ExceptionInfo[HTTPException], status: int, code: str) -> None:
     assert exc.value.status_code == status
     assert exc.value.detail["error_code"] == code
@@ -447,6 +473,87 @@ def test_generate_persists_artifact_and_atomic_audit(result_db: Session) -> None
     assert len(audits) == 1
     assert audits[0].entity_id == artifact.id
     assert audits[0].command_name == "GeneratePreliminaryResultArtifact"
+
+
+@pytest.mark.parametrize(
+    "customer_timing", ["unbound", "bind_after_analysis", "bind_after_result", "bound_from_start"],
+)
+def test_result_ready_uses_result_customer_snapshot(
+    result_db: Session, customer_timing: str,
+) -> None:
+    seeded = _seed(result_db)
+    if customer_timing != "bound_from_start":
+        seeded["project"].customer_id = None
+        proposal = result_db.get(ColumnMappingDecision, seeded["decision"].proposal_decision_id)
+        assert proposal is not None
+        for fact in (proposal, seeded["decision"], seeded["usage"], seeded["snapshot"]):
+            fact.customer_id = None
+        result_db.commit()
+
+    analysis_before = evaluate_preliminary_analysis_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    assert analysis_before.result == "COMPLETE"
+
+    if customer_timing == "bind_after_analysis":
+        seeded["role"].permissions = [PRELIMINARY_RESULT_PERMISSION, "project:update"]
+        result_db.commit()
+        bind_preliminary_project_customer(
+            result_db, actor=seeded["actor"], org_id=seeded["org"].id,
+            project_id=seeded["project"].id, customer_id=seeded["customer"].id,
+            expected_project_version=seeded["project"].row_version,
+            idempotency_key="bind-before-result", correlation_id="bind-before-result",
+        )
+        assert seeded["snapshot"].customer_id is None
+        analysis_after = evaluate_preliminary_analysis_provider(
+            result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        )
+        assert analysis_after.result == "COMPLETE"
+        assert analysis_after.fact_token == analysis_before.fact_token
+
+    result = _generate(result_db, seeded)
+    expected_customer_id = (
+        None if customer_timing in {"unbound", "bind_after_result"} else seeded["customer"].id
+    )
+    assert result.customer_id == expected_customer_id
+    assert result.lineage_manifest["customer_id"] == (
+        str(expected_customer_id) if expected_customer_id is not None else None
+    )
+    if customer_timing == "bind_after_analysis":
+        assert seeded["snapshot"].customer_id is None
+        assert result.customer_id != seeded["snapshot"].customer_id
+
+    analysis = evaluate_preliminary_analysis_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    ready = evaluate_preliminary_ready_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert analysis.result == "COMPLETE"
+    assert ready.result == "COMPLETE"
+    assert ready.authoritative_entity.id == result.id
+
+    if customer_timing == "bind_after_result":
+        seeded["role"].permissions = [PRELIMINARY_RESULT_PERMISSION, "project:update"]
+        result_db.commit()
+        bind_preliminary_project_customer(
+            result_db, actor=seeded["actor"], org_id=seeded["org"].id,
+            project_id=seeded["project"].id, customer_id=seeded["customer"].id,
+            expected_project_version=seeded["project"].row_version,
+            idempotency_key="bind-after-result", correlation_id="bind-after-result",
+        )
+        analysis_after = evaluate_preliminary_analysis_provider(
+            result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        )
+        ready_after = evaluate_preliminary_ready_provider(
+            result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+            analysis_provider_result=analysis_after,
+        )
+        assert analysis_after.fact_token == analysis.fact_token
+        assert ready_after.result == "COMPLETE"
+        assert ready_after.fact_token == ready.fact_token
+        assert result.customer_id is None
 
 
 def test_output_contains_static_half_up_amounts(result_db: Session) -> None:
@@ -634,7 +741,7 @@ def test_unpaired_idempotency_key_and_digest_is_rejected_by_orm(
         ({"confirmed": False}, 400, "preliminary_result_confirmation_required"),
         ({"confirmed": 1}, 400, "preliminary_result_confirmation_required"),
         ({"confirmed": "yes"}, 400, "preliminary_result_confirmation_required"),
-        ({"expected_project_version": 2}, 409, "project_version_conflict"),
+        ({"expected_project_version": 999}, 409, "project_version_conflict"),
     ],
 )
 def test_confirmation_and_version_fail_without_persistence(
@@ -815,6 +922,7 @@ def test_target_not_empty_is_rejected(result_db: Session) -> None:
     seeded["fake_storage"]._objects[seeded["artifact"].storage_object_key] = new_data
     seeded["artifact"].checksum_sha256 = _sha256(new_data)
     seeded["usage"].source_checksum_sha256 = seeded["artifact"].checksum_sha256
+    seeded["structure"].source_checksum_sha256 = seeded["artifact"].checksum_sha256
     result_db.commit()
     wb.close()
 
@@ -917,4 +1025,34 @@ def test_storage_collision_mismatch_returns_500(result_db: Session) -> None:
         _generate(result_db, seeded)
 
     _assert_error(exc, 500, "preliminary_result_storage_failure")
+    assert result_db.query(PreliminaryResultArtifact).count() == 0
+
+
+def test_historical_analysis_cannot_generate_first_result(result_db: Session) -> None:
+    seeded = _seed(result_db)
+    current = _append_analysis_version(result_db, seeded["snapshot"], 2)
+    with pytest.raises(HTTPException) as exc:
+        _generate(result_db, seeded)
+    _assert_error(exc, 409, "preliminary_analysis_not_current")
+    artifact = _generate(
+        result_db, seeded, preliminary_analysis_snapshot_id=current.id,
+        idempotency_key="current-analysis-result",
+    )
+    assert artifact.version == 1
+    assert artifact.lineage_manifest["analysis_snapshot"]["id"] == str(current.id)
+
+
+def test_current_analysis_rechecked_after_object_io(result_db: Session, monkeypatch) -> None:
+    seeded = _seed(result_db)
+    original_build = service._t1_build_and_put_object
+
+    def build_then_finalize_new_version(ctx, storage):
+        output = original_build(ctx, storage)
+        _append_analysis_version(result_db, seeded["snapshot"], 2)
+        return output
+
+    monkeypatch.setattr(service, "_t1_build_and_put_object", build_then_finalize_new_version)
+    with pytest.raises(HTTPException) as exc:
+        _generate(result_db, seeded)
+    _assert_error(exc, 409, "preliminary_analysis_not_current")
     assert result_db.query(PreliminaryResultArtifact).count() == 0

@@ -21,8 +21,6 @@ from app.contracts.uiux_v23 import CANONICAL_CASE_STAGES
 from app.core.rbac import derive_effective_permissions
 from app.modules.excel_import.models import (
     ColumnMappingDecision,
-    ColumnMappingDecisionKind,
-    ColumnMappingDecisionOutcome,
     ColumnMappingProfileUsage,
     ImportSourceArtifact,
     ImportSourceArtifactState,
@@ -31,6 +29,14 @@ from app.modules.excel_import.models import (
 from app.modules.project_master_data.application.official_intake_service import (
     get_official_intake_open_blockers,
     get_official_intake_open_warnings,
+)
+from app.modules.project_master_data.application.preliminary_analysis_currentness import (
+    CurrentAnalysisCorruption,
+    CurrentBatchUnresolved,
+    CurrentnessIntegrityError,
+    current_batch,
+    current_source,
+    select_current_analysis,
 )
 from app.modules.project_master_data.application.preliminary_result_service import (
     _build_lineage_manifest,
@@ -43,7 +49,6 @@ from app.modules.project_master_data.models import (
     PreliminaryAnalysisSnapshot,
     PreliminaryResultArtifact,
     Project,
-    ProjectAssetImportBatch,
     ProjectOfficialIntakeCommit,
     User,
     UserRole,
@@ -97,11 +102,11 @@ class StageCapability:
     version: str = "pr01-prefix-v1"
 
 
-CAPABILITY_REGISTRY_VERSION = "pr01-prefix-v1"
+CAPABILITY_REGISTRY_VERSION = "pr01-prefix-v2"
 
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
-    StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v1"),
-    StageCapability("PRELIMINARY_ANALYSIS", available=True, provider_key="preliminary_analysis_v1"),
+    StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
+    StageCapability("PRELIMINARY_ANALYSIS", available=True, provider_key="preliminary_analysis_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_READY", available=True, provider_key="preliminary_ready_v1"),
     StageCapability("OFFICIAL_INTAKE", available=True, provider_key="official_intake_commit_v1"),
     *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[4:]),
@@ -152,6 +157,13 @@ def _canonical_json(payload: Any) -> bytes:
 
 def _sha256_hex(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest().lower()
+
+
+def _unresolved_batch_sha(error: CurrentBatchUnresolved) -> str:
+    return _sha256_hex(_canonical_json({
+        "batch_ids": error.batch_ids,
+        "schema": "current-batch-unresolved-v2",
+    }))
 
 
 def _format_utc_timestamp(dt: datetime.datetime) -> str:
@@ -208,251 +220,101 @@ def _reload_active_actor_and_org(
     return persisted_actor
 
 
+
 def evaluate_preliminary_request_provider(
     db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID
 ) -> ProviderResult:
-    """Raw provider for PRELIMINARY_REQUEST."""
-    batches = (
-        db.query(ProjectAssetImportBatch)
-        .filter(
-            ProjectAssetImportBatch.organization_id == org_id,
-            ProjectAssetImportBatch.project_id == project_id,
-        )
-        .all()
-    )
-
-    if len(batches) == 0:
-        return ProviderResult(
-            stage="PRELIMINARY_REQUEST",
-            result="INCOMPLETE",
-            fact_token="preliminary_request_v1:null:absent-v1:absent",
-            provider_key="preliminary_request_v1",
-            authoritative_entity=None,
-        )
-
-    if len(batches) == 1:
-        batch = batches[0]
-        if batch.current_source_artifact_id is None:
-            return ProviderResult(
-                stage="PRELIMINARY_REQUEST",
-                result="INCOMPLETE",
-                fact_token="preliminary_request_v1:null:absent-v1:absent",
-                provider_key="preliminary_request_v1",
-                authoritative_entity=batch,
-            )
-
+    """Evaluate only the Project's explicit current batch."""
+    try:
+        batch = current_batch(db, org_id=org_id, project_id=project_id)
         artifact = (
-            db.query(ImportSourceArtifact)
-            .filter(
-                ImportSourceArtifact.id == batch.current_source_artifact_id,
-                ImportSourceArtifact.organization_id == org_id,
-                ImportSourceArtifact.project_id == project_id,
-            )
-            .first()
+            current_source(db, org_id=org_id, project_id=project_id, batch=batch)
+            if batch is not None else None
         )
-        if artifact is None or artifact.import_batch_id != batch.id:
-            raise ProjectionIntegrityError(
-                "Dangling or cross-lineage artifact pointer in import batch."
-            )
-
-        ts = artifact.available_at if artifact.available_at is not None else artifact.created_at
-        state_val = _status_value(artifact.state).lower()
-
-        payload = {
-            "artifact_checksum_sha256": str(artifact.checksum_sha256).lower(),
-            "artifact_generation": int(artifact.generation),
-            "artifact_id": str(artifact.id).lower(),
-            "artifact_state": state_val,
-            "authoritative_timestamp": _format_utc_timestamp(ts),
-            "import_batch_id": str(batch.id).lower(),
-            "schema": "preliminary-request-authoritative-version-v1",
-        }
-        av1_sha = _sha256_hex(_canonical_json(payload))
-
-        if state_val == ImportSourceArtifactState.AVAILABLE.value:
-            raw_result = "COMPLETE"
-            state_tag = "complete"
-        else:
-            raw_result = "INCOMPLETE"
-            state_tag = "incomplete"
-
-        fact_token = f"preliminary_request_v1:{str(artifact.id).lower()}:av1-{av1_sha}:{state_tag}"
+    except CurrentBatchUnresolved as exc:
         return ProviderResult(
-            stage="PRELIMINARY_REQUEST",
-            result=raw_result,
-            fact_token=fact_token,
-            provider_key="preliminary_request_v1",
-            authoritative_entity=artifact,
+            stage="PRELIMINARY_REQUEST", result="NOT_AVAILABLE",
+            fact_token=f"preliminary_request_v2:null:amb2-{_unresolved_batch_sha(exc)}:not_available",
+            provider_key="preliminary_request_v2",
         )
-
-    # >= 2 batches: multiplicity produces ambiguity payload and NOT_AVAILABLE
-    batch_ids = sorted(str(b.id).lower() for b in batches)
-    amb_payload = {
-        "batch_count": len(batches),
-        "batch_ids": batch_ids,
-        "schema": "preliminary-request-ambiguity-v1",
+    except CurrentnessIntegrityError as exc:
+        raise ProjectionIntegrityError(str(exc)) from exc
+    if batch is None:
+        return ProviderResult(
+            stage="PRELIMINARY_REQUEST", result="INCOMPLETE",
+            fact_token="preliminary_request_v2:null:absent-v2:absent",
+            provider_key="preliminary_request_v2",
+        )
+    if artifact is None:
+        return ProviderResult(
+            stage="PRELIMINARY_REQUEST", result="INCOMPLETE",
+            fact_token=f"preliminary_request_v2:{str(batch.id).lower()}:absent-v2:incomplete",
+            provider_key="preliminary_request_v2", authoritative_entity=batch,
+        )
+    ts = artifact.available_at if artifact.available_at is not None else artifact.created_at
+    state_val = _status_value(artifact.state).lower()
+    payload = {
+        "artifact_checksum_sha256": str(artifact.checksum_sha256).lower(),
+        "artifact_generation": int(artifact.generation),
+        "artifact_id": str(artifact.id).lower(),
+        "artifact_state": state_val,
+        "authoritative_timestamp": _format_utc_timestamp(ts),
+        "import_batch_id": str(batch.id).lower(),
+        "schema": "preliminary-request-authoritative-version-v2",
     }
-    amb_sha = _sha256_hex(_canonical_json(amb_payload))
+    av_sha = _sha256_hex(_canonical_json(payload))
+    complete = state_val == ImportSourceArtifactState.AVAILABLE.value
+    state_tag = "complete" if complete else "incomplete"
     return ProviderResult(
         stage="PRELIMINARY_REQUEST",
-        result="NOT_AVAILABLE",
-        fact_token=f"preliminary_request_v1:null:amb1-{amb_sha}:not_available",
-        provider_key="preliminary_request_v1",
-        authoritative_entity=None,
+        result="COMPLETE" if complete else "INCOMPLETE",
+        fact_token=f"preliminary_request_v2:{str(artifact.id).lower()}:av2-{av_sha}:{state_tag}",
+        provider_key="preliminary_request_v2", authoritative_entity=artifact,
     )
 
 
 def evaluate_preliminary_analysis_provider(
-    db: Session,
-    *,
-    org_id: uuid.UUID,
-    project_id: uuid.UUID,
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
     req_provider_result: ProviderResult | None = None,
 ) -> ProviderResult:
-    """Raw provider for PRELIMINARY_ANALYSIS."""
-    snapshots = (
-        db.query(PreliminaryAnalysisSnapshot)
-        .filter(
-            PreliminaryAnalysisSnapshot.organization_id == org_id,
-            PreliminaryAnalysisSnapshot.project_id == project_id,
+    """Evaluate the highest valid analysis snapshot matching current authority."""
+    try:
+        snapshot = select_current_analysis(
+            db, org_id=org_id, project_id=project_id,
+            valid_manifest=validate_stored_v2_manifest,
         )
-        .all()
-    )
-
-    if len(snapshots) == 0:
+    except CurrentBatchUnresolved as exc:
         return ProviderResult(
-            stage="PRELIMINARY_ANALYSIS",
-            result="INCOMPLETE",
-            fact_token="preliminary_analysis_v1:null:absent-v1:absent",
-            provider_key="preliminary_analysis_v1",
-            authoritative_entity=None,
+            stage="PRELIMINARY_ANALYSIS", result="NOT_AVAILABLE",
+            fact_token=f"preliminary_analysis_v2:null:amb2-{_unresolved_batch_sha(exc)}:not_available",
+            provider_key="preliminary_analysis_v2",
         )
-
-    if len(snapshots) == 1:
-        snapshot = snapshots[0]
-        canonical_digest = snapshot_canonical_digest(snapshot)
-        finalized_ts = _format_utc_timestamp(snapshot.finalized_at)
-
-        payload = {
-            "canonical_snapshot_digest": canonical_digest,
-            "finalized_at": finalized_ts,
-            "schema": "preliminary-analysis-provider-authoritative-version-v1",
-            "snapshot_id": str(snapshot.id).lower(),
-            "snapshot_version": int(snapshot.version),
-        }
-        av1_sha = _sha256_hex(_canonical_json(payload))
-
-        # Evaluate lineage and validity for completeness
-        is_complete = False
-        batches = (
-            db.query(ProjectAssetImportBatch)
-            .filter(
-                ProjectAssetImportBatch.organization_id == org_id,
-                ProjectAssetImportBatch.project_id == project_id,
-            )
-            .all()
-        )
-        if (
-            len(batches) == 1
-            and batches[0].id == snapshot.import_batch_id
-            and batches[0].current_source_artifact_id == snapshot.source_artifact_id
-        ):
-            source_artifact = (
-                db.query(ImportSourceArtifact)
-                .filter(
-                    ImportSourceArtifact.id == snapshot.source_artifact_id,
-                    ImportSourceArtifact.organization_id == org_id,
-                    ImportSourceArtifact.project_id == project_id,
-                )
-                .first()
-            )
-            if (
-                source_artifact is not None
-                and source_artifact.import_batch_id == batches[0].id
-                and source_artifact.generation == snapshot.source_artifact_generation
-                and _status_value(source_artifact.state).lower() == ImportSourceArtifactState.AVAILABLE.value
-            ):
-                structure = (
-                    db.query(WorkbookStructureSnapshot)
-                    .filter(
-                        WorkbookStructureSnapshot.id == snapshot.structure_snapshot_id,
-                        WorkbookStructureSnapshot.organization_id == org_id,
-                        WorkbookStructureSnapshot.project_id == project_id,
-                    )
-                    .first()
-                )
-                decision = (
-                    db.query(ColumnMappingDecision)
-                    .filter(
-                        ColumnMappingDecision.id == snapshot.mapping_decision_id,
-                        ColumnMappingDecision.organization_id == org_id,
-                        ColumnMappingDecision.project_id == project_id,
-                    )
-                    .first()
-                )
-                usage = (
-                    db.query(ColumnMappingProfileUsage)
-                    .filter(
-                        ColumnMappingProfileUsage.id == snapshot.mapping_profile_usage_id,
-                        ColumnMappingProfileUsage.organization_id == org_id,
-                        ColumnMappingProfileUsage.project_id == project_id,
-                    )
-                    .first()
-                )
-                if (
-                    structure is not None
-                    and structure.import_batch_id == batches[0].id
-                    and structure.source_artifact_id == source_artifact.id
-                    and structure.source_checksum_sha256 == source_artifact.checksum_sha256
-                    and decision is not None
-                    and decision.customer_id == snapshot.customer_id
-                    and decision.project_id == project_id
-                    and decision.import_batch_id == batches[0].id
-                    and decision.source_artifact_id == source_artifact.id
-                    and decision.structure_snapshot_id == structure.id
-                    and decision.decision_kind == ColumnMappingDecisionKind.CONFIRMATION.value
-                    and decision.outcome in (ColumnMappingDecisionOutcome.ACCEPTED.value, ColumnMappingDecisionOutcome.CORRECTED.value)
-                    and decision.mapping_digest_sha256 == snapshot.mapping_decision_digest_sha256
-                    and usage is not None
-                    and usage.customer_id == snapshot.customer_id
-                    and usage.project_id == project_id
-                    and usage.import_batch_id == batches[0].id
-                    and usage.source_artifact_id == source_artifact.id
-                    and usage.structure_snapshot_id == structure.id
-                    and usage.confirmation_decision_id == decision.id
-                    and usage.mapping_digest_sha256 == snapshot.profile_usage_mapping_digest_sha256
-                    and usage.source_checksum_sha256 == source_artifact.checksum_sha256
-                    and usage.structure_digest_sha256 == structure.analysis_digest_sha256
-                    and _sha256_hex(_canonical_json(snapshot.line_manifest)) == snapshot.line_manifest_digest_sha256
-                    and validate_stored_v2_manifest(snapshot.line_manifest)
-                ):
-                    is_complete = True
-
-        raw_result = "COMPLETE" if is_complete else "INCOMPLETE"
-        state_tag = "complete" if is_complete else "incomplete"
-        fact_token = f"preliminary_analysis_v1:{str(snapshot.id).lower()}:av1-{av1_sha}:{state_tag}"
+    except CurrentAnalysisCorruption:
         return ProviderResult(
-            stage="PRELIMINARY_ANALYSIS",
-            result=raw_result,
-            fact_token=fact_token,
-            provider_key="preliminary_analysis_v1",
-            authoritative_entity=snapshot,
+            stage="PRELIMINARY_ANALYSIS", result="NOT_AVAILABLE",
+            fact_token="preliminary_analysis_v2:null:invalid-v2:not_available",
+            provider_key="preliminary_analysis_v2",
         )
-
-    # >= 2 snapshots: multiplicity produces ambiguity payload and NOT_AVAILABLE
-    identities = sorted(f"{str(s.id).lower()}@{s.version}" for s in snapshots)
-    amb_payload = {
-        "count": len(snapshots),
-        "identities": identities,
-        "schema": "preliminary-analysis-ambiguity-v1",
+    except CurrentnessIntegrityError as exc:
+        raise ProjectionIntegrityError(str(exc)) from exc
+    if snapshot is None:
+        return ProviderResult(
+            stage="PRELIMINARY_ANALYSIS", result="INCOMPLETE",
+            fact_token="preliminary_analysis_v2:null:absent-v2:absent",
+            provider_key="preliminary_analysis_v2",
+        )
+    payload = {
+        "canonical_snapshot_digest": snapshot_canonical_digest(snapshot),
+        "finalized_at": _format_utc_timestamp(snapshot.finalized_at),
+        "schema": "preliminary-analysis-provider-authoritative-version-v2",
+        "snapshot_id": str(snapshot.id).lower(),
+        "snapshot_version": int(snapshot.version),
     }
-    amb_sha = _sha256_hex(_canonical_json(amb_payload))
+    av_sha = _sha256_hex(_canonical_json(payload))
     return ProviderResult(
-        stage="PRELIMINARY_ANALYSIS",
-        result="NOT_AVAILABLE",
-        fact_token=f"preliminary_analysis_v1:null:amb1-{amb_sha}:not_available",
-        provider_key="preliminary_analysis_v1",
-        authoritative_entity=None,
+        stage="PRELIMINARY_ANALYSIS", result="COMPLETE",
+        fact_token=f"preliminary_analysis_v2:{str(snapshot.id).lower()}:av2-{av_sha}:complete",
+        provider_key="preliminary_analysis_v2", authoritative_entity=snapshot,
     )
 
 
@@ -610,7 +472,7 @@ def evaluate_preliminary_ready_provider(
                             expected_manifest = _build_lineage_manifest(
                                 org_id=org_id,
                                 project_id=project_id,
-                                customer_id=snapshot.customer_id,
+                                customer_id=artifact.customer_id,
                                 snapshot=snapshot,
                                 artifact=source_artifact,
                                 structure=structure,

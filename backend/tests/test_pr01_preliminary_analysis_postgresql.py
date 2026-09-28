@@ -7,19 +7,27 @@ import uuid
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.project_master_data.application.preliminary_analysis_service import (
     finalize_preliminary_analysis,
 )
+from app.modules.project_master_data.application.preliminary_project_lifecycle_service import (
+    switch_current_preliminary_import_batch,
+)
 from app.modules.project_master_data.models import (
     AuditEvent,
     PreliminaryAnalysisSnapshot,
+    Project,
+    ProjectAssetImportBatch,
     User,
     UserRole,
 )
-from tests.test_pr01_preliminary_analysis_service import _seed
+from tests.test_pr01_preliminary_analysis_service import (
+    PRELIMINARY_ANALYSIS_PERMISSION,
+    _seed,
+)
 
 
 def _postgres_engine_or_skip():
@@ -57,7 +65,7 @@ def _command(
         actor=actor,
         org_id=ids["org"],
         project_id=ids["project"],
-        expected_project_version=1,
+        expected_project_version=ids["project_version"],
         import_batch_id=ids["batch"],
         source_artifact_id=ids["artifact"],
         structure_snapshot_id=ids["structure"],
@@ -123,6 +131,7 @@ def _seed_ids(setup: Session, *, suffix: str) -> tuple[dict[str, object], dict]:
             "org": seeded["org"].id,
             "actor": seeded["actor"].id,
             "project": seeded["project"].id,
+            "project_version": seeded["project"].row_version,
             "batch": seeded["batch"].id,
             "artifact": seeded["artifact"].id,
             "structure": seeded["structure"].id,
@@ -222,7 +231,7 @@ def test_postgresql_concurrent_same_key_different_digest_is_typed_reuse() -> Non
         engine.dispose()
 
 
-def test_postgresql_concurrent_different_keys_have_one_typed_already_finalized() -> None:
+def test_postgresql_concurrent_different_keys_allocate_distinct_versions() -> None:
     engine = _postgres_engine_or_skip()
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     setup: Session = SessionLocal()
@@ -240,12 +249,92 @@ def test_postgresql_concurrent_different_keys_have_one_typed_already_finalized()
             ],
         )
 
-        assert len(results) == 1
+        assert len(results) == 2
+        assert errors == []
+        verify = SessionLocal()
+        try:
+            snapshots = verify.query(PreliminaryAnalysisSnapshot).filter_by(
+                organization_id=ids["org"], project_id=ids["project"]
+            ).all()
+            assert {snapshot.version for snapshot in snapshots} == {1, 2}
+            assert {snapshot.id for snapshot in snapshots} == set(results)
+            assert verify.query(AuditEvent).filter_by(
+                organization_id=ids["org"],
+                event_name="PreliminaryAnalysisSnapshotFinalized",
+            ).count() == 2
+        finally:
+            verify.close()
+    finally:
+        setup.close()
+        engine.dispose()
+
+
+def test_postgresql_switch_wins_project_lock_before_analysis_finalization() -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    holder: Session = SessionLocal()
+    try:
+        ids, seeded = _seed_ids(setup, suffix=f"pg-switch-{uuid.uuid4().hex[:8]}")
+        seeded["role"].permissions = [
+            PRELIMINARY_ANALYSIS_PERMISSION, "project:update",
+        ]
+        target = ProjectAssetImportBatch(
+            organization_id=ids["org"],
+            project_id=ids["project"],
+            source_filename="next.xlsx",
+            created_by_user_id=ids["actor"],
+        )
+        setup.add(target)
+        setup.commit()
+        target_id = target.id
+        holder.query(Project).filter(Project.id == ids["project"]).with_for_update().one()
+
+        waiting = threading.Event()
+        errors: list[BaseException] = []
+
+        def observe(_conn, _cursor, statement, _params, _context, _many):
+            if threading.current_thread().name == "analysis-switch-waiter" and "from projects" in statement.lower() and "for update" in statement.lower():
+                waiting.set()
+
+        event.listen(engine, "before_cursor_execute", observe)
+
+        def finalize_waiter() -> None:
+            db = SessionLocal()
+            try:
+                _command(db, ids=ids, actor_id=ids["actor"], idempotency_key="pg-switch-race")
+            except BaseException as exc:
+                errors.append(exc)
+            finally:
+                db.close()
+
+        worker = threading.Thread(target=finalize_waiter, name="analysis-switch-waiter", daemon=True)
+        worker.start()
+        assert waiting.wait(timeout=15)
+        switch_current_preliminary_import_batch(
+            holder,
+            actor=holder.get(User, ids["actor"]),
+            org_id=ids["org"],
+            project_id=ids["project"],
+            target_import_batch_id=target_id,
+            expected_current_import_batch_id=ids["batch"],
+            expected_project_version=ids["project_version"],
+            idempotency_key="pg-switch-before-analysis",
+        )
+        worker.join(timeout=30)
+        assert not worker.is_alive()
         assert len(errors) == 1
         assert isinstance(errors[0], HTTPException)
-        assert errors[0].status_code == 409
-        assert errors[0].detail["error_code"] == "preliminary_analysis_already_finalized"
-        _assert_one_fact_and_audit(SessionLocal, ids)
+        assert errors[0].detail["error_code"] == "preliminary_analysis_batch_not_current"
+        verify = SessionLocal()
+        try:
+            assert verify.query(PreliminaryAnalysisSnapshot).filter_by(
+                organization_id=ids["org"], project_id=ids["project"]
+            ).count() == 0
+        finally:
+            verify.close()
     finally:
+        holder.rollback()
+        holder.close()
         setup.close()
         engine.dispose()

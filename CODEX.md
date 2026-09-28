@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G1.1B Pre-case lifecycle commands)
+**Last reconciled:** 2026-09-28 (OS-G1.1C versioned Preliminary Analysis currentness)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -78,8 +78,17 @@ G1.1B implements internal `BindPreliminaryProjectCustomer` and
 `SwitchCurrentPreliminaryImportBatch` commands with durable replay receipts, Project-locked
 transactions and atomic audit under `VALORA-TASK-OS-G1-1B-PRECASE-LIFECYCLE-COMMANDS`. Official
 Intake accepts a valid historical result with a NULL Customer snapshot while requiring an ACTIVE
-same-tenant bound Customer for the first commit. G1.1C+ analysis/result regeneration, currentness
-provider changes, public Pre-case creation/API and UI are NOT STARTED; OS-G2 is NOT STARTED.
+same-tenant bound Customer for the first commit. G1.1C makes the explicit Project current-batch pointer
+authoritative for PRELIMINARY_REQUEST, allocates immutable Preliminary Analysis versions under the
+Project lock, and selects the highest valid analysis version matching the current batch/source and
+materialized mapping lineage. Preliminary Result generation requires that selected analysis before
+object IO and before DB insert. The one-result-per-Project boundary remains until G1.1D; a historical
+Result makes PRELIMINARY_READY incomplete and blocks first Official Intake. G1.1D+ result
+regeneration, public Pre-case creation/API and UI are NOT STARTED; OS-G2 is NOT STARTED.
+With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
+current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
+remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
+READY verification does not compare it to the Analysis snapshot's historical Customer.
 Each runtime slice still requires an explicit Product Owner task packet. These SHAs are dated
 evidence, not a live-head claim.
 Neither G1.0 nor this authority closes the OS-G1 product journey or full North-star E2E.

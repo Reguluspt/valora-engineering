@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base
@@ -34,6 +34,7 @@ from app.modules.project_master_data.application.case_state_projection import (
     evaluate_preliminary_analysis_provider,
     evaluate_preliminary_ready_provider,
     evaluate_preliminary_request_provider,
+    get_case_state_projection,
 )
 from app.modules.project_master_data.application.official_intake_service import (
     get_official_intake_open_blockers,
@@ -159,8 +160,32 @@ def test_preliminary_request_zero_batches(test_db: Session) -> None:
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    assert res.fact_token == "preliminary_request_v1:null:absent-v1:absent"
-    assert res.provider_key == "preliminary_request_v1"
+    assert res.fact_token == "preliminary_request_v2:null:absent-v2:absent"
+    assert res.provider_key == "preliminary_request_v2"
+
+
+@pytest.mark.parametrize("batch_count", [1, 2])
+def test_preliminary_request_retained_batches_without_pointer_are_unavailable(
+    test_db: Session, batch_count: int,
+) -> None:
+    seeded = _seed_basic(test_db)
+    for index in range(batch_count):
+        test_db.add(ProjectAssetImportBatch(
+            organization_id=seeded["org"].id,
+            project_id=seeded["project"].id,
+            source_filename=f"legacy-{index}.xlsx",
+            created_by_user_id=seeded["actor"].id,
+        ))
+    test_db.flush()
+
+    projection = get_case_state_projection(
+        test_db, actor=seeded["actor"], org_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+    )
+    assert projection.stages[0].result == "NOT_AVAILABLE"
+    assert projection.stages[1].result == "NOT_AVAILABLE"
+    assert projection.next_action.kind == "UNAVAILABLE"
+    assert projection.next_action.stage == "PRELIMINARY_REQUEST"
 
 
 def test_preliminary_request_batch_with_null_artifact(test_db: Session) -> None:
@@ -174,12 +199,13 @@ def test_preliminary_request_batch_with_null_artifact(test_db: Session) -> None:
     )
     test_db.add(batch)
     test_db.flush()
+    seeded["project"].current_preliminary_import_batch_id = batch.id
 
     res = evaluate_preliminary_request_provider(
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    assert res.fact_token == "preliminary_request_v1:null:absent-v1:absent"
+    assert res.fact_token == f"preliminary_request_v2:{str(batch.id).lower()}:absent-v2:incomplete"
 
 
 def test_preliminary_request_single_batch_available(test_db: Session) -> None:
@@ -213,13 +239,14 @@ def test_preliminary_request_single_batch_available(test_db: Session) -> None:
     test_db.add(artifact)
     test_db.flush()
     batch.current_source_artifact_id = artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     res = evaluate_preliminary_request_provider(
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "COMPLETE"
-    assert res.fact_token.startswith(f"preliminary_request_v1:{str(artifact.id).lower()}:av1-")
+    assert res.fact_token.startswith(f"preliminary_request_v2:{str(artifact.id).lower()}:av2-")
     assert res.fact_token.endswith(":complete")
 
 
@@ -252,13 +279,14 @@ def test_preliminary_request_single_batch_pending_or_failed(test_db: Session) ->
     test_db.add(artifact)
     test_db.flush()
     batch.current_source_artifact_id = artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     res = evaluate_preliminary_request_provider(
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    assert res.fact_token.startswith(f"preliminary_request_v1:{str(artifact.id).lower()}:av1-")
+    assert res.fact_token.startswith(f"preliminary_request_v2:{str(artifact.id).lower()}:av2-")
     assert res.fact_token.endswith(":incomplete")
 
 
@@ -274,6 +302,7 @@ def test_preliminary_request_dangling_pointer_integrity_error(test_db: Session) 
     test_db.add(batch)
     test_db.flush()
     batch.current_source_artifact_id = uuid.uuid4()
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     with pytest.raises(ProjectionIntegrityError):
@@ -282,7 +311,35 @@ def test_preliminary_request_dangling_pointer_integrity_error(test_db: Session) 
         )
 
 
-def test_preliminary_request_multiple_batches_ambiguity(test_db: Session) -> None:
+def test_preliminary_request_cross_project_pointer_integrity_error(test_db: Session) -> None:
+    seeded = _seed_basic(test_db)
+    other_project = Project(
+        organization_id=seeded["org"].id,
+        customer_id=seeded["customer"].id,
+        code=f"PRJ-{uuid.uuid4().hex[:6]}",
+        name="Other Project",
+        created_by=seeded["actor"].id,
+    )
+    test_db.add(other_project)
+    test_db.flush()
+    other_batch = ProjectAssetImportBatch(
+        organization_id=seeded["org"].id,
+        project_id=other_project.id,
+        source_filename="other.xlsx",
+        created_by_user_id=seeded["actor"].id,
+    )
+    test_db.add(other_batch)
+    test_db.flush()
+    seeded["project"].current_preliminary_import_batch_id = other_batch.id
+    test_db.flush()
+
+    with pytest.raises(ProjectionIntegrityError):
+        evaluate_preliminary_request_provider(
+            test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
+        )
+
+
+def test_preliminary_request_multiple_batches_evaluates_current_pointer(test_db: Session) -> None:
     seeded = _seed_basic(test_db)
     b1 = ProjectAssetImportBatch(
         organization_id=seeded["org"].id,
@@ -300,13 +357,14 @@ def test_preliminary_request_multiple_batches_ambiguity(test_db: Session) -> Non
     )
     test_db.add_all([b1, b2])
     test_db.flush()
+    seeded["project"].current_preliminary_import_batch_id = b2.id
 
     res = evaluate_preliminary_request_provider(
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
-    assert res.result == "NOT_AVAILABLE"
-    assert res.fact_token.startswith("preliminary_request_v1:null:amb1-")
-    assert res.fact_token.endswith(":not_available")
+    assert res.result == "INCOMPLETE"
+    assert res.authoritative_entity.id == b2.id
+    assert res.fact_token == f"preliminary_request_v2:{str(b2.id).lower()}:absent-v2:incomplete"
 
 
 def test_preliminary_analysis_zero_snapshots(test_db: Session) -> None:
@@ -315,7 +373,7 @@ def test_preliminary_analysis_zero_snapshots(test_db: Session) -> None:
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    assert res.fact_token == "preliminary_analysis_v1:null:absent-v1:absent"
+    assert res.fact_token == "preliminary_analysis_v2:null:absent-v2:absent"
 
 
 def test_preliminary_analysis_single_snapshot_complete(test_db: Session) -> None:
@@ -347,6 +405,7 @@ def test_preliminary_analysis_single_snapshot_complete(test_db: Session) -> None
     test_db.add(artifact)
     test_db.flush()
     batch.current_source_artifact_id = artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     structure = WorkbookStructureSnapshot(
@@ -471,11 +530,11 @@ def test_preliminary_analysis_single_snapshot_complete(test_db: Session) -> None
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "COMPLETE"
-    assert res.fact_token.startswith(f"preliminary_analysis_v1:{str(snapshot.id).lower()}:av1-")
+    assert res.fact_token.startswith(f"preliminary_analysis_v2:{str(snapshot.id).lower()}:av2-")
     assert res.fact_token.endswith(":complete")
 
 
-def test_preliminary_analysis_v1_manifest_incomplete(test_db: Session) -> None:
+def test_preliminary_analysis_v1_manifest_is_historical_without_current_pointer(test_db: Session) -> None:
     seeded = _seed_basic(test_db)
     # Stored snapshot with v1-shaped line manifest (missing required v2 keys)
     v1_line = {"identity": "Old", "proposed_unit_price": 100.0}
@@ -506,12 +565,11 @@ def test_preliminary_analysis_v1_manifest_incomplete(test_db: Session) -> None:
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    # Still contributes av1 token
-    assert res.fact_token.startswith(f"preliminary_analysis_v1:{str(snapshot.id).lower()}:av1-")
-    assert res.fact_token.endswith(":incomplete")
+    assert res.authoritative_entity is None
+    assert res.fact_token == "preliminary_analysis_v2:null:absent-v2:absent"
 
 
-def test_preliminary_analysis_multiple_snapshots_ambiguity(test_db: Session) -> None:
+def test_preliminary_analysis_historical_snapshots_without_pointer_are_incomplete(test_db: Session) -> None:
     seeded = _seed_basic(test_db)
     s1 = PreliminaryAnalysisSnapshot(
         organization_id=seeded["org"].id,
@@ -559,9 +617,8 @@ def test_preliminary_analysis_multiple_snapshots_ambiguity(test_db: Session) -> 
     res = evaluate_preliminary_analysis_provider(
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
-    assert res.result == "NOT_AVAILABLE"
-    assert res.fact_token.startswith("preliminary_analysis_v1:null:amb1-")
-    assert res.fact_token.endswith(":not_available")
+    assert res.result == "INCOMPLETE"
+    assert res.authoritative_entity is None
 
 
 def test_preliminary_ready_zero_artifacts(test_db: Session) -> None:
@@ -607,6 +664,7 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
     test_db.flush()
 
     batch.current_source_artifact_id = source_artifact.id
+    seeded["project"].current_preliminary_import_batch_id = batch.id
     test_db.flush()
 
     structure = WorkbookStructureSnapshot(
@@ -796,6 +854,174 @@ def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str
         "expected_digest": expected_digest,
         "full_lineage": full_lineage,
     }
+
+
+def _append_analysis_version(
+    test_db: Session, original: PreliminaryAnalysisSnapshot, *, version: int,
+    valid: bool = True,
+) -> PreliminaryAnalysisSnapshot:
+    fields = {
+        column.key: getattr(original, column.key)
+        for column in PreliminaryAnalysisSnapshot.__table__.columns
+        if column.key not in {"id", "version", "idempotency_key", "request_digest_sha256", "created_at"}
+    }
+    snapshot = PreliminaryAnalysisSnapshot(
+        **fields,
+        version=version,
+        idempotency_key=f"analysis-version-{version}-{uuid.uuid4()}",
+        request_digest_sha256="a" * 64,
+    )
+    if not valid:
+        snapshot.line_manifest_digest_sha256 = "0" * 64
+    test_db.add(snapshot)
+    test_db.flush()
+    return snapshot
+
+
+def test_analysis_selects_highest_valid_version_and_ready_becomes_incomplete(
+    test_db: Session,
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    second = _append_analysis_version(test_db, ready["snapshot"], version=2)
+    third = _append_analysis_version(test_db, ready["snapshot"], version=3, valid=False)
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    result = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert third.version == 3
+    assert analysis.result == "COMPLETE"
+    assert analysis.authoritative_entity.id == second.id
+    assert result.result == "INCOMPLETE"
+
+
+def test_analysis_same_version_conflict_is_not_available(
+    test_db: Session, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seeded = _seed_basic(test_db)
+    _seed_complete_preliminary_ready(test_db, seeded)
+    original_all = Query.all
+
+    def conflicting_analysis_rows(query: Query) -> list[Any]:
+        rows = original_all(query)
+        if query.column_descriptions[0]["entity"] is PreliminaryAnalysisSnapshot:
+            return rows + rows
+        return rows
+
+    monkeypatch.setattr(Query, "all", conflicting_analysis_rows)
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    assert analysis.result == "NOT_AVAILABLE"
+    assert analysis.authoritative_entity is None
+
+
+@pytest.mark.parametrize("corrupt_fact", ["decision", "usage", "structure"])
+def test_analysis_corrupt_current_lineage_is_not_available(
+    test_db: Session, corrupt_fact: str,
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    fact = ready[corrupt_fact]
+    if corrupt_fact == "structure":
+        fact.analysis_digest_sha256 = "0" * 64
+    else:
+        fact.mapping_digest_sha256 = "0" * 64
+    test_db.flush()
+
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    assert analysis.result == "NOT_AVAILABLE"
+    assert analysis.authoritative_entity is None
+
+
+@pytest.mark.parametrize("scope_field", ["project_id", "organization_id"])
+def test_matching_customer_does_not_rescue_wrong_analysis_scope(
+    test_db: Session, scope_field: str,
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    assert ready["snapshot"].customer_id == ready["artifact"].customer_id
+    setattr(ready["snapshot"], scope_field, uuid.uuid4())
+    test_db.flush()
+
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    result = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert analysis.result == "INCOMPLETE"
+    assert result.result == "INCOMPLETE"
+
+
+def test_batch_switch_leaves_historical_analysis_without_current_match(
+    test_db: Session,
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    second = ProjectAssetImportBatch(
+        organization_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+        source_filename="second.xlsx",
+        created_by_user_id=seeded["actor"].id,
+    )
+    test_db.add(second)
+    test_db.flush()
+    seeded["project"].current_preliminary_import_batch_id = second.id
+    test_db.flush()
+    request = evaluate_preliminary_request_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    assert ready["snapshot"].version == 1
+    assert request.result == "INCOMPLETE"
+    assert request.authoritative_entity.id == second.id
+    assert analysis.result == "INCOMPLETE"
+    assert analysis.authoritative_entity is None
+
+
+def test_current_source_replacement_same_batch_invalidates_old_analysis(
+    test_db: Session,
+) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    old = ready["source_artifact"]
+    replacement = ImportSourceArtifact(
+        organization_id=old.organization_id,
+        project_id=old.project_id,
+        import_batch_id=old.import_batch_id,
+        generation=old.generation + 1,
+        original_filename="replacement.xlsx",
+        detected_format="xlsx",
+        content_type=old.content_type,
+        file_size_bytes=old.file_size_bytes,
+        checksum_sha256="b" * 64,
+        storage_object_key=f"replacement-{uuid.uuid4()}",
+        state=ImportSourceArtifactState.AVAILABLE.value,
+        created_by_user_id=seeded["actor"].id,
+    )
+    test_db.add(replacement)
+    test_db.flush()
+    ready["batch"].current_source_artifact_id = replacement.id
+    test_db.flush()
+    request = evaluate_preliminary_request_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    analysis = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    assert request.result == "COMPLETE"
+    assert request.authoritative_entity.id == replacement.id
+    assert analysis.result == "INCOMPLETE"
+    assert analysis.authoritative_entity is None
 
 
 def _append_unmaterialized_confirmation(
