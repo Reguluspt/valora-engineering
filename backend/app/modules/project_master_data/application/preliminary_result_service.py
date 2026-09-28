@@ -6,12 +6,14 @@ import io
 import json
 import math
 import uuid
+import zipfile
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from fastapi import HTTPException
 from openpyxl import load_workbook
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -41,6 +43,7 @@ from app.modules.project_master_data.models import (
     PreliminaryResultArtifact,
     Project,
     ProjectAssetImportBatch,
+    ProjectOfficialIntakeCommit,
     User,
     UserRole,
     UserStatus,
@@ -93,6 +96,7 @@ class _GenerationContext:
     line_manifest: list[dict[str, Any]]
     output_filename: str
     storage_key: str
+    lineage_manifest: dict[str, Any]
 
 
 def _status_value(value: Any) -> str:
@@ -176,6 +180,48 @@ def _artifact_id(*, org_id: uuid.UUID, normalized_key: str, request_digest: str)
         _NAMESPACE,
         f"org={org_id}|key={normalized_key}|digest={request_digest}",
     )
+
+
+def _replay_or_conflict(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
+    normalized_key: str, request_digest: str, artifact_id: uuid.UUID,
+    actor_id: uuid.UUID, snapshot_digest: str,
+) -> PreliminaryResultArtifact | None:
+    existing = (
+        db.query(PreliminaryResultArtifact)
+        .filter(
+            PreliminaryResultArtifact.organization_id == org_id,
+            PreliminaryResultArtifact.idempotency_key == normalized_key,
+        )
+        .populate_existing()
+        .first()
+    )
+    if existing is None:
+        return None
+    if (
+        existing.id != artifact_id
+        or existing.request_digest_sha256 != request_digest
+        or existing.created_by_user_id != actor_id
+        or existing.project_id != project_id
+        or existing.source_snapshot_sha256 != snapshot_digest
+    ):
+        _abort(db, 409, "preliminary_result_idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+    db.commit()
+    db.refresh(existing)
+    return existing
+
+
+def _require_pre_intake(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID) -> None:
+    committed = (
+        db.query(ProjectOfficialIntakeCommit.id)
+        .filter(
+            ProjectOfficialIntakeCommit.organization_id == org_id,
+            ProjectOfficialIntakeCommit.project_id == project_id,
+        )
+        .first()
+    )
+    if committed is not None:
+        _abort(db, 409, "official_intake_already_committed", "Hồ sơ đã được chuyển chính thức.")
 
 
 def _reload_active_actor_and_org(
@@ -507,8 +553,22 @@ def _write_output_workbook(
 
         output = io.BytesIO()
         wb.save(output)
-        output.seek(0)
-        return output.read(), hashlib.sha256(output.getvalue()).hexdigest()
+        canonical = io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(output.getvalue())) as source_zip:
+            with zipfile.ZipFile(canonical, "w") as target_zip:
+                for member in source_zip.infolist():
+                    if member.file_size > 50 * 1024 * 1024:
+                        raise _error(409, "preliminary_result_output_too_large", "File kết quả quá lớn.")
+                    info = zipfile.ZipInfo(member.filename, date_time=(1980, 1, 1, 0, 0, 0))
+                    info.compress_type = member.compress_type
+                    info.external_attr = member.external_attr
+                    with source_zip.open(member) as stream:
+                        content = _read_stream_bounded(stream, max_bytes=50 * 1024 * 1024)
+                    target_zip.writestr(info, content)
+        data = canonical.getvalue()
+        if len(data) > _MAX_OBJECT_BYTES:
+            raise _error(409, "preliminary_result_output_too_large", "File kết quả quá lớn.")
+        return data, _sha256_hex(data)
     finally:
         wb.close()
 
@@ -631,6 +691,28 @@ def _t1_validate_and_lock(
     )
     if snapshot is None:
         _abort(db, 404, "preliminary_analysis_snapshot_not_found", "Không tìm thấy phân tích sơ bộ.")
+
+    snapshot_digest = _snapshot_canonical_digest(snapshot)
+    request_digest = _request_digest(
+        actor_id=actor.id,
+        project_id=project_id,
+        snapshot_id=snapshot.id,
+        snapshot_digest=snapshot_digest,
+        expected_project_version=expected_project_version,
+    )
+    artifact_id = _artifact_id(
+        org_id=org_id, normalized_key=normalized_key, request_digest=request_digest
+    )
+    replay = _replay_or_conflict(
+        db, org_id=org_id, project_id=project_id, normalized_key=normalized_key,
+        request_digest=request_digest, artifact_id=artifact_id, actor_id=actor.id,
+        snapshot_digest=snapshot_digest,
+    )
+    if replay is not None:
+        return replay
+    if project.row_version != expected_project_version:
+        _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
+    _require_pre_intake(db, org_id=org_id, project_id=project_id)
 
     # Strict v2 shape gate on the stored snapshot.
     try:
@@ -762,75 +844,23 @@ def _t1_validate_and_lock(
 
     candidate, fields, quantity_field = _resolve_candidate_and_fields(usage)
 
-    if project.row_version != expected_project_version:
-        _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
-
-    # Idempotency lookup under locks.
-    existing_by_key = (
-        db.query(PreliminaryResultArtifact)
-        .filter(
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.idempotency_key == normalized_key,
-        )
-        .populate_existing()
-        .first()
-    )
-
-    snapshot_digest = _snapshot_canonical_digest(snapshot)
-    request_digest = _request_digest(
-        actor_id=actor.id,
-        project_id=project_id,
-        snapshot_id=snapshot.id,
-        snapshot_digest=snapshot_digest,
-        expected_project_version=expected_project_version,
-    )
-    artifact_id = _artifact_id(
-        org_id=org_id, normalized_key=normalized_key, request_digest=request_digest
-    )
-
-    if existing_by_key is not None:
-        if (
-            existing_by_key.id == artifact_id
-            and existing_by_key.request_digest_sha256 == request_digest
-            and existing_by_key.created_by_user_id == actor.id
-            and existing_by_key.project_id == project_id
-            and existing_by_key.source_snapshot_sha256 == snapshot_digest
-        ):
-            db.commit()
-            db.refresh(existing_by_key)
-            return existing_by_key
-        _abort(
-            db,
-            409,
-            "preliminary_result_idempotency_key_reused",
-            "Mã lệnh đã được dùng cho dữ liệu khác.",
-        )
-
-    # Any project artifact (including legacy keyless) blocks generation.
-    already_generated = (
-        db.query(PreliminaryResultArtifact.id)
-        .filter(
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.project_id == project_id,
-        )
-        .first()
-    )
-    if already_generated is not None:
-        _abort(
-            db,
-            409,
-            "preliminary_result_already_generated",
-            "Hồ sơ đã có kết quả sơ bộ.",
-        )
-
+    db.expire_all()
     _require_current_analysis(
         db, org_id=org_id, project_id=project_id, snapshot_id=snapshot.id,
     )
 
     price_col = candidate["max_column"] + 1
     amount_col = candidate["max_column"] + 2
-    output_filename = f"ket-qua-so-bo-v1-{artifact_id}.xlsx"
+    output_filename = f"ket-qua-so-bo-{artifact_id}.xlsx"
     storage_key = f"org/{org_id}/project/{project_id}/preliminary-results/{artifact_id}.xlsx"
+
+    lineage_manifest = _build_lineage_manifest(
+        org_id=org_id, project_id=project_id, customer_id=project.customer_id,
+        snapshot=snapshot, artifact=artifact, structure=structure, decision=decision,
+        usage=usage, candidate=candidate, quantity_field=quantity_field,
+        price_col=price_col, amount_col=amount_col, snapshot_digest=snapshot_digest,
+        line_manifest=snapshot.line_manifest,
+    )
 
     # Commit read-only and release locks before object IO.
     db.commit()
@@ -856,13 +886,14 @@ def _t1_validate_and_lock(
         line_manifest=snapshot.line_manifest,
         output_filename=output_filename,
         storage_key=storage_key,
+        lineage_manifest=lineage_manifest,
     )
 
 
 def _t1_build_and_put_object(
     ctx: _GenerationContext,
     storage,
-) -> tuple[bytes, str, int]:
+) -> tuple[str, int, bool]:
     # Load source bytes once for workbook transformation and re-verify checksum.
     try:
         stream = storage.open_stream(ctx.artifact.storage_object_key)
@@ -937,7 +968,7 @@ def _t1_build_and_put_object(
                 "preliminary_result_storage_failure",
                 "Kho lưu trữ chứa dữ liệu khác mã kiểm tra.",
             )
-        return output_data, output_checksum, len(output_data)
+        return output_checksum, len(output_data), False
 
     try:
         output_stream = io.BytesIO(output_data)
@@ -948,13 +979,23 @@ def _t1_build_and_put_object(
             expected_size=len(output_data),
         )
     except ObjectStorageError as exc:
+        if exc.code == "object_key_exists":
+            existing_stat = storage.head(ctx.storage_key)
+            if existing_stat is not None and existing_stat.size == len(output_data):
+                existing_stream = storage.open_stream(ctx.storage_key)
+                try:
+                    existing_bytes = _read_stream_bounded(existing_stream, max_bytes=_MAX_OBJECT_BYTES)
+                finally:
+                    existing_stream.close()
+                if _sha256_hex(existing_bytes) == output_checksum:
+                    return output_checksum, len(output_data), False
         raise _error(
             500,
             "preliminary_result_storage_failed",
             "Không thể lưu file kết quả.",
         ) from exc
 
-    return output_data, output_checksum, len(output_data)
+    return output_checksum, len(output_data), True
 
 
 def _t2_insert_artifact(
@@ -966,6 +1007,7 @@ def _t2_insert_artifact(
     project_id: uuid.UUID,
     output_checksum: str,
     output_size: int,
+    storage: Any,
     correlation_id: str | None,
 ) -> PreliminaryResultArtifact:
     actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
@@ -994,9 +1036,18 @@ def _t2_insert_artifact(
     if snapshot is None:
         _abort(db, 404, "preliminary_analysis_snapshot_not_found", "Không tìm thấy phân tích sơ bộ.")
 
+    replay = _replay_or_conflict(
+        db, org_id=org_id, project_id=project_id, normalized_key=ctx.normalized_key,
+        request_digest=ctx.request_digest, artifact_id=ctx.artifact_id,
+        actor_id=actor.id, snapshot_digest=ctx.snapshot_digest,
+    )
+    if replay is not None:
+        return replay
+
     # Recheck invariants.
     if project.row_version != ctx.project_version:
         _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
+    _require_pre_intake(db, org_id=org_id, project_id=project_id)
 
     recomputed = _snapshot_canonical_digest(snapshot)
     if recomputed != ctx.snapshot_digest:
@@ -1007,76 +1058,68 @@ def _t2_insert_artifact(
             "Dữ liệu phân tích sơ bộ đã thay đổi.",
         )
 
-    existing_by_key = (
-        db.query(PreliminaryResultArtifact)
-        .filter(
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.idempotency_key == ctx.normalized_key,
-        )
-        .populate_existing()
-        .first()
-    )
-    if existing_by_key is not None:
-        if (
-            existing_by_key.id == ctx.artifact_id
-            and existing_by_key.request_digest_sha256 == ctx.request_digest
-            and existing_by_key.created_by_user_id == actor.id
-            and existing_by_key.project_id == project_id
-            and existing_by_key.source_snapshot_sha256 == ctx.snapshot_digest
-        ):
-            db.commit()
-            db.refresh(existing_by_key)
-            return existing_by_key
-        _abort(
-            db,
-            409,
-            "preliminary_result_idempotency_key_reused",
-            "Mã lệnh đã được dùng cho dữ liệu khác.",
-        )
-
-    already_generated = (
-        db.query(PreliminaryResultArtifact.id)
-        .filter(
-            PreliminaryResultArtifact.organization_id == org_id,
-            PreliminaryResultArtifact.project_id == project_id,
-        )
-        .first()
-    )
-    if already_generated is not None:
-        _abort(
-            db,
-            409,
-            "preliminary_result_already_generated",
-            "Hồ sơ đã có kết quả sơ bộ.",
-        )
-
+    db.expire_all()
     _require_current_analysis(
         db, org_id=org_id, project_id=project_id, snapshot_id=snapshot.id,
     )
 
-    lineage_manifest = _build_lineage_manifest(
-        org_id=org_id,
-        project_id=project_id,
-        customer_id=ctx.customer_id,
-        snapshot=snapshot,
-        artifact=ctx.artifact,
-        structure=ctx.structure,
-        decision=ctx.decision,
-        usage=ctx.usage,
-        candidate=ctx.candidate,
-        quantity_field=ctx.quantity_field,
-        price_col=ctx.price_col,
-        amount_col=ctx.amount_col,
-        snapshot_digest=ctx.snapshot_digest,
-        line_manifest=ctx.line_manifest,
-    )
+    # Re-read every manifest input after object IO; the T1 ORM objects are stale.
+    source = db.query(ImportSourceArtifact).filter_by(
+        id=snapshot.source_artifact_id, organization_id=org_id, project_id=project_id,
+    ).populate_existing().first()
+    structure = db.query(WorkbookStructureSnapshot).filter_by(
+        id=snapshot.structure_snapshot_id, organization_id=org_id, project_id=project_id,
+    ).populate_existing().first()
+    decision = db.query(ColumnMappingDecision).filter_by(
+        id=snapshot.mapping_decision_id, organization_id=org_id, project_id=project_id,
+    ).populate_existing().first()
+    usage = db.query(ColumnMappingProfileUsage).filter_by(
+        id=snapshot.mapping_profile_usage_id, organization_id=org_id, project_id=project_id,
+    ).populate_existing().first()
+    if any(item is None for item in (source, structure, decision, usage)):
+        _abort(db, 409, "preliminary_result_lineage_changed", "Nguồn gốc kết quả sơ bộ đã thay đổi.")
+    try:
+        candidate, _, quantity_field = _resolve_candidate_and_fields(usage)
+        lineage_manifest = _build_lineage_manifest(
+            org_id=org_id, project_id=project_id, customer_id=project.customer_id,
+            snapshot=snapshot, artifact=source, structure=structure, decision=decision,
+            usage=usage, candidate=candidate, quantity_field=quantity_field,
+            price_col=candidate["max_column"] + 1,
+            amount_col=candidate["max_column"] + 2,
+            snapshot_digest=ctx.snapshot_digest, line_manifest=snapshot.line_manifest,
+        )
+    except (HTTPException, KeyError, TypeError, ValueError):
+        _abort(db, 409, "preliminary_result_lineage_changed", "Nguồn gốc kết quả sơ bộ đã thay đổi.")
+    if _canonical_json(lineage_manifest) != _canonical_json(ctx.lineage_manifest):
+        _abort(db, 409, "preliminary_result_lineage_changed", "Nguồn gốc kết quả sơ bộ đã thay đổi.")
+
+    # Candidate storage has no authority, but must still hold the exact bytes at commit.
+    try:
+        stored = storage.open_stream(ctx.storage_key)
+        try:
+            stored_bytes = _read_stream_bounded(stored, max_bytes=_MAX_OBJECT_BYTES, expected_size=output_size)
+        finally:
+            stored.close()
+    except (ObjectNotFound, ObjectStorageError):
+        _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
+    if _sha256_hex(stored_bytes) != output_checksum:
+        _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
+
+    next_version = (
+        db.query(func.max(PreliminaryResultArtifact.version))
+        .filter(
+            PreliminaryResultArtifact.organization_id == org_id,
+            PreliminaryResultArtifact.project_id == project_id,
+        )
+        .scalar() or 0
+    ) + 1
 
     artifact = PreliminaryResultArtifact(
         id=ctx.artifact_id,
         organization_id=org_id,
         customer_id=ctx.customer_id,
         project_id=project_id,
-        version=1,
+        version=next_version,
         original_filename=ctx.output_filename,
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         file_size_bytes=output_size,
@@ -1107,7 +1150,7 @@ def _t2_insert_artifact(
                 "source_snapshot_sha256": ctx.snapshot_digest,
                 "content_checksum_sha256": output_checksum,
                 "file_size_bytes": output_size,
-                "version": 1,
+                "version": next_version,
                 "project_version_before": ctx.project_version,
             },
         )
@@ -1139,20 +1182,6 @@ def _t2_insert_artifact(
                 "preliminary_result_idempotency_key_reused",
                 "Mã lệnh đã được dùng cho dữ liệu khác.",
             ) from exc
-        raced_project = (
-            db.query(PreliminaryResultArtifact.id)
-            .filter(
-                PreliminaryResultArtifact.organization_id == org_id,
-                PreliminaryResultArtifact.project_id == project_id,
-            )
-            .first()
-        )
-        if raced_project is not None:
-            raise _error(
-                409,
-                "preliminary_result_already_generated",
-                "Hồ sơ đã có kết quả sơ bộ.",
-            ) from exc
         raise _error(
             409,
             "preliminary_result_conflict",
@@ -1175,7 +1204,7 @@ def generate_preliminary_result_artifact(
     confirmed: bool,
     correlation_id: str | None = None,
 ) -> PreliminaryResultArtifact:
-    """Generate the one-per-project preliminary-result artifact and atomic success audit."""
+    """Generate the next immutable preliminary-result version and atomic success audit."""
     if confirmed is not True:
         _abort(db, 400, "preliminary_result_confirmation_required", "Cần xác nhận thao tác.")
 
@@ -1193,7 +1222,7 @@ def generate_preliminary_result_artifact(
 
     storage = get_object_storage()
     try:
-        output_data, output_checksum, output_size = _t1_build_and_put_object(
+        output_checksum, output_size, created_object = _t1_build_and_put_object(
             t1_result, storage
         )
     except HTTPException:
@@ -1214,12 +1243,25 @@ def generate_preliminary_result_artifact(
             project_id=project_id,
             output_checksum=output_checksum,
             output_size=output_size,
+            storage=storage,
             correlation_id=correlation_id,
         )
     except Exception:
-        # Best-effort idempotent cleanup of our own deterministic key on DB failure.
-        try:
-            storage.delete(t1_result.storage_key)
-        except Exception:
-            pass
+        # Only an object created by this attempt is eligible for cleanup. Never
+        # delete a key adopted from a prior candidate or a committed replay.
+        if created_object:
+            try:
+                db.rollback()
+                project = db.query(Project).filter_by(
+                    id=project_id, organization_id=org_id,
+                ).with_for_update().first()
+                if project is not None:
+                    committed = db.query(PreliminaryResultArtifact.id).filter_by(
+                        id=t1_result.artifact_id, organization_id=org_id,
+                    ).first()
+                    if committed is None:
+                        storage.delete(t1_result.storage_key)
+                db.commit()
+            except Exception:
+                db.rollback()
         raise

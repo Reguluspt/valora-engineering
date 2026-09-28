@@ -170,6 +170,27 @@ def _replace_current_source(intake_db: Session, seeded: dict) -> ImportSourceArt
     return replacement
 
 
+def _append_result_version(intake_db: Session, seeded: dict) -> PreliminaryResultArtifact:
+    previous = seeded["artifact"]
+    successor = PreliminaryResultArtifact(
+        organization_id=previous.organization_id,
+        customer_id=previous.customer_id,
+        project_id=previous.project_id,
+        version=previous.version + 1,
+        original_filename="another-result.xlsx",
+        content_type=previous.content_type,
+        file_size_bytes=previous.file_size_bytes,
+        content_checksum_sha256=previous.content_checksum_sha256,
+        storage_object_key=f"key-res-other-{uuid.uuid4()}",
+        source_snapshot_sha256=previous.source_snapshot_sha256,
+        lineage_manifest=previous.lineage_manifest,
+        created_by_user_id=seeded["actor"].id,
+    )
+    intake_db.add(successor)
+    intake_db.commit()
+    return successor
+
+
 def _assert_no_official_success(intake_db: Session) -> None:
     assert intake_db.query(ProjectOfficialIntakeCommit).count() == 0
     assert intake_db.query(AuditEvent).filter_by(
@@ -309,32 +330,22 @@ def test_result_digest_mismatch_rejects_first_commit(intake_db: Session) -> None
     _assert_no_official_success(intake_db)
 
 
-def test_ambiguous_result_does_not_make_requested_artifact_current(intake_db: Session) -> None:
+def test_historical_result_v1_rejected_and_current_v2_commits(intake_db: Session) -> None:
     seeded = _seed(intake_db)
-    previous = seeded["artifact"]
-    intake_db.add(
-        PreliminaryResultArtifact(
-            organization_id=previous.organization_id,
-            customer_id=previous.customer_id,
-            project_id=previous.project_id,
-            version=2,
-            original_filename="another-result.xlsx",
-            content_type=previous.content_type,
-            file_size_bytes=previous.file_size_bytes,
-            content_checksum_sha256=previous.content_checksum_sha256,
-            storage_object_key=f"key-res-other-{uuid.uuid4()}",
-            source_snapshot_sha256=previous.source_snapshot_sha256,
-            lineage_manifest=previous.lineage_manifest,
-            created_by_user_id=seeded["actor"].id,
-        )
-    )
-    intake_db.commit()
+    current = _append_result_version(intake_db, seeded)
 
     with pytest.raises(HTTPException) as exc:
         _commit(intake_db, seeded)
 
     _assert_error(exc, 409, "preliminary_result_not_current")
     _assert_no_official_success(intake_db)
+    committed = _commit(
+        intake_db, seeded,
+        preliminary_result_artifact_id=current.id,
+        expected_preliminary_result_version=current.version,
+    )
+    assert committed.preliminary_result_artifact_id == current.id
+    assert committed.preliminary_result_version == 2
 
 
 def test_same_idempotency_key_and_request_replays_without_new_fact_or_audit(

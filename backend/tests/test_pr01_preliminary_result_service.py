@@ -55,6 +55,7 @@ from app.modules.project_master_data.models import (
     PreliminaryResultArtifact,
     Project,
     ProjectAssetImportBatch,
+    ProjectOfficialIntakeCommit,
     ProjectWorkflowStatus,
     Role,
     User,
@@ -463,7 +464,7 @@ def test_generate_persists_artifact_and_atomic_audit(result_db: Session) -> None
     assert artifact.request_digest_sha256 is not None
     assert artifact.source_snapshot_sha256 == service._snapshot_canonical_digest(seeded["snapshot"])
     assert artifact.storage_object_key == f"org/{seeded['org'].id}/project/{seeded['project'].id}/preliminary-results/{artifact.id}.xlsx"
-    assert artifact.original_filename == f"ket-qua-so-bo-v1-{artifact.id}.xlsx"
+    assert artifact.original_filename == f"ket-qua-so-bo-{artifact.id}.xlsx"
 
     audits = (
         result_db.query(AuditEvent)
@@ -663,18 +664,19 @@ def test_reused_idempotency_key_with_different_request_is_rejected(
     assert result_db.query(PreliminaryResultArtifact).count() == 1
 
 
-def test_second_generate_for_project_is_rejected(result_db: Session) -> None:
+def test_second_generate_for_project_creates_version_two(result_db: Session) -> None:
     seeded = _seed(result_db)
-    _generate(result_db, seeded)
+    first = _generate(result_db, seeded)
 
-    with pytest.raises(HTTPException) as exc:
-        _generate(result_db, seeded, idempotency_key="preliminary-result-generate-2")
+    second = _generate(result_db, seeded, idempotency_key="preliminary-result-generate-2")
 
-    _assert_error(exc, 409, "preliminary_result_already_generated")
-    assert result_db.query(PreliminaryResultArtifact).count() == 1
+    assert first.version == 1
+    assert second.version == 2
+    assert second.id != first.id
+    assert result_db.query(PreliminaryResultArtifact).count() == 2
 
 
-def test_legacy_keyless_artifact_blocks_generation(result_db: Session) -> None:
+def test_legacy_keyless_artifact_remains_history(result_db: Session) -> None:
     seeded = _seed(result_db)
     legacy = PreliminaryResultArtifact(
         organization_id=seeded["org"].id,
@@ -693,10 +695,9 @@ def test_legacy_keyless_artifact_blocks_generation(result_db: Session) -> None:
     result_db.add(legacy)
     result_db.commit()
 
-    with pytest.raises(HTTPException) as exc:
-        _generate(result_db, seeded)
-
-    _assert_error(exc, 409, "preliminary_result_already_generated")
+    second = _generate(result_db, seeded)
+    assert second.version == 2
+    assert result_db.query(PreliminaryResultArtifact).count() == 2
 
 
 @pytest.mark.parametrize(
@@ -1002,6 +1003,32 @@ def test_audit_failure_rolls_back_artifact_and_object(result_db: Session, monkey
     assert storage_key not in seeded["fake_storage"]._objects
 
 
+def test_failed_cleanup_leaves_only_reusable_candidate_bytes(
+    result_db: Session, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seeded = _seed(result_db)
+    storage = seeded["fake_storage"]
+    storage.fail_delete = True
+
+    def fail_audit(*args, **kwargs):
+        raise RuntimeError("audit unavailable")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(service, "log_audit_event", fail_audit)
+        with pytest.raises(RuntimeError, match="audit unavailable"):
+            _generate(result_db, seeded)
+    assert result_db.query(PreliminaryResultArtifact).count() == 0
+    assert result_db.query(AuditEvent).filter_by(
+        event_name="PreliminaryResultArtifactGenerated",
+    ).count() == 0
+    assert len(storage._objects) == 2  # Source plus non-authoritative candidate.
+
+    recovered = _generate(result_db, seeded)
+    assert recovered.version == 1
+    assert result_db.query(PreliminaryResultArtifact).count() == 1
+    assert _generate(result_db, seeded).id == recovered.id
+
+
 def test_storage_collision_mismatch_returns_500(result_db: Session) -> None:
     seeded = _seed(result_db)
     snapshot_digest = service._snapshot_canonical_digest(seeded["snapshot"])
@@ -1056,3 +1083,84 @@ def test_current_analysis_rechecked_after_object_io(result_db: Session, monkeypa
         _generate(result_db, seeded)
     _assert_error(exc, 409, "preliminary_analysis_not_current")
     assert result_db.query(PreliminaryResultArtifact).count() == 0
+
+
+def test_three_versions_and_old_key_replay_select_latest(result_db: Session) -> None:
+    seeded = _seed(result_db)
+    original_version = seeded["project"].row_version
+    first = _generate(result_db, seeded)
+    second = _generate(result_db, seeded, idempotency_key="result-v2")
+    third = _generate(result_db, seeded, idempotency_key="result-v3")
+
+    analysis = evaluate_preliminary_analysis_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    ready = evaluate_preliminary_ready_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert [first.version, second.version, third.version] == [1, 2, 3]
+    assert first.content_checksum_sha256 == second.content_checksum_sha256 == third.content_checksum_sha256
+    assert ready.result == "COMPLETE"
+    assert ready.authoritative_entity.id == third.id
+    assert _generate(result_db, seeded).id == first.id
+    assert seeded["project"].row_version == original_version
+    assert result_db.query(AuditEvent).filter_by(
+        event_name="PreliminaryResultArtifactGenerated",
+    ).count() == 3
+
+
+def test_new_analysis_makes_old_result_historical(result_db: Session) -> None:
+    seeded = _seed(result_db)
+    first = _generate(result_db, seeded)
+    next_analysis = _append_analysis_version(result_db, seeded["snapshot"], 2)
+    analysis = evaluate_preliminary_analysis_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    before = evaluate_preliminary_ready_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert analysis.authoritative_entity.id == next_analysis.id
+    assert before.result == "INCOMPLETE"
+    with pytest.raises(HTTPException) as stale:
+        _generate(result_db, seeded, idempotency_key="stale-new-key")
+    _assert_error(stale, 409, "preliminary_analysis_not_current")
+
+    second = _generate(
+        result_db, seeded, preliminary_analysis_snapshot_id=next_analysis.id,
+        idempotency_key="result-analysis-v2",
+    )
+    after = evaluate_preliminary_ready_provider(
+        result_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis,
+    )
+    assert second.version == 2
+    assert after.result == "COMPLETE"
+    assert after.authoritative_entity.id == second.id
+    assert _generate(result_db, seeded).id == first.id
+
+
+def test_post_intake_blocks_new_version_but_preserves_old_replay(result_db: Session) -> None:
+    seeded = _seed(result_db)
+    first = _generate(result_db, seeded)
+    result_db.add(ProjectOfficialIntakeCommit(
+        organization_id=seeded["org"].id,
+        customer_id=seeded["customer"].id,
+        project_id=seeded["project"].id,
+        preliminary_result_artifact_id=first.id,
+        preliminary_result_version=first.version,
+        preliminary_result_sha256=first.content_checksum_sha256,
+        source_snapshot_sha256=first.source_snapshot_sha256,
+        project_version_before=seeded["project"].row_version,
+        idempotency_key="intake-after-result",
+        request_digest_sha256="a" * 64,
+        committed_by_user_id=seeded["actor"].id,
+    ))
+    result_db.commit()
+
+    with pytest.raises(HTTPException) as closed:
+        _generate(result_db, seeded, idempotency_key="result-after-intake")
+    _assert_error(closed, 409, "official_intake_already_committed")
+    assert _generate(result_db, seeded).id == first.id
+    assert result_db.query(PreliminaryResultArtifact).count() == 1

@@ -627,7 +627,7 @@ def test_preliminary_ready_zero_artifacts(test_db: Session) -> None:
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "INCOMPLETE"
-    assert res.fact_token == "preliminary_ready_v1:null:absent-v1:absent"
+    assert res.fact_token == "preliminary_ready_v2:null:absent-v2:absent"
 
 
 def _seed_complete_preliminary_ready(test_db: Session, seeded: dict) -> dict[str, Any]:
@@ -878,6 +878,45 @@ def _append_analysis_version(
     return snapshot
 
 
+def _append_result_for_analysis(
+    test_db: Session, ready: dict, analysis: PreliminaryAnalysisSnapshot,
+    *, version: int,
+) -> PreliminaryResultArtifact:
+    prior = ready["artifact"]
+    usage = ready["usage"]
+    candidate = usage.mapping_snapshot["candidate"]
+    quantity_field = next(
+        field for field in usage.mapping_snapshot["fields"]
+        if field["semantic_role"] == "quantity"
+    )
+    result = PreliminaryResultArtifact(
+        organization_id=prior.organization_id,
+        customer_id=prior.customer_id,
+        project_id=prior.project_id,
+        version=version,
+        original_filename=f"result-v{version}.xlsx",
+        content_type=prior.content_type,
+        file_size_bytes=prior.file_size_bytes,
+        content_checksum_sha256=prior.content_checksum_sha256,
+        storage_object_key=f"key-res-{version}-{uuid.uuid4()}",
+        source_snapshot_sha256=snapshot_canonical_digest(analysis),
+        lineage_manifest=_build_lineage_manifest(
+            org_id=prior.organization_id, project_id=prior.project_id,
+            customer_id=prior.customer_id, snapshot=analysis,
+            artifact=ready["source_artifact"], structure=ready["structure"],
+            decision=ready["decision"], usage=usage, candidate=candidate,
+            quantity_field=quantity_field, price_col=candidate["max_column"] + 1,
+            amount_col=candidate["max_column"] + 2,
+            snapshot_digest=snapshot_canonical_digest(analysis),
+            line_manifest=analysis.line_manifest,
+        ),
+        created_by_user_id=prior.created_by_user_id,
+    )
+    test_db.add(result)
+    test_db.flush()
+    return result
+
+
 def test_analysis_selects_highest_valid_version_and_ready_becomes_incomplete(
     test_db: Session,
 ) -> None:
@@ -896,6 +935,40 @@ def test_analysis_selects_highest_valid_version_and_ready_becomes_incomplete(
     assert analysis.result == "COMPLETE"
     assert analysis.authoritative_entity.id == second.id
     assert result.result == "INCOMPLETE"
+
+
+def test_ready_selects_highest_valid_result_for_current_analysis(test_db: Session) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    current_analysis = _append_analysis_version(test_db, ready["snapshot"], version=2)
+    analysis_result = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    historical_only = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis_result,
+    )
+    assert historical_only.result == "INCOMPLETE"
+    second = _append_result_for_analysis(test_db, ready, current_analysis, version=2)
+    third = _append_result_for_analysis(test_db, ready, current_analysis, version=3)
+    selected = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis_result,
+    )
+    assert second.version == 2
+    assert selected.result == "COMPLETE"
+    assert selected.authoritative_entity.id == third.id
+    assert selected.provider_key == "preliminary_ready_v2"
+
+    damaged = json.loads(json.dumps(second.lineage_manifest))
+    damaged["analysis_snapshot"]["version"] = 99
+    second.lineage_manifest = damaged
+    test_db.flush()
+    unavailable = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis_result,
+    )
+    assert unavailable.result == "NOT_AVAILABLE"
 
 
 def test_analysis_same_version_conflict_is_not_available(
@@ -957,7 +1030,7 @@ def test_matching_customer_does_not_rescue_wrong_analysis_scope(
         analysis_provider_result=analysis,
     )
     assert analysis.result == "INCOMPLETE"
-    assert result.result == "INCOMPLETE"
+    assert result.result == "NOT_AVAILABLE"
 
 
 def test_batch_switch_leaves_historical_analysis_without_current_match(
@@ -1112,7 +1185,7 @@ def test_preliminary_ready_single_artifact_complete(test_db: Session) -> None:
         analysis_provider_result=analysis_res,
     )
     assert res.result == "COMPLETE"
-    assert res.fact_token.startswith(f"preliminary_ready_v1:{str(artifact.id).lower()}:av1-")
+    assert res.fact_token.startswith(f"preliminary_ready_v2:{str(artifact.id).lower()}:av2-")
     assert res.fact_token.endswith(":complete")
 
 
@@ -1149,8 +1222,8 @@ def test_preliminary_ready_missing_lineage_group(test_db: Session) -> None:
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_mutated_source_checksum_or_format(test_db: Session) -> None:
@@ -1177,8 +1250,8 @@ def test_preliminary_ready_mutated_source_checksum_or_format(test_db: Session) -
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # Mutate detected format
     mutated = json.loads(json.dumps(full_lineage))
@@ -1191,8 +1264,8 @@ def test_preliminary_ready_mutated_source_checksum_or_format(test_db: Session) -
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_mutated_structure_version_rule_digest(test_db: Session) -> None:
@@ -1219,8 +1292,8 @@ def test_preliminary_ready_mutated_structure_version_rule_digest(test_db: Sessio
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_mutated_mapping_fingerprint_contract_digests(test_db: Session) -> None:
@@ -1252,8 +1325,8 @@ def test_preliminary_ready_mutated_mapping_fingerprint_contract_digests(test_db:
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_mutated_analysis_version_line_manifest_finalizer_finalized_at(test_db: Session) -> None:
@@ -1285,8 +1358,8 @@ def test_preliminary_ready_mutated_analysis_version_line_manifest_finalizer_fina
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_mutated_remaining_manifest_sections(test_db: Session) -> None:
@@ -1318,8 +1391,8 @@ def test_preliminary_ready_mutated_remaining_manifest_sections(test_db: Session)
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
     # line_locator_count mutation
     mutated = json.loads(json.dumps(full_lineage))
@@ -1332,8 +1405,8 @@ def test_preliminary_ready_mutated_remaining_manifest_sections(test_db: Session)
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # generation_contract mutation
     mutated = json.loads(json.dumps(full_lineage))
@@ -1346,8 +1419,8 @@ def test_preliminary_ready_mutated_remaining_manifest_sections(test_db: Session)
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # customer_id mutation
     mutated = json.loads(json.dumps(full_lineage))
@@ -1360,8 +1433,8 @@ def test_preliminary_ready_mutated_remaining_manifest_sections(test_db: Session)
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
 
 def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: Session) -> None:
@@ -1400,8 +1473,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
     # line_locator_count (top-level) int -> bool (coordinator reproduction)
     mutated = json.loads(json.dumps(full_lineage))
@@ -1414,8 +1487,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # 2. Boolean-versus-integer mutation (output_layout.header_merge True -> 1; coordinator reproduction)
     mutated = json.loads(json.dumps(full_lineage))
@@ -1428,8 +1501,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # 3. Numeric-versus-string mutations
     num_to_str_cases = [
@@ -1451,8 +1524,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
     # line_locator_count (top-level) num -> str
     mutated = json.loads(json.dumps(full_lineage))
@@ -1465,8 +1538,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
     # 4. Integer-versus-float mutations
     int_to_float_cases = [
@@ -1488,8 +1561,8 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
             project_id=seeded["project"].id,
             analysis_provider_result=analysis_res,
         )
-        assert res.result == "INCOMPLETE"
-        assert res.fact_token.endswith(":incomplete")
+        assert res.result == "NOT_AVAILABLE"
+        assert res.fact_token.endswith(":not_available")
 
     # line_locator_count (top-level) int -> float
     mutated = json.loads(json.dumps(full_lineage))
@@ -1502,11 +1575,11 @@ def test_preliminary_ready_lineage_manifest_type_sensitive_rejections(test_db: S
         project_id=seeded["project"].id,
         analysis_provider_result=analysis_res,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.fact_token.endswith(":not_available")
 
 
-def test_preliminary_ready_single_artifact_incomplete_contributes_identity_and_av1(test_db: Session) -> None:
+def test_preliminary_ready_corrupt_artifact_is_unavailable(test_db: Session) -> None:
     seeded = _seed_basic(test_db)
     artifact = PreliminaryResultArtifact(
         organization_id=seeded["org"].id,
@@ -1531,10 +1604,9 @@ def test_preliminary_ready_single_artifact_incomplete_contributes_identity_and_a
         project_id=seeded["project"].id,
         analysis_provider_result=None,
     )
-    assert res.result == "INCOMPLETE"
-    assert res.authoritative_entity == artifact
-    assert res.fact_token.startswith(f"preliminary_ready_v1:{str(artifact.id).lower()}:av1-")
-    assert res.fact_token.endswith(":incomplete")
+    assert res.result == "NOT_AVAILABLE"
+    assert res.authoritative_entity is None
+    assert res.fact_token == "preliminary_ready_v2:null:invalid-v2:not_available"
 
 
 def test_preliminary_ready_multiple_artifacts_ambiguity(test_db: Session) -> None:
@@ -1574,7 +1646,7 @@ def test_preliminary_ready_multiple_artifacts_ambiguity(test_db: Session) -> Non
         test_db, org_id=seeded["org"].id, project_id=seeded["project"].id
     )
     assert res.result == "NOT_AVAILABLE"
-    assert res.fact_token.startswith("preliminary_ready_v1:null:amb1-")
+    assert res.fact_token.startswith("preliminary_ready_v2:null:invalid-v2")
     assert res.fact_token.endswith(":not_available")
 
 

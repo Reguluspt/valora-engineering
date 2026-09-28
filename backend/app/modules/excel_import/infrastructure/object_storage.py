@@ -221,12 +221,20 @@ class S3ObjectStorage:
         content_type: str,
         expected_size: int | None = None,
     ) -> ObjectStat:
-        if self.head(key) is not None:
-            raise ObjectStorageError("object_key_exists")
-        extra = {"ContentType": content_type}
+        # S3's conditional create is atomic across processes. A HEAD followed by
+        # upload_fileobj can overwrite a competing writer between those calls.
+        data = _read_stream_bounded(
+            stream, max_bytes=_MAX_OBJECT_BYTES, expected_size=expected_size,
+        )
         try:
-            self._client.upload_fileobj(stream, self._bucket, key, ExtraArgs=extra)
+            self._client.put_object(
+                Bucket=self._bucket, Key=key, Body=data,
+                ContentType=content_type, IfNoneMatch="*",
+            )
         except Exception as exc:
+            status = getattr(exc, "response", {}).get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if status in (409, 412):
+                raise ObjectStorageError("object_key_exists") from exc
             raise ObjectStorageError("put_failed", type(exc).__name__) from exc
         st = self.head(key)
         if st is None:
