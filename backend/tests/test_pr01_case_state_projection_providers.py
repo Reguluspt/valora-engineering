@@ -971,6 +971,36 @@ def test_ready_selects_highest_valid_result_for_current_analysis(test_db: Sessio
     assert unavailable.result == "NOT_AVAILABLE"
 
 
+def test_ready_ignores_damaged_noncompeting_historical_result(test_db: Session) -> None:
+    seeded = _seed_basic(test_db)
+    ready = _seed_complete_preliminary_ready(test_db, seeded)
+    current_analysis = _append_analysis_version(test_db, ready["snapshot"], version=2)
+    current = _append_result_for_analysis(test_db, ready, current_analysis, version=2)
+    historical = ready["artifact"]
+    damaged = json.loads(json.dumps(historical.lineage_manifest))
+    damaged["source_workbook"]["checksum_sha256"] = "0" * 64
+    historical.lineage_manifest = damaged
+    test_db.flush()
+
+    analysis_result = evaluate_preliminary_analysis_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+    )
+    selected = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis_result,
+    )
+    assert selected.result == "COMPLETE"
+    assert selected.authoritative_entity.id == current.id
+
+    historical.lineage_manifest = {"analysis_snapshot": {"id": str(current_analysis.id)}}
+    test_db.flush()
+    unavailable = evaluate_preliminary_ready_provider(
+        test_db, org_id=seeded["org"].id, project_id=seeded["project"].id,
+        analysis_provider_result=analysis_result,
+    )
+    assert unavailable.result == "NOT_AVAILABLE"
+
+
 def test_analysis_same_version_conflict_is_not_available(
     test_db: Session, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

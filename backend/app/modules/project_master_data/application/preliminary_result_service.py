@@ -1007,7 +1007,6 @@ def _t2_insert_artifact(
     project_id: uuid.UUID,
     output_checksum: str,
     output_size: int,
-    storage: Any,
     correlation_id: str | None,
 ) -> PreliminaryResultArtifact:
     actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
@@ -1092,18 +1091,6 @@ def _t2_insert_artifact(
         _abort(db, 409, "preliminary_result_lineage_changed", "Nguồn gốc kết quả sơ bộ đã thay đổi.")
     if _canonical_json(lineage_manifest) != _canonical_json(ctx.lineage_manifest):
         _abort(db, 409, "preliminary_result_lineage_changed", "Nguồn gốc kết quả sơ bộ đã thay đổi.")
-
-    # Candidate storage has no authority, but must still hold the exact bytes at commit.
-    try:
-        stored = storage.open_stream(ctx.storage_key)
-        try:
-            stored_bytes = _read_stream_bounded(stored, max_bytes=_MAX_OBJECT_BYTES, expected_size=output_size)
-        finally:
-            stored.close()
-    except (ObjectNotFound, ObjectStorageError):
-        _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
-    if _sha256_hex(stored_bytes) != output_checksum:
-        _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
 
     next_version = (
         db.query(func.max(PreliminaryResultArtifact.version))
@@ -1235,6 +1222,20 @@ def generate_preliminary_result_artifact(
         ) from exc
 
     try:
+        # Verify candidate bytes before reacquiring DB locks for finalization.
+        try:
+            stored = storage.open_stream(t1_result.storage_key)
+            try:
+                stored_bytes = _read_stream_bounded(
+                    stored, max_bytes=_MAX_OBJECT_BYTES, expected_size=output_size,
+                )
+            finally:
+                stored.close()
+        except (ObjectNotFound, ObjectStorageError):
+            _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
+        if _sha256_hex(stored_bytes) != output_checksum:
+            _abort(db, 409, "preliminary_result_storage_failure", "File kết quả không còn hợp lệ.")
+
         return _t2_insert_artifact(
             db,
             ctx=t1_result,
@@ -1243,7 +1244,6 @@ def generate_preliminary_result_artifact(
             project_id=project_id,
             output_checksum=output_checksum,
             output_size=output_size,
-            storage=storage,
             correlation_id=correlation_id,
         )
     except Exception:

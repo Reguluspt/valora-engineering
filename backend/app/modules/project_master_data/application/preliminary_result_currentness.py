@@ -77,11 +77,9 @@ def _validated_analysis(
 
 def _validate_manifest(
     db: Session, *, result: PreliminaryResultArtifact,
+    manifest: dict, analysis: PreliminaryAnalysisSnapshot,
     org_id: uuid.UUID, project_id: uuid.UUID,
-) -> PreliminaryAnalysisSnapshot:
-    manifest = result.lineage_manifest
-    if not isinstance(manifest, dict) or not manifest:
-        raise CurrentResultCorruption("Result manifest is missing or malformed.")
+) -> None:
     if (
         not isinstance(result.content_checksum_sha256, str)
         or re.fullmatch(r"[0-9a-f]{64}", result.content_checksum_sha256) is None
@@ -89,9 +87,6 @@ def _validate_manifest(
         or not result.storage_object_key
     ):
         raise CurrentResultCorruption("Result file identity is invalid.")
-    analysis = _validated_analysis(
-        db, result=result, manifest=manifest, org_id=org_id, project_id=project_id,
-    )
     source = _lineage_entity(
         db, ImportSourceArtifact, id=analysis.source_artifact_id,
         org_id=org_id, project_id=project_id,
@@ -145,7 +140,6 @@ def _validate_manifest(
         raise CurrentResultCorruption("Result manifest inputs are invalid.") from exc
     if _canonical_json(manifest) != _canonical_json(expected):
         raise CurrentResultCorruption("Result manifest does not match stored lineage.")
-    return analysis
 
 
 def select_current_result(
@@ -162,9 +156,16 @@ def select_current_result(
         raise CurrentResultCorruption("Conflicting Result claims at the same version.")
     matching: list[PreliminaryResultArtifact] = []
     for result in results:
-        analysis = _validate_manifest(
-            db, result=result, org_id=org_id, project_id=project_id,
+        manifest = result.lineage_manifest
+        if not isinstance(manifest, dict) or not manifest:
+            raise CurrentResultCorruption("Result manifest is missing or malformed.")
+        analysis = _validated_analysis(
+            db, result=result, manifest=manifest, org_id=org_id, project_id=project_id,
         )
         if current_analysis is not None and analysis.id == current_analysis.id:
+            _validate_manifest(
+                db, result=result, manifest=manifest, analysis=analysis,
+                org_id=org_id, project_id=project_id,
+            )
             matching.append(result)
     return max(matching, key=lambda result: result.version) if matching else None

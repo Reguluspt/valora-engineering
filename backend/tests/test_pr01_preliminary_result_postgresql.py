@@ -656,6 +656,44 @@ def test_postgresql_source_switch_during_object_io_cannot_publish(
         engine.dispose()
 
 
+def test_postgresql_candidate_read_does_not_hold_project_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    setup: Session = SessionLocal()
+    try:
+        ids = _seed(setup, suffix=f"pg-object-lock-{uuid.uuid4().hex[:8]}")
+        storage = ids["fake_storage"]
+        set_object_storage_override(storage)
+        original_open = storage.open_stream
+        candidate_reads = []
+
+        def inspect_candidate_lock(object_key: str):
+            if "/preliminary-results/" in object_key:
+                with SessionLocal() as probe:
+                    project = probe.query(Project).filter_by(
+                        id=ids["project_id"], organization_id=ids["org_id"],
+                    ).with_for_update(nowait=True).one()
+                    assert project.id == ids["project_id"]
+                    probe.rollback()
+                candidate_reads.append(object_key)
+            return original_open(object_key)
+
+        monkeypatch.setattr(storage, "open_stream", inspect_candidate_lock)
+        result = generate_preliminary_result_artifact(
+            setup, actor=setup.get(User, ids["actor_id"]), org_id=ids["org_id"],
+            project_id=ids["project_id"], preliminary_analysis_snapshot_id=ids["snapshot_id"],
+            expected_project_version=ids["project_version"],
+            idempotency_key="pg-object-lock-key", confirmed=True,
+        )
+        assert result.version == 1
+        assert candidate_reads == [result.storage_object_key]
+    finally:
+        setup.close()
+        engine.dispose()
+
+
 def test_postgresql_intake_during_regeneration_closes_t2(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
