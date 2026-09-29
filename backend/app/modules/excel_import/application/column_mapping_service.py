@@ -294,6 +294,20 @@ def _lock_mapping_project(
     )
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
+    batch = (
+        db.query(ProjectAssetImportBatch)
+        .filter(
+            ProjectAssetImportBatch.organization_id == org_id,
+            ProjectAssetImportBatch.project_id == project_id,
+            ProjectAssetImportBatch.id == batch_id,
+        )
+        .populate_existing()
+        .with_for_update()
+        .first()
+    )
+    if batch is None:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+    # Official Intake locks Project before committing; source replacement locks this batch.
     _assert_mapping_open(db, project=project, batch_id=batch_id)
     return project
 

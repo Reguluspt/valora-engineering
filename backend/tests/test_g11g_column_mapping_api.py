@@ -353,6 +353,11 @@ def test_public_mapping_rejects_inactive_and_cross_tenant(api_client, mapping_db
     payload = _proposal_payload(seeded)
     headers = _headers(seeded)
     assert api_client.post(_path(other, "proposals"), headers=headers, json=payload).status_code == 404
+    foreign_batch_url = (
+        f"/api/v1/projects/{seeded['project'].id}/asset-imports/"
+        f"{other['batch'].id}/column-mapping/proposals"
+    )
+    assert api_client.post(foreign_batch_url, headers=headers, json=payload).status_code == 404
     assert api_client.post(url, headers=headers, json={
         **payload, "source_artifact_id": str(other["artifact"].id),
     }).status_code == 404
