@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-29 (OS-G1.1E Pre-case public API exposure)
+**Last reconciled:** 2026-09-29 (OS-G1.1F Pre-case creation UI entry)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -91,8 +91,11 @@ explicit current-batch switching, Preliminary Analysis finalization, Preliminary
 and Official Intake through the existing application commands. The public case-state read includes
 authoritative current Pre-case IDs, versions and the Project CAS token. Standard `owner` and
 `appraiser` roles receive the dedicated Analysis, Result and Official Intake permissions through a
-data-only migration; other standard roles do not. G1.1E is an API slice only; Pre-case frontend,
-browser acceptance, G1.1F+ and OS-G2 are NOT STARTED.
+data-only migration; other standard roles do not. G1.1F adds the first bounded Pre-case frontend
+entry: authenticated users can open a Fluent 2 light `Tạo yêu cầu sơ bộ` surface from the Project
+list and create an unbound Pre-case Project through the G1.1E optional-Customer API. This slice stops
+before dedicated `Quản lý yêu cầu sơ bộ` state management, Upload & Mapping, Analysis/Result/Official
+Intake UI and browser acceptance. G1.1G+ and OS-G2 are NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
