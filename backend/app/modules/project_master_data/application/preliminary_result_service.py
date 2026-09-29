@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import math
+import re
 import uuid
 import zipfile
 from dataclasses import dataclass
@@ -564,6 +565,19 @@ def _write_output_workbook(
                     info.external_attr = member.external_attr
                     with source_zip.open(member) as stream:
                         content = _read_stream_bounded(stream, max_bytes=50 * 1024 * 1024)
+                    if member.filename == "docProps/core.xml":
+                        for field in (b"created", b"modified"):
+                            pattern = rb"(<dcterms:" + field + rb"\b[^>]*>)[^<]*(</dcterms:" + field + rb">)"
+                            content, count = re.subn(
+                                pattern,
+                                lambda match: match.group(1) + b"1980-01-01T00:00:00Z" + match.group(2),
+                                content,
+                            )
+                            if count != 1:
+                                raise _error(
+                                    409, "preliminary_result_output_metadata_invalid",
+                                    "Metadata của file kết quả không hợp lệ.",
+                                )
                     target_zip.writestr(info, content)
         data = canonical.getvalue()
         if len(data) > _MAX_OBJECT_BYTES:
