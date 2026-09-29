@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import time
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -1089,6 +1090,7 @@ def test_three_versions_and_old_key_replay_select_latest(result_db: Session) -> 
     seeded = _seed(result_db)
     original_version = seeded["project"].row_version
     first = _generate(result_db, seeded)
+    time.sleep(1.1)
     second = _generate(result_db, seeded, idempotency_key="result-v2")
     third = _generate(result_db, seeded, idempotency_key="result-v3")
 
