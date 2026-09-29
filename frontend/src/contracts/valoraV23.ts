@@ -45,6 +45,7 @@ export const CANONICAL_CROSS_PRODUCT_UI_STATES = [
 
 export const APP_ROUTES = {
   projectList: "/workbench/projects",
+  preliminaryRequestCreate: "/workbench/preliminary-requests/new",
   projectDetailPrefix: "/workbench/projects/",
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
