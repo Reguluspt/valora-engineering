@@ -155,6 +155,7 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
 
   it("preserves the canonical project, document, and M365 return routes", () => {
     expect(APP_ROUTES.projectList).toBe("/workbench/projects");
+    expect(APP_ROUTES.preliminaryRequestCreate).toBe("/workbench/preliminary-requests/new");
     expect(projectDocumentsPath("HD 01")).toBe("/workbench/projects/HD%2001/documents");
     expect(splitProjectRoute("/workbench/projects/HD%2001/documents")).toEqual({
       projectRef: "HD 01",
