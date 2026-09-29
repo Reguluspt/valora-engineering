@@ -2,7 +2,7 @@ import math
 import uuid
 from datetime import datetime
 from typing import List, Literal, Optional
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
@@ -215,7 +215,7 @@ class SupplierResponse(BaseSchema):
 class ProjectCreate(BaseSchema):
     code: str = Field(..., max_length=64)
     name: str = Field(..., max_length=255)
-    customer_id: uuid.UUID
+    customer_id: Optional[uuid.UUID] = None
     description: Optional[str] = None
     fee_amount: float = Field(0.0, ge=0.0)
     fee_currency_id: Optional[uuid.UUID] = None
@@ -234,7 +234,8 @@ class ProjectUpdate(BaseSchema):
 class ProjectResponse(BaseSchema):
     id: uuid.UUID
     organization_id: uuid.UUID
-    customer_id: uuid.UUID
+    customer_id: Optional[uuid.UUID]
+    current_preliminary_import_batch_id: Optional[uuid.UUID]
     code: str
     name: str
     description: Optional[str]
@@ -311,6 +312,20 @@ class CaseStateResponse(BaseSchema):
     warnings: list[CaseStateIssueResponse]
     stale: list[dict[str, object]]
     capabilities: list[CaseStateCapabilityResponse]
+    preliminary: "PreliminarySelectionResponse"
+
+
+class PreliminarySelectionResponse(BaseSchema):
+    project_id: uuid.UUID
+    customer_id: Optional[uuid.UUID]
+    project_row_version: int
+    current_preliminary_import_batch_id: Optional[uuid.UUID]
+    current_source_artifact_id: Optional[uuid.UUID]
+    current_preliminary_analysis_snapshot_id: Optional[uuid.UUID]
+    current_preliminary_analysis_version: Optional[int]
+    current_preliminary_result_artifact_id: Optional[uuid.UUID]
+    current_preliminary_result_version: Optional[int]
+    official_intake_commit_id: Optional[uuid.UUID]
 
 
 # ProjectAssetLine Schemas
@@ -456,13 +471,14 @@ class PreliminaryAnalysisLineItem(BaseSchema):
 class PreliminaryAnalysisFinalizeRequest(BaseSchema):
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
-    project_id: uuid.UUID
     expected_project_version: int = Field(..., ge=1)
     import_batch_id: uuid.UUID
     source_artifact_id: uuid.UUID
     structure_snapshot_id: uuid.UUID
     mapping_decision_id: uuid.UUID
     mapping_profile_usage_id: uuid.UUID
+    mapping_decision_digest_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+    profile_usage_mapping_digest_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
     line_manifest: List[PreliminaryAnalysisLineItem]
     idempotency_key: str = Field(..., max_length=128)
     confirmed: bool
@@ -486,6 +502,79 @@ class PreliminaryAnalysisSnapshotResponse(BaseSchema):
     line_manifest_digest_sha256: str
     finalized_by_user_id: uuid.UUID
     finalized_at: datetime
+
+
+class PreliminaryCustomerBindRequest(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    customer_id: uuid.UUID
+    expected_project_version: int = Field(..., ge=1)
+    idempotency_key: str = Field(..., min_length=1, max_length=128)
+
+
+class PreliminaryBatchSwitchRequest(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    target_import_batch_id: uuid.UUID
+    expected_current_import_batch_id: Optional[uuid.UUID]
+    expected_project_version: int = Field(..., ge=1)
+    idempotency_key: str = Field(..., min_length=1, max_length=128)
+
+
+class PreliminaryResultGenerateRequest(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    preliminary_analysis_snapshot_id: uuid.UUID
+    expected_project_version: int = Field(..., ge=1)
+    idempotency_key: str = Field(..., min_length=1, max_length=128)
+    confirmed: StrictBool
+
+
+class OfficialIntakeCommitRequest(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    preliminary_result_artifact_id: uuid.UUID
+    expected_project_version: int = Field(..., ge=1)
+    expected_preliminary_result_version: int = Field(..., ge=1)
+    idempotency_key: str = Field(..., min_length=1, max_length=128)
+    confirmed: StrictBool
+
+
+class PreliminaryLifecycleCommandResponse(BaseSchema):
+    receipt_id: uuid.UUID
+    project_id: uuid.UUID
+    expected_project_version: int
+    committed_project_version: int
+    target_customer_id: Optional[uuid.UUID]
+    previous_import_batch_id: Optional[uuid.UUID]
+    target_import_batch_id: Optional[uuid.UUID]
+
+
+class PreliminaryAnalysisCommandResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    version: int
+    expected_project_version: int
+    import_batch_id: uuid.UUID
+    source_artifact_id: uuid.UUID
+
+
+class PreliminaryResultCommandResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    version: int
+    expected_project_version: int
+    preliminary_analysis_snapshot_id: uuid.UUID
+    content_checksum_sha256: str
+
+
+class OfficialIntakeCommitResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    customer_id: uuid.UUID
+    preliminary_result_artifact_id: uuid.UUID
+    preliminary_result_version: int
+    project_version_before: int
 
 
 # ==========================================

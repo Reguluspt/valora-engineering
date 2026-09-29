@@ -39,6 +39,11 @@ from app.modules.project_master_data.schemas import (
     ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse,
     ProjectResolutionResponse, CaseStateResponse,
+    PreliminaryCustomerBindRequest, PreliminaryBatchSwitchRequest,
+    PreliminaryAnalysisFinalizeRequest, PreliminaryResultGenerateRequest,
+    OfficialIntakeCommitRequest, PreliminaryLifecycleCommandResponse,
+    PreliminaryAnalysisCommandResponse, PreliminaryResultCommandResponse,
+    OfficialIntakeCommitResponse,
     NccSelectionConfirmRequest, NccSelectionCurrentResponse, NccSelectionAggregateResponse,
 )
 from app.modules.project_master_data.application.ncc_selection_service import (
@@ -50,6 +55,19 @@ from app.modules.project_master_data.application.ncc_selection_service import (
 from app.modules.project_master_data.application.case_state_projection import (
     ProjectionError,
     get_case_state_projection,
+)
+from app.modules.project_master_data.application.preliminary_project_lifecycle_service import (
+    bind_preliminary_project_customer,
+    switch_current_preliminary_import_batch,
+)
+from app.modules.project_master_data.application.preliminary_analysis_service import (
+    finalize_preliminary_analysis,
+)
+from app.modules.project_master_data.application.preliminary_result_service import (
+    generate_preliminary_result_artifact,
+)
+from app.modules.project_master_data.application.official_intake_service import (
+    commit_project_official_intake,
 )
 from app.modules.project_master_data.workbench_schemas import (
     ProjectDraftStateResponse,
@@ -116,14 +134,15 @@ def create_project(
         raise HTTPException(status_code=409, detail="Duplicate project code (code already exists in organization)")
 
     # 2. Enforce customer relationship within same organization
-    customer = db.query(Customer).filter(
-        Customer.organization_id == org_id,
-        Customer.id == payload.customer_id
-    ).first()
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    if customer.status != CustomerStatus.ACTIVE:
-        raise HTTPException(status_code=422, detail="Customer inactive")
+    if payload.customer_id is not None:
+        customer = db.query(Customer).filter(
+            Customer.organization_id == org_id,
+            Customer.id == payload.customer_id
+        ).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        if customer.status != CustomerStatus.ACTIVE:
+            raise HTTPException(status_code=422, detail="Customer inactive")
 
     # 3. Currency lookup (if provided)
     if payload.fee_currency_id:
@@ -355,7 +374,151 @@ def get_project_case_state(
             }
             for capability in projection.capabilities
         ],
+        "preliminary": projection.preliminary,
     }
+
+
+@router.post(
+    "/{project_id}/preliminary-customer",
+    response_model=PreliminaryLifecycleCommandResponse,
+    status_code=201,
+)
+def bind_project_preliminary_customer(
+    project_id: uuid.UUID,
+    payload: PreliminaryCustomerBindRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    receipt = bind_preliminary_project_customer(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, customer_id=payload.customer_id,
+        expected_project_version=payload.expected_project_version,
+        idempotency_key=payload.idempotency_key,
+        correlation_id=get_correlation_id(request),
+    )
+    return {"receipt_id": receipt.id, "project_id": receipt.project_id,
+            "expected_project_version": receipt.expected_project_version,
+            "committed_project_version": receipt.committed_project_version,
+            "target_customer_id": receipt.target_customer_id,
+            "previous_import_batch_id": receipt.previous_import_batch_id,
+            "target_import_batch_id": receipt.target_import_batch_id}
+
+
+@router.post(
+    "/{project_id}/preliminary-import-batch/current",
+    response_model=PreliminaryLifecycleCommandResponse,
+    status_code=201,
+)
+def switch_project_current_preliminary_batch(
+    project_id: uuid.UUID,
+    payload: PreliminaryBatchSwitchRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    receipt = switch_current_preliminary_import_batch(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id,
+        target_import_batch_id=payload.target_import_batch_id,
+        expected_current_import_batch_id=payload.expected_current_import_batch_id,
+        expected_project_version=payload.expected_project_version,
+        idempotency_key=payload.idempotency_key,
+        correlation_id=get_correlation_id(request),
+    )
+    return {"receipt_id": receipt.id, "project_id": receipt.project_id,
+            "expected_project_version": receipt.expected_project_version,
+            "committed_project_version": receipt.committed_project_version,
+            "target_customer_id": receipt.target_customer_id,
+            "previous_import_batch_id": receipt.previous_import_batch_id,
+            "target_import_batch_id": receipt.target_import_batch_id}
+
+
+@router.post(
+    "/{project_id}/preliminary-analyses",
+    response_model=PreliminaryAnalysisCommandResponse,
+    status_code=201,
+)
+def finalize_project_preliminary_analysis(
+    project_id: uuid.UUID,
+    payload: PreliminaryAnalysisFinalizeRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    snapshot = finalize_preliminary_analysis(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, expected_project_version=payload.expected_project_version,
+        import_batch_id=payload.import_batch_id, source_artifact_id=payload.source_artifact_id,
+        structure_snapshot_id=payload.structure_snapshot_id,
+        mapping_decision_id=payload.mapping_decision_id,
+        mapping_profile_usage_id=payload.mapping_profile_usage_id,
+        mapping_decision_digest_sha256=payload.mapping_decision_digest_sha256,
+        profile_usage_mapping_digest_sha256=payload.profile_usage_mapping_digest_sha256,
+        line_manifest=[line.model_dump() for line in payload.line_manifest],
+        idempotency_key=payload.idempotency_key, confirmed=payload.confirmed,
+        correlation_id=get_correlation_id(request),
+    )
+    return {"id": snapshot.id, "project_id": snapshot.project_id,
+            "version": snapshot.version,
+            "expected_project_version": payload.expected_project_version,
+            "import_batch_id": snapshot.import_batch_id,
+            "source_artifact_id": snapshot.source_artifact_id}
+
+
+@router.post(
+    "/{project_id}/preliminary-results",
+    response_model=PreliminaryResultCommandResponse,
+    status_code=201,
+)
+def generate_project_preliminary_result(
+    project_id: uuid.UUID,
+    payload: PreliminaryResultGenerateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    artifact = generate_preliminary_result_artifact(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id,
+        preliminary_analysis_snapshot_id=payload.preliminary_analysis_snapshot_id,
+        expected_project_version=payload.expected_project_version,
+        idempotency_key=payload.idempotency_key, confirmed=payload.confirmed,
+        correlation_id=get_correlation_id(request),
+    )
+    return {"id": artifact.id, "project_id": artifact.project_id,
+            "version": artifact.version,
+            "expected_project_version": payload.expected_project_version,
+            "preliminary_analysis_snapshot_id": payload.preliminary_analysis_snapshot_id,
+            "content_checksum_sha256": artifact.content_checksum_sha256}
+
+
+@router.post(
+    "/{project_id}/official-intake",
+    response_model=OfficialIntakeCommitResponse,
+    status_code=201,
+)
+def commit_project_official_intake_endpoint(
+    project_id: uuid.UUID,
+    payload: OfficialIntakeCommitRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    commit = commit_project_official_intake(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id,
+        preliminary_result_artifact_id=payload.preliminary_result_artifact_id,
+        expected_project_version=payload.expected_project_version,
+        expected_preliminary_result_version=payload.expected_preliminary_result_version,
+        idempotency_key=payload.idempotency_key, confirmed=payload.confirmed,
+        correlation_id=get_correlation_id(request),
+    )
+    return {"id": commit.id, "project_id": commit.project_id,
+            "customer_id": commit.customer_id,
+            "preliminary_result_artifact_id": commit.preliminary_result_artifact_id,
+            "preliminary_result_version": commit.preliminary_result_version,
+            "project_version_before": commit.project_version_before}
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)

@@ -200,6 +200,7 @@ def _seed(
     grant_permission: bool = True,
     artifact_state: ImportSourceArtifactState = ImportSourceArtifactState.AVAILABLE,
     rows: list[tuple[str, float]] | None = None,
+    project_factory=None,
 ) -> dict:
     rows = rows if rows is not None else [("Máy bơm nước 10HP", 2.0)]
     source_data = _make_xlsx_bytes(rows=rows)
@@ -236,15 +237,18 @@ def _seed(
     )
     result_db.add(customer)
     result_db.flush()
-    project = Project(
-        organization_id=org.id,
-        customer_id=customer.id,
-        code=f"PR-{suffix}-{uuid.uuid4().hex[:6]}",
-        name=f"Preliminary Result Project {suffix}",
-        status=ProjectWorkflowStatus.DRAFT,
-        created_by=actor.id,
-    )
-    result_db.add(project)
+    if project_factory is None:
+        project = Project(
+            organization_id=org.id,
+            customer_id=customer.id,
+            code=f"PR-{suffix}-{uuid.uuid4().hex[:6]}",
+            name=f"Preliminary Result Project {suffix}",
+            status=ProjectWorkflowStatus.DRAFT,
+            created_by=actor.id,
+        )
+        result_db.add(project)
+    else:
+        project = project_factory(result_db, org, actor, role, customer)
     result_db.flush()
     batch = ProjectAssetImportBatch(
         organization_id=org.id,

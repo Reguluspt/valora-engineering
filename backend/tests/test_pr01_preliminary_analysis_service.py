@@ -915,17 +915,19 @@ def test_schema_line_rejects_non_finite_non_number_for_numeric_fields(field: str
 )
 def test_schema_finalize_request_rejects_non_bool_confirmed(field: str, value) -> None:
     request = {
-        "project_id": uuid.uuid4(),
         "expected_project_version": 1,
         "import_batch_id": uuid.uuid4(),
         "source_artifact_id": uuid.uuid4(),
         "structure_snapshot_id": uuid.uuid4(),
         "mapping_decision_id": uuid.uuid4(),
         "mapping_profile_usage_id": uuid.uuid4(),
+        "mapping_decision_digest_sha256": "a" * 64,
+        "profile_usage_mapping_digest_sha256": "b" * 64,
         "line_manifest": [_VALID_LINE_DICT],
         "idempotency_key": "key-1",
         field: value,
     }
+    assert PreliminaryAnalysisFinalizeRequest(**{**request, field: True}).confirmed is True
     with pytest.raises(ValidationError):
         PreliminaryAnalysisFinalizeRequest(**request)
 
