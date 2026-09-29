@@ -64,7 +64,7 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
   return (
     <main className="precase-create-page">
       <header className="precase-create-header">
-        <p>Pre-case</p>
+        <p>Yêu cầu sơ bộ</p>
         <h1>Tạo yêu cầu sơ bộ</h1>
         <span>
           Khách hàng chưa bắt buộc ở giai đoạn sơ bộ. Hồ sơ phải được gắn khách hàng hợp lệ trước khi
@@ -111,8 +111,8 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
           </label>
 
           <div className="valora-message valora-message--info" id="precase-create-help">
-            Yêu cầu mới được tạo dưới dạng Pre-case chưa gắn khách hàng. Việc gắn khách hàng là một thao
-            tác riêng có kiểm soát trước Official Intake.
+            Yêu cầu mới được tạo ở giai đoạn sơ bộ chưa gắn khách hàng. Việc gắn khách hàng là một thao
+            tác riêng có kiểm soát trước khi chuyển sang thẩm định chính thức.
           </div>
 
           {feedback && (
