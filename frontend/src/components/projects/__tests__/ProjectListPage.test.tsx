@@ -3,9 +3,13 @@ import { act, create } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listProjects = vi.hoisted(() => vi.fn());
-vi.mock("../../../api/projects", () => ({ listProjects }));
+const resolveProjectReference = vi.hoisted(() => vi.fn());
+const getProject = vi.hoisted(() => vi.fn());
+vi.mock("../../../api/projects", () => ({ listProjects, resolveProjectReference, getProject }));
 
+import { ApiError } from "../../../api/client";
 import { ProjectListPage } from "../ProjectListPage";
+import { APP_ROUTES } from "../../../contracts/valoraV23";
 
 describe("ProjectListPage", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -38,6 +42,11 @@ describe("ProjectListPage", () => {
     );
     act(() => overview.props.onClick());
     expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1/overview");
+    const createRequest = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Tạo yêu cầu sơ bộ"),
+    );
+    act(() => createRequest.props.onClick());
+    expect(navigate).toHaveBeenCalledWith(APP_ROUTES.preliminaryRequestCreate);
     expect(JSON.stringify(root.toJSON())).not.toContain("Phiên bản 3");
   });
 
@@ -78,5 +87,73 @@ describe("ProjectListPage", () => {
     });
     expect(root.root.findAllByProps({ "data-state": "EMPTY_FIRST_USE" })).toHaveLength(1);
     expect(root.root.findAllByProps({ "data-state": "PAGE_ERROR" })).toHaveLength(0);
+    expect(JSON.stringify(root.toJSON())).toContain("Tạo yêu cầu sơ bộ để bắt đầu");
+    const createRequest = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Tạo yêu cầu sơ bộ"),
+    );
+    expect(createRequest).toBeDefined();
+  });
+
+  it("verifies a specific code through the read API, beyond the first list page", async () => {
+    resolveProjectReference.mockResolvedValue({ project_id: "project-101", matched_by: "code" });
+    getProject.mockResolvedValue({
+      id: "project-101", code: "SB-2026-001", name: "Nhà máy An Phú", description: null,
+      status: "draft", row_version: 1,
+    });
+    const navigate = vi.fn();
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(ProjectListPage, {
+        onNavigate: navigate, verificationCode: "SB-2026-001",
+      }));
+    });
+    expect(resolveProjectReference).toHaveBeenCalledWith("SB-2026-001");
+    expect(getProject).toHaveBeenCalledWith("project-101");
+    expect(listProjects).not.toHaveBeenCalled();
+    expect(root.root.findAllByType("strong")[0].children.join("")).toBe("Nhà máy An Phú");
+    expect(root.root.findByType("header").findByType("span").children.join(""))
+      .toBe("Kiểm tra mã hồ sơ SB-2026-001");
+  });
+
+  it("shows an honest no-result state and allows another read after a 404", async () => {
+    resolveProjectReference.mockRejectedValueOnce(new ApiError("not found", 404));
+    resolveProjectReference.mockResolvedValueOnce({ project_id: "project-101", matched_by: "code" });
+    getProject.mockResolvedValue({
+      id: "project-101", code: "SB-2026-001", name: "Nhà máy An Phú", description: null,
+      status: "draft", row_version: 1,
+    });
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(ProjectListPage, {
+        onNavigate: vi.fn(), verificationCode: "SB-2026-001",
+      }));
+    });
+    expect(root.root.findAllByProps({ "data-state": "EMPTY_NO_RESULTS" })).toHaveLength(1);
+    expect(JSON.stringify(root.toJSON())).toContain("Chưa tìm thấy mã hồ sơ này lúc này");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Kết quả tạo vẫn chưa xác định");
+    const retry = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Kiểm tra lại"),
+    );
+    await act(async () => retry.props.onClick());
+    expect(resolveProjectReference).toHaveBeenCalledTimes(2);
+    expect(root.root.findAllByType("strong")[0].children.join("")).toBe("Nhà máy An Phú");
+  });
+
+  it("offers authentication recovery when verification loses its session", async () => {
+    resolveProjectReference.mockRejectedValue(new ApiError("expired", 401));
+    const onSessionExpired = vi.fn();
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(ProjectListPage, {
+        onNavigate: vi.fn(), onSessionExpired, verificationCode: "SB-2026-001",
+      }));
+    });
+    const login = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Đăng nhập lại"),
+    );
+    expect(login).toBeDefined();
+    act(() => login.props.onClick());
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(resolveProjectReference).toHaveBeenCalledTimes(1);
   });
 });

@@ -45,12 +45,22 @@ export const CANONICAL_CROSS_PRODUCT_UI_STATES = [
 
 export const APP_ROUTES = {
   projectList: "/workbench/projects",
+  preliminaryRequestCreate: "/workbench/preliminary-requests/new",
   projectDetailPrefix: "/workbench/projects/",
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
   projectDocumentsSuffix: "/documents",
   m365Return: "/workbench/m365/return"
 } as const;
+
+export function projectListVerificationPath(code: string): string {
+  return `${APP_ROUTES.projectList}?verify=${encodeURIComponent(code)}`;
+}
+
+export function projectListVerificationCode(path: string): string | null {
+  if (!path.startsWith(`${APP_ROUTES.projectList}?`)) return null;
+  return new URLSearchParams(path.slice(APP_ROUTES.projectList.length + 1)).get("verify")?.trim() || null;
+}
 
 export function projectWorkbenchPath(projectRef: string): string {
   return `${APP_ROUTES.projectDetailPrefix}${encodeURIComponent(projectRef)}`;

@@ -3,7 +3,8 @@ import { request } from "./client";
 export interface ProjectSummary {
   id: string;
   organization_id: string;
-  customer_id: string;
+  customer_id: string | null;
+  current_preliminary_import_batch_id: string | null;
   code: string;
   name: string;
   description: string | null;
@@ -23,6 +24,25 @@ export async function listProjects(): Promise<ProjectSummary[]> {
 
 export async function getProject(projectId: string): Promise<ProjectSummary> {
   return request<ProjectSummary>(`/api/v1/projects/${projectId}`);
+}
+
+export interface ProjectCreateRequest {
+  code: string;
+  name: string;
+  description?: string | null;
+  customer_id?: string | null;
+}
+
+export async function createProject(payload: ProjectCreateRequest): Promise<ProjectSummary> {
+  return request<ProjectSummary>("/api/v1/projects", {
+    method: "POST",
+    body: JSON.stringify({
+      code: payload.code,
+      name: payload.name,
+      description: payload.description ?? null,
+      customer_id: payload.customer_id ?? null,
+    }),
+  });
 }
 
 export interface ProjectResolutionResponse {

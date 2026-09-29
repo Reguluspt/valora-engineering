@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { commitAssetLineDraft } from "../projects";
+import { commitAssetLineDraft, createProject } from "../projects";
 
-describe("commitAssetLineDraft API", () => {
+describe("projects API", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubGlobal("document", { cookie: "" });
@@ -9,6 +9,40 @@ describe("commitAssetLineDraft API", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("creates an unbound Pre-case Project through the public Projects API", async () => {
+    const mockResponse = {
+      status: 201,
+      ok: true,
+      json: async () => ({
+        id: "project-precase-1", organization_id: "org-1", customer_id: null,
+        current_preliminary_import_batch_id: null, code: "SB-2026-001",
+        name: "Yêu cầu sơ bộ Nhà máy An Phú", description: "Danh mục máy móc",
+        status: "draft", knowledge_status: "pending", fee_amount: 0,
+        fee_currency_id: null, signer_profile_id: null, row_version: 1,
+        created_at: "2026-09-29T00:00:00Z", updated_at: "2026-09-29T00:00:00Z",
+      })
+    };
+    (fetch as any).mockResolvedValueOnce(mockResponse);
+
+    const result = await createProject({
+      code: "SB-2026-001",
+      name: "Yêu cầu sơ bộ Nhà máy An Phú",
+      description: "Danh mục máy móc",
+      customer_id: null,
+    });
+
+    const [url, options] = (fetch as any).mock.calls[0];
+    expect(new URL(url).pathname).toBe("/api/v1/projects");
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(options.body)).toEqual({
+      code: "SB-2026-001",
+      name: "Yêu cầu sơ bộ Nhà máy An Phú",
+      description: "Danh mục máy móc",
+      customer_id: null,
+    });
+    expect(result.customer_id).toBeNull();
   });
 
   it("serializes version_token, confirm, and field_keys exactly in POST body", async () => {

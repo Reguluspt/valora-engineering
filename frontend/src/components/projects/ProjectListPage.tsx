@@ -1,25 +1,49 @@
 import React, { useCallback, useEffect, useState } from "react";
 
-import { listProjects, ProjectSummary } from "../../api/projects";
-import { projectDocumentsPath, projectOverviewPath } from "../../contracts/valoraV23";
+import { ApiError } from "../../api/client";
+import { getProject, listProjects, ProjectSummary, resolveProjectReference } from "../../api/projects";
+import { APP_ROUTES, projectDocumentsPath, projectOverviewPath } from "../../contracts/valoraV23";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingState } from "../common/LoadingState";
 import "./projectList.css";
 
-export function ProjectListPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+export function ProjectListPage({
+  onNavigate,
+  onSessionExpired,
+  verificationCode,
+}: {
+  onNavigate: (path: string) => void;
+  onSessionExpired?: () => void;
+  verificationCode?: string | null;
+}) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error" | "sessionExpired">("loading");
 
   const load = useCallback(async () => {
     setState("loading");
     try {
-      setProjects(await listProjects());
+      if (verificationCode) {
+        const match = await resolveProjectReference(verificationCode);
+        const project = match.matched_by === "code" ? await getProject(match.project_id) : null;
+        setProjects(project?.code.toLowerCase() === verificationCode.toLowerCase() ? [project] : []);
+      } else {
+        setProjects(await listProjects());
+      }
       setState("ready");
-    } catch {
+    } catch (error) {
+      if (verificationCode && error instanceof ApiError && error.status === 401) {
+        setState("sessionExpired");
+        return;
+      }
+      if (verificationCode && error instanceof ApiError && error.status === 404) {
+        setProjects([]);
+        setState("ready");
+        return;
+      }
       setState("error");
     }
-  }, []);
+  }, [verificationCode]);
 
   useEffect(() => {
     void load();
@@ -32,21 +56,66 @@ export function ProjectListPage({ onNavigate }: { onNavigate: (path: string) => 
           <p>Hồ sơ của đơn vị</p>
           <h1>Danh sách hồ sơ</h1>
         </div>
-        {state === "ready" && <span>{projects.length} hồ sơ</span>}
+        {state === "ready" && (
+          <div className="project-list-header-actions">
+            {verificationCode ? (
+              <>
+                <span>Kiểm tra mã hồ sơ {verificationCode}</span>
+                <button
+                  className="valora-button valora-button--secondary"
+                  onClick={() => onNavigate(APP_ROUTES.projectList)}
+                  type="button"
+                >
+                  Xem tất cả hồ sơ
+                </button>
+              </>
+            ) : (
+              <>
+                <span>{projects.length} hồ sơ</span>
+                <button
+                  className="valora-button valora-button--primary"
+                  onClick={() => onNavigate(APP_ROUTES.preliminaryRequestCreate)}
+                  type="button"
+                >
+                  Tạo yêu cầu sơ bộ
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </header>
       {state === "loading" && <LoadingState message="Đang tải danh sách hồ sơ…" />}
       {state === "error" && (
         <ErrorState
-          title="Chưa thể tải danh sách hồ sơ"
-          message="Hệ thống chưa thể đọc hồ sơ trong đơn vị hiện tại."
+          title={verificationCode ? "Chưa thể kiểm tra mã hồ sơ" : "Chưa thể tải danh sách hồ sơ"}
+          message={verificationCode
+            ? "Hệ thống chưa thể xác minh yêu cầu vừa gửi."
+            : "Hệ thống chưa thể đọc hồ sơ trong đơn vị hiện tại."}
           onRetry={() => void load()}
         />
       )}
-      {state === "ready" && projects.length === 0 && (
+      {state === "sessionExpired" && (
+        <ErrorState
+          title="Phiên làm việc đã hết hạn"
+          message="Vui lòng đăng nhập lại để kiểm tra mã hồ sơ."
+          onRetry={onSessionExpired}
+          retryLabel="Đăng nhập lại"
+        />
+      )}
+      {state === "ready" && projects.length === 0 && verificationCode && (
+        <EmptyState
+          kind="no-results"
+          title="Chưa tìm thấy mã hồ sơ này lúc này"
+          message="Nếu bạn vừa gửi yêu cầu, hãy kiểm tra lại trước khi tạo yêu cầu mới."
+          onAction={() => void load()}
+          actionLabel="Kiểm tra lại"
+        />
+      )}
+      {state === "ready" && projects.length === 0 && !verificationCode && (
         <EmptyState
           kind="first-use"
           title="Đơn vị chưa có hồ sơ"
-          message="Hiện chưa có hồ sơ nào để mở."
+          message="Tạo yêu cầu sơ bộ để bắt đầu hồ sơ đầu tiên."
         />
       )}
       {state === "ready" && projects.length > 0 && (

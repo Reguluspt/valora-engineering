@@ -58,8 +58,6 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
             });
         }
         await refreshPromise;
-        // Retry the original request exactly once
-        return await request<T>(path, options, true);
       } catch (refreshErr) {
         // Refresh failed, clear frontend auth state/redirect
         if (typeof localStorage !== "undefined") {
@@ -68,6 +66,8 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
         }
         throw new ApiError("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.", 401);
       }
+      // A failure after refresh belongs to the retried request, especially for mutations.
+      return await request<T>(path, options, true);
     }
 
     if (!response.ok) {
