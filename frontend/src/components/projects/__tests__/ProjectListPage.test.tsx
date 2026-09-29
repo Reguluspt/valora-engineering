@@ -38,6 +38,11 @@ describe("ProjectListPage", () => {
     );
     act(() => overview.props.onClick());
     expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1/overview");
+    const createRequest = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Tạo yêu cầu sơ bộ"),
+    );
+    act(() => createRequest.props.onClick());
+    expect(navigate).toHaveBeenCalledWith("/workbench/preliminary-requests/new");
     expect(JSON.stringify(root.toJSON())).not.toContain("Phiên bản 3");
   });
 
