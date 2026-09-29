@@ -346,6 +346,49 @@ def test_historical_null_customer_and_true_replay_survive_binding_and_intake(map
     assert mapping_db.query(ColumnMappingProfileUsage).count() == 1
 
 
+@pytest.mark.parametrize("scope", ["none", "customer"])
+def test_unbound_proposals_remain_current_after_customer_binding(mapping_db, scope):
+    seeded = _api_seed(mapping_db)
+    confirmed_proposal = _propose(mapping_db, seeded).decision
+    rejected_proposal = _propose(mapping_db, seeded).decision
+    bind_preliminary_project_customer(
+        mapping_db, actor=seeded["user"], org_id=seeded["org"].id,
+        project_id=seeded["project"].id, customer_id=seeded["customer"].id,
+        expected_project_version=seeded["project"].row_version,
+        idempotency_key=f"g11g-bind-before-decision-{scope}",
+    )
+    confirmation = _confirm(mapping_db, seeded, confirmed_proposal, scope=scope)
+    rejection = reject_column_mapping(
+        mapping_db, actor=seeded["user"], org_id=seeded["org"].id,
+        project_id=seeded["project"].id, batch_id=seeded["batch"].id,
+        proposal_decision_id=rejected_proposal.id, command_id=uuid.uuid4(),
+    )
+    mapping_db.expire_all()
+    assert mapping_db.get(ColumnMappingDecision, confirmed_proposal.id).customer_id is None
+    assert mapping_db.get(ColumnMappingDecision, rejected_proposal.id).customer_id is None
+    assert confirmation.customer_id == seeded["customer"].id
+    assert rejection.customer_id == seeded["customer"].id
+    assert (confirmation.profile_id is not None) == (scope == "customer")
+
+
+def test_null_customer_confirmation_materializes_after_customer_binding(mapping_db):
+    seeded = _api_seed(mapping_db)
+    proposal = _propose(mapping_db, seeded).decision
+    confirmation = _confirm(mapping_db, seeded, proposal)
+    bind_preliminary_project_customer(
+        mapping_db, actor=seeded["user"], org_id=seeded["org"].id,
+        project_id=seeded["project"].id, customer_id=seeded["customer"].id,
+        expected_project_version=seeded["project"].row_version,
+        idempotency_key="g11g-bind-before-materialization",
+    )
+    command_id = uuid.uuid4()
+    usage = _materialize(mapping_db, seeded, confirmation, command_id=command_id)
+    assert _materialize(mapping_db, seeded, confirmation, command_id=command_id).id == usage.id
+    mapping_db.expire_all()
+    assert mapping_db.get(ColumnMappingDecision, confirmation.id).customer_id is None
+    assert mapping_db.get(ColumnMappingProfileUsage, usage.id).customer_id == seeded["customer"].id
+
+
 def test_public_mapping_rejects_inactive_and_cross_tenant(api_client, mapping_db):
     seeded = _api_seed(mapping_db)
     other = _api_seed(mapping_db)

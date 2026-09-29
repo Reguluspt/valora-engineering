@@ -128,3 +128,48 @@ def test_postgresql_historical_batch_and_null_pointer_reject_new_commands():
         if org_id is not None:
             _cleanup(SessionLocal, org_id)
         engine.dispose()
+
+
+def test_postgresql_null_customer_confirmation_materializes_after_binding():
+    engine = _postgres_engine_or_skip()
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    db = SessionLocal()
+    storage = FakeObjectStorage()
+    org_id = None
+    try:
+        seeded = _seed(db, storage=storage)
+        org_id = seeded["org"].id
+        seeded["project"].customer_id = None
+        db.commit()
+        proposal = _propose(db, seeded).decision
+        confirmation = confirm_column_mapping(
+            db, actor=seeded["user"], org_id=org_id,
+            project_id=seeded["project"].id, batch_id=seeded["batch"].id,
+            proposal_decision_id=proposal.id, mapping_snapshot=proposal.mapping_snapshot,
+            memory_scope="none", command_id=uuid.uuid4(),
+        )
+        db.commit()
+        seeded["project"].customer_id = seeded["customer"].id
+        db.commit()
+        command_id = uuid.uuid4()
+        usage = materialize_confirmed_mapping_to_staging(
+            db, actor=seeded["user"], org_id=org_id,
+            project_id=seeded["project"].id, batch_id=seeded["batch"].id,
+            confirmation_decision_id=confirmation.id, command_id=command_id,
+            storage=storage,
+        )
+        replay = materialize_confirmed_mapping_to_staging(
+            db, actor=seeded["user"], org_id=org_id,
+            project_id=seeded["project"].id, batch_id=seeded["batch"].id,
+            confirmation_decision_id=confirmation.id, command_id=command_id,
+            storage=storage,
+        )
+        assert replay.id == usage.id
+        assert proposal.customer_id is None
+        assert confirmation.customer_id is None
+        assert usage.customer_id == seeded["customer"].id
+    finally:
+        db.close()
+        if org_id is not None:
+            _cleanup(SessionLocal, org_id)
+        engine.dispose()
