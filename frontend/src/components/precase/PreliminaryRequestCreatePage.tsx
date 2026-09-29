@@ -58,14 +58,14 @@ export function PreliminaryRequestCreatePage({
         description: description.trim() || null,
         customer_id: null,
       });
-      onNavigate(APP_ROUTES.projectList);
+      onNavigate(projectListVerificationPath(normalizedCode));
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setFeedback(knownCreateError(error));
         setSubmitState("sessionExpired");
         return;
       }
-      if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500) {
+      if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status === 429 || error.status >= 500) {
         setFeedback(
           "Chưa xác định yêu cầu đã được tạo hay chưa. Hãy về danh sách hồ sơ để kiểm tra trước khi gửi lại."
         );

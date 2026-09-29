@@ -43,7 +43,7 @@ describe("PreliminaryRequestCreatePage", () => {
       description: "Danh mục máy móc",
       customer_id: null,
     });
-    expect(onNavigate).toHaveBeenCalledWith("/workbench/projects");
+    expect(onNavigate).toHaveBeenCalledWith(projectListVerificationPath("SB-2026-001"));
   });
 
   it("rejects whitespace-only required fields without sending a command", async () => {
@@ -116,6 +116,7 @@ describe("PreliminaryRequestCreatePage", () => {
 
   it.each([
     [408, new ApiError("timeout", 408)],
+    [429, new ApiError("rate limited", 429)],
     [0, new Error("unexpected transport failure")],
   ])("treats an unproven mutation result (%i) as uncertain", async (_status, error) => {
     createProject.mockRejectedValue(error);
