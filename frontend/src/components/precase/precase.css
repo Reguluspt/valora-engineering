@@ -1,0 +1,68 @@
+.precase-create-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--valora-space-page);
+  background: var(--valora-color-canvas);
+  color: var(--valora-color-text-primary);
+}
+
+.precase-create-header {
+  max-width: 52rem;
+  margin-bottom: var(--valora-space-xl);
+}
+
+.precase-create-header p {
+  margin: 0 0 var(--valora-space-xs);
+  color: var(--valora-color-text-secondary);
+  font-size: var(--valora-font-size-label);
+  font-weight: var(--valora-font-weight-semibold);
+}
+
+.precase-create-header h1 {
+  margin: 0;
+  font-size: var(--valora-font-size-page-title);
+  line-height: var(--valora-line-height-page-title);
+}
+
+.precase-create-header span {
+  display: block;
+  margin-top: var(--valora-space-sm);
+  color: var(--valora-color-text-secondary);
+  font-size: var(--valora-font-size-body-secondary);
+  line-height: var(--valora-line-height-body);
+}
+
+.precase-create-form {
+  width: min(100%, 52rem);
+}
+
+.precase-create-fields {
+  display: grid;
+  gap: var(--valora-space-lg);
+}
+
+.precase-create-fields label {
+  display: grid;
+  gap: var(--valora-space-xs);
+  color: var(--valora-color-text-primary);
+  font-size: var(--valora-font-size-body-secondary);
+  font-weight: var(--valora-font-weight-semibold);
+}
+
+.precase-create-fields label > span {
+  color: var(--valora-color-text-secondary);
+  font-weight: var(--valora-font-weight-regular);
+}
+
+.precase-create-description {
+  min-height: 7rem;
+  padding-top: var(--valora-space-sm);
+  padding-bottom: var(--valora-space-sm);
+  resize: vertical;
+}
+
+.precase-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--valora-space-sm);
+}
