@@ -97,6 +97,11 @@ def _cleanup(SessionLocal, org_id: uuid.UUID) -> None:
         db.query(ImportSourceArtifact).filter_by(organization_id=org_id).delete(
             synchronize_session=False
         )
+        db.query(Project).filter_by(organization_id=org_id).update(
+            {Project.current_preliminary_import_batch_id: None},
+            synchronize_session=False,
+        )
+        db.flush()
         db.query(ProjectAssetImportBatch).filter_by(organization_id=org_id).delete(
             synchronize_session=False
         )

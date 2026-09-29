@@ -224,6 +224,7 @@ def _seed(
     )
     db.add(batch)
     db.flush()
+    project.current_preliminary_import_batch_id = batch.id
 
     if workbook_format == "xlsx":
         content = _xlsx_bytes(asset_rows=asset_rows)

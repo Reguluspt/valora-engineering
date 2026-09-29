@@ -69,6 +69,7 @@ from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
     Project,
+    ProjectOfficialIntakeCommit,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     User,
@@ -155,7 +156,7 @@ class StructureSeal:
 class ConfirmationSeal:
     id: uuid.UUID
     organization_id: uuid.UUID
-    customer_id: uuid.UUID
+    customer_id: uuid.UUID | None
     project_id: uuid.UUID
     import_batch_id: uuid.UUID
     source_artifact_id: uuid.UUID
@@ -197,7 +198,7 @@ class FrozenMaterialization:
     source: ArtifactFingerprint
     structure: StructureSeal
     confirmation: ConfirmationSeal
-    customer_id: uuid.UUID
+    customer_id: uuid.UUID | None
     batch_source_artifact_id: uuid.UUID | None
     batch_status: str
     candidate_json: bytes
@@ -266,6 +267,37 @@ def _reload_active_actor_and_org(
     return persisted_actor
 
 
+def _assert_mapping_open(db: Session, *, project: Project, batch_id: uuid.UUID) -> None:
+    if project.current_preliminary_import_batch_id != batch_id:
+        raise _error(409, "mapping_batch_not_current", "Lô nhập liệu không phải lô sơ bộ hiện tại.")
+    committed = (
+        db.query(ProjectOfficialIntakeCommit.id)
+        .filter(
+            ProjectOfficialIntakeCommit.organization_id == project.organization_id,
+            ProjectOfficialIntakeCommit.project_id == project.id,
+        )
+        .first()
+    )
+    if committed is not None:
+        raise _error(409, "mapping_official_intake_closed", "Hồ sơ đã chuyển sang thẩm định chính thức.")
+
+
+def _lock_mapping_project(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID, batch_id: uuid.UUID
+) -> Project:
+    project = (
+        db.query(Project)
+        .filter(Project.organization_id == org_id, Project.id == project_id)
+        .populate_existing()
+        .with_for_update()
+        .first()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    _assert_mapping_open(db, project=project, batch_id=batch_id)
+    return project
+
+
 def _candidate_at(snapshot: WorkbookStructureSnapshot, candidate_index: int) -> dict[str, Any]:
     if isinstance(candidate_index, bool) or not isinstance(candidate_index, int) or candidate_index < 0:
         raise _error(409, "mapping_candidate_invalid", "Vùng bảng được chọn không hợp lệ.")
@@ -316,6 +348,7 @@ def _resolve_context(
     )
     if batch is None:
         raise HTTPException(status_code=404, detail="Import batch not found")
+    _assert_mapping_open(db, project=project, batch_id=batch_id)
     artifact = (
         db.query(ImportSourceArtifact)
         .filter(
@@ -564,6 +597,8 @@ def retrieve_mapping_profiles(
         )
         .populate_existing()
         .all()
+        if context.project.customer_id is not None
+        else []
     )
     if len(exact_rows) > 1:
         raise _error(409, "mapping_profile_conflict", "Có nhiều hồ sơ ánh xạ đang hoạt động.")
@@ -583,6 +618,8 @@ def retrieve_mapping_profiles(
         )
         .populate_existing()
         .all()
+        if context.project.customer_id is not None
+        else []
     )
     for row in candidates:
         verified = _verify_profile(db, row)
@@ -794,6 +831,7 @@ def propose_column_mapping(
     snapshot = _current_snapshot(context, fields)
     digest = mapping_digest(snapshot)
     summary = mapping_summary(snapshot)
+    customer_snapshot = context.project.customer_id
     before_summary = {
         "exact_profile_id": str(exact_id) if exact_id else None,
         "similar_profile_ids": [
@@ -802,6 +840,16 @@ def propose_column_mapping(
         "organization_template_id": str(template_id) if template_id else None,
         "review_reasons": list(dict.fromkeys(review_reasons)),
     }
+    locked_project = _lock_mapping_project(
+        db, org_id=org_id, project_id=project_id, batch_id=batch_id
+    )
+    locked_context = _resolve_context(
+        db, actor=actor, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        artifact_id=artifact_id, snapshot_id=snapshot_id, candidate_index=candidate_index,
+    )
+    _assert_snapshot_matches_context(snapshot, locked_context)
+    if locked_project.customer_id != customer_snapshot:
+        raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
     decision = ColumnMappingDecision(
         organization_id=org_id,
         customer_id=context.project.customer_id,
@@ -993,6 +1041,40 @@ def _assert_snapshot_matches_context(
     return canonical, fields
 
 
+def _confirmation_replay_matches(
+    existing: ColumnMappingDecision, submitted: Mapping[str, Any]
+) -> bool:
+    """Compare a retry with its sealed decision without consulting mutable current state."""
+    sealed_fields = _verify_decision_snapshot(existing)
+    try:
+        submitted_fields = validate_mapping_snapshot(submitted)
+    except ColumnMappingContractError as exc:
+        raise _contract_error(exc) from exc
+    sealed = existing.mapping_snapshot
+    if any(
+        submitted.get(key) != sealed[key]
+        for key in (
+            "contract_version", "source", "structure", "candidate",
+            "template_fingerprint_sha256",
+        )
+    ):
+        return False
+    if any(
+        (a.source_column_index, a.source_column_letter, a.original_header)
+        != (b.source_column_index, b.source_column_letter, b.original_header)
+        for a, b in zip(submitted_fields, sealed_fields, strict=True)
+    ):
+        return False
+    canonical = {
+        **sealed,
+        "fields": [
+            {**field.to_snapshot(), "semantic_role": submitted_field.semantic_role.value}
+            for field, submitted_field in zip(sealed_fields, submitted_fields, strict=True)
+        ],
+    }
+    return mapping_digest(canonical) == existing.mapping_digest_sha256
+
+
 def _new_profile(
     db: Session,
     *,
@@ -1077,21 +1159,6 @@ def confirm_column_mapping(
         batch_id=batch_id,
         proposal_decision_id=proposal_decision_id,
     )
-    proposal_candidate = proposal.mapping_snapshot["candidate"]["candidate_index"]
-    context = _resolve_context(
-        db,
-        actor=actor,
-        org_id=org_id,
-        project_id=project_id,
-        batch_id=batch_id,
-        artifact_id=proposal.source_artifact_id,
-        snapshot_id=proposal.structure_snapshot_id,
-        candidate_index=proposal_candidate,
-    )
-    if proposal.customer_id != context.project.customer_id:
-        raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
-    canonical_snapshot, fields = _canonical_snapshot_from_roles(mapping_snapshot, context)
-    final_digest = mapping_digest(canonical_snapshot)
     existing = (
         db.query(ColumnMappingDecision)
         .filter(
@@ -1108,12 +1175,29 @@ def confirm_column_mapping(
             or existing.project_id != project_id
             or existing.import_batch_id != batch_id
             or existing.proposal_decision_id != proposal_decision_id
-            or existing.mapping_digest_sha256 != final_digest
             or _status_value(existing.memory_scope) != memory_scope
             or existing.supersedes_profile_id != supersedes_profile_id
+            or not _confirmation_replay_matches(existing, mapping_snapshot)
         ):
             raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
         return existing
+    proposal_candidate = proposal.mapping_snapshot["candidate"]["candidate_index"]
+    context = _resolve_context(
+        db,
+        actor=actor,
+        org_id=org_id,
+        project_id=project_id,
+        batch_id=batch_id,
+        artifact_id=proposal.source_artifact_id,
+        snapshot_id=proposal.structure_snapshot_id,
+        candidate_index=proposal_candidate,
+    )
+    if proposal.customer_id != context.project.customer_id:
+        raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
+    if memory_scope == "customer" and context.project.customer_id is None:
+        raise _error(409, "mapping_customer_required", "Cần gắn khách hàng trước khi ghi nhớ ánh xạ theo khách hàng.")
+    canonical_snapshot, fields = _canonical_snapshot_from_roles(mapping_snapshot, context)
+    final_digest = mapping_digest(canonical_snapshot)
 
     # Frozen lock order: Project -> batch -> optional profile/family.
     project = (
@@ -1136,8 +1220,11 @@ def confirm_column_mapping(
     )
     if project is None or batch is None:
         raise HTTPException(status_code=404, detail="Import batch not found")
+    _assert_mapping_open(db, project=project, batch_id=batch_id)
     if project.customer_id != proposal.customer_id:
         raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
+    if memory_scope == "customer" and project.customer_id is None:
+        raise _error(409, "mapping_customer_required", "Cần gắn khách hàng trước khi ghi nhớ ánh xạ theo khách hàng.")
     if _status_value(batch.status) == ImportBatchStatus.APPLIED.value:
         raise _error(409, "mapping_batch_already_applied", "Lô nhập liệu đã được áp dụng.")
     if batch.current_source_artifact_id != proposal.source_artifact_id:
@@ -1406,6 +1493,19 @@ def reject_column_mapping(
     )
     if proposal.customer_id != context.project.customer_id:
         raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
+    customer_snapshot = context.project.customer_id
+    locked_project = _lock_mapping_project(
+        db, org_id=org_id, project_id=project_id, batch_id=batch_id
+    )
+    locked_context = _resolve_context(
+        db, actor=actor, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        artifact_id=proposal.source_artifact_id,
+        snapshot_id=proposal.structure_snapshot_id,
+        candidate_index=candidate_index,
+    )
+    _assert_snapshot_matches_context(proposal.mapping_snapshot, locked_context)
+    if locked_project.customer_id != customer_snapshot:
+        raise _error(409, "mapping_proposal_not_current", "Khách hàng của dự án đã thay đổi.")
     decision = ColumnMappingDecision(
         organization_id=org_id,
         customer_id=context.project.customer_id,
@@ -1615,6 +1715,23 @@ def materialize_confirmed_mapping_to_staging(
             409, "mapping_confirmation_required", "Cần xác nhận ánh xạ hợp lệ trước khi tạo staging."
         )
     _verify_decision_snapshot(confirmation)
+    command_usage = (
+        db.query(ColumnMappingProfileUsage)
+        .filter(
+            ColumnMappingProfileUsage.organization_id == org_id,
+            ColumnMappingProfileUsage.command_id == command_id,
+        )
+        .populate_existing()
+        .first()
+    )
+    if command_usage is not None:
+        if _usage_matches(
+            command_usage, ConfirmationSeal.freeze(confirmation),
+            actor_id=actor_id, project_id=project_id, batch_id=batch_id,
+            command_id=command_id,
+        ):
+            return command_usage
+        raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
     candidate_index = confirmation.mapping_snapshot["candidate"]["candidate_index"]
     context = _resolve_context(
         db,
@@ -1639,26 +1756,6 @@ def materialize_confirmed_mapping_to_staging(
         candidate_json=canonical_json_bytes(context.candidate),
         fields=fields,
     )
-    command_usage = (
-        db.query(ColumnMappingProfileUsage)
-        .filter(
-            ColumnMappingProfileUsage.organization_id == org_id,
-            ColumnMappingProfileUsage.command_id == command_id,
-        )
-        .populate_existing()
-        .first()
-    )
-    if command_usage is not None:
-        if _usage_matches(
-            command_usage,
-            frozen.confirmation,
-            actor_id=actor_id,
-            project_id=project_id,
-            batch_id=batch_id,
-            command_id=command_id,
-        ):
-            return command_usage
-        raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
     existing = (
         db.query(ColumnMappingProfileUsage)
         .filter(
@@ -1784,6 +1881,7 @@ def materialize_confirmed_mapping_to_staging(
             or ConfirmationSeal.freeze(locked_confirmation) != frozen.confirmation
         ):
             raise _error(409, "mapping_materialization_stale", "Nguồn ánh xạ đã thay đổi.")
+        _assert_mapping_open(db, project=project, batch_id=batch_id)
         locked_snapshot = (
             db.query(WorkbookStructureSnapshot)
             .filter(
