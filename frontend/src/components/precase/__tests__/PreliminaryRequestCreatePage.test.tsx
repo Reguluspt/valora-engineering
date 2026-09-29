@@ -189,4 +189,24 @@ describe("PreliminaryRequestCreatePage", () => {
     expect(onNavigate).toHaveBeenCalledWith(projectListVerificationPath("SB-2026-001"));
     expect(createProject).toHaveBeenCalledTimes(1);
   });
+
+  it("checks the submitted code even if the form value changes after an uncertain result", async () => {
+    createProject.mockRejectedValue(new ApiError("network", 0));
+    const { root, onNavigate } = mount();
+    fill(root);
+    await act(async () => {
+      await root.root.findByType("form").props.onSubmit({ preventDefault: vi.fn() });
+    });
+
+    expect(root.root.findByProps({ name: "code" }).props.disabled).toBe(true);
+    act(() => {
+      root.root.findByProps({ name: "code" }).props.onChange({ target: { value: "SB-CHANGED" } });
+    });
+    const recovery = root.root.findAllByType("button").find((button: any) =>
+      button.children.includes("Về danh sách hồ sơ để kiểm tra"),
+    );
+    act(() => recovery.props.onClick());
+    expect(onNavigate).toHaveBeenCalledWith(projectListVerificationPath("SB-2026-001"));
+    expect(createProject).toHaveBeenCalledTimes(1);
+  });
 });

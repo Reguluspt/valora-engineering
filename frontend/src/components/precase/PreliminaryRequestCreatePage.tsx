@@ -31,6 +31,7 @@ export function PreliminaryRequestCreatePage({
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
   const submitLocked = useRef(false);
+  const submittedCode = useRef<string | null>(null);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -45,6 +46,7 @@ export function PreliminaryRequestCreatePage({
 
     setFeedback(null);
     submitLocked.current = true;
+    submittedCode.current = normalizedCode;
     setSubmitState("submitting");
     try {
       await createProject({
@@ -93,6 +95,7 @@ export function PreliminaryRequestCreatePage({
             Mã hồ sơ
             <input
               className="valora-field"
+              disabled={submitState !== "idle"}
               maxLength={64}
               name="code"
               onChange={(event) => setCode(event.target.value)}
@@ -105,6 +108,7 @@ export function PreliminaryRequestCreatePage({
             Tên yêu cầu sơ bộ
             <input
               className="valora-field"
+              disabled={submitState !== "idle"}
               maxLength={255}
               name="name"
               onChange={(event) => setName(event.target.value)}
@@ -117,6 +121,7 @@ export function PreliminaryRequestCreatePage({
             Mô tả <span>(không bắt buộc)</span>
             <textarea
               className="valora-field precase-create-description"
+              disabled={submitState !== "idle"}
               name="description"
               onChange={(event) => setDescription(event.target.value)}
               rows={4}
@@ -140,7 +145,7 @@ export function PreliminaryRequestCreatePage({
           {submitState === "uncertain" ? (
             <button
               className="valora-button valora-button--primary"
-              onClick={() => onNavigate(projectListVerificationPath(code.trim()))}
+              onClick={() => onNavigate(projectListVerificationPath(submittedCode.current ?? code.trim()))}
               type="button"
             >
               Về danh sách hồ sơ để kiểm tra
