@@ -10,13 +10,15 @@ import "./projectList.css";
 
 export function ProjectListPage({
   onNavigate,
+  onSessionExpired,
   verificationCode,
 }: {
   onNavigate: (path: string) => void;
+  onSessionExpired?: () => void;
   verificationCode?: string | null;
 }) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error" | "sessionExpired">("loading");
 
   const load = useCallback(async () => {
     setState("loading");
@@ -30,6 +32,10 @@ export function ProjectListPage({
       }
       setState("ready");
     } catch (error) {
+      if (verificationCode && error instanceof ApiError && error.status === 401) {
+        setState("sessionExpired");
+        return;
+      }
       if (verificationCode && error instanceof ApiError && error.status === 404) {
         setProjects([]);
         setState("ready");
@@ -88,11 +94,19 @@ export function ProjectListPage({
           onRetry={() => void load()}
         />
       )}
+      {state === "sessionExpired" && (
+        <ErrorState
+          title="Phiên làm việc đã hết hạn"
+          message="Vui lòng đăng nhập lại để kiểm tra mã hồ sơ."
+          onRetry={onSessionExpired}
+          retryLabel="Đăng nhập lại"
+        />
+      )}
       {state === "ready" && projects.length === 0 && verificationCode && (
         <EmptyState
           kind="no-results"
           title="Chưa tìm thấy mã hồ sơ này lúc này"
-          message="Kết quả tạo vẫn chưa xác định. Hãy kiểm tra lại trước khi tạo yêu cầu mới."
+          message="Nếu bạn vừa gửi yêu cầu, hãy kiểm tra lại trước khi tạo yêu cầu mới."
           onAction={() => void load()}
           actionLabel="Kiểm tra lại"
         />

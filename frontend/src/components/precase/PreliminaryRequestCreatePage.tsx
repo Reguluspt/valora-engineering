@@ -12,6 +12,9 @@ function knownCreateError(error: unknown): string {
     return "Không thể tạo yêu cầu sơ bộ. Vui lòng kiểm tra thông tin và thử lại.";
   }
   if (error.status === 401) return "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.";
+  if (error.status === 403 && error.code === "CSRF_ERROR") {
+    return "Phiên làm việc cần được làm mới. Vui lòng tải lại trang và thử lại.";
+  }
   if (error.status === 403) return "Tài khoản chưa có quyền tạo yêu cầu sơ bộ.";
   if (error.status === 409) return "Mã hồ sơ đã tồn tại trong đơn vị. Vui lòng dùng mã khác.";
   if (error.status === 422) return "Thông tin yêu cầu sơ bộ chưa hợp lệ. Vui lòng kiểm tra lại.";

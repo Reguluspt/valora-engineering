@@ -94,7 +94,7 @@ export function AuthenticatedApp() {
     }
 
     if (currentPath.split("?", 1)[0] === APP_ROUTES.projectList) {
-      return <ProjectListPage onNavigate={handleNavigate} verificationCode={projectListVerificationCode(currentPath)} />;
+      return <ProjectListPage onNavigate={handleNavigate} onSessionExpired={() => void restore()} verificationCode={projectListVerificationCode(currentPath)} />;
     }
 
     if (currentPath === APP_ROUTES.preliminaryRequestCreate) {

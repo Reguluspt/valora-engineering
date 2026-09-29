@@ -89,6 +89,18 @@ describe("PreliminaryRequestCreatePage", () => {
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
+  it("distinguishes a CSRF rejection from missing create permission", async () => {
+    createProject.mockRejectedValue(new ApiError("CSRF", 403, "CSRF_ERROR"));
+    const { root } = mount();
+    fill(root);
+    await act(async () => {
+      await root.root.findByType("form").props.onSubmit({ preventDefault: vi.fn() });
+    });
+    const message = root.root.findByProps({ role: "alert" }).children.join("");
+    expect(message).toContain("tải lại trang");
+    expect(message).not.toContain("chưa có quyền");
+  });
+
   it("keeps a 5xx mutation result uncertain and offers list verification", async () => {
     createProject.mockRejectedValue(new ApiError("server", 500));
     const { root } = mount();

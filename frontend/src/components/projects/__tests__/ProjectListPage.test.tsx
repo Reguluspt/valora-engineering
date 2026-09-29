@@ -130,11 +130,30 @@ describe("ProjectListPage", () => {
     });
     expect(root.root.findAllByProps({ "data-state": "EMPTY_NO_RESULTS" })).toHaveLength(1);
     expect(JSON.stringify(root.toJSON())).toContain("Chưa tìm thấy mã hồ sơ này lúc này");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Kết quả tạo vẫn chưa xác định");
     const retry = root.root.findAllByType("button").find((item: any) =>
       item.children.includes("Kiểm tra lại"),
     );
     await act(async () => retry.props.onClick());
     expect(resolveProjectReference).toHaveBeenCalledTimes(2);
     expect(root.root.findAllByType("strong")[0].children.join("")).toBe("Nhà máy An Phú");
+  });
+
+  it("offers authentication recovery when verification loses its session", async () => {
+    resolveProjectReference.mockRejectedValue(new ApiError("expired", 401));
+    const onSessionExpired = vi.fn();
+    let root: any;
+    await act(async () => {
+      root = create(React.createElement(ProjectListPage, {
+        onNavigate: vi.fn(), onSessionExpired, verificationCode: "SB-2026-001",
+      }));
+    });
+    const login = root.root.findAllByType("button").find((item: any) =>
+      item.children.includes("Đăng nhập lại"),
+    );
+    expect(login).toBeDefined();
+    act(() => login.props.onClick());
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(resolveProjectReference).toHaveBeenCalledTimes(1);
   });
 });
