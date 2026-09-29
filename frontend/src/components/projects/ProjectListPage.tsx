@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { listProjects, ProjectSummary } from "../../api/projects";
-import { projectDocumentsPath, projectOverviewPath } from "../../contracts/valoraV23";
+import { APP_ROUTES, projectDocumentsPath, projectOverviewPath } from "../../contracts/valoraV23";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingState } from "../common/LoadingState";
@@ -32,7 +32,18 @@ export function ProjectListPage({ onNavigate }: { onNavigate: (path: string) => 
           <p>Hồ sơ của đơn vị</p>
           <h1>Danh sách hồ sơ</h1>
         </div>
-        {state === "ready" && <span>{projects.length} hồ sơ</span>}
+        {state === "ready" && (
+          <div className="project-list-header-actions">
+            <span>{projects.length} hồ sơ</span>
+            <button
+              className="valora-button valora-button--primary"
+              onClick={() => onNavigate(APP_ROUTES.preliminaryRequestCreate)}
+              type="button"
+            >
+              Tạo yêu cầu sơ bộ
+            </button>
+          </div>
+        )}
       </header>
       {state === "loading" && <LoadingState message="Đang tải danh sách hồ sơ…" />}
       {state === "error" && (
