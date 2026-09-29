@@ -29,11 +29,6 @@
   line-height: var(--valora-line-height-page-title);
 }
 
-.project-list-header > span {
-  color: var(--valora-color-text-secondary);
-  font-size: var(--valora-font-size-body-secondary);
-}
-
 .project-table { min-width: 50rem; }
 .project-table th:first-child { width: 36%; }
 .project-table th:nth-child(2) { width: 34%; }
@@ -76,7 +71,7 @@
 .project-list-header-actions > span {
   color: var(--valora-color-text-secondary);
   font-size: var(--valora-font-size-body-secondary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {

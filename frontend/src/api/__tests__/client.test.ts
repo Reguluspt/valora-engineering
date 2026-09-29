@@ -80,6 +80,17 @@ describe("Central API Client Tests", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
+  it("preserves an uncertain POST result if the request fails after auth refresh", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ status: 401, ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({ status: "ok" }) })
+      .mockRejectedValueOnce(new TypeError("connection lost"));
+
+    await expect(request("/api/v1/projects", { method: "POST", body: "{}" }))
+      .rejects.toMatchObject({ status: 0 });
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
   it("deduplicates concurrent 401 refresh calls into a single flight", async () => {
     const mockResponse401 = {
       status: 401,

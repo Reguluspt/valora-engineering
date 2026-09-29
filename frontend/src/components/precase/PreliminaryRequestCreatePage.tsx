@@ -1,11 +1,11 @@
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { createProject } from "../../api/projects";
-import { APP_ROUTES } from "../../contracts/valoraV23";
+import { APP_ROUTES, projectListVerificationPath } from "../../contracts/valoraV23";
 import "./precase.css";
 
-type SubmitState = "idle" | "submitting" | "uncertain";
+type SubmitState = "idle" | "submitting" | "uncertain" | "sessionExpired";
 
 function knownCreateError(error: unknown): string {
   if (!(error instanceof ApiError)) {
@@ -18,16 +18,23 @@ function knownCreateError(error: unknown): string {
   return "Không thể tạo yêu cầu sơ bộ. Vui lòng kiểm tra thông tin và thử lại.";
 }
 
-export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path: string) => void }) {
+export function PreliminaryRequestCreatePage({
+  onNavigate,
+  onSessionExpired,
+}: {
+  onNavigate: (path: string) => void;
+  onSessionExpired: () => void;
+}) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const submitLocked = useRef(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitState !== "idle") return;
+    if (submitState !== "idle" || submitLocked.current) return;
 
     const normalizedCode = code.trim();
     const normalizedName = name.trim();
@@ -37,6 +44,7 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
     }
 
     setFeedback(null);
+    submitLocked.current = true;
     setSubmitState("submitting");
     try {
       await createProject({
@@ -47,7 +55,12 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
       });
       onNavigate(APP_ROUTES.projectList);
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 0 || error.status >= 500)) {
+      if (error instanceof ApiError && error.status === 401) {
+        setFeedback(knownCreateError(error));
+        setSubmitState("sessionExpired");
+        return;
+      }
+      if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500) {
         setFeedback(
           "Chưa xác định yêu cầu đã được tạo hay chưa. Hãy về danh sách hồ sơ để kiểm tra trước khi gửi lại."
         );
@@ -55,6 +68,7 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
         return;
       }
       setFeedback(knownCreateError(error));
+      submitLocked.current = false;
       setSubmitState("idle");
     }
   };
@@ -67,12 +81,12 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
         <p>Yêu cầu sơ bộ</p>
         <h1>Tạo yêu cầu sơ bộ</h1>
         <span>
-          Khách hàng chưa bắt buộc ở giai đoạn sơ bộ. Hồ sơ phải được gắn khách hàng hợp lệ trước khi
-          chuyển sang thẩm định chính thức.
+          Bạn có thể tạo yêu cầu mà chưa gắn khách hàng. Cần gắn khách hàng trước khi chuyển sang
+          thẩm định chính thức.
         </span>
       </header>
 
-      <form className="precase-create-form valora-panel" onSubmit={submit}>
+      <form aria-busy={submitState === "submitting"} className="precase-create-form valora-panel" onSubmit={submit}>
         <div className="valora-panel__header">Thông tin yêu cầu</div>
         <div className="valora-panel__body precase-create-fields">
           <label>
@@ -110,11 +124,6 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
             />
           </label>
 
-          <div className="valora-message valora-message--info" id="precase-create-help">
-            Yêu cầu mới được tạo ở giai đoạn sơ bộ chưa gắn khách hàng. Việc gắn khách hàng là một thao
-            tác riêng có kiểm soát trước khi chuyển sang thẩm định chính thức.
-          </div>
-
           {feedback && (
             <div
               className={`valora-message ${
@@ -131,10 +140,21 @@ export function PreliminaryRequestCreatePage({ onNavigate }: { onNavigate: (path
           {submitState === "uncertain" ? (
             <button
               className="valora-button valora-button--primary"
-              onClick={() => onNavigate(APP_ROUTES.projectList)}
+              onClick={() => onNavigate(projectListVerificationPath(code.trim()))}
               type="button"
             >
               Về danh sách hồ sơ để kiểm tra
+            </button>
+          ) : submitState === "sessionExpired" ? (
+            <button
+              className="valora-button valora-button--primary"
+              onClick={() => {
+                onSessionExpired();
+                onNavigate(APP_ROUTES.projectList);
+              }}
+              type="button"
+            >
+              Đăng nhập lại
             </button>
           ) : (
             <>

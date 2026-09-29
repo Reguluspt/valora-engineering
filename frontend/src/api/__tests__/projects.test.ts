@@ -34,7 +34,7 @@ describe("projects API", () => {
     });
 
     const [url, options] = (fetch as any).mock.calls[0];
-    expect(url).toContain("/api/v1/projects");
+    expect(new URL(url).pathname).toBe("/api/v1/projects");
     expect(options.method).toBe("POST");
     expect(JSON.parse(options.body)).toEqual({
       code: "SB-2026-001",

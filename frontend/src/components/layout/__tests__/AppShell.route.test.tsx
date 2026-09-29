@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { create, act } from "react-test-renderer";
 import { AppShell } from "../../layout/AppShell";
+import { APP_ROUTES, projectListVerificationPath } from "../../../contracts/valoraV23";
 
 vi.mock("../../../i18n", () => ({ t: (k: string) => k }));
 
@@ -72,6 +73,19 @@ describe("AppShell routing", () => {
     const link = findLink(root!, "nav.workbench");
     act(() => { link.props.onClick({ preventDefault: vi.fn() }); });
     expect(nav).toHaveBeenCalledWith("/workbench/projects");
+  });
+
+  it.each([
+    APP_ROUTES.preliminaryRequestCreate,
+    projectListVerificationPath("SB-2026-001"),
+  ])("keeps Workbench navigation active on the preliminary entry path %s", (currentPath) => {
+    let root: any;
+    act(() => {
+      root = create(React.createElement(AppShell, {
+        account, currentPath, onLogout: vi.fn(), onNavigate: vi.fn(), children: null,
+      }));
+    });
+    expect(findLink(root, "nav.workbench").props["aria-current"]).toBe("page");
   });
 
   it("opens the provider-neutral document workspace for the current project", () => {

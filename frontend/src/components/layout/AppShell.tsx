@@ -54,7 +54,9 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
             {navItem(
               workbenchPath,
               t("nav.workbench"),
-              projectRoute?.view === "workbench" || currentPath === APP_ROUTES.projectList,
+              projectRoute?.view === "workbench"
+                || currentPath.split("?", 1)[0] === APP_ROUTES.projectList
+                || currentPath === APP_ROUTES.preliminaryRequestCreate,
             )}
             {projectRoute && navItem(
               projectOverviewPath(projectRoute.projectRef),

@@ -93,9 +93,10 @@ authoritative current Pre-case IDs, versions and the Project CAS token. Standard
 `appraiser` roles receive the dedicated Analysis, Result and Official Intake permissions through a
 data-only migration; other standard roles do not. G1.1F adds the first bounded Pre-case frontend
 entry: authenticated users can open a Fluent 2 light `Tạo yêu cầu sơ bộ` surface from the Project
-list and create an unbound Pre-case Project through the G1.1E optional-Customer API. This slice stops
-before dedicated `Quản lý yêu cầu sơ bộ` state management, Upload & Mapping, Analysis/Result/Official
-Intake UI and browser acceptance. G1.1G+ and OS-G2 are NOT STARTED.
+list; users with `project:create` permission can create an unbound Pre-case Project through the G1.1E
+optional-Customer API. This slice stops before dedicated `Quản lý yêu cầu sơ bộ` state management,
+Upload & Mapping, Analysis/Result/Official Intake UI and browser acceptance. G1.1G+ and OS-G2 are
+NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

@@ -13,6 +13,7 @@ import { LoginPage } from "./auth/LoginPage";
 import { SessionProvider, useSession } from "./auth/SessionProvider";
 import {
   APP_ROUTES,
+  projectListVerificationCode,
   projectOverviewPath,
   splitProjectRoute,
 } from "./contracts/valoraV23";
@@ -47,7 +48,7 @@ function SessionGate() {
 }
 
 export function AuthenticatedApp() {
-  const { account, logout } = useSession();
+  const { account, logout, restore } = useSession();
   const [currentPath, setCurrentPath] = useState(() => {
     const hash = window.location.hash?.replace("#", "");
     return hash || NEUTRAL_PATH;
@@ -92,12 +93,12 @@ export function AuthenticatedApp() {
       return <M365WorkspacePage projectRef={projectRoute.projectRef} />;
     }
 
-    if (currentPath === APP_ROUTES.projectList) {
-      return <ProjectListPage onNavigate={handleNavigate} />;
+    if (currentPath.split("?", 1)[0] === APP_ROUTES.projectList) {
+      return <ProjectListPage onNavigate={handleNavigate} verificationCode={projectListVerificationCode(currentPath)} />;
     }
 
     if (currentPath === APP_ROUTES.preliminaryRequestCreate) {
-      return <PreliminaryRequestCreatePage onNavigate={handleNavigate} />;
+      return <PreliminaryRequestCreatePage onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
     }
 
     if (currentPath.split("?", 1)[0] === APP_ROUTES.m365Return) {
