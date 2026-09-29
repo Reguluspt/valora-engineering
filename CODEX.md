@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-28 (OS-G1.1D versioned Preliminary Result currentness)
+**Last reconciled:** 2026-09-29 (OS-G1.1E Pre-case public API exposure)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -86,7 +86,13 @@ selected analysis, allocating `max(version)+1` under the Project lock after obje
 `PRELIMINARY_READY` selects the highest valid Result version matching the current Analysis; valid
 historical Results do not create ambiguity. First Official Intake accepts exactly that selected
 Result, and new Result generation closes after Intake while true prior command replay remains valid.
-Public Pre-case creation/API and UI are NOT STARTED; G1.1E+ and OS-G2 are NOT STARTED.
+G1.1E exposes optional-Customer Project creation and authenticated project-scoped Customer binding,
+explicit current-batch switching, Preliminary Analysis finalization, Preliminary Result generation
+and Official Intake through the existing application commands. The public case-state read includes
+authoritative current Pre-case IDs, versions and the Project CAS token. Standard `owner` and
+`appraiser` roles receive the dedicated Analysis, Result and Official Intake permissions through a
+data-only migration; other standard roles do not. G1.1E is an API slice only; Pre-case frontend,
+browser acceptance, G1.1F+ and OS-G2 are NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

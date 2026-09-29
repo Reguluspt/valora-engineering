@@ -144,6 +144,7 @@ class CaseStateProjection:
     stale: list[dict[str, Any]]
     facts: list[str]
     capabilities: tuple[StageCapability, ...]
+    preliminary: dict[str, Any]
 
 
 def _canonical_json(payload: Any) -> bytes:
@@ -655,4 +656,34 @@ def get_case_state_projection(
         stale=[],
         facts=sorted_facts,
         capabilities=STATIC_STAGE_CAPABILITIES,
+        preliminary={
+            "project_id": project.id,
+            "customer_id": project.customer_id,
+            "project_row_version": project.row_version,
+            "current_preliminary_import_batch_id": project.current_preliminary_import_batch_id,
+            "current_source_artifact_id": (
+                request_result.authoritative_entity.id
+                if request_result.result == "COMPLETE" else None
+            ),
+            "current_preliminary_analysis_snapshot_id": (
+                analysis_result.authoritative_entity.id
+                if analysis_result.result == "COMPLETE" else None
+            ),
+            "current_preliminary_analysis_version": (
+                analysis_result.authoritative_entity.version
+                if analysis_result.result == "COMPLETE" else None
+            ),
+            "current_preliminary_result_artifact_id": (
+                ready_result.authoritative_entity.id
+                if ready_result.result == "COMPLETE" else None
+            ),
+            "current_preliminary_result_version": (
+                ready_result.authoritative_entity.version
+                if ready_result.result == "COMPLETE" else None
+            ),
+            "official_intake_commit_id": (
+                official_result.authoritative_entity.id
+                if official_result.result == "COMPLETE" else None
+            ),
+        },
     )
