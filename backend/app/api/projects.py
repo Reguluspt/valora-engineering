@@ -94,8 +94,21 @@ from app.modules.excel_import.application.workbook_structure_service import (
     get_structure_snapshot,
     list_structure_snapshots,
 )
+from app.modules.excel_import.application.column_mapping_service import (
+    confirm_column_mapping,
+    materialize_confirmed_mapping_to_staging,
+    propose_column_mapping,
+    reject_column_mapping,
+)
 from app.modules.excel_import.schemas import (
     ImportSourceArtifactResponse,
+    MappingConfirmationRequest,
+    MappingDecisionResponse,
+    MappingMaterializationRequest,
+    MappingMaterializationResponse,
+    MappingProposalRequest,
+    MappingProposalResponse,
+    MappingRejectionRequest,
     WorkbookStructureSnapshotResponse,
 )
 from app.modules.excel_import.application.validate_staging import (
@@ -1080,6 +1093,133 @@ def get_project_asset_import_source_structure_snapshot(
         artifact_id=artifact_id,
         snapshot_id=snapshot_id,
     )
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/proposals",
+    response_model=MappingProposalResponse,
+    status_code=201,
+)
+def propose_project_asset_column_mapping(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: MappingProposalRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    result = propose_column_mapping(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+        artifact_id=payload.source_artifact_id,
+        snapshot_id=payload.structure_snapshot_id,
+        candidate_index=payload.candidate_index, command_id=payload.command_id,
+        correlation_id=get_correlation_id(request),
+    )
+    decision = result.decision
+    return {
+        "decision_id": decision.id,
+        "source_artifact_id": decision.source_artifact_id,
+        "structure_snapshot_id": decision.structure_snapshot_id,
+        "mapping_snapshot": decision.mapping_snapshot,
+        "mapping_digest_sha256": decision.mapping_digest_sha256,
+        "review_required": result.review_required,
+        "review_reasons": result.review_reasons,
+        "exact_profile_id": result.exact_profile_id,
+        "similar_profile_ids": result.similar_profile_ids,
+        "organization_template_id": result.organization_template_id,
+    }
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/confirmations",
+    response_model=MappingDecisionResponse,
+    status_code=201,
+)
+def confirm_project_asset_column_mapping(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: MappingConfirmationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    decision = confirm_column_mapping(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+        proposal_decision_id=payload.proposal_decision_id,
+        mapping_snapshot=payload.mapping_snapshot,
+        memory_scope=payload.memory_scope,
+        supersedes_profile_id=payload.supersedes_profile_id,
+        command_id=payload.command_id, correlation_id=get_correlation_id(request),
+    )
+    return _mapping_decision_response(decision)
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/rejections",
+    response_model=MappingDecisionResponse,
+    status_code=201,
+)
+def reject_project_asset_column_mapping(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: MappingRejectionRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    decision = reject_column_mapping(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+        proposal_decision_id=payload.proposal_decision_id,
+        command_id=payload.command_id,
+        reason_code=payload.reason_code, reason_text=payload.reason_text,
+        correlation_id=get_correlation_id(request),
+    )
+    return _mapping_decision_response(decision)
+
+
+def _mapping_decision_response(decision):
+    return {
+        "decision_id": decision.id,
+        "proposal_decision_id": decision.proposal_decision_id,
+        "outcome": decision.outcome,
+        "mapping_digest_sha256": decision.mapping_digest_sha256,
+        "memory_scope": decision.memory_scope,
+        "profile_id": decision.profile_id,
+        "source_artifact_id": decision.source_artifact_id,
+        "structure_snapshot_id": decision.structure_snapshot_id,
+    }
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/materializations",
+    response_model=MappingMaterializationResponse,
+    status_code=201,
+)
+def materialize_project_asset_column_mapping(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: MappingMaterializationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    usage = materialize_confirmed_mapping_to_staging(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+        confirmation_decision_id=payload.confirmation_decision_id,
+        command_id=payload.command_id, correlation_id=get_correlation_id(request),
+    )
+    return {
+        "usage_id": usage.id,
+        "confirmation_decision_id": usage.confirmation_decision_id,
+        "mapping_digest_sha256": usage.mapping_digest_sha256,
+        "materialized_asset_row_count": usage.materialized_asset_row_count,
+        "source_artifact_id": usage.source_artifact_id,
+        "structure_snapshot_id": usage.structure_snapshot_id,
+    }
 
 
 @router.post(

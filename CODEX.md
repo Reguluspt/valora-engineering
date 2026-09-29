@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-29 (OS-G1.1F Pre-case creation UI entry)
+**Last reconciled:** 2026-09-29 (OS-G1.1G Column Mapping public API)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -95,8 +95,14 @@ data-only migration; other standard roles do not. G1.1F adds the first bounded P
 entry: authenticated users can open a Fluent 2 light `Tạo yêu cầu sơ bộ` surface from the Project
 list; users with `project:create` permission can create an unbound Pre-case Project through the G1.1E
 optional-Customer API. This slice stops before dedicated `Quản lý yêu cầu sơ bộ` state management,
-Upload & Mapping, Analysis/Result/Official Intake UI and browser acceptance. G1.1G+ and OS-G2 are
-NOT STARTED.
+Upload & Mapping, Analysis/Result/Official Intake UI and browser acceptance. G1.1G exposes
+authenticated Project/batch-scoped Column Mapping proposal, human confirmation or correction,
+rejection and staging materialization commands through the existing application services. Mapping
+mutations require the explicit current Preliminary batch, allow unbound Pre-case Projects without
+Customer memory, forbid Customer-scoped memory until binding, retain NULL historical Customer
+snapshots and close new mapping mutations after Official Intake. True command-ID replays remain
+available for already committed mapping facts. G1.1G does not add Upload & Mapping UI or alter Apply.
+G1.1H+ and OS-G2 are NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
