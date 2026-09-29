@@ -15,6 +15,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
+from app.modules.excel_import.application.mapping_authority import (
+    authority_slot, lineage_has_usage, require_revision, terminal_outcomes,
+)
 from app.modules.excel_import.application.workbook_structure_service import (
     ArtifactFingerprint,
     _materialize_verified_source,
@@ -57,6 +60,7 @@ from app.modules.excel_import.infrastructure.object_storage import (
 from app.modules.excel_import.models import (
     ColumnMappingDecision,
     ColumnMappingField,
+    ColumnMappingLegacySelectionReceipt,
     ColumnMappingProfile,
     ColumnMappingProfileUsage,
     ImportSourceArtifact,
@@ -1006,6 +1010,12 @@ def _canonical_snapshot_from_roles(
         geometry = candidate_geometry(context.candidate)
     except ColumnMappingContractError as exc:
         raise _contract_error(exc) from exc
+    if len(caller_fields) != len(geometry["header_labels"]):
+        raise _error(
+            409,
+            "mapping_proposal_not_current",
+            "Snapshot ánh xạ không khớp bằng chứng candidate đã niêm phong.",
+        )
     trusted_fields = tuple(
         MappingField(
             source_column_index=geometry["min_column"] + offset,
@@ -1026,7 +1036,6 @@ def _canonical_snapshot_from_roles(
         or snapshot.get("template_fingerprint_sha256")
         != canonical["template_fingerprint_sha256"]
         or caller_candidate != canonical["candidate"]
-        or len(caller_fields) != len(trusted_fields)
         or any(
             caller.source_column_index != trusted.source_column_index
             or caller.source_column_letter != trusted.source_column_letter
@@ -1161,6 +1170,7 @@ def confirm_column_mapping(
     memory_scope: str = "none",
     supersedes_profile_id: uuid.UUID | None = None,
     command_id: uuid.UUID,
+    expected_selection_revision: int,
     correlation_id: str | None = None,
 ) -> ColumnMappingDecision:
     actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
@@ -1191,6 +1201,8 @@ def confirm_column_mapping(
             or existing.proposal_decision_id != proposal_decision_id
             or _status_value(existing.memory_scope) != memory_scope
             or existing.supersedes_profile_id != supersedes_profile_id
+            or ("expected_selection_revision" in (existing.before_summary or {})
+                and existing.before_summary["expected_selection_revision"] != expected_selection_revision)
             or not _confirmation_replay_matches(existing, mapping_snapshot)
         ):
             raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
@@ -1230,6 +1242,26 @@ def confirm_column_mapping(
     )
     if project is None or batch is None:
         raise HTTPException(status_code=404, detail="Import batch not found")
+    raced_command = db.query(ColumnMappingDecision).filter(
+        ColumnMappingDecision.organization_id == org_id,
+        ColumnMappingDecision.command_id == command_id,
+    ).populate_existing().first()
+    if raced_command is not None:
+        if (
+            _status_value(raced_command.decision_kind) == "confirmation"
+            and raced_command.actor_user_id == actor.id
+            and raced_command.project_id == project_id
+            and raced_command.import_batch_id == batch_id
+            and raced_command.proposal_decision_id == proposal_decision_id
+            and _status_value(raced_command.memory_scope) == memory_scope
+            and raced_command.supersedes_profile_id == supersedes_profile_id
+            and (raced_command.before_summary or {}).get(
+                "expected_selection_revision", expected_selection_revision
+            ) == expected_selection_revision
+            and _confirmation_replay_matches(raced_command, mapping_snapshot)
+        ):
+            return raced_command
+        raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
     _assert_mapping_open(db, project=project, batch_id=batch_id)
     if memory_scope == "customer" and project.customer_id is None:
         raise _error(409, "mapping_customer_required", "Cần gắn khách hàng trước khi ghi nhớ ánh xạ theo khách hàng.")
@@ -1237,6 +1269,18 @@ def confirm_column_mapping(
         raise _error(409, "mapping_batch_already_applied", "Lô nhập liệu đã được áp dụng.")
     if batch.current_source_artifact_id != proposal.source_artifact_id:
         raise _error(409, "mapping_source_not_current", "Tệp nguồn không còn là thế hệ hiện tại.")
+    slot = authority_slot(db, org_id=org_id, project_id=project_id, lock=True)
+    require_revision(slot, expected_selection_revision)
+    if terminal_outcomes(db, org_id=org_id, project_id=project_id, proposal_id=proposal.id):
+        raise _error(409, "mapping_proposal_resolved", "Đề xuất đã có quyết định cuối cùng.")
+    if lineage_has_usage(
+        db, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        source_id=proposal.source_artifact_id, structure_id=proposal.structure_snapshot_id,
+    ):
+        raise _error(409, "mapping_usage_conflict", "Cấu trúc này đã được tạo staging trước đó.")
+    if slot is None:
+        slot = authority_slot(db, org_id=org_id, project_id=project_id, create=True, lock=True)
+    assert slot is not None
 
     profile: ColumnMappingProfile | None = None
     supersedes: ColumnMappingProfile | None = None
@@ -1381,12 +1425,21 @@ def confirm_column_mapping(
         template_fingerprint_sha256=context.template_fingerprint_sha256,
         mapping_snapshot=canonical_snapshot,
         mapping_digest_sha256=final_digest,
-        before_summary=mapping_summary(proposal.mapping_snapshot),
-        after_summary=mapping_summary(canonical_snapshot),
+        before_summary={**mapping_summary(proposal.mapping_snapshot),
+                        "expected_selection_revision": expected_selection_revision},
+        after_summary={**mapping_summary(canonical_snapshot),
+                       "selection_revision": expected_selection_revision + 1},
         reason_code=None,
         reason_text=None,
     )
     db.add(decision)
+    db.flush([decision])
+    slot.import_batch_id = batch_id
+    slot.source_artifact_id = proposal.source_artifact_id
+    slot.structure_snapshot_id = proposal.structure_snapshot_id
+    slot.confirmation_decision_id = decision.id
+    slot.selected_usage_id = None
+    slot.selection_revision += 1
     _audit(
         db,
         actor=actor,
@@ -1411,6 +1464,7 @@ def confirm_column_mapping(
             "source_generation": context.artifact.generation,
             "outcome": outcome,
             "role_counts": decision.after_summary["role_counts"],
+            "selection_revision": slot.selection_revision,
         },
     )
     try:
@@ -1509,6 +1563,24 @@ def reject_column_mapping(
         candidate_index=candidate_index,
     )
     _assert_snapshot_matches_context(proposal.mapping_snapshot, locked_context)
+    raced_command = db.query(ColumnMappingDecision).filter(
+        ColumnMappingDecision.organization_id == org_id,
+        ColumnMappingDecision.command_id == command_id,
+    ).populate_existing().first()
+    if raced_command is not None:
+        if (
+            _status_value(raced_command.decision_kind) == "rejection"
+            and raced_command.actor_user_id == actor.id
+            and raced_command.project_id == project_id
+            and raced_command.import_batch_id == batch_id
+            and raced_command.proposal_decision_id == proposal_decision_id
+            and raced_command.reason_code == reason_code
+            and raced_command.reason_text == reason_text
+        ):
+            return raced_command
+        raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+    if terminal_outcomes(db, org_id=org_id, project_id=project_id, proposal_id=proposal.id):
+        raise _error(409, "mapping_proposal_resolved", "Đề xuất đã có quyết định cuối cùng.")
     decision = ColumnMappingDecision(
         organization_id=org_id,
         customer_id=locked_project.customer_id,
@@ -1592,6 +1664,121 @@ def reject_column_mapping(
     return decision
 
 
+def select_legacy_column_mapping(
+    db: Session, *, actor: User, org_id: uuid.UUID, project_id: uuid.UUID,
+    batch_id: uuid.UUID, confirmation_decision_id: uuid.UUID,
+    expected_selection_revision: int, command_id: uuid.UUID,
+    correlation_id: str | None = None,
+) -> ColumnMappingLegacySelectionReceipt:
+    """Explicitly select one eligible, unmaterialized historical confirmation."""
+    actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
+    digest = hashlib.sha256(canonical_json_bytes({
+        "contract": "select-legacy-column-mapping-v1",
+        "organization_id": str(org_id), "project_id": str(project_id),
+        "batch_id": str(batch_id), "confirmation_decision_id": str(confirmation_decision_id),
+        "actor_id": str(actor.id),
+        "expected_selection_revision": expected_selection_revision,
+    })).hexdigest()
+    existing = db.query(ColumnMappingLegacySelectionReceipt).filter(
+        ColumnMappingLegacySelectionReceipt.organization_id == org_id,
+        ColumnMappingLegacySelectionReceipt.command_id == command_id,
+    ).first()
+    if existing is not None:
+        if existing.request_digest_sha256 != digest:
+            raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+        return existing
+    _lock_mapping_project(db, org_id=org_id, project_id=project_id, batch_id=batch_id)
+    raced_receipt = db.query(ColumnMappingLegacySelectionReceipt).filter(
+        ColumnMappingLegacySelectionReceipt.organization_id == org_id,
+        ColumnMappingLegacySelectionReceipt.command_id == command_id,
+    ).populate_existing().first()
+    if raced_receipt is not None:
+        if raced_receipt.request_digest_sha256 == digest:
+            return raced_receipt
+        raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+    confirmation = db.query(ColumnMappingDecision).filter(
+        ColumnMappingDecision.organization_id == org_id,
+        ColumnMappingDecision.project_id == project_id,
+        ColumnMappingDecision.import_batch_id == batch_id,
+        ColumnMappingDecision.id == confirmation_decision_id,
+        ColumnMappingDecision.decision_kind == "confirmation",
+        ColumnMappingDecision.outcome.in_(("accepted", "corrected")),
+        ColumnMappingDecision.proposal_source_kind == "human",
+    ).first()
+    if confirmation is None or confirmation.proposal_decision_id is None:
+        raise _error(409, "mapping_legacy_selection_ineligible", "Xác nhận lịch sử không hợp lệ.")
+    proposal = _proposal_for_command(
+        db, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        proposal_decision_id=confirmation.proposal_decision_id,
+    )
+    if (proposal.source_artifact_id != confirmation.source_artifact_id
+        or proposal.structure_snapshot_id != confirmation.structure_snapshot_id):
+        raise _error(409, "mapping_legacy_selection_ineligible", "Lineage lịch sử không khớp.")
+    outcomes = terminal_outcomes(
+        db, org_id=org_id, project_id=project_id, proposal_id=proposal.id,
+    )
+    if len(outcomes) != 1 or outcomes[0].id != confirmation.id:
+        raise _error(409, "mapping_legacy_selection_ineligible", "Đề xuất có kết quả mâu thuẫn.")
+    _verify_decision_snapshot(confirmation)
+    context = _resolve_context(
+        db, actor=actor, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        artifact_id=confirmation.source_artifact_id,
+        snapshot_id=confirmation.structure_snapshot_id,
+        candidate_index=confirmation.mapping_snapshot["candidate"]["candidate_index"],
+    )
+    _assert_snapshot_matches_context(confirmation.mapping_snapshot, context)
+    if lineage_has_usage(
+        db, org_id=org_id, project_id=project_id, batch_id=batch_id,
+        source_id=confirmation.source_artifact_id,
+        structure_id=confirmation.structure_snapshot_id,
+    ):
+        raise _error(409, "mapping_legacy_selection_ineligible", "Cấu trúc đã có Usage lịch sử.")
+    slot = authority_slot(db, org_id=org_id, project_id=project_id, lock=True)
+    require_revision(slot, expected_selection_revision)
+    if slot is not None and slot.confirmation_decision_id is not None:
+        raise _error(409, "mapping_selection_exists", "Project đã có ánh xạ được chọn.")
+    if slot is None:
+        slot = authority_slot(db, org_id=org_id, project_id=project_id, create=True, lock=True)
+    assert slot is not None
+    slot.import_batch_id = batch_id
+    slot.source_artifact_id = confirmation.source_artifact_id
+    slot.structure_snapshot_id = confirmation.structure_snapshot_id
+    slot.confirmation_decision_id = confirmation.id
+    slot.selected_usage_id = None
+    slot.selection_revision += 1
+    receipt = ColumnMappingLegacySelectionReceipt(
+        organization_id=org_id, project_id=project_id, import_batch_id=batch_id,
+        source_artifact_id=confirmation.source_artifact_id,
+        structure_snapshot_id=confirmation.structure_snapshot_id,
+        confirmation_decision_id=confirmation.id, actor_user_id=actor.id,
+        command_id=command_id, request_digest_sha256=digest,
+        expected_selection_revision=expected_selection_revision,
+        resulting_selection_revision=slot.selection_revision,
+    )
+    db.add(receipt)
+    _audit(
+        db, actor=actor, event_name="LegacyColumnMappingSelected",
+        command_name="SelectLegacyColumnMapping", entity_type="ProjectColumnMappingAuthority",
+        entity_id=slot.id, org_id=org_id, correlation_id=correlation_id,
+        payload={"project_id": str(project_id), "batch_id": str(batch_id),
+                 "confirmation_decision_id": str(confirmation.id),
+                 "selection_revision": slot.selection_revision, "command_id": str(command_id)},
+    )
+    try:
+        db.commit()
+        db.refresh(receipt)
+    except IntegrityError as exc:
+        db.rollback()
+        raced = db.query(ColumnMappingLegacySelectionReceipt).filter(
+            ColumnMappingLegacySelectionReceipt.organization_id == org_id,
+            ColumnMappingLegacySelectionReceipt.command_id == command_id,
+        ).first()
+        if raced is not None and raced.request_digest_sha256 == digest:
+            return raced
+        raise _error(409, "mapping_selection_revision_conflict", "Quyền chọn đã thay đổi.") from exc
+    return receipt
+
+
 def _write_spool(rows: Iterable[dict[str, Any]]) -> tuple[str, int, str]:
     fd, path = tempfile.mkstemp(prefix="valora-mapping-", suffix=".jsonl")
     os.close(fd)
@@ -1662,6 +1849,7 @@ def _usage_matches(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     command_id: uuid.UUID,
+    expected_selection_revision: int,
 ) -> bool:
     return (
         usage.confirmation_decision_id == confirmation.id
@@ -1672,6 +1860,8 @@ def _usage_matches(
         and usage.import_batch_id == batch_id
         and usage.source_artifact_id == confirmation.source_artifact_id
         and usage.structure_snapshot_id == confirmation.structure_snapshot_id
+        and (usage.expected_selection_revision is None
+             or usage.expected_selection_revision == expected_selection_revision)
     )
 
 
@@ -1694,6 +1884,7 @@ def materialize_confirmed_mapping_to_staging(
     batch_id: uuid.UUID,
     confirmation_decision_id: uuid.UUID,
     command_id: uuid.UUID,
+    expected_selection_revision: int,
     correlation_id: str | None = None,
     storage: ObjectStoragePort | None = None,
 ) -> ColumnMappingProfileUsage:
@@ -1731,6 +1922,7 @@ def materialize_confirmed_mapping_to_staging(
             command_usage, ConfirmationSeal.freeze(confirmation),
             actor_id=actor_id, project_id=project_id, batch_id=batch_id,
             command_id=command_id,
+            expected_selection_revision=expected_selection_revision,
         ):
             return command_usage
         raise _error(409, "idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
@@ -1862,6 +2054,7 @@ def materialize_confirmed_mapping_to_staging(
                 project_id=project_id,
                 batch_id=batch_id,
                 command_id=command_id,
+                expected_selection_revision=expected_selection_revision,
             ):
                 return existing_after_lock
             raise _error(409, "mapping_usage_conflict", "Thế hệ nguồn đã có staging.")
@@ -1881,6 +2074,17 @@ def materialize_confirmed_mapping_to_staging(
         ):
             raise _error(409, "mapping_materialization_stale", "Nguồn ánh xạ đã thay đổi.")
         _assert_mapping_open(db, project=project, batch_id=batch_id)
+        slot = authority_slot(db, org_id=org_id, project_id=project_id, lock=True)
+        require_revision(slot, expected_selection_revision)
+        if (
+            slot is None
+            or slot.import_batch_id != batch_id
+            or slot.source_artifact_id != frozen.source.id
+            or slot.structure_snapshot_id != frozen.structure.id
+            or slot.confirmation_decision_id != frozen.confirmation.id
+            or slot.selected_usage_id is not None
+        ):
+            raise _error(409, "mapping_selection_not_current", "Ánh xạ đã chọn không còn hiện hành.")
         locked_snapshot = (
             db.query(WorkbookStructureSnapshot)
             .filter(
@@ -1971,6 +2175,7 @@ def materialize_confirmed_mapping_to_staging(
                 profile_id=(profile.id if profile else None),
                 profile_version=(profile.profile_version if profile else None),
                 command_id=command_id,
+                expected_selection_revision=expected_selection_revision,
                 materialization_contract_version=MATERIALIZATION_CONTRACT_VERSION,
                 mapping_contract_version=MAPPING_CONTRACT_VERSION,
                 template_fingerprint_sha256=frozen.confirmation.template_fingerprint_sha256,
@@ -1982,6 +2187,10 @@ def materialize_confirmed_mapping_to_staging(
                 created_by_user_id=actor_id,
             )
             db.add(usage)
+            db.flush([usage])
+            slot.selected_usage_id = usage.id
+            slot.current_staging_usage_id = usage.id
+            slot.selection_revision += 1
             batch.source_filename = frozen.source.original_filename
             batch.source_sheet_name = frozen.confirmation.mapping_snapshot()["candidate"][
                 "sheet_name"
@@ -2017,6 +2226,7 @@ def materialize_confirmed_mapping_to_staging(
                     "mapping_digest_sha256": frozen.confirmation.mapping_digest_sha256,
                     "source_generation": frozen.source.generation,
                     "materialized_asset_row_count": row_count,
+                    "selection_revision": slot.selection_revision,
                 },
             )
             db.flush()
@@ -2050,6 +2260,7 @@ def materialize_confirmed_mapping_to_staging(
                 project_id=project_id,
                 batch_id=batch_id,
                 command_id=command_id,
+                expected_selection_revision=expected_selection_revision,
             ):
                 return raced
             raise _error(

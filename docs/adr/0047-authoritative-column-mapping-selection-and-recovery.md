@@ -1,6 +1,6 @@
 # ADR 0047 — Authoritative Column Mapping Selection and Recovery
 
-**Status:** Proposed for Product Owner acceptance; design only, runtime not implemented
+**Status:** Accepted by Product Owner on 2026-09-29; runtime implementation in F0 candidate pending merge
 **Date:** 2026-09-29
 **Task:** `VALORA-TASK-OS-G1-1H-PRECASE-MAPPING-AUTHORITY-ADR`
 **Scope:** OS-G1 Pre-case Column Mapping authority and recovery
@@ -12,7 +12,7 @@ ADR 0030 makes `ColumnMappingDecision` an append-only business fact and requires
 
 This ADR defines the missing selection authority. It ratchets ADR 0030 and ADR 0046 only for this boundary. It preserves ADR 0046's version and lineage selection for preliminary analysis and result: a later confirmation without a new materialized usage does not silently invalidate an existing analysis; D3 defines the consequence of a new selected materialization. It does not change S12 Apply v1, official `ProjectAssetLine`, canonical stages or Customer memory scope.
 
-This is architecture authority only after acceptance. A separate authorized runtime task must implement the selection persistence, command changes, migration and tests before a public recovery GET can claim this state. The G1.1H mapping read contract and Upload & Mapping UI remain unimplemented and blocked.
+This ADR is accepted architecture authority. The F0 runtime candidate implements selection persistence, command changes, migration and a public recovery GET in one Macro PR. G1.1H Upload & Mapping UI remains unimplemented and blocked until that runtime is merged and exact-main CI succeeds.
 
 ## Decision
 
@@ -72,7 +72,7 @@ This conservative bootstrap does not retroactively invalidate previously committ
 
 Once the persistence and commands exist, one authenticated Project/batch-scoped read projection can expose: current Project batch and source IDs; selection revision; selected confirmation ID, outcome, exact structure snapshot and candidate lineage, sealed mapping snapshot/digest, memory scope/profile ID; selected materialization usage ID/count/digest or NULL; current staging-owner usage ID or NULL; and a bounded, explicitly scoped set of proposal/decision statuses needed for recovery. It must distinguish no selection, unresolved legacy history, selected but unmaterialized, selected but recovery required, materialized, stale lineage and closed Official Intake. `Materialized` requires the two usage IDs to match and verify; a historical usage alone cannot produce that status. If analysis/result lineage is included, it must say whether it uses the selected materialized usage, without implying that an unmaterialized selection generated it. It must not expose storage keys or cross-tenant facts. The selected decision and usage come from the slot and verified links, never from array order.
 
-ADR acceptance and merge alone do **not** create this read state. The stopped G1.1H mapping-read task is read-only and cannot implement the required pointer/migration/command changes without a revised owner authorization or an earlier bounded selection-runtime task. The Upload & Mapping UI remains blocked behind an implemented, independently verified read contract.
+ADR acceptance and merge alone did **not** create this read state. The F0 runtime task implements the pointer, migration, commands and read contract in one candidate. The Upload & Mapping UI remains blocked until the runtime candidate is merged and exact-main CI succeeds.
 
 ## Options considered
 
@@ -86,6 +86,6 @@ ADR acceptance and merge alone do **not** create this read state. The stopped G1
 
 ## Consequences and acceptance gates
 
-- New runtime must add tenant-safe selection persistence, migration, command/API contract changes, source/batch invalidation, read projection and PostgreSQL concurrency/replay tests in separately authorized slices. G1.1G's current confirmation and materialization behavior is historical runtime behavior until those slices are merged; this ADR does not claim it already conforms.
+- The F0 runtime candidate adds tenant-safe selection persistence, migration, command/API contract changes, source/batch invalidation and a read projection as one authorized architecture boundary. G1.1G's merged behavior remains historical until the candidate is merged and verified on exact-main CI.
 - Tests must cover multiple proposals/confirmations, rejection after another selected mapping, same-snapshot correction before materialization and denial after it, new-snapshot correction, attempted re-selection after later staging replacement, non-mapping staging replacement clearing ownership with revision/audit, recovery after marker clearing, analysis/result and Official Intake currentness after new usage, batch/source changes and switch-back, legacy zero/one/many cases, NULL Customer, CAS races, lost responses, true replay after authority moves, and exact staging/usage lineage.
 - No runtime file, migration, API route, frontend, Apply behavior, official asset line or workflow-stage change is made by this ADR task.

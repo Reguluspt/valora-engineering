@@ -582,6 +582,10 @@ def test_j01_pg_verified_pending_promotion():
     finally:
         with engine.begin() as conn:
             conn.execute(
+                text("DELETE FROM project_column_mapping_authorities WHERE organization_id = :oid"),
+                {"oid": oid},
+            )
+            conn.execute(
                 text(
                     "UPDATE project_asset_import_batches SET current_source_artifact_id = NULL "
                     "WHERE organization_id = :oid"

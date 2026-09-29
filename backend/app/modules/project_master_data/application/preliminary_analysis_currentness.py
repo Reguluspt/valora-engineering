@@ -8,6 +8,7 @@ import uuid
 from typing import Callable, Any
 
 from sqlalchemy.orm import Session
+from app.modules.excel_import.application.mapping_authority import authority_slot, lineage_has_usage
 
 from app.modules.excel_import.models import (
     ColumnMappingDecision,
@@ -119,6 +120,23 @@ def select_current_analysis(
         != ImportSourceArtifactState.AVAILABLE.value
     ):
         return None
+    slot = authority_slot(db, org_id=org_id, project_id=project_id)
+    required_usage_id = None
+    if slot is not None and slot.confirmation_decision_id is not None:
+        if slot.import_batch_id != batch.id or slot.source_artifact_id != source.id:
+            return None
+        # A new selection alone leaves existing analysis intact. The physical
+        # staging owner, once known, controls which usage may remain current.
+        required_usage_id = slot.current_staging_usage_id
+        if slot.selected_usage_id is not None and slot.selected_usage_id != required_usage_id:
+            return None
+        if required_usage_id is None and lineage_has_usage(
+            db, org_id=org_id, project_id=project_id, batch_id=batch.id,
+            source_id=source.id, structure_id=slot.structure_snapshot_id,
+        ):
+            # A usage on the selected lineage with no owner marker is recovery
+            # required; it cannot keep its former analysis current.
+            return None
     snapshots = (
         db.query(PreliminaryAnalysisSnapshot)
         .filter(
@@ -135,6 +153,8 @@ def select_current_analysis(
         raise CurrentAnalysisCorruption("Conflicting analysis authority at the same version.")
     corrupt = False
     for snapshot in snapshots:
+        if required_usage_id is not None and snapshot.mapping_profile_usage_id != required_usage_id:
+            continue
         if snapshot.source_artifact_generation != source.generation:
             continue
         structure = (

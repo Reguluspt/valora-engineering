@@ -10,6 +10,7 @@ from app.modules.project_master_data.models import (
     ImportRowValidationStatus,
 )
 from app.core.audit import log_audit_event
+from app.modules.excel_import.application.mapping_authority import require_staging_replacement_open
 from app.modules.excel_import.domain import DEFAULT_LIMITS, ExcelImportLimits
 
 
@@ -32,7 +33,7 @@ def replace_staging_rows(
 
     project = db.query(Project).filter(
         Project.id == project_id, Project.organization_id == org_id
-    ).first()
+    ).with_for_update().first()
     if not project:
         raise ValueError("Project not found in organization scope")
 
@@ -48,6 +49,11 @@ def replace_staging_rows(
     )
     if not batch:
         raise ValueError("Import batch not found")
+    if project.current_preliminary_import_batch_id == batch_id:
+        require_staging_replacement_open(
+            db, org_id=org_id, project_id=project_id, batch_id=batch_id,
+            current_source_id=batch.current_source_artifact_id,
+        )
 
     # Delete old staging
     db.query(ProjectAssetImportStagingRow).filter(

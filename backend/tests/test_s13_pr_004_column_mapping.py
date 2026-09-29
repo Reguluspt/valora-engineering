@@ -20,10 +20,11 @@ from app.db import Base
 import app.modules.excel_import.models  # noqa: F401
 import app.modules.excel_import.application.column_mapping_service as mapping_service
 from app.modules.excel_import.application.column_mapping_service import (
-    confirm_column_mapping,
-    materialize_confirmed_mapping_to_staging,
     propose_column_mapping,
     reject_column_mapping,
+)
+from tests.mapping_revision_helpers import (
+    confirm_column_mapping, materialize_confirmed_mapping_to_staging,
 )
 from app.modules.excel_import.domain.column_mapping import (
     ColumnMappingContractError,
@@ -1064,7 +1065,7 @@ def _attacker_reseal_mapping_snapshot(snapshot: dict) -> None:
     )
 
 
-@pytest.mark.parametrize("tamper", ["sheet", "bounds", "headers"])
+@pytest.mark.parametrize("tamper", ["sheet", "bounds", "headers", "width"])
 def test_confirmation_rebuilds_canonical_snapshot_and_rejects_candidate_tamper(
     mapping_db: Session, tamper: str
 ):
@@ -1075,6 +1076,10 @@ def test_confirmation_rebuilds_canonical_snapshot_and_rejects_candidate_tamper(
         attacked["candidate"]["sheet_name"] = "ATTACKER-SHEET"
     elif tamper == "bounds":
         attacked["candidate"]["max_row"] += 1
+    elif tamper == "width":
+        attacked["candidate"]["max_column"] = attacked["candidate"]["min_column"]
+        attacked["fields"] = attacked["fields"][:1]
+        attacked["fields"][0]["semantic_role"] = "raw_asset_name"
     else:
         attacked["fields"][1]["original_header"] = "ATTACKER HEADER"
     _attacker_reseal_mapping_snapshot(attacked)
@@ -1527,6 +1532,7 @@ def test_materialization_exact_audit_privacy_cardinality_and_no_apply_side_effec
         "mapping_digest_sha256",
         "source_generation",
         "materialized_asset_row_count",
+        "selection_revision",
     }
     serialized = str(event.payload)
     assert "TÊN VẬT TƯ" not in serialized
@@ -1734,6 +1740,7 @@ def test_proposal_confirmation_rejection_audits_have_exact_private_cardinalities
             "source_generation",
             "outcome",
             "role_counts",
+            "selection_revision",
         },
         "ColumnMappingRejected": {
             "organization_id",

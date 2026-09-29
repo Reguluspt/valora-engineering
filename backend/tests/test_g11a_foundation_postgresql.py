@@ -39,6 +39,7 @@ from tests.test_pr01_preliminary_result_postgresql import _seed
 
 PRIOR = "c9d0e1f2a3b4"
 CURRENT = "e4f5a6b7c8d9"
+RUNTIME_HEAD = "d1e2f3a4b5c6"
 MIGRATION = Path(__file__).parents[1] / "alembic/versions/e4f5a6b7c8d9_precase_identity_batch_foundation.py"
 
 
@@ -151,7 +152,7 @@ def test_migration_backfills_zero_one_and_ambiguous_multiple_then_roundtrips(pg_
 
 
 def test_nullable_project_customer_pointer_and_all_fact_ownership_fks(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine = create_engine(pg_database)
     db = Session(engine)
     try:
@@ -254,7 +255,7 @@ def test_nullable_project_customer_pointer_and_all_fact_ownership_fks(pg_databas
 
 
 def test_multiple_batches_use_only_unique_accepted_commit_chain(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine = create_engine(pg_database)
     db = Session(engine)
     try:
@@ -333,7 +334,7 @@ def test_multiple_batches_use_only_unique_accepted_commit_chain(pg_database):
 
 
 def test_postgresql_first_batch_transaction_and_second_no_switch(pg_database, monkeypatch):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine = create_engine(pg_database)
     with engine.begin() as conn:
         org_id, _, project_id, _ = _seed_prior_minimal(conn, batches=0)

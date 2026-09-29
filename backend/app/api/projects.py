@@ -99,15 +99,20 @@ from app.modules.excel_import.application.column_mapping_service import (
     materialize_confirmed_mapping_to_staging,
     propose_column_mapping,
     reject_column_mapping,
+    select_legacy_column_mapping,
 )
+from app.modules.excel_import.application.mapping_recovery_service import get_mapping_recovery_state
 from app.modules.excel_import.schemas import (
     ImportSourceArtifactResponse,
     MappingConfirmationRequest,
     MappingDecisionResponse,
     MappingMaterializationRequest,
     MappingMaterializationResponse,
+    MappingLegacySelectionRequest,
+    MappingLegacySelectionResponse,
     MappingProposalRequest,
     MappingProposalResponse,
+    MappingRecoveryStateResponse,
     MappingRejectionRequest,
     WorkbookStructureSnapshotResponse,
 )
@@ -1095,6 +1100,22 @@ def get_project_asset_import_source_structure_snapshot(
     )
 
 
+@router.get(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/state",
+    response_model=MappingRecoveryStateResponse,
+)
+def get_project_asset_column_mapping_state(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    return get_mapping_recovery_state(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+    )
+
+
 @router.post(
     "/{project_id}/asset-imports/{batch_id}/column-mapping/proposals",
     response_model=MappingProposalResponse,
@@ -1151,9 +1172,37 @@ def confirm_project_asset_column_mapping(
         mapping_snapshot=payload.mapping_snapshot,
         memory_scope=payload.memory_scope,
         supersedes_profile_id=payload.supersedes_profile_id,
-        command_id=payload.command_id, correlation_id=get_correlation_id(request),
+        command_id=payload.command_id,
+        expected_selection_revision=payload.expected_selection_revision,
+        correlation_id=get_correlation_id(request),
     )
     return _mapping_decision_response(decision)
+
+
+@router.post(
+    "/{project_id}/asset-imports/{batch_id}/column-mapping/legacy-selections",
+    response_model=MappingLegacySelectionResponse,
+    status_code=201,
+)
+def select_legacy_project_asset_column_mapping(
+    project_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: MappingLegacySelectionRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("workbench:edit")),
+):
+    receipt = select_legacy_column_mapping(
+        db, actor=current_user, org_id=current_user.organization_id,
+        project_id=project_id, batch_id=batch_id,
+        confirmation_decision_id=payload.confirmation_decision_id,
+        expected_selection_revision=payload.expected_selection_revision,
+        command_id=payload.command_id, correlation_id=get_correlation_id(request),
+    )
+    return {
+        "confirmation_decision_id": receipt.confirmation_decision_id,
+        "selection_revision": receipt.resulting_selection_revision,
+    }
 
 
 @router.post(
@@ -1190,6 +1239,7 @@ def _mapping_decision_response(decision):
         "profile_id": decision.profile_id,
         "source_artifact_id": decision.source_artifact_id,
         "structure_snapshot_id": decision.structure_snapshot_id,
+        "selection_revision": (decision.after_summary or {}).get("selection_revision"),
     }
 
 
@@ -1210,7 +1260,9 @@ def materialize_project_asset_column_mapping(
         db, actor=current_user, org_id=current_user.organization_id,
         project_id=project_id, batch_id=batch_id,
         confirmation_decision_id=payload.confirmation_decision_id,
-        command_id=payload.command_id, correlation_id=get_correlation_id(request),
+        command_id=payload.command_id,
+        expected_selection_revision=payload.expected_selection_revision,
+        correlation_id=get_correlation_id(request),
     )
     return {
         "usage_id": usage.id,
@@ -1219,6 +1271,10 @@ def materialize_project_asset_column_mapping(
         "materialized_asset_row_count": usage.materialized_asset_row_count,
         "source_artifact_id": usage.source_artifact_id,
         "structure_snapshot_id": usage.structure_snapshot_id,
+        "selection_revision": (
+            usage.expected_selection_revision + 1
+            if usage.expected_selection_revision is not None else None
+        ),
     }
 
 

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import Base
 import app.modules.excel_import.models  # noqa: F401
-from app.modules.excel_import.application.column_mapping_service import (
+from tests.mapping_revision_helpers import (
     confirm_column_mapping,
     materialize_confirmed_mapping_to_staging,
 )
@@ -24,8 +24,10 @@ from app.modules.excel_import.infrastructure.object_storage import FakeObjectSto
 from app.modules.excel_import.models import (
     ColumnMappingDecision,
     ColumnMappingField,
+    ColumnMappingLegacySelectionReceipt,
     ColumnMappingProfile,
     ColumnMappingProfileUsage,
+    ProjectColumnMappingAuthority,
     ImportSourceArtifact,
     WorkbookStructureSnapshot,
 )
@@ -63,6 +65,12 @@ def _postgres_engine_or_skip():
 def _cleanup(SessionLocal, org_id: uuid.UUID) -> None:
     db: Session = SessionLocal()
     try:
+        db.query(ColumnMappingLegacySelectionReceipt).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
+        db.query(ProjectColumnMappingAuthority).filter_by(organization_id=org_id).delete(
+            synchronize_session=False
+        )
         db.query(ColumnMappingProfileUsage).filter_by(organization_id=org_id).delete(
             synchronize_session=False
         )
@@ -251,14 +259,22 @@ def test_postgresql_concurrent_customer_confirmation_has_one_active_profile():
         thread.join(timeout=60)
     try:
         assert all(not thread.is_alive() for thread in threads)
-        assert errors == []
-        assert len(results) == 2 and len(set(results)) == 1
+        assert len(results) == 1
+        assert len(errors) == 1
+        assert isinstance(errors[0], HTTPException)
+        assert errors[0].status_code == 409
+        assert errors[0].detail["error_code"] in {
+            "mapping_selection_revision_conflict", "mapping_proposal_resolved",
+        }
         verify = SessionLocal()
         try:
             active = verify.query(ColumnMappingProfile).filter_by(
                 organization_id=ids["org"], status="active", scope_type="customer"
             ).all()
             assert len(active) == 1
+            assert verify.query(ColumnMappingDecision).filter_by(
+                organization_id=ids["org"], decision_kind="confirmation",
+            ).count() == 1
         finally:
             verify.close()
     finally:
@@ -459,6 +475,8 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+            "column_mapping_legacy_selection_receipts",
+            "project_column_mapping_authorities",
         "preliminary_project_lifecycle_command_receipts",
         "preliminary_analysis_snapshots",
         "project_official_intake_commits",
