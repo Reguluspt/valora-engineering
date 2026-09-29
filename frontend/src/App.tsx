@@ -7,6 +7,7 @@ import { LoadingState } from "./components/common/LoadingState";
 import { CaseOverviewPage } from "./components/case-overview/CaseOverviewPage";
 import { NccSelectionPage } from "./components/ncc-selection/NccSelectionPage";
 import { ProjectListPage } from "./components/projects/ProjectListPage";
+import { PreliminaryRequestCreatePage } from "./components/precase/PreliminaryRequestCreatePage";
 import { M365ReturnPage, M365WorkspacePage } from "./components/m365/M365WorkspacePage";
 import { LoginPage } from "./auth/LoginPage";
 import { SessionProvider, useSession } from "./auth/SessionProvider";
@@ -93,6 +94,10 @@ export function AuthenticatedApp() {
 
     if (currentPath === APP_ROUTES.projectList) {
       return <ProjectListPage onNavigate={handleNavigate} />;
+    }
+
+    if (currentPath === APP_ROUTES.preliminaryRequestCreate) {
+      return <PreliminaryRequestCreatePage onNavigate={handleNavigate} />;
     }
 
     if (currentPath.split("?", 1)[0] === APP_ROUTES.m365Return) {
