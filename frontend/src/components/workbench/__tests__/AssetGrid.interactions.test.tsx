@@ -37,7 +37,7 @@ describe("AssetGrid interaction and virtualization lock", () => {
       root = create(<AssetGrid rows={Array.from({ length: 30 }, (_, index) => row(index + 1))} onActiveRowChange={onActiveRowChange} />);
     });
 
-    expect(visibleRows(root!).length).toBe(10);
+    expect(visibleRows(root!).length).toBe(13);
     expect(visibleRows(root!)[0].props["data-row-version"]).toBe(1);
     expect(visibleRows(root!)[0].props["aria-label"]).toContain("Tài sản 1");
 
@@ -63,13 +63,13 @@ describe("AssetGrid interaction and virtualization lock", () => {
     expect(visibleRows(root!)[0].props["aria-label"]).toContain("Tài sản 12");
   });
 
-  it("retains the 400px window and 60px row virtualization boundary", () => {
+  it("retains the 400px window and 44px dense row virtualization boundary", () => {
     let root: ReturnType<typeof create>;
     act(() => { root = create(<AssetGrid rows={Array.from({ length: 30 }, (_, index) => row(index + 1))} />); });
     const viewport = root!.root.findByProps({ className: "grid-scroll-viewport valora-table-shell" });
     expect(viewport.props.style.height).toBe("400px");
     act(() => viewport.props.onScroll({ currentTarget: { scrollTop: 600 } }));
-    expect(visibleRows(root!)[0].props["aria-label"]).toContain("Tài sản 9");
+    expect(visibleRows(root!)[0].props["aria-label"]).toContain("Tài sản 12");
     expect(visibleRows(root!).some((item) => item.props["aria-label"] === "Tài sản dòng 1: Tài sản 1")).toBe(false);
   });
 });

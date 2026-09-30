@@ -29,7 +29,7 @@ describe("AppShell routing", () => {
       );
     });
 
-    expect(root!.root.findByType("nav").props["aria-label"]).toBe("Điều hướng chính");
+    expect(root!.root.findAllByType("nav").map((node: any) => node.props["aria-label"])).toEqual(["Điều hướng chính", "Vị trí hiện tại"]);
     expect(root!.root.findByType("main").props["aria-label"]).toBe("Nội dung chính");
     expect(findLink(root!, "nav.caseOverview").props["aria-current"]).toBe("page");
     expect(findLink(root!, "nav.workbench").props["aria-current"]).toBeUndefined();
@@ -75,14 +75,14 @@ describe("AppShell routing", () => {
     expect(nav).toHaveBeenCalledWith("/workbench/projects");
   });
 
-  it("keeps the dedicated management navigation active on the create path", () => {
+  it("does not mark management as the current page on the create path", () => {
     let root: any;
     act(() => {
       root = create(React.createElement(AppShell, {
         account, currentPath: APP_ROUTES.preliminaryRequestCreate, onLogout: vi.fn(), onNavigate: vi.fn(), children: null,
       }));
     });
-    expect(findLink(root, "Quản lý yêu cầu sơ bộ").props["aria-current"]).toBe("page");
+    expect(findLink(root, "Quản lý yêu cầu sơ bộ").props["aria-current"]).toBeUndefined();
     expect(findLink(root, "nav.workbench").props["aria-current"]).toBeUndefined();
   });
 

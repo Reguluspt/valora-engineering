@@ -286,12 +286,18 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
   const visibleDrafts = drafts.slice(pageIndex * 50, (pageIndex + 1) * 50);
   const pageCount = Math.max(1, Math.ceil((completed?.line_manifest.length ?? drafts.length) / 50));
   return (
-    <main className="precase-analysis-page">
+    <div className="precase-analysis-page">
       <header className="precase-intake-header">
         <div><p className="precase-intake-eyebrow">Yêu cầu sơ bộ</p><h1>Phân tích danh mục</h1>
           <p>Rà soát từng dòng trên đúng dữ liệu tạm của tệp và ánh xạ hiện hành.</p></div>
         <button className="valora-button valora-button--secondary" onClick={() => onNavigate(projectOverviewPath(projectRef))} type="button">Về Tổng quan hồ sơ</button>
       </header>
+      <section className="precase-analysis-summary" aria-label="Tình trạng phân tích sơ bộ">
+        <div><span>Trạng thái</span><strong>{completed ? `Đã chốt · phiên bản ${completed.version}` : "Đang rà soát"}</strong></div>
+        <div><span>Dòng dữ liệu</span><strong>{completed?.line_manifest.length ?? drafts.length}</strong></div>
+        <div><span>Đã xác nhận</span><strong>{completed?.line_manifest.length ?? reviewedCount}</strong></div>
+        <div><span>Còn vướng mắc</span><strong>{completed ? 0 : drafts.filter((row) => row.has_unresolved_blocking_line).length}</strong></div>
+      </section>
       {notice && <p className="precase-intake-warning" role="status">{notice}</p>}
       {loadState === "loading" && <p role="status">Đang kiểm tra dữ liệu hiện hành…</p>}
       {loadState === "error" && <ErrorState title="Chưa thể cập nhật phân tích" message="Không thể đọc trạng thái hiện hành. Dữ liệu đang hiển thị chưa được xác minh lại." onRetry={() => void load()} />}
@@ -374,6 +380,6 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
             <button className="valora-button valora-button--primary" onClick={confirmFinalize} type="button">Xác nhận chốt</button>
           </div></div>
       </dialog>}
-    </main>
+    </div>
   );
 }

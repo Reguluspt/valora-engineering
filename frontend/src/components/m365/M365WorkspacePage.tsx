@@ -358,7 +358,7 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
   }
 
   return (
-    <main className="m365-page">
+    <div className="m365-page">
       <header className="m365-header">
         <div>
           <p>Hồ sơ · {projectName}</p>
@@ -639,7 +639,7 @@ function ResolvedM365Workspace({ projectId, projectName }: { projectId: string; 
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -742,7 +742,7 @@ export function M365ReturnPage({ currentPath, onNavigate }: { currentPath: strin
   if (!connection && !failed) return <LoadingState message="Đang xác nhận kết nối OneDrive…" />;
   const connected = connection?.status === "active" && !failed;
   return (
-    <main className="m365-return-page">
+    <div className="m365-return-page">
       <p>Xác thực Microsoft · Máy chủ xác nhận</p>
       <h1>{connected ? "OneDrive Personal đã sẵn sàng." : "Kết nối chưa hoàn tất."}</h1>
       <span>
@@ -751,7 +751,7 @@ export function M365ReturnPage({ currentPath, onNavigate }: { currentPath: strin
           : "Không có token hay chi tiết nhà cung cấp nào được đưa về trình duyệt. Vui lòng thử kết nối lại từ hồ sơ."}
       </span>
       <button onClick={() => onNavigate(APP_ROUTES.projectList)} type="button">Về danh sách hồ sơ</button>
-    </main>
+    </div>
   );
 }
 

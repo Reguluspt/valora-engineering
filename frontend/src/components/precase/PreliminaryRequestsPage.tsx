@@ -54,7 +54,7 @@ export function PreliminaryRequestsPage({
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <main className="precase-management-page">
+    <div className="precase-management-page">
       <header className="precase-management-header">
         <div>
           <p>Yêu cầu sơ bộ</p>
@@ -85,6 +85,7 @@ export function PreliminaryRequestsPage({
       )}
       {state === "ready" && result && result.total > 0 && (
         <>
+          <div className="precase-queue-toolbar"><strong>Danh sách công việc</strong><span>{result.total} yêu cầu trong đơn vị hiện tại</span></div>
           <section className="valora-table-shell precase-management-table" aria-label="Danh sách yêu cầu sơ bộ">
             <table className="valora-table">
               <thead>
@@ -100,7 +101,7 @@ export function PreliminaryRequestsPage({
                   <tr key={item.project_id}>
                     <td><span className="precase-management-code">{item.code}</span><strong>{item.name}</strong></td>
                     <td>{sourceLabel(item)}</td>
-                    <td>{item.customer_id ? "Đã gắn" : "Chưa gắn"}</td>
+                    <td><span className={`valora-status${item.customer_id ? " valora-status--success" : ""}`}>{item.customer_id ? "Đã gắn" : "Chưa gắn"}</span></td>
                     <td>
                       <button className="valora-button valora-button--secondary" onClick={() => onNavigate(projectPreliminaryIntakePath(item.project_id))} type="button">
                         Mở nhập liệu
@@ -118,6 +119,6 @@ export function PreliminaryRequestsPage({
           </nav>
         </>
       )}
-    </main>
+    </div>
   );
 }

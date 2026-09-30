@@ -653,7 +653,7 @@ function ResolvedPreliminaryIntake({
   const controlsBlocked = loadState !== "ready" || Boolean(busy) || uncertain || pendingUpload;
 
   return (
-    <main className="precase-intake-page">
+    <div className="precase-intake-page">
       <header className="precase-intake-header">
         <div>
           <p>Quản lý yêu cầu sơ bộ / Upload & Mapping Excel</p>
@@ -685,6 +685,12 @@ function ResolvedPreliminaryIntake({
             <button className="valora-button valora-button--secondary" disabled={controlsBlocked || pendingUpload} onClick={() => setReplaceSource(true)} type="button">Tải tệp Excel khác</button>}
         </div>
       </section>
+
+      <div className="precase-workflow-strip" aria-label="Tiến độ nhập liệu">
+        <div><strong>1 · Tệp nguồn</strong><span>{currentSource ? "Nguồn hiện hành đã sẵn sàng" : "Cần kiểm tra nguồn"}</span></div>
+        <div><strong>2 · Cấu trúc workbook</strong><span>{currentSource && data.snapshots.length > 0 ? "Đã có bản phân tích" : "Chưa có bản phân tích"}</span></div>
+        <div><strong>3 · Ánh xạ & dữ liệu tạm</strong><span>{recovery?.status === "materialized" ? "Đã tạo dữ liệu tạm" : recovery?.status === "selected_unmaterialized" ? "Đã xác nhận ánh xạ" : "Cần rà soát"}</span></div>
+      </div>
 
       {unresolvedBatch && <BlockedState title="Chưa xác định batch hiện hành" message="Yêu cầu còn batch đã lưu nhưng Project chưa có con trỏ batch hiện hành. Cần xử lý theo quy trình có thẩm quyền trước khi nhập thêm tệp." />}
       {staleBatch && <BlockedState title="Batch hiện hành không khả dụng" message="Con trỏ batch của Project không khớp dữ liệu có thể đọc. Hãy kiểm tra lại hoặc yêu cầu hỗ trợ." onRefresh={() => void refresh()} />}
@@ -718,7 +724,9 @@ function ResolvedPreliminaryIntake({
       {structureReview && !replaceSource && !recovery?.official_intake_closed && (
         <section className="precase-intake-step valora-panel">
           <div className="valora-panel__header">2 · Rà soát cấu trúc workbook</div>
-          <div className="valora-panel__body">
+          <details className="precase-prior-step" key={proposal ? "proposal" : "structure"} open={!proposal}>
+            <summary>{proposal ? "Đã chọn vùng bảng; mở lại để xem cấu trúc" : "Nguồn và vùng bảng đang rà soát"}</summary>
+            <div className="valora-panel__body">
             {recovery?.status === "unresolved_legacy_history" && <p className="precase-intake-warning">Lịch sử ánh xạ cũ chưa có lựa chọn hiện hành được xác minh. Rà soát cấu trúc hiện tại hoặc phân tích lại trước khi đề xuất mới.</p>}
             {recovery?.status === "selected_recovery_required" && <p className="precase-intake-warning">Dữ liệu tạm cũ không còn chứng minh được quyền sở hữu. Cần bản cấu trúc mới, đề xuất mới và xác nhận mới.</p>}
             {data.snapshots.length === 0 ? (
@@ -757,7 +765,8 @@ function ResolvedPreliminaryIntake({
                 {!mustAnalyze && <button className="valora-button valora-button--secondary" disabled={controlsBlocked} onClick={() => void handleAnalyze()} type="button">Phân tích lại cấu trúc</button>}
               </div>
             )}
-          </div>
+            </div>
+          </details>
         </section>
       )}
 
@@ -826,7 +835,7 @@ function ResolvedPreliminaryIntake({
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }
 

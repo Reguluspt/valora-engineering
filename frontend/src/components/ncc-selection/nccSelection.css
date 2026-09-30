@@ -365,10 +365,10 @@
 /* Contextual Right Drawer */
 .ncc-drawer {
   position: fixed;
-  top: 0;
+  top: var(--valora-shell-topbar-height);
   right: 0;
-  height: 100%;
-  width: min(520px, 92vw);
+  height: calc(100% - var(--valora-shell-topbar-height));
+  width: min(440px, 92vw);
   background: var(--valora-color-surface-elevated);
   color: var(--valora-color-text-primary);
   border-left: 1px solid var(--valora-color-border-subtle);

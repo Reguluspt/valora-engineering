@@ -55,6 +55,7 @@ export function AssetGridToolbar({
           Đã chọn {selectedCount} dòng
         </span>
       )}
+      <span className="grid-scroll-hint">Cuộn ngang để xem thêm cột →</span>
     </div>
   );
 }

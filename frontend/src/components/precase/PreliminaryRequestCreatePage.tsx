@@ -81,7 +81,7 @@ export function PreliminaryRequestCreatePage({
   const canSubmit = Boolean(code.trim() && name.trim()) && submitState === "idle";
 
   return (
-    <main className="precase-create-page">
+    <div className="precase-create-page">
       <header className="precase-create-header">
         <p>Yêu cầu sơ bộ</p>
         <h1>Tạo yêu cầu sơ bộ</h1>
@@ -185,6 +185,6 @@ export function PreliminaryRequestCreatePage({
           )}
         </div>
       </form>
-    </main>
+    </div>
   );
 }

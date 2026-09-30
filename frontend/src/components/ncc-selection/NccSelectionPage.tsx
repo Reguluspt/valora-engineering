@@ -159,7 +159,7 @@ function ResolvedNccSelection({
   };
 
   return (
-    <main className="ncc-page">
+    <div className="ncc-page">
       <header className="ncc-page-header">
         <div>
           <p className="ncc-kicker">{t("ncc.pageTitle")}</p>
@@ -246,7 +246,7 @@ function ResolvedNccSelection({
           }}
         />
       )}
-    </main>
+    </div>
   );
 }
 
@@ -276,7 +276,7 @@ function NccEmptyState({
 
 function NccSelectionSkeleton() {
   return (
-    <main className="ncc-page ncc-skeleton" data-state="INITIAL_LOADING" role="status" aria-live="polite" aria-label={t("ncc.pageTitle")}>
+    <div className="ncc-page ncc-skeleton" data-state="INITIAL_LOADING" role="status" aria-live="polite" aria-label={t("ncc.pageTitle")}>
       <div className="ncc-skeleton-line ncc-skeleton-line--title" />
       <div className="ncc-skeleton-metrics">
         {Array.from({ length: 5 }, (_, index) => (
@@ -284,7 +284,7 @@ function NccSelectionSkeleton() {
         ))}
       </div>
       <div className="ncc-skeleton-body" />
-    </main>
+    </div>
   );
 }
 
@@ -302,12 +302,12 @@ function NccSelectionPageError({
   onRetry: () => void;
 }) {
   return (
-    <main className="ncc-page-error" data-state={dataState}>
+    <div className="ncc-page-error" data-state={dataState}>
       <p>{t("ncc.pageTitle")}</p>
       <h1>{title}</h1>
       <span>{message}</span>
       <small>{nextAction}</small>
       <button type="button" onClick={onRetry}>{t("ncc.error.retry")}</button>
-    </main>
+    </div>
   );
 }

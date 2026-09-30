@@ -86,6 +86,8 @@
   --valora-control-height-large: 36px;
   --valora-table-header-height: 34px;
   --valora-table-row-height: 36px;
+  --valora-shell-sidebar-width: 216px;
+  --valora-shell-topbar-height: 44px;
 
   /* Shape and elevation */
   --valora-radius-small: 2px;
