@@ -19,7 +19,12 @@ function sourceLabel(item: PreliminaryRequestManagementItem): string {
   if (!item.current_source_artifact_id) return "Chưa có tệp nguồn";
   if (item.current_source_state === "available") return "Tệp nguồn sẵn sàng";
   if (!item.current_source_state) return "Cần xác minh tệp nguồn";
-  return `Tệp nguồn: ${item.current_source_state}`;
+  const stateLabels: Record<string, string> = {
+    pending: "Tệp nguồn đang xử lý",
+    failed: "Tệp nguồn xử lý thất bại",
+    orphaned: "Tệp nguồn không còn hiện hành",
+  };
+  return stateLabels[item.current_source_state] || "Cần xác minh tệp nguồn";
 }
 
 export function PreliminaryRequestsPage({

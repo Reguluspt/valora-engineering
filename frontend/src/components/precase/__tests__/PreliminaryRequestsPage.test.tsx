@@ -52,6 +52,22 @@ describe("PreliminaryRequestsPage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("Chưa có yêu cầu sơ bộ");
   });
 
+  it("renders source processing states in Vietnamese", async () => {
+    listPreliminaryRequests.mockResolvedValue({
+      page: 1, page_size: 25, total: 2,
+      items: ["pending", "failed"].map((state, index) => ({
+        project_id: `p-${index}`, code: `SB-${index}`, name: `Yêu cầu ${index}`,
+        customer_id: null, current_batch_id: `b-${index}`, has_retained_batches: true,
+        current_source_artifact_id: `s-${index}`, current_source_state: state,
+      })),
+    });
+    const { root } = await mount();
+    const rendered = JSON.stringify(root.toJSON());
+    expect(rendered).toContain("Tệp nguồn đang xử lý");
+    expect(rendered).toContain("Tệp nguồn xử lý thất bại");
+    expect(rendered).not.toContain("Tệp nguồn: failed");
+  });
+
   it("presents permission and session failures", async () => {
     listPreliminaryRequests.mockRejectedValueOnce(new ApiError("forbidden", 403));
     const forbidden = await mount();

@@ -41,10 +41,13 @@ interface IntakeData {
 
 interface PendingUnknown {
   kind: "batch" | "source" | "structure" | "proposal" | "confirmation" | "materialization";
+  batchId?: string;
   previousSourceId?: string | null;
   knownSnapshotIds?: string[];
   commandId?: string;
   confirmationId?: string;
+  confirmationPayload?: Parameters<typeof confirmMapping>[2];
+  materializationPayload?: Parameters<typeof materializeMapping>[2];
   proposalPayload?: {
     source_artifact_id: string;
     structure_snapshot_id: string;
@@ -234,6 +237,56 @@ function ResolvedPreliminaryIntake({
     setNotice(null);
     const pending = readPending(projectId);
     const fresh = await load();
+    if (pending?.kind === "confirmation" && pending.confirmationPayload && fresh?.batch &&
+      fresh.batch.id === pending.batchId && sourceIsCurrent(fresh) &&
+      !fresh.recovery?.official_intake_closed &&
+      fresh.recovery?.selection_revision === pending.confirmationPayload.expected_selection_revision &&
+      fresh.source?.id === pending.confirmationPayload.mapping_snapshot?.source?.source_artifact_id &&
+      (pending.confirmationPayload.memory_scope === "none" || Boolean(fresh.project.customer_id)) &&
+      fresh.recovery?.recent_proposals.some((item) =>
+        item.proposal_decision_id === pending.confirmationPayload?.proposal_decision_id &&
+        item.source_artifact_id === fresh.source?.id &&
+        item.structure_snapshot_id === pending.confirmationPayload?.mapping_snapshot?.structure?.structure_snapshot_id &&
+        item.terminal_outcomes.length === 0)) {
+      setBusy("recovery");
+      try {
+        await confirmMapping(projectId, fresh.batch.id, pending.confirmationPayload);
+        const verified = await load();
+        if (verified?.recovery?.selected_command_id === pending.confirmationPayload.command_id) {
+          try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+          setUncertain(false);
+          setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu xác nhận trước. Ánh xạ hiện hành lấy từ máy chủ." });
+        }
+      } catch {
+        setNotice({ tone: "warning", text: "Chưa thể khôi phục xác nhận cũ. Hãy kiểm tra trạng thái máy chủ trước khi tiếp tục." });
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
+    if (pending?.kind === "materialization" && pending.materializationPayload && fresh?.batch &&
+      fresh.batch.id === pending.batchId && sourceIsCurrent(fresh) &&
+      fresh.recovery?.status === "selected_unmaterialized" &&
+      !fresh.recovery.official_intake_closed &&
+      fresh.recovery.selected_confirmation_decision_id === pending.materializationPayload.confirmation_decision_id &&
+      fresh.recovery.selection_revision === pending.materializationPayload.expected_selection_revision) {
+      setBusy("recovery");
+      try {
+        await materializeMapping(projectId, fresh.batch.id, pending.materializationPayload);
+        const verified = await load();
+        if (verified?.recovery?.status === "materialized" &&
+          verified.recovery.selected_confirmation_decision_id === pending.materializationPayload.confirmation_decision_id) {
+          try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+          setUncertain(false);
+          setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu tạo dữ liệu tạm trước. Danh mục chính thức chưa thay đổi." });
+        }
+      } catch {
+        setNotice({ tone: "warning", text: "Chưa thể khôi phục lần tạo dữ liệu tạm cũ. Hãy kiểm tra trạng thái máy chủ trước khi tiếp tục." });
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
     if (pending?.kind === "proposal" && pending.proposalPayload && fresh?.batch &&
       fresh.recovery?.recent_proposals.some((item) => item.command_id === pending.commandId &&
         item.terminal_outcomes.length === 0)) {
@@ -400,18 +453,19 @@ function ResolvedPreliminaryIntake({
     if (!data?.batch || !data.recovery || !proposal || !reviewed || !mappingFieldsValid(fields) || loadState !== "ready" || busy || uncertain) return;
     const commandId = crypto.randomUUID();
     const mappingSnapshot: MappingSnapshot = { ...proposal.mapping_snapshot, fields: fields.map((field) => ({ ...field })) };
+    const payload: Parameters<typeof confirmMapping>[2] = {
+      proposal_decision_id: proposal.decision_id,
+      mapping_snapshot: mappingSnapshot,
+      memory_scope: data.project.customer_id ? memoryScope : "none",
+      supersedes_profile_id: data.project.customer_id && memoryScope === "customer"
+        ? supersedesProfileId : null,
+      command_id: commandId,
+      expected_selection_revision: data.recovery.selection_revision,
+    };
     setBusy("confirmation");
     setNotice(null);
     try {
-      await confirmMapping(projectId, data.batch.id, {
-        proposal_decision_id: proposal.decision_id,
-        mapping_snapshot: mappingSnapshot,
-        memory_scope: data.project.customer_id ? memoryScope : "none",
-        supersedes_profile_id: data.project.customer_id && memoryScope === "customer"
-          ? supersedesProfileId : null,
-        command_id: commandId,
-        expected_selection_revision: data.recovery.selection_revision,
-      });
+      await confirmMapping(projectId, data.batch.id, payload);
       const fresh = await load();
       setNotice({
         tone: fresh?.recovery?.selected_command_id === commandId ? "info" : "warning",
@@ -426,7 +480,7 @@ function ResolvedPreliminaryIntake({
       } else if (error instanceof ApiError && error.status === 409) {
         setNotice({ tone: "warning", text: "Ánh xạ đã thay đổi ở nơi khác. Hãy rà soát trạng thái mới trước khi xác nhận lại." });
       } else if (unknownResult(error)) {
-        markUnknown({ kind: "confirmation", commandId });
+        markUnknown({ kind: "confirmation", commandId, batchId: data.batch.id, confirmationPayload: payload });
         setNotice({ tone: "warning", text: "Chưa xác định xác nhận đã được ghi nhận hay chưa. Hãy kiểm tra trạng thái máy chủ; không gửi quyết định mới ngay." });
       } else {
         setNotice({ tone: "error", text: "Chưa thể xác nhận ánh xạ. Hãy kiểm tra các vai trò cột và quyền truy cập." });
@@ -441,14 +495,15 @@ function ResolvedPreliminaryIntake({
     if (!data?.batch || !recovery?.selected_confirmation_decision_id ||
       recovery.status !== "selected_unmaterialized" || loadState !== "ready" || busy || uncertain) return;
     const commandId = crypto.randomUUID();
+    const payload: Parameters<typeof materializeMapping>[2] = {
+      confirmation_decision_id: recovery.selected_confirmation_decision_id,
+      expected_selection_revision: recovery.selection_revision,
+      command_id: commandId,
+    };
     setBusy("materialization");
     setNotice(null);
     try {
-      await materializeMapping(projectId, data.batch.id, {
-        confirmation_decision_id: recovery.selected_confirmation_decision_id,
-        expected_selection_revision: recovery.selection_revision,
-        command_id: commandId,
-      });
+      await materializeMapping(projectId, data.batch.id, payload);
       const fresh = await load();
       setNotice({
         tone: fresh?.recovery?.status === "materialized" ? "info" : "warning",
@@ -464,7 +519,10 @@ function ResolvedPreliminaryIntake({
       } else if (error instanceof ApiError && error.status === 409) {
         setNotice({ tone: "warning", text: "Phiên bản chọn ánh xạ đã thay đổi. Hãy xem trạng thái mới trước khi tiếp tục." });
       } else if (unknownResult(error)) {
-        markUnknown({ kind: "materialization", confirmationId: recovery.selected_confirmation_decision_id });
+        markUnknown({
+          kind: "materialization", batchId: data.batch.id,
+          confirmationId: recovery.selected_confirmation_decision_id, materializationPayload: payload,
+        });
         setNotice({ tone: "warning", text: "Chưa xác định dữ liệu tạm đã được tạo hay chưa. Hãy kiểm tra trạng thái máy chủ; không gửi yêu cầu mới ngay." });
       } else {
         setNotice({ tone: "error", text: "Chưa thể tạo dữ liệu tạm từ ánh xạ đã xác nhận." });
@@ -502,7 +560,7 @@ function ResolvedPreliminaryIntake({
   const pendingUpload = data.artifacts.some((item) => item.state === "pending");
   const structureReview = currentSource && (
     recovery?.status === "no_selection" || recovery?.status === "unresolved_legacy_history" ||
-    recovery?.status === "selected_recovery_required"
+    recovery?.status === "selected_recovery_required" || recovery?.status === "stale_lineage"
   );
   const selectedSnapshot = data.snapshots.find((item) => item.id === selectedSnapshotId) || null;
   const canPropose = structureReview && selectedSnapshot && candidateIndex !== null &&
@@ -529,9 +587,9 @@ function ResolvedPreliminaryIntake({
       {loadState === "error" && <ErrorState scope="section" title="Chưa thể cập nhật trạng thái" message="Thông tin đang hiển thị có thể đã cũ." onRetry={() => void load()} />}
       {notice && <div className={`valora-message valora-message--${notice.tone}`} role="status">{notice.text}</div>}
       {uncertain && (
-        <section className="precase-intake-blocked" data-state="OFFLINE">
+        <section className="precase-intake-blocked" role="alert">
           <h2>Kết quả thao tác chưa rõ</h2>
-          <p>Kiểm tra lại trạng thái máy chủ trước khi gửi thêm yêu cầu.</p>
+          <p>Kiểm tra lại trạng thái máy chủ trước khi gửi thêm yêu cầu. Nếu trạng thái vẫn chưa rõ, liên hệ quản trị để đối soát thao tác.</p>
           <button className="valora-button valora-button--primary" onClick={() => void refresh()} type="button">Kiểm tra trạng thái</button>
         </section>
       )}
@@ -564,6 +622,10 @@ function ResolvedPreliminaryIntake({
             <button className="valora-button valora-button--primary" disabled={!selectedFile || controlsBlocked} onClick={() => void handleUpload()} type="button">
               {busy === "upload" ? "Đang tải tệp…" : "Tải tệp Excel"}
             </button>
+            {replaceSource && <button className="valora-button valora-button--secondary" disabled={controlsBlocked} onClick={() => {
+              setReplaceSource(false);
+              setSelectedFile(null);
+            }} type="button">Hủy thay tệp</button>}
           </div>
         </section>
       )}
@@ -571,7 +633,7 @@ function ResolvedPreliminaryIntake({
       {data.source && !currentSource && !recovery?.official_intake_closed && (
         <BlockedState title="Tệp nguồn chưa sẵn sàng" message="Tệp hiện hành chưa ở trạng thái khả dụng hoặc không khớp batch hiện hành. Hãy kiểm tra lại; không dùng nguồn cũ để ánh xạ." onRefresh={() => void refresh()} />
       )}
-      {recovery?.status === "stale_lineage" && <BlockedState title="Ánh xạ không còn khớp nguồn hiện hành" message="Nguồn, cấu trúc hoặc quyền chọn đã thay đổi. Hãy tải lại trạng thái; không dùng ánh xạ cũ." onRefresh={() => void refresh()} />}
+      {recovery?.status === "stale_lineage" && <BlockedState title="Ánh xạ không còn khớp nguồn hiện hành" message="Nguồn, cấu trúc hoặc quyền chọn đã thay đổi. Hãy rà soát lại cấu trúc nguồn hiện hành và tạo đề xuất mới." />}
 
       {structureReview && !replaceSource && !recovery?.official_intake_closed && (
         <section className="precase-intake-step valora-panel">
@@ -579,6 +641,7 @@ function ResolvedPreliminaryIntake({
           <div className="valora-panel__body">
             {recovery?.status === "unresolved_legacy_history" && <p className="precase-intake-warning">Lịch sử ánh xạ cũ chưa có lựa chọn hiện hành được xác minh. Rà soát cấu trúc hiện tại hoặc phân tích lại trước khi đề xuất mới.</p>}
             {recovery?.status === "selected_recovery_required" && <p className="precase-intake-warning">Dữ liệu tạm cũ không còn chứng minh được quyền sở hữu. Cần bản cấu trúc mới, đề xuất mới và xác nhận mới.</p>}
+            {recovery?.status === "stale_lineage" && <p className="precase-intake-warning">Chỉ dùng bản cấu trúc của tệp nguồn hiện hành; đề xuất và xác nhận lại trước khi tạo dữ liệu tạm.</p>}
             {data.snapshots.length === 0 ? (
               <p>Chưa có bản phân tích cấu trúc cho tệp nguồn hiện hành.</p>
             ) : (
@@ -619,7 +682,7 @@ function ResolvedPreliminaryIntake({
         </section>
       )}
 
-      {proposal && structureReview && (
+      {proposal && structureReview && !replaceSource && (
         <section className="precase-intake-step valora-panel" data-mapping-stage="proposal">
           <div className="valora-panel__header">3 · Đề xuất ánh xạ · cần người xác nhận</div>
           <div className="valora-panel__body">
@@ -665,7 +728,7 @@ function ResolvedPreliminaryIntake({
         </section>
       )}
 
-      {recovery && ["selected_unmaterialized", "materialized", "selected_recovery_required"].includes(recovery.status) && recovery.mapping_snapshot && (
+      {recovery && !replaceSource && ["selected_unmaterialized", "materialized", "selected_recovery_required"].includes(recovery.status) && recovery.mapping_snapshot && (
         <section className="precase-intake-step valora-panel" data-mapping-stage="confirmed">
           <div className="valora-panel__header">Ánh xạ đã được người dùng xác nhận</div>
           <div className="valora-panel__body">
@@ -677,7 +740,9 @@ function ResolvedPreliminaryIntake({
               </button>
             )}
             {recovery.status === "materialized" && (
-              <p className="precase-materialized" role="status">Đã đưa {recovery.materialized_asset_row_count ?? 0} dòng tài sản vào vùng dữ liệu tạm. Chưa chuyển thành danh mục thẩm định chính thức.</p>
+              <p className="precase-materialized" role="status">{recovery.materialized_asset_row_count === null
+                ? "Đã tạo dữ liệu tạm; chưa xác định số dòng tài sản."
+                : `Đã đưa ${recovery.materialized_asset_row_count} dòng tài sản vào vùng dữ liệu tạm.`} Chưa chuyển thành danh mục thẩm định chính thức.</p>
             )}
           </div>
         </section>

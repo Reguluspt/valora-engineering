@@ -148,6 +148,8 @@ describe("PreliminaryIntakePage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("Tệp mới sẽ trở thành nguồn hiện hành");
     expect(button(root, "Tải tệp Excel")).toBeDefined();
     expect(button(root, "Phân tích cấu trúc")).toBeUndefined();
+    await act(async () => button(root, "Hủy thay tệp").props.onClick());
+    expect(button(root, "Tải tệp Excel")).toBeUndefined();
   });
 
   it("disables mutations when an authoritative refresh fails and the visible data is stale", async () => {
@@ -306,6 +308,48 @@ describe("PreliminaryIntakePage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("Máy chủ đã ghi nhận xác nhận ánh xạ");
   });
 
+  it("replays an uncommitted confirmation with its exact command after recovery GET", async () => {
+    api.proposeMapping.mockImplementation(async (_projectId, _batchId, payload) => {
+      serverRecovery = recovery("no_selection", { recent_proposals: [{
+        proposal_decision_id: "pr-1", source_artifact_id: "s-1",
+        structure_snapshot_id: "st-1", command_id: payload.command_id, terminal_outcomes: [],
+      }] });
+      return proposal;
+    });
+    const root = await mount();
+    await selectCandidate(root);
+    await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
+    act(() => root.root.findByProps({ className: "precase-review-check" }).findByType("input").props.onChange({ target: { checked: true } }));
+    api.confirmMapping.mockImplementationOnce(async () => { throw new ApiError("network", 0); });
+    api.confirmMapping.mockImplementationOnce(async (_projectId, _batchId, payload) => {
+      serverRecovery = recovery("selected_unmaterialized", {
+        selection_revision: 8, selected_confirmation_decision_id: "cf-1",
+        selected_command_id: payload.command_id, mapping_snapshot: payload.mapping_snapshot,
+      });
+      return { decision_id: "cf-1" };
+    });
+    await act(async () => button(root, "Xác nhận ánh xạ").props.onClick());
+    expect(api.confirmMapping).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
+    await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
+    expect(api.confirmMapping).toHaveBeenCalledTimes(2);
+    expect(api.confirmMapping.mock.calls[1][2]).toEqual(api.confirmMapping.mock.calls[0][2]);
+    expect(JSON.stringify(root.toJSON())).toContain("Ánh xạ đã được người dùng xác nhận");
+  });
+
+  it("does not replay an uncertain confirmation after selection revision changes", async () => {
+    const root = await mount();
+    await selectCandidate(root);
+    await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
+    act(() => root.root.findByProps({ className: "precase-review-check" }).findByType("input").props.onChange({ target: { checked: true } }));
+    api.confirmMapping.mockRejectedValueOnce(new ApiError("network", 0));
+    await act(async () => button(root, "Xác nhận ánh xạ").props.onClick());
+    serverRecovery = recovery("no_selection", { selection_revision: 8 });
+    await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
+    expect(api.confirmMapping).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
+  });
+
   it("allows a newly reviewed structure to recover an occupied old selection", async () => {
     serverRecovery = recovery("selected_recovery_required", {
       selected_confirmation_decision_id: "old-cf", selected_structure_snapshot_id: "old-st",
@@ -317,6 +361,15 @@ describe("PreliminaryIntakePage", () => {
     expect(api.proposeMapping).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(root.toJSON())).toContain("Đề xuất chưa có hiệu lực");
     expect(button(root, "Xác nhận ánh xạ")).toBeDefined();
+  });
+
+  it("allows a fresh proposal from the available source after stale lineage", async () => {
+    serverRecovery = recovery("stale_lineage");
+    const root = await mount();
+    await selectCandidate(root);
+    await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
+    expect(api.proposeMapping).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(root.toJSON())).toContain("Đề xuất chưa có hiệu lực");
   });
 
   it("offers customer memory only for a bound customer and still requires review", async () => {
@@ -366,5 +419,43 @@ describe("PreliminaryIntakePage", () => {
       }));
     });
     expect(reloaded.root.findByProps({ className: "precase-materialized" }).children.join("")).toContain("6 dòng tài sản");
+  });
+
+  it("replays an uncommitted materialization with the same command and selected revision", async () => {
+    serverRecovery = recovery("selected_unmaterialized", {
+      selected_confirmation_decision_id: "cf-1", selected_structure_snapshot_id: "st-1",
+      mapping_snapshot: mappingSnapshot,
+    });
+    const root = await mount();
+    api.materializeMapping.mockImplementationOnce(async () => { throw new ApiError("network", 0); });
+    api.materializeMapping.mockImplementationOnce(async () => {
+      serverRecovery = recovery("materialized", {
+        selection_revision: 8, selected_confirmation_decision_id: "cf-1",
+        mapping_snapshot: mappingSnapshot, materialized_asset_row_count: null,
+      });
+      return { usage_id: "u-1" };
+    });
+    await act(async () => button(root, "Tạo dữ liệu tạm").props.onClick());
+    expect(api.materializeMapping).toHaveBeenCalledTimes(1);
+    await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
+    expect(api.materializeMapping).toHaveBeenCalledTimes(2);
+    expect(api.materializeMapping.mock.calls[1][2]).toEqual(api.materializeMapping.mock.calls[0][2]);
+    expect(root.root.findByProps({ className: "precase-materialized" }).children.join("")).toContain("chưa xác định số dòng");
+  });
+
+  it("does not replay an uncertain materialization after the selected revision changes", async () => {
+    serverRecovery = recovery("selected_unmaterialized", {
+      selected_confirmation_decision_id: "cf-1", mapping_snapshot: mappingSnapshot,
+    });
+    const root = await mount();
+    api.materializeMapping.mockRejectedValueOnce(new ApiError("network", 0));
+    await act(async () => button(root, "Tạo dữ liệu tạm").props.onClick());
+    serverRecovery = recovery("selected_unmaterialized", {
+      selection_revision: 8, selected_confirmation_decision_id: "cf-1",
+      mapping_snapshot: mappingSnapshot,
+    });
+    await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
+    expect(api.materializeMapping).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
   });
 });
