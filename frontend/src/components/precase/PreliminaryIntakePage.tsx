@@ -132,6 +132,35 @@ function unknownResult(error: unknown): boolean {
     error.status === 429 || error.status >= 500;
 }
 
+function mappingConflictMessage(error: ApiError): string {
+  if (["mapping_profile_conflict", "mapping_profile_stale"].includes(error.code || "")) {
+    return "Ký ức ánh xạ đã thay đổi hoặc có nhiều mẫu hiện hành. Hãy đối soát ký ức trước khi tiếp tục.";
+  }
+  if (error.code === "mapping_usage_conflict") {
+    return "Nguồn hoặc cấu trúc này đã có dữ liệu tạm. Hãy kiểm tra staging hiện hành trước khi tiếp tục.";
+  }
+  if (["mapping_proposal_resolved", "mapping_proposal_not_current"].includes(error.code || "")) {
+    return "Đề xuất ánh xạ không còn hiệu lực. Hãy rà soát nguồn hiện hành và tạo đề xuất mới.";
+  }
+  if (["mapping_source_not_current", "mapping_source_not_available", "mapping_materialization_stale",
+    "mapping_batch_not_current", "mapping_candidate_invalid"].includes(error.code || "")) {
+    return "Nguồn hoặc cấu trúc hiện hành đã thay đổi. Hãy rà soát lại tệp và vùng bảng.";
+  }
+  if (["mapping_official_intake_closed", "mapping_batch_already_applied"].includes(error.code || "")) {
+    return "Hồ sơ đã chuyển sang thẩm định chính thức. Không thể tiếp tục ánh xạ sơ bộ.";
+  }
+  if (error.code === "mapping_customer_required") {
+    return "Chưa có khách hàng để ghi nhớ ánh xạ. Hãy chọn không lưu ký ức hoặc hoàn tất bước gắn khách hàng có thẩm quyền.";
+  }
+  if (error.code === "idempotency_key_reused") {
+    return "Mã thao tác đã gắn với nội dung khác. Hãy đối soát trạng thái máy chủ trước khi tiếp tục.";
+  }
+  if (["mapping_selection_revision_conflict", "mapping_selection_not_current"].includes(error.code || "")) {
+    return "Phiên bản chọn ánh xạ đã thay đổi. Hãy rà soát quyền chọn hiện hành trước khi tiếp tục.";
+  }
+  return "Trạng thái ánh xạ có xung đột. Hãy rà soát nguồn, đề xuất và quyền chọn hiện hành trước khi tiếp tục.";
+}
+
 function mappingFieldsValid(fields: MappingField[]): boolean {
   const roles = fields.map((field) => field.semantic_role).filter((role) => role !== "ignore");
   return roles.filter((role) => role === "raw_asset_name").length === 1 &&
@@ -199,6 +228,19 @@ function ResolvedPreliminaryIntake({
   const markUnknown = (pending: PendingUnknown) => {
     try { sessionStorage.setItem(pendingKey(projectId), JSON.stringify(pending)); } catch { /* Keep the in-memory lock. */ }
     setUncertain(true);
+  };
+
+  const setAccessState = (error: unknown): boolean => {
+    if (!(error instanceof ApiError)) return false;
+    if (error.status === 401) {
+      setLoadState("sessionExpired");
+      return true;
+    }
+    if (error.status === 403) {
+      setLoadState("forbidden");
+      return true;
+    }
+    return false;
   };
 
   const load = useCallback(async (): Promise<IntakeData | null> => {
@@ -278,7 +320,8 @@ function ResolvedPreliminaryIntake({
           setUncertain(false);
           setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu xác nhận trước. Ánh xạ hiện hành lấy từ máy chủ." });
         }
-      } catch {
+      } catch (error) {
+        if (setAccessState(error)) return;
         setNotice({ tone: "warning", text: "Chưa thể khôi phục xác nhận cũ. Hãy kiểm tra trạng thái máy chủ trước khi tiếp tục." });
       } finally {
         setBusy(null);
@@ -301,7 +344,8 @@ function ResolvedPreliminaryIntake({
           setUncertain(false);
           setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu tạo dữ liệu tạm trước. Danh mục chính thức chưa thay đổi." });
         }
-      } catch {
+      } catch (error) {
+        if (setAccessState(error)) return;
         setNotice({ tone: "warning", text: "Chưa thể khôi phục lần tạo dữ liệu tạm cũ. Hãy kiểm tra trạng thái máy chủ trước khi tiếp tục." });
       } finally {
         setBusy(null);
@@ -322,7 +366,8 @@ function ResolvedPreliminaryIntake({
         try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
         setUncertain(false);
         setNotice({ tone: "info", text: "Đã khôi phục đề xuất từ đúng yêu cầu trước. Hãy rà soát từng cột." });
-      } catch {
+      } catch (error) {
+        if (setAccessState(error)) return;
         setNotice({ tone: "warning", text: "Chưa thể khôi phục đề xuất cũ. Không gửi yêu cầu ánh xạ mới khi kết quả chưa rõ." });
       }
     }
@@ -358,6 +403,7 @@ function ResolvedPreliminaryIntake({
       }
     } catch (error) {
       const fresh = await load();
+      if (setAccessState(error)) return;
       if (error instanceof ApiError && error.status === 409) {
         setNotice({ tone: "warning", text: "Dữ liệu hiện hành đã thay đổi. Hãy xem lại batch và tệp nguồn." });
       } else if (unknownResult(error)) {
@@ -394,6 +440,7 @@ function ResolvedPreliminaryIntake({
       setNotice({ tone: "info", text: "Đã phân tích cấu trúc. Hãy xem vùng bảng và chọn cột trước khi tạo đề xuất." });
     } catch (error) {
       const fresh = await load();
+      if (setAccessState(error)) return;
       if (unknownResult(error)) {
         if (fresh?.snapshots.some((item) => !data.snapshots.some((known) => known.id === item.id))) {
           setNotice({ tone: "info", text: "Máy chủ đã ghi nhận bản phân tích mới. Hãy chọn vùng bảng để tiếp tục." });
@@ -442,6 +489,7 @@ function ResolvedPreliminaryIntake({
       setReviewed(false);
     } catch (error) {
       const fresh = await load();
+      if (setAccessState(error)) return;
       if (unknownResult(error) && fresh?.recovery?.recent_proposals.some((item) => item.command_id === commandId)) {
         try {
           const result = await proposeMapping(projectId, data.batch.id, payload);
@@ -453,7 +501,8 @@ function ResolvedPreliminaryIntake({
           setReviewed(false);
           setNotice({ tone: "info", text: "Đã khôi phục đề xuất từ yêu cầu trước. Hãy rà soát từng cột." });
           return;
-        } catch {
+        } catch (replayError) {
+          if (setAccessState(replayError)) return;
           // The same command identity may no longer be replayable after authority changes.
         }
       }
@@ -461,7 +510,7 @@ function ResolvedPreliminaryIntake({
         markUnknown({ kind: "proposal", commandId, proposalPayload: payload });
         setNotice({ tone: "warning", text: "Chưa xác định đề xuất đã được tạo hay chưa. Hãy kiểm tra trạng thái trước khi tạo yêu cầu mới." });
       } else if (error instanceof ApiError && error.status === 409) {
-        setNotice({ tone: "warning", text: "Nguồn hoặc cấu trúc đã thay đổi. Hãy chọn lại vùng bảng." });
+        setNotice({ tone: "warning", text: mappingConflictMessage(error) });
       } else {
         setNotice({ tone: "error", text: "Chưa thể tạo đề xuất ánh xạ cho vùng bảng đã chọn." });
       }
@@ -496,10 +545,11 @@ function ResolvedPreliminaryIntake({
       });
     } catch (error) {
       const fresh = await load();
+      if (setAccessState(error)) return;
       if (fresh?.recovery?.selected_command_id === commandId) {
         setNotice({ tone: "info", text: "Máy chủ đã ghi nhận xác nhận ánh xạ. Chưa tạo dữ liệu tạm." });
       } else if (error instanceof ApiError && error.status === 409) {
-        setNotice({ tone: "warning", text: "Ánh xạ đã thay đổi ở nơi khác. Hãy rà soát trạng thái mới trước khi xác nhận lại." });
+        setNotice({ tone: "warning", text: mappingConflictMessage(error) });
       } else if (unknownResult(error)) {
         markUnknown({ kind: "confirmation", commandId, batchId: data.batch.id, confirmationPayload: payload });
         setNotice({ tone: "warning", text: "Chưa xác định xác nhận đã được ghi nhận hay chưa. Hãy kiểm tra trạng thái máy chủ; không gửi quyết định mới ngay." });
@@ -534,11 +584,12 @@ function ResolvedPreliminaryIntake({
       });
     } catch (error) {
       const fresh = await load();
+      if (setAccessState(error)) return;
       if (fresh?.recovery?.status === "materialized" &&
         fresh.recovery.selected_confirmation_decision_id === recovery.selected_confirmation_decision_id) {
         setNotice({ tone: "info", text: "Máy chủ đã tạo dữ liệu tạm trong staging. Danh mục thẩm định chính thức chưa được cập nhật." });
       } else if (error instanceof ApiError && error.status === 409) {
-        setNotice({ tone: "warning", text: "Phiên bản chọn ánh xạ đã thay đổi. Hãy xem trạng thái mới trước khi tiếp tục." });
+        setNotice({ tone: "warning", text: mappingConflictMessage(error) });
       } else if (unknownResult(error)) {
         markUnknown({
           kind: "materialization", batchId: data.batch.id,
@@ -560,7 +611,8 @@ function ResolvedPreliminaryIntake({
       const cursor = data.snapshots[data.snapshots.length - 1].snapshot_version;
       const more = await listStructureSnapshots(projectId, data.batch.id, data.source.id, cursor);
       setData({ ...data, snapshots: [...data.snapshots, ...more.filter((item) => !data.snapshots.some((existing) => existing.id === item.id))] });
-    } catch {
+    } catch (error) {
+      if (setAccessState(error)) return;
       setNotice({ tone: "error", text: "Chưa thể tải thêm bản phân tích cấu trúc." });
     } finally {
       setBusy(null);

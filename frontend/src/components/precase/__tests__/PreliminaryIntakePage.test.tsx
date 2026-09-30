@@ -142,6 +142,16 @@ describe("PreliminaryIntakePage", () => {
     expect(api.uploadSourceArtifact).not.toHaveBeenCalled();
   });
 
+  it("opens the session recovery state when upload loses authorization", async () => {
+    api.getMappingRecovery.mockResolvedValue(recovery("no_selection", { current_source_artifact_id: null }));
+    api.listSourceArtifacts.mockResolvedValue([]);
+    api.uploadSourceArtifact.mockRejectedValue(new ApiError("expired", 401));
+    const root = await mount();
+    act(() => root.root.findByType("input").props.onChange({ target: { files: [{ name: "assets.xlsx" }] } }));
+    await act(async () => button(root, "Tải tệp Excel").props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Phiên làm việc đã hết hạn");
+  });
+
   it("offers an explicit replacement path for the current available source", async () => {
     const root = await mount();
     act(() => button(root, "Tải tệp Excel khác").props.onClick());
@@ -255,6 +265,24 @@ describe("PreliminaryIntakePage", () => {
     expect(root.root.findByProps({ className: "precase-materialized" }).children.join("")).toContain("Đã đưa 10 dòng tài sản vào vùng dữ liệu tạm");
   });
 
+  it("explains a profile conflict without blaming another mapping selection", async () => {
+    api.proposeMapping.mockRejectedValue(new ApiError("conflict", 409, "mapping_profile_conflict"));
+    const root = await mount();
+    await selectCandidate(root);
+    await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Ký ức ánh xạ");
+  });
+
+  it("opens the session recovery state when confirmation loses authorization", async () => {
+    const root = await mount();
+    await selectCandidate(root);
+    await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
+    act(() => root.root.findByProps({ className: "precase-review-check" }).findByType("input").props.onChange({ target: { checked: true } }));
+    api.confirmMapping.mockRejectedValue(new ApiError("expired", 401));
+    await act(async () => button(root, "Xác nhận ánh xạ").props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Phiên làm việc đã hết hạn");
+  });
+
   it("refreshes on CAS conflict without retrying confirmation", async () => {
     const root = await mount();
     await selectCandidate(root);
@@ -265,11 +293,11 @@ describe("PreliminaryIntakePage", () => {
         selection_revision: 8, selected_confirmation_decision_id: "other-decision",
         mapping_snapshot: mappingSnapshot,
       });
-      throw new ApiError("conflict", 409);
+      throw new ApiError("conflict", 409, "mapping_selection_revision_conflict");
     });
     await act(async () => button(root, "Xác nhận ánh xạ").props.onClick());
     expect(api.confirmMapping).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(root.toJSON())).toContain("Ánh xạ đã thay đổi ở nơi khác");
+    expect(JSON.stringify(root.toJSON())).toContain("Phiên bản chọn ánh xạ đã thay đổi");
     expect(button(root, "Xác nhận ánh xạ")).toBeUndefined();
   });
 
@@ -421,6 +449,16 @@ describe("PreliminaryIntakePage", () => {
       }));
     });
     expect(reloaded.root.findByProps({ className: "precase-materialized" }).children.join("")).toContain("6 dòng tài sản");
+  });
+
+  it("opens the permission state when materialization is forbidden", async () => {
+    serverRecovery = recovery("selected_unmaterialized", {
+      selected_confirmation_decision_id: "cf-1", mapping_snapshot: mappingSnapshot,
+    });
+    const root = await mount();
+    api.materializeMapping.mockRejectedValue(new ApiError("forbidden", 403));
+    await act(async () => button(root, "Tạo dữ liệu tạm").props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Chưa có quyền truy cập");
   });
 
   it("replays an uncommitted materialization with the same command and selected revision", async () => {
