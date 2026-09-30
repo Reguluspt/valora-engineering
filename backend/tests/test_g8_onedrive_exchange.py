@@ -39,7 +39,13 @@ from app.modules.excel_import.infrastructure.object_storage import (
     FakeObjectStorage,
     set_object_storage_override,
 )
-from app.modules.excel_import.models import ImportSourceArtifact
+from app.modules.excel_import.models import (
+    ColumnMappingDecision,
+    ColumnMappingProfileUsage,
+    ImportSourceArtifact,
+    ProjectColumnMappingAuthority,
+    WorkbookStructureSnapshot,
+)
 from app.modules.m365_integration.application import exchange_import_service
 from app.modules.m365_integration.application.connection_service import (
     get_connection_capabilities,
@@ -96,6 +102,10 @@ RETENTION_UNTIL = datetime(2036, 9, 20, tzinfo=timezone.utc)
 EXCHANGE_TABLES = [
     ProjectAssetImportBatch.__table__,
     ImportSourceArtifact.__table__,
+    WorkbookStructureSnapshot.__table__,
+    ColumnMappingDecision.__table__,
+    ColumnMappingProfileUsage.__table__,
+    ProjectColumnMappingAuthority.__table__,
     ProjectAssetImportStagingRow.__table__,
     DocumentStorageExecutionIntent.__table__,
     DocumentStorageCandidate.__table__,

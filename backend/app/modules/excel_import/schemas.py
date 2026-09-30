@@ -79,6 +79,7 @@ class MappingConfirmationRequest(BaseModel):
     memory_scope: Literal["none", "customer"]
     supersedes_profile_id: uuid.UUID | None = None
     command_id: uuid.UUID
+    expected_selection_revision: StrictInt = Field(..., ge=0)
 
     @field_validator("mapping_snapshot")
     @classmethod
@@ -104,6 +105,20 @@ class MappingMaterializationRequest(BaseModel):
 
     confirmation_decision_id: uuid.UUID
     command_id: uuid.UUID
+    expected_selection_revision: StrictInt = Field(..., ge=0)
+
+
+class MappingLegacySelectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirmation_decision_id: uuid.UUID
+    expected_selection_revision: StrictInt = Field(..., ge=0)
+    command_id: uuid.UUID
+
+
+class MappingLegacySelectionResponse(BaseModel):
+    confirmation_decision_id: uuid.UUID
+    selection_revision: int
 
 
 class MappingProposalResponse(BaseModel):
@@ -128,6 +143,7 @@ class MappingDecisionResponse(BaseModel):
     profile_id: uuid.UUID | None
     source_artifact_id: uuid.UUID
     structure_snapshot_id: uuid.UUID
+    selection_revision: int | None = None
 
 
 class MappingMaterializationResponse(BaseModel):
@@ -137,3 +153,46 @@ class MappingMaterializationResponse(BaseModel):
     materialized_asset_row_count: int
     source_artifact_id: uuid.UUID
     structure_snapshot_id: uuid.UUID
+    selection_revision: int | None = None
+
+
+class MappingRecoveryTerminalStatus(BaseModel):
+    decision_id: uuid.UUID
+    command_id: uuid.UUID
+    outcome: str
+
+
+class MappingRecoveryProposalStatus(BaseModel):
+    proposal_decision_id: uuid.UUID
+    source_artifact_id: uuid.UUID
+    structure_snapshot_id: uuid.UUID
+    command_id: uuid.UUID
+    terminal_outcomes: list[MappingRecoveryTerminalStatus]
+
+
+class MappingRecoveryStateResponse(BaseModel):
+    project_id: uuid.UUID
+    batch_id: uuid.UUID
+    current_batch_id: uuid.UUID | None
+    current_source_artifact_id: uuid.UUID | None
+    selection_revision: int
+    status: Literal[
+        "no_selection", "unresolved_legacy_history", "selected_unmaterialized",
+        "selected_recovery_required", "materialized", "stale_lineage",
+    ]
+    official_intake_closed: bool
+    selected_confirmation_decision_id: uuid.UUID | None
+    selected_structure_snapshot_id: uuid.UUID | None
+    selected_source_artifact_id: uuid.UUID | None
+    selected_candidate: dict[str, Any] | None
+    mapping_snapshot: dict[str, Any] | None
+    mapping_digest_sha256: str | None
+    memory_scope: str | None
+    profile_id: uuid.UUID | None
+    selected_command_id: uuid.UUID | None
+    selected_outcome: str | None
+    selected_usage_id: uuid.UUID | None
+    current_staging_usage_id: uuid.UUID | None
+    materialized_asset_row_count: int | None
+    materialized_mapping_digest_sha256: str | None
+    recent_proposals: list[MappingRecoveryProposalStatus]

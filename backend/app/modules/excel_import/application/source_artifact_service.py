@@ -14,6 +14,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.excel_import.application.adapters import detect_format_and_adapter
+from app.modules.excel_import.application.mapping_authority import invalidate_authority
 from app.modules.excel_import.application.parse_workbook import (
     get_request_size,
     sanitize_filename,
@@ -123,6 +124,7 @@ def _atomic_claim_current_pointer(
     batch_id: uuid.UUID,
     art_id: uuid.UUID,
     art_generation: int,
+    invoke_probe: bool = True,
 ) -> bool:
     """
     Atomically claim batch.current_source_artifact_id for ``art_id`` if no
@@ -140,7 +142,7 @@ def _atomic_claim_current_pointer(
     """
     # Observe durable pointer first (typed, cross-dialect), then optional barrier.
     observed = _read_committed_batch_pointer(session.get_bind(), batch_id)
-    if _pointer_probe_hook is not None:
+    if invoke_probe and _pointer_probe_hook is not None:
         _pointer_probe_hook()
 
     # Correlated generation of the currently pointed artifact (NULL if none).
@@ -698,6 +700,7 @@ def upload_source_artifact(
             raise HTTPException(status_code=500, detail="Không thể lưu tệp nguồn an toàn. Vui lòng thử lại.")
         # Atomic CAS first; only emit Available audit after a winning claim so a
         # concurrent higher generation cannot leave a durable Available trail.
+        previous_source_id = batch.current_source_artifact_id
         claimed = _atomic_claim_current_pointer(
             db,
             batch_id=batch.id,
@@ -724,6 +727,12 @@ def upload_source_artifact(
             )
             db.commit()
             return art
+        if previous_source_id is not None and previous_source_id != art.id:
+            invalidate_authority(
+                db, org_id=org_id, project_id=project_id, actor_id=current_user.id,
+                reason="current_source_replacement", correlation_id=correlation_id,
+                changed_batch_id=batch.id,
+            )
         _audit(
             db,
             org_id=org_id,
@@ -944,6 +953,34 @@ def reconcile_source_artifacts(
             scanned += 1
             committed = False
             try:
+                # Serialize pointer changes with mapping commands before locking
+                # artifact rows (Project -> artifact -> batch CAS).
+                candidate = work.query(
+                    ImportSourceArtifact.project_id, ImportSourceArtifact.import_batch_id,
+                ).filter(
+                    ImportSourceArtifact.id == art_id,
+                    ImportSourceArtifact.organization_id == org_id,
+                ).first()
+                if candidate is None:
+                    work.rollback()
+                    continue
+                candidate_project_id, candidate_batch_id = candidate
+                probe = _pointer_probe_hook
+                if probe is not None:
+                    # The race probe must run outside Project locks so a
+                    # concurrent finalizer can cross the observed CAS gap.
+                    work.rollback()
+                    _read_committed_batch_pointer(work.get_bind(), candidate_batch_id)
+                    probe()
+                # NO KEY UPDATE serializes mapping commands without blocking
+                # another session's unrelated child insert holding KEY SHARE.
+                locked_project = work.query(Project).filter(
+                    Project.id == candidate_project_id,
+                    Project.organization_id == org_id,
+                ).with_for_update(key_share=True).first()
+                if locked_project is None:
+                    work.rollback()
+                    continue
                 art = (
                     work.query(ImportSourceArtifact)
                     .filter(
@@ -954,7 +991,7 @@ def reconcile_source_artifacts(
                     .with_for_update()
                     .first()
                 )
-                if not art:
+                if not art or art.project_id != candidate_project_id:
                     if work.in_transaction():
                         work.rollback()
                     continue
@@ -1129,11 +1166,13 @@ def reconcile_source_artifacts(
                                 art.available_at = _utcnow()
                                 art.failure_code = None
                                 # Atomic CAS first; Available audit only after win.
+                                previous_source_id = batch.current_source_artifact_id
                                 claimed = _atomic_claim_current_pointer(
                                     work,
                                     batch_id=batch.id,
                                     art_id=art.id,
                                     art_generation=art.generation,
+                                    invoke_probe=False,
                                 )
                                 if not claimed:
                                     art.state = SourceArtifactState.ORPHANED.value
@@ -1156,6 +1195,12 @@ def reconcile_source_artifacts(
                                     )
                                     item_orphan = 1
                                 else:
+                                    if previous_source_id is not None and previous_source_id != art.id:
+                                        invalidate_authority(
+                                            work, org_id=org_id, project_id=art.project_id,
+                                            actor_id=actor_id, reason="current_source_replacement",
+                                            changed_batch_id=batch.id,
+                                        )
                                     _audit(
                                         work,
                                         org_id=org_id,

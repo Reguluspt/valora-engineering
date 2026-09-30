@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.orm.exc import StaleDataError
 
 from app.core.audit import log_audit_event
+from app.modules.excel_import.application.mapping_authority import invalidate_authority
 from app.core.rbac import derive_effective_permissions
 from app.modules.project_master_data.models import (
     Customer,
@@ -370,6 +371,10 @@ def switch_current_preliminary_import_batch(
         _abort(db, 404, "import_batch_not_found", "Không tìm thấy batch của hồ sơ.")
     previous_id = project.current_preliminary_import_batch_id
     project.current_preliminary_import_batch_id = target.id
+    invalidate_authority(
+        db, org_id=org_id, project_id=project_id, actor_id=actor.id,
+        reason="current_batch_switch", correlation_id=correlation_id,
+    )
     return _commit_change(
         db, project=project, actor=actor, command_type=SWITCH_COMMAND,
         key=key, request_digest=request_digest,

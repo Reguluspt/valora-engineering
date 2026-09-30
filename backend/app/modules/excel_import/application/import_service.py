@@ -14,6 +14,7 @@ from app.modules.excel_import.application.parse_workbook import (
 from app.modules.excel_import.application.replace_staging_rows import (
     replace_staging_rows, record_failure_audit
 )
+from app.modules.excel_import.application.mapping_authority import require_staging_replacement_open
 from app.modules.excel_import.domain import DEFAULT_LIMITS
 
 
@@ -71,6 +72,11 @@ def upload_excel_file_orchestrator(
     ).populate_existing().with_for_update().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
+    if project.current_preliminary_import_batch_id == batch_id:
+        require_staging_replacement_open(
+            db, org_id=org_id, project_id=project_id, batch_id=batch_id,
+            current_source_id=batch.current_source_artifact_id,
+        )
 
     if (
         expected_source_artifact_id is not None

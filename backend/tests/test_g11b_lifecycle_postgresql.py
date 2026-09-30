@@ -30,6 +30,7 @@ pytest_plugins = ("tests.test_g11a_foundation_postgresql",)
 
 PRIOR = "e4f5a6b7c8d9"
 CURRENT = "f5a6b7c8d9e0"
+RUNTIME_HEAD = "d1e2f3a4b5c6"
 
 
 def _session_factory(url):
@@ -98,10 +99,14 @@ def test_receipt_migration_roundtrip_and_nonempty_downgrade_refusal(pg_database)
             "SELECT customer_id, current_preliminary_import_batch_id FROM projects WHERE id=:id"
         ), {"id": project_id}).one() == (customer_id, batches[0])
 
+    # Seed through the current ORM (which includes the F0 nullable Usage CAS
+    # column), then return to the historical G1.1B head for its refusal proof.
+    _must_alembic(pg_database, "upgrade", "d1e2f3a4b5c6")
     with Session(engine) as db:
         seeded = _seed_case(db)
         _bind(db, seeded, version=seeded["project"].row_version)
         receipt_id = db.query(PreliminaryProjectLifecycleCommandReceipt.id).one()[0]
+    _must_alembic(pg_database, "downgrade", CURRENT)
     refused = _alembic(pg_database, "downgrade", PRIOR)
     assert refused.returncode != 0
     assert "committed lifecycle receipts cannot be discarded" in refused.stderr
@@ -114,7 +119,7 @@ def test_receipt_migration_roundtrip_and_nonempty_downgrade_refusal(pg_database)
 
 
 def test_postgresql_bind_and_null_history_official_intake(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine, SessionLocal = _session_factory(pg_database)
     with SessionLocal() as db:
         seeded = _seed_case(db)
@@ -135,7 +140,7 @@ def test_postgresql_bind_and_null_history_official_intake(pg_database):
 
 
 def test_postgresql_competing_binds_and_global_receipt_key(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine, SessionLocal = _session_factory(pg_database)
     with SessionLocal() as setup:
         seeded = _seed_case(setup)
@@ -212,7 +217,7 @@ def test_postgresql_competing_binds_and_global_receipt_key(pg_database):
 
 
 def test_postgresql_concurrent_same_key_bind_replays_one_receipt(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine, SessionLocal = _session_factory(pg_database)
     with SessionLocal() as setup:
         seeded = _seed_case(setup)
@@ -242,7 +247,7 @@ def test_postgresql_concurrent_same_key_bind_replays_one_receipt(pg_database):
 
 
 def test_postgresql_competing_switches_only_one_pointer_wins(pg_database):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine, SessionLocal = _session_factory(pg_database)
     with SessionLocal() as setup:
         seeded = _seed_case(setup, unbound=False)
@@ -284,7 +289,7 @@ def test_postgresql_competing_switches_only_one_pointer_wins(pg_database):
 def test_postgresql_lifecycle_command_serializes_with_official_intake(
     pg_database, monkeypatch, command,
 ):
-    _must_alembic(pg_database, "upgrade", CURRENT)
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     engine, SessionLocal = _session_factory(pg_database)
     with SessionLocal() as setup:
         seeded = _seed_case(setup, unbound=command == "bind")

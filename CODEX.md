@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-29 (OS-G1.1G Column Mapping public API)
+**Last reconciled:** 2026-09-29 (ADR 0047 accepted; F0 mapping authority runtime candidate)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -102,7 +102,12 @@ mutations require the explicit current Preliminary batch, allow unbound Pre-case
 Customer memory, forbid Customer-scoped memory until binding, retain NULL historical Customer
 snapshots and close new mapping mutations after Official Intake. True command-ID replays remain
 available for already committed mapping facts. G1.1G does not add Upload & Mapping UI or alter Apply.
-G1.1H+ and OS-G2 are NOT STARTED.
+ADR 0047 is ACCEPTED by the Product Owner on 2026-09-29. The authorized F0 mapping-authority
+runtime candidate adds a versioned Project selection slot, conservative legacy bootstrap,
+CAS-protected confirmation/materialization, pointer invalidation and a Project/batch recovery GET.
+This candidate is not merged authority until its Draft PR is accepted and exact-main CI succeeds.
+G1.1H Upload & Mapping UX and OS-G2 are NOT STARTED; G1.1H remains blocked on F0 merge and
+exact-main CI success.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

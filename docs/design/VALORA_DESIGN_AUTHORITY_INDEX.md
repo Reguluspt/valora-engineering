@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-29 (proposed ADR 0047 indexed; accepted OS-G1.1 lifecycle authority remains ADR 0046)
+**Reconciled:** 2026-09-29 (ADR 0047 accepted; F0 mapping authority runtime candidate pending merge)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 **Documentation lifecycle:** `docs/DOCUMENTATION_STATUS_INDEX.md`.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
@@ -48,7 +48,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0038 | Current-source preliminary prefix predicates and immutable analysis/result facts | ADR 0046 defines explicit batch selection and highest-valid-version currentness for G1.1; G1.1C/D now implement highest-valid-version analysis/result selection |
 | ADR 0045 | Working-copy change observation and human-confirmed document revision | Automatic notification/delta/revalidation may create Change Candidates and recommendations; authoritative business mutation and Revision N+1 require explicit human-confirmed commit. Supersedes ADR 0044 only for immediate DOCX Working re-import promotion semantics. |
 | ADR 0046 | Optional Pre-case Customer, explicit current batch, immutable versioned analysis/result lifecycle | Accepted design only; ratchets ADR 0030/0037/0038 in named scope; G1.1A–G1.1G merged, remaining lifecycle runtime gated |
-| ADR 0047 | Explicit, versioned current Column Mapping selection and recovery for Pre-case | Proposed design only; no selection runtime or public mapping read API exists. G1.1H UI remains blocked behind the read contract. |
+| ADR 0047 | Explicit, versioned current Column Mapping selection and recovery for Pre-case | Accepted by Product Owner on 2026-09-29. F0 runtime implementation and public recovery GET are in a candidate PR pending merge and exact-main CI; G1.1H UI remains blocked. |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
