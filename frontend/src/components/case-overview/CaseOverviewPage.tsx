@@ -1,9 +1,6 @@
 import React from "react";
 
 import type { CaseStateIssue, CaseStateResponse } from "../../api/caseState";
-import {
-  projectWorkbenchPath,
-} from "../../contracts/valoraV23";
 import { useResolvedProject } from "../workbench/project-context";
 import {
   CASE_RESULT_LABELS,
@@ -73,7 +70,7 @@ function ResolvedCaseOverview({
     <CaseOverviewContent
       projectName={projectName}
       projection={projection}
-      workbenchPath={projectWorkbenchPath(projectId)}
+      projectRef={projectId}
       onNavigate={onNavigate}
     />
   );
@@ -82,17 +79,17 @@ function ResolvedCaseOverview({
 export function CaseOverviewContent({
   projectName,
   projection,
-  workbenchPath,
+  projectRef,
   onNavigate,
 }: {
   projectName: string;
   projection: CaseStateResponse;
-  workbenchPath: string;
+  projectRef: string;
   onNavigate: (path: string) => void;
 }) {
   const currentStageLabel = CASE_STAGE_LABELS[projection.current_stage];
   const actionCopy = nextActionCopy(projection.next_action);
-  const actionPath = mappedNextActionPath(projection.next_action, workbenchPath);
+  const actionPath = mappedNextActionPath(projection.next_action, projectRef);
   const completeCount = projection.stages.filter((stage) => stage.result === "COMPLETE").length;
   const unavailableCount = projection.stages.filter((stage) => stage.result === "NOT_AVAILABLE").length;
 

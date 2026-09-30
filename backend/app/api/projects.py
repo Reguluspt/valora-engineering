@@ -32,6 +32,7 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     ImportBatchStatus,
+    ProjectOfficialIntakeCommit,
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -39,6 +40,7 @@ from app.modules.project_master_data.schemas import (
     ProjectAssetLinePaginationResponse,
     ProjectFileCreate, ProjectFileResponse,
     ProjectResolutionResponse, CaseStateResponse,
+    PreliminaryRequestManagementPage,
     PreliminaryCustomerBindRequest, PreliminaryBatchSwitchRequest,
     PreliminaryAnalysisFinalizeRequest, PreliminaryResultGenerateRequest,
     OfficialIntakeCommitRequest, PreliminaryLifecycleCommandResponse,
@@ -102,6 +104,7 @@ from app.modules.excel_import.application.column_mapping_service import (
     select_legacy_column_mapping,
 )
 from app.modules.excel_import.application.mapping_recovery_service import get_mapping_recovery_state
+from app.modules.excel_import.models import ImportSourceArtifact
 from app.modules.excel_import.schemas import (
     ImportSourceArtifactResponse,
     MappingConfirmationRequest,
@@ -322,6 +325,79 @@ def list_projects(
     offset = (page - 1) * page_size
     projects = query.offset(offset).limit(page_size).all()
     return projects
+
+
+@router.get("/preliminary-requests", response_model=PreliminaryRequestManagementPage)
+def list_preliminary_requests(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    org_id = current_user.organization_id
+    committed = db.query(ProjectOfficialIntakeCommit.id).filter(
+        ProjectOfficialIntakeCommit.organization_id == org_id,
+        ProjectOfficialIntakeCommit.project_id == Project.id,
+    ).exists()
+    query = db.query(Project).filter(Project.organization_id == org_id, ~committed)
+    total = query.count()
+    projects = query.order_by(Project.created_at.desc(), Project.id.desc()).offset(
+        (page - 1) * page_size
+    ).limit(page_size).all()
+    if not projects:
+        return {"items": [], "total": total, "page": page, "page_size": page_size}
+
+    project_ids = [project.id for project in projects]
+    retained_batch_projects = {
+        project_id for (project_id,) in db.query(ProjectAssetImportBatch.project_id).filter(
+            ProjectAssetImportBatch.organization_id == org_id,
+            ProjectAssetImportBatch.project_id.in_(project_ids),
+        ).distinct().all()
+    }
+    current_batch_ids = [
+        project.current_preliminary_import_batch_id for project in projects
+        if project.current_preliminary_import_batch_id is not None
+    ]
+    current_batches = {
+        batch.id: batch for batch in db.query(ProjectAssetImportBatch).filter(
+            ProjectAssetImportBatch.organization_id == org_id,
+            ProjectAssetImportBatch.project_id.in_(project_ids),
+            ProjectAssetImportBatch.id.in_(current_batch_ids),
+        ).all()
+    } if current_batch_ids else {}
+    source_ids = [
+        batch.current_source_artifact_id for batch in current_batches.values()
+        if batch.current_source_artifact_id is not None
+    ]
+    current_sources = {
+        source.id: source for source in db.query(ImportSourceArtifact).filter(
+            ImportSourceArtifact.organization_id == org_id,
+            ImportSourceArtifact.project_id.in_(project_ids),
+            ImportSourceArtifact.id.in_(source_ids),
+        ).all()
+    } if source_ids else {}
+
+    items = []
+    for project in projects:
+        batch = current_batches.get(project.current_preliminary_import_batch_id)
+        if batch is not None and batch.project_id != project.id:
+            batch = None
+        source = current_sources.get(batch.current_source_artifact_id) if batch else None
+        if source is not None and (
+            source.project_id != project.id or source.import_batch_id != batch.id
+        ):
+            source = None
+        items.append({
+            "project_id": project.id,
+            "code": project.code,
+            "name": project.name,
+            "customer_id": project.customer_id,
+            "current_batch_id": project.current_preliminary_import_batch_id,
+            "has_retained_batches": project.id in retained_batch_projects,
+            "current_source_artifact_id": batch.current_source_artifact_id if batch else None,
+            "current_source_state": source.state if source else None,
+        })
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

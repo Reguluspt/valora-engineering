@@ -2,7 +2,7 @@ import React, { FormEvent, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { createProject } from "../../api/projects";
-import { APP_ROUTES, projectListVerificationPath } from "../../contracts/valoraV23";
+import { APP_ROUTES, projectListVerificationPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
 import "./precase.css";
 
 type SubmitState = "idle" | "submitting" | "uncertain" | "sessionExpired";
@@ -52,13 +52,13 @@ export function PreliminaryRequestCreatePage({
     submittedCode.current = normalizedCode;
     setSubmitState("submitting");
     try {
-      await createProject({
+      const created = await createProject({
         code: normalizedCode,
         name: normalizedName,
         description: description.trim() || null,
         customer_id: null,
       });
-      onNavigate(projectListVerificationPath(normalizedCode));
+      onNavigate(projectPreliminaryIntakePath(created.id));
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setFeedback(knownCreateError(error));
@@ -169,7 +169,7 @@ export function PreliminaryRequestCreatePage({
               <button
                 className="valora-button valora-button--secondary"
                 disabled={submitState === "submitting"}
-                onClick={() => onNavigate(APP_ROUTES.projectList)}
+                onClick={() => onNavigate(APP_ROUTES.preliminaryRequestManagement)}
                 type="button"
               >
                 Hủy

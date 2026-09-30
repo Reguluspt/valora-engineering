@@ -15,6 +15,7 @@ import {
   projectListVerificationPath,
   projectDocumentsPath,
   projectOverviewPath,
+  projectPreliminaryIntakePath,
   projectWorkbenchPath,
   projectNccSelectionPath,
   splitProjectRoute
@@ -157,7 +158,13 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
 
   it("preserves the canonical project, document, and M365 return routes", () => {
     expect(APP_ROUTES.projectList).toBe("/workbench/projects");
+    expect(APP_ROUTES.preliminaryRequestManagement).toBe("/workbench/preliminary-requests");
     expect(APP_ROUTES.preliminaryRequestCreate).toBe("/workbench/preliminary-requests/new");
+    expect(projectPreliminaryIntakePath("HD 01")).toBe("/workbench/projects/HD%2001/preliminary-intake");
+    expect(splitProjectRoute("/workbench/projects/HD%2001/preliminary-intake")).toEqual({
+      projectRef: "HD 01",
+      view: "preliminary-intake",
+    });
     expect(projectListVerificationPath("SB / 1")).toBe("/workbench/projects?verify=SB%20%2F%201");
     expect(projectListVerificationCode("/workbench/projects?verify=SB%20%2F%201")).toBe("SB / 1");
     expect(projectListVerificationCode("/workbench/projects")).toBeNull();

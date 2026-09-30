@@ -75,17 +75,40 @@ describe("AppShell routing", () => {
     expect(nav).toHaveBeenCalledWith("/workbench/projects");
   });
 
-  it.each([
-    APP_ROUTES.preliminaryRequestCreate,
-    projectListVerificationPath("SB-2026-001"),
-  ])("keeps Workbench navigation active on the preliminary entry path %s", (currentPath) => {
+  it("keeps the dedicated management navigation active on the create path", () => {
     let root: any;
     act(() => {
       root = create(React.createElement(AppShell, {
-        account, currentPath, onLogout: vi.fn(), onNavigate: vi.fn(), children: null,
+        account, currentPath: APP_ROUTES.preliminaryRequestCreate, onLogout: vi.fn(), onNavigate: vi.fn(), children: null,
+      }));
+    });
+    expect(findLink(root, "Quản lý yêu cầu sơ bộ").props["aria-current"]).toBe("page");
+    expect(findLink(root, "nav.workbench").props["aria-current"]).toBeUndefined();
+  });
+
+  it("keeps Workbench navigation active for legacy create-response verification", () => {
+    let root: any;
+    act(() => {
+      root = create(React.createElement(AppShell, {
+        account, currentPath: projectListVerificationPath("SB-2026-001"), onLogout: vi.fn(), onNavigate: vi.fn(), children: null,
       }));
     });
     expect(findLink(root, "nav.workbench").props["aria-current"]).toBe("page");
+  });
+
+  it("opens the project-scoped intake route from its navigation", () => {
+    const navigate = vi.fn();
+    let root: any;
+    act(() => {
+      root = create(React.createElement(AppShell, {
+        account, currentPath: "/workbench/projects/hd-98-test/preliminary-intake",
+        onLogout: vi.fn(), onNavigate: navigate, children: null,
+      }));
+    });
+    const link = findLink(root, "Upload & Mapping Excel");
+    expect(link.props["aria-current"]).toBe("page");
+    act(() => link.props.onClick({ preventDefault: vi.fn() }));
+    expect(navigate).toHaveBeenCalledWith("/workbench/projects/hd-98-test/preliminary-intake");
   });
 
   it("opens the provider-neutral document workspace for the current project", () => {

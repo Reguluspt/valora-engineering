@@ -6,7 +6,7 @@ const createProject = vi.hoisted(() => vi.fn());
 vi.mock("../../../api/projects", () => ({ createProject }));
 
 import { ApiError } from "../../../api/client";
-import { projectListVerificationPath } from "../../../contracts/valoraV23";
+import { projectListVerificationPath, projectPreliminaryIntakePath } from "../../../contracts/valoraV23";
 import { PreliminaryRequestCreatePage } from "../PreliminaryRequestCreatePage";
 
 describe("PreliminaryRequestCreatePage", () => {
@@ -28,7 +28,7 @@ describe("PreliminaryRequestCreatePage", () => {
     });
   }
 
-  it("creates an unbound Pre-case request and returns to the project list", async () => {
+  it("creates an unbound Pre-case request and opens its intake route", async () => {
     createProject.mockResolvedValue({ id: "project-1", customer_id: null });
     const { root, onNavigate } = mount();
     fill(root);
@@ -43,7 +43,7 @@ describe("PreliminaryRequestCreatePage", () => {
       description: "Danh mục máy móc",
       customer_id: null,
     });
-    expect(onNavigate).toHaveBeenCalledWith(projectListVerificationPath("SB-2026-001"));
+    expect(onNavigate).toHaveBeenCalledWith(projectPreliminaryIntakePath("project-1"));
   });
 
   it("rejects whitespace-only required fields without sending a command", async () => {

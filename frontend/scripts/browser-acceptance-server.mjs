@@ -37,6 +37,9 @@ let projectScenario = "populated";
 let workbenchScenario = "normal";
 let workbenchDraftSaved = false;
 let nccScenario = "normal";
+let precaseScenario = "upload";
+let precaseProposalCommandId = null;
+let precaseSelectedCommandId = null;
 let nccLines = [];
 let nccIdempotencyMap = new Map();
 
@@ -489,6 +492,62 @@ const projectFixture = {
   updated_at: "2026-09-13T00:00:00Z",
 };
 
+const precaseProject = {
+  ...projectFixture,
+  id: "precase-acceptance",
+  code: "SB-2026-010",
+  name: "Yêu cầu sơ bộ An Phú",
+  customer_id: null,
+  current_preliminary_import_batch_id: "batch-precase",
+};
+const precaseBatch = {
+  id: "batch-precase", project_id: "precase-acceptance", status: "created",
+  source_filename: "Danh_muc_thiet_bi.xlsx", source_sheet_name: null,
+  total_rows: 0, valid_rows: 0, invalid_rows: 0, warning_rows: 0,
+  created_at: "2026-09-30T00:00:00Z", updated_at: "2026-09-30T00:00:00Z",
+};
+const precaseSource = {
+  id: "source-precase", import_batch_id: "batch-precase", generation: 1,
+  original_filename: "Danh_muc_thiet_bi.xlsx", detected_format: "xlsx",
+  content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  file_size_bytes: 4096, checksum_sha256: "a".repeat(64), state: "available",
+  adapter_name: "xlsx-openpyxl", adapter_version: "1", adapter_metadata: {},
+  created_by_user_id: "user-acceptance", created_at: "2026-09-30T00:00:00Z",
+  available_at: "2026-09-30T00:00:00Z",
+};
+const precaseCandidate = {
+  sheet_name: "Danh mục", header_start_row: 2, header_end_row: 2, data_start_row: 3,
+  candidate_table_bounds: { min_row: 2, max_row: 14, min_column: 1, max_column: 3 },
+  header_labels: ["STT", "Tên tài sản", "Số lượng"], confidence: 0.94,
+  reasons: ["Vùng bảng có tiêu đề rõ ràng"], boundary_reason: "Kết thúc vùng dữ liệu",
+  boundary_flags: [],
+};
+const precaseSnapshot = {
+  id: "structure-precase", import_batch_id: "batch-precase", source_artifact_id: "source-precase",
+  snapshot_version: 1, source_checksum_sha256: "a".repeat(64), rule_version: "fixture-v1",
+  adapter_name: "xlsx-openpyxl", adapter_version: "1", disposition: "candidate_detected",
+  candidate_count: 1, structure_payload: {
+    disposition: "candidate_detected", disposition_reasons: [], proposed_candidate_index: 0,
+    candidate_count: 1, candidates: [precaseCandidate],
+  },
+  analysis_digest_sha256: "b".repeat(64), created_by_user_id: "user-acceptance",
+  created_at: "2026-09-30T00:00:00Z",
+};
+const precaseMapping = {
+  contract_version: "fixture-v1",
+  source: { source_artifact_id: "source-precase", generation: 1, checksum_sha256: "a".repeat(64) },
+  structure: { structure_snapshot_id: "structure-precase", snapshot_version: 1,
+    rule_version: "fixture-v1", analysis_digest_sha256: "b".repeat(64) },
+  template_fingerprint_sha256: "c".repeat(64),
+  candidate: { candidate_index: 0, sheet_name: "Danh mục", header_start_row: 2,
+    header_end_row: 2, data_start_row: 3, min_row: 2, max_row: 14, min_column: 1, max_column: 3 },
+  fields: [
+    { source_column_index: 1, source_column_letter: "A", original_header: "STT", semantic_role: "row_number" },
+    { source_column_index: 2, source_column_letter: "B", original_header: "Tên tài sản", semantic_role: "raw_asset_name" },
+    { source_column_index: 3, source_column_letter: "C", original_header: "Số lượng", semantic_role: "quantity" },
+  ],
+};
+
 function caseProjection() {
   const blocker = caseScenario === "blocking" ? [{
     id: "issue-blocking-acceptance",
@@ -598,6 +657,7 @@ const server = http.createServer(async (request, response) => {
     const nextProjects = url.searchParams.get("projects");
     const nextWorkbench = url.searchParams.get("workbench");
     const nextNcc = url.searchParams.get("ncc");
+    const nextPrecase = url.searchParams.get("precase");
     const nextM365 = url.searchParams.get("m365");
     const nextM365Classification = url.searchParams.get("m365_classification");
     if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
@@ -611,6 +671,9 @@ const server = http.createServer(async (request, response) => {
     }
     if (nextNcc && !["normal", "empty", "loading", "error", "conflict", "processing", "no-candidates"].includes(nextNcc)) {
       return send(response, 400, { detail: "Unknown ncc fixture" });
+    }
+    if (nextPrecase && !["upload", "structure", "review", "proposal", "selected", "materialized", "conflict", "stale"].includes(nextPrecase)) {
+      return send(response, 400, { detail: "Unknown Pre-case fixture" });
     }
     if (nextM365 && !["normal", "disconnected", "empty", "error", "denied", "limited", "read-only", "adoption-error", "exchange-error"].includes(nextM365)) {
       return send(response, 400, { detail: "Unknown M365 fixture" });
@@ -628,6 +691,11 @@ const server = http.createServer(async (request, response) => {
       nccScenario = nextNcc;
       resetNccData();
     }
+    if (nextPrecase) {
+      precaseScenario = nextPrecase;
+      precaseProposalCommandId = null;
+      precaseSelectedCommandId = null;
+    }
     if (nextM365) {
       m365Scenario = nextM365;
       documents = nextM365 === "empty" ? [] : [makeDocument("document-1", "Báo cáo hiện trạng")];
@@ -638,6 +706,7 @@ const server = http.createServer(async (request, response) => {
       projects: projectScenario,
       workbench: workbenchScenario,
       ncc: nccScenario,
+      precase: precaseScenario,
       m365: m365Scenario,
       m365_classification: m365Classification,
     });
@@ -751,7 +820,104 @@ const server = http.createServer(async (request, response) => {
     if (projectScenario === "error") return send(response, 503, { detail: "Fixture project read unavailable" });
     return send(response, 200, projectScenario === "empty" ? [] : [projectFixture]);
   }
+  if (url.pathname === "/api/v1/projects/preliminary-requests" && request.method === "GET") {
+    return send(response, 200, {
+      items: [{ project_id: precaseProject.id, code: precaseProject.code,
+        name: precaseProject.name, customer_id: null, current_batch_id: precaseBatch.id,
+        has_retained_batches: true,
+        current_source_artifact_id: precaseScenario === "upload" ? null : precaseSource.id,
+        current_source_state: precaseScenario === "upload" ? null : "available" }],
+      total: 1, page: 1, page_size: 25,
+    });
+  }
+  if (url.pathname === "/api/v1/projects/precase-acceptance" && request.method === "GET") {
+    return send(response, 200, precaseProject);
+  }
+  const precaseBase = "/api/v1/projects/precase-acceptance/asset-imports";
+  const precaseBatchPath = `${precaseBase}/batch-precase`;
+  const precaseSourcePath = `${precaseBatchPath}/source-artifacts`;
+  const precaseStructurePath = `${precaseSourcePath}/source-precase/structure-snapshots`;
+  const precaseMappingPath = `${precaseBatchPath}/column-mapping`;
+  if (url.pathname === precaseBase && request.method === "GET") return send(response, 200, [precaseBatch]);
+  if (url.pathname === precaseSourcePath && request.method === "GET") {
+    return send(response, 200, precaseScenario === "upload" ? [] : [precaseSource]);
+  }
+  if (url.pathname === precaseSourcePath && request.method === "POST") {
+    precaseScenario = "structure";
+    return send(response, 201, precaseSource);
+  }
+  if (url.pathname === `${precaseSourcePath}/source-precase` && request.method === "GET") {
+    return send(response, 200, precaseSource);
+  }
+  if (url.pathname === precaseStructurePath && request.method === "GET") {
+    return send(response, 200, ["review", "proposal", "selected", "materialized", "conflict", "stale"].includes(precaseScenario)
+      ? [precaseSnapshot] : []);
+  }
+  if (url.pathname === precaseStructurePath && request.method === "POST") {
+    precaseScenario = "review";
+    return send(response, 201, precaseSnapshot);
+  }
+  if (url.pathname === `${precaseMappingPath}/state` && request.method === "GET") {
+    const selected = ["selected", "materialized"].includes(precaseScenario);
+    return send(response, 200, {
+      project_id: precaseProject.id, batch_id: precaseBatch.id,
+      current_batch_id: precaseBatch.id,
+      current_source_artifact_id: precaseScenario === "upload" ? null : precaseSource.id,
+      selection_revision: selected ? 8 : 7,
+      status: precaseScenario === "stale" ? "stale_lineage"
+        : precaseScenario === "selected" ? "selected_unmaterialized"
+          : precaseScenario === "materialized" ? "materialized" : "no_selection",
+      official_intake_closed: false,
+      selected_confirmation_decision_id: selected ? "confirmation-precase" : null,
+      selected_structure_snapshot_id: selected ? precaseSnapshot.id : null,
+      selected_source_artifact_id: selected ? precaseSource.id : null,
+      selected_candidate: selected ? precaseMapping.candidate : null,
+      mapping_snapshot: selected ? precaseMapping : null,
+      mapping_digest_sha256: selected ? "d".repeat(64) : null,
+      memory_scope: selected ? "none" : null, profile_id: null,
+      selected_command_id: selected ? (precaseSelectedCommandId || "fixture-confirm") : null,
+      selected_outcome: selected ? "accepted" : null,
+      selected_usage_id: precaseScenario === "materialized" ? "usage-precase" : null,
+      current_staging_usage_id: precaseScenario === "materialized" ? "usage-precase" : null,
+      materialized_asset_row_count: precaseScenario === "materialized" ? 12 : null,
+      materialized_mapping_digest_sha256: precaseScenario === "materialized" ? "d".repeat(64) : null,
+      recent_proposals: precaseProposalCommandId ? [{ proposal_decision_id: "proposal-precase",
+        source_artifact_id: precaseSource.id, structure_snapshot_id: precaseSnapshot.id,
+        command_id: precaseProposalCommandId, terminal_outcomes: [] }] : [],
+    });
+  }
+  if (url.pathname === `${precaseMappingPath}/proposals` && request.method === "POST") {
+    const body = await readJson(request);
+    precaseProposalCommandId = body.command_id;
+    precaseScenario = "proposal";
+    return send(response, 201, {
+      decision_id: "proposal-precase", source_artifact_id: precaseSource.id,
+      structure_snapshot_id: precaseSnapshot.id, mapping_snapshot: precaseMapping,
+      mapping_digest_sha256: "d".repeat(64), review_required: true,
+      review_reasons: ["Cần người dùng xác nhận vai trò cột"],
+      exact_profile_id: null, similar_profile_ids: [], organization_template_id: null,
+    });
+  }
+  if (url.pathname === `${precaseMappingPath}/confirmations` && request.method === "POST") {
+    if (precaseScenario === "conflict") return send(response, 409, { detail: "Phiên bản chọn ánh xạ đã thay đổi." });
+    const body = await readJson(request);
+    precaseSelectedCommandId = body.command_id;
+    precaseScenario = "selected";
+    return send(response, 201, { decision_id: "confirmation-precase", selection_revision: 8 });
+  }
+  if (url.pathname === `${precaseMappingPath}/materializations` && request.method === "POST") {
+    precaseScenario = "materialized";
+    return send(response, 201, { usage_id: "usage-precase", materialized_asset_row_count: 12,
+      confirmation_decision_id: "confirmation-precase", selection_revision: 8 });
+  }
   if (url.pathname === "/api/v1/projects/resolve" && request.method === "GET") {
+    if (url.searchParams.get("ref") === "precase-acceptance") {
+      return send(response, 200, {
+        project_id: precaseProject.id,
+        display_name: precaseProject.name,
+        matched_by: "code",
+      });
+    }
     if (url.searchParams.get("ref") === "workbench-acceptance") {
       return send(response, 200, {
         project_id: workbenchProjectId,

@@ -45,8 +45,10 @@ export const CANONICAL_CROSS_PRODUCT_UI_STATES = [
 
 export const APP_ROUTES = {
   projectList: "/workbench/projects",
+  preliminaryRequestManagement: "/workbench/preliminary-requests",
   preliminaryRequestCreate: "/workbench/preliminary-requests/new",
   projectDetailPrefix: "/workbench/projects/",
+  projectPreliminaryIntakeSuffix: "/preliminary-intake",
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
   projectDocumentsSuffix: "/documents",
@@ -70,6 +72,10 @@ export function projectOverviewPath(projectRef: string): string {
   return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectOverviewSuffix}`;
 }
 
+export function projectPreliminaryIntakePath(projectRef: string): string {
+  return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectPreliminaryIntakeSuffix}`;
+}
+
 export function projectNccSelectionPath(projectRef: string): string {
   return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectNccSelectionSuffix}`;
 }
@@ -80,16 +86,19 @@ export function projectDocumentsPath(projectRef: string): string {
 
 export function splitProjectRoute(path: string): {
   projectRef: string;
-  view: "overview" | "workbench" | "ncc-selection" | "documents";
+  view: "overview" | "workbench" | "preliminary-intake" | "ncc-selection" | "documents";
 } | null {
   const pathname = path.split("?", 1)[0];
   if (!pathname.startsWith(APP_ROUTES.projectDetailPrefix)) return null;
   const remainder = pathname.slice(APP_ROUTES.projectDetailPrefix.length);
+  const isPreliminaryIntake = remainder.endsWith(APP_ROUTES.projectPreliminaryIntakeSuffix);
   const isNccSelection = remainder.endsWith(APP_ROUTES.projectNccSelectionSuffix);
   const isOverview = remainder.endsWith(APP_ROUTES.projectOverviewSuffix);
   const isDocuments = remainder.endsWith(APP_ROUTES.projectDocumentsSuffix);
-  const encodedRef = isNccSelection
-    ? remainder.slice(0, -APP_ROUTES.projectNccSelectionSuffix.length)
+  const encodedRef = isPreliminaryIntake
+    ? remainder.slice(0, -APP_ROUTES.projectPreliminaryIntakeSuffix.length)
+    : isNccSelection
+      ? remainder.slice(0, -APP_ROUTES.projectNccSelectionSuffix.length)
     : isDocuments
       ? remainder.slice(0, -APP_ROUTES.projectDocumentsSuffix.length)
     : isOverview
@@ -99,8 +108,10 @@ export function splitProjectRoute(path: string): {
   try {
     return {
       projectRef: decodeURIComponent(encodedRef),
-      view: isNccSelection
-        ? "ncc-selection"
+      view: isPreliminaryIntake
+        ? "preliminary-intake"
+        : isNccSelection
+          ? "ncc-selection"
         : isDocuments
           ? "documents"
           : isOverview

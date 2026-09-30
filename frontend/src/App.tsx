@@ -8,6 +8,8 @@ import { CaseOverviewPage } from "./components/case-overview/CaseOverviewPage";
 import { NccSelectionPage } from "./components/ncc-selection/NccSelectionPage";
 import { ProjectListPage } from "./components/projects/ProjectListPage";
 import { PreliminaryRequestCreatePage } from "./components/precase/PreliminaryRequestCreatePage";
+import { PreliminaryRequestsPage } from "./components/precase/PreliminaryRequestsPage";
+import { PreliminaryIntakePage } from "./components/precase/PreliminaryIntakePage";
 import { M365ReturnPage, M365WorkspacePage } from "./components/m365/M365WorkspacePage";
 import { LoginPage } from "./auth/LoginPage";
 import { SessionProvider, useSession } from "./auth/SessionProvider";
@@ -76,6 +78,10 @@ export function AuthenticatedApp() {
       return <CaseOverviewPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
     }
 
+    if (projectRoute?.view === "preliminary-intake") {
+      return <PreliminaryIntakePage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
+    }
+
     if (projectRoute?.view === "workbench") {
       return (
         <WorkbenchLayout
@@ -99,6 +105,10 @@ export function AuthenticatedApp() {
 
     if (currentPath === APP_ROUTES.preliminaryRequestCreate) {
       return <PreliminaryRequestCreatePage onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
+    }
+
+    if (currentPath === APP_ROUTES.preliminaryRequestManagement) {
+      return <PreliminaryRequestsPage onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
     }
 
     if (currentPath.split("?", 1)[0] === APP_ROUTES.m365Return) {
