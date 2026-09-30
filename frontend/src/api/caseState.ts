@@ -40,6 +40,19 @@ export interface CaseStateCapability {
   version: string;
 }
 
+export interface PreliminarySelectionResponse {
+  project_id: string;
+  customer_id: string | null;
+  project_row_version: number;
+  current_preliminary_import_batch_id: string | null;
+  current_source_artifact_id: string | null;
+  current_preliminary_analysis_snapshot_id: string | null;
+  current_preliminary_analysis_version: number | null;
+  current_preliminary_result_artifact_id: string | null;
+  current_preliminary_result_version: number | null;
+  official_intake_commit_id: string | null;
+}
+
 export interface CaseStateResponse {
   case_version: string;
   current_stage: CaseStage;
@@ -49,6 +62,7 @@ export interface CaseStateResponse {
   warnings: CaseStateIssue[];
   stale: Record<string, unknown>[];
   capabilities: CaseStateCapability[];
+  preliminary: PreliminarySelectionResponse;
 }
 
 export function fetchCaseState(

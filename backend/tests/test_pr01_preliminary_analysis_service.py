@@ -44,6 +44,7 @@ from app.modules.excel_import.models import (
     ColumnMappingMemoryScope,
     ColumnMappingProfileUsage,
     ColumnMappingProposalSourceKind,
+    ProjectColumnMappingAuthority,
     ImportSourceArtifact,
     ImportSourceArtifactState,
     WorkbookStructureDisposition,
@@ -301,6 +302,18 @@ def _seed(
         created_by_user_id=actor.id,
     )
     analysis_db.add(usage)
+    analysis_db.flush()
+    analysis_db.add(ProjectColumnMappingAuthority(
+        organization_id=org.id,
+        project_id=project.id,
+        selection_revision=2,
+        import_batch_id=batch.id,
+        source_artifact_id=artifact.id,
+        structure_snapshot_id=structure.id,
+        confirmation_decision_id=decision.id,
+        selected_usage_id=usage.id,
+        current_staging_usage_id=usage.id,
+    ))
     analysis_db.commit()
 
     return {
@@ -359,6 +372,28 @@ def _assert_error(
 # ---------------------------------------------------------------------------
 # Baseline success and project/snapshot integrity.
 # ---------------------------------------------------------------------------
+
+
+def test_finalize_rejects_selected_mapping_without_current_staging_usage(analysis_db: Session) -> None:
+    seeded = _seed(analysis_db, suffix="unmaterialized-selection")
+    slot = analysis_db.query(ProjectColumnMappingAuthority).filter_by(project_id=seeded["project"].id).one()
+    slot.selected_usage_id = None
+    analysis_db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        _finalize(analysis_db, seeded)
+    _assert_error(exc, 409, "preliminary_analysis_mapping_not_current")
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 0
+
+
+def test_finalize_rejects_unresolved_legacy_mapping_authority(analysis_db: Session) -> None:
+    seeded = _seed(analysis_db, suffix="unresolved-selection")
+    analysis_db.delete(analysis_db.query(ProjectColumnMappingAuthority).filter_by(project_id=seeded["project"].id).one())
+    analysis_db.commit()
+    with pytest.raises(HTTPException) as exc:
+        _finalize(analysis_db, seeded)
+    _assert_error(exc, 409, "preliminary_analysis_mapping_not_current")
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 0
 
 
 def test_finalize_creates_snapshot_and_emits_audit(analysis_db: Session) -> None:

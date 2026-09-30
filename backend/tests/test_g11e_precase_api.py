@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.modules.excel_import.infrastructure.object_storage import set_object_storage_override
-from app.modules.excel_import.models import ColumnMappingDecision
+from app.modules.excel_import.models import ColumnMappingDecision, ProjectColumnMappingAuthority
 from app.modules.project_master_data.models import (
     AuditEvent, CustomerStatus, OrganizationStatus, PreliminaryResultArtifact,
     Project, ProjectOfficialIntakeCommit, UserStatus, ValidationIssue, ValidationIssueSeverity,
@@ -300,6 +300,17 @@ def test_api_created_unbound_project_reaches_official_intake(api_db):
     proposal = db.get(ColumnMappingDecision, seeded["decision"].proposal_decision_id)
     for fact in (proposal, seeded["decision"], seeded["usage"], seeded["snapshot"]):
         fact.customer_id = None
+    db.add(ProjectColumnMappingAuthority(
+        organization_id=seeded["org"].id,
+        project_id=seeded["project"].id,
+        selection_revision=2,
+        import_batch_id=seeded["batch"].id,
+        source_artifact_id=seeded["artifact"].id,
+        structure_snapshot_id=seeded["structure"].id,
+        confirmation_decision_id=seeded["decision"].id,
+        selected_usage_id=seeded["usage"].id,
+        current_staging_usage_id=seeded["usage"].id,
+    ))
     db.commit()
     headers = _headers(seeded)
     analysis_payload = {

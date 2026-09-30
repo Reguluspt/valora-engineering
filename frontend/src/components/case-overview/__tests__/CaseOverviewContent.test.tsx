@@ -37,6 +37,13 @@ function buildProjection(): CaseStateResponse {
       provider_key: index < 4 ? `${stage.toLowerCase()}_v1` : null,
       version: "pr01-prefix-v1",
     })),
+    preliminary: {
+      project_id: "project-1", customer_id: null, project_row_version: 1,
+      current_preliminary_import_batch_id: null, current_source_artifact_id: null,
+      current_preliminary_analysis_snapshot_id: null, current_preliminary_analysis_version: null,
+      current_preliminary_result_artifact_id: null, current_preliminary_result_version: null,
+      official_intake_commit_id: null,
+    },
   };
 }
 
@@ -63,7 +70,7 @@ describe("CaseOverviewContent", () => {
     const primaryActions = root.root.findAllByProps({ "data-primary-action": true });
     expect(primaryActions).toHaveLength(1);
     act(() => primaryActions[0].props.onClick());
-    expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1");
+    expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1/preliminary-analysis");
   });
 
   it("opens Preliminary Intake for the server's preliminary_request_pending route key", () => {

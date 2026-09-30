@@ -40,6 +40,8 @@ let nccScenario = "normal";
 let precaseScenario = "upload";
 let precaseProposalCommandId = null;
 let precaseSelectedCommandId = null;
+let precaseAnalysis = null;
+let precaseAnalysisLostOnce = false;
 let nccLines = [];
 let nccIdempotencyMap = new Map();
 
@@ -599,6 +601,35 @@ function caseProjection() {
   };
 }
 
+function precaseCaseProjection() {
+  const completed = Boolean(precaseAnalysis);
+  const base = caseProjection();
+  return {
+    ...base,
+    case_version: completed ? "c".repeat(64) : "b".repeat(64),
+    next_action: completed ? {
+      kind: "NO_AUTHORIZED_DOWNSTREAM_ACTION", stage: null,
+      semantic_route_key: null, validation_issue_id: null,
+    } : {
+      kind: "PENDING", stage: "PRELIMINARY_ANALYSIS",
+      semantic_route_key: "preliminary_analysis_pending", validation_issue_id: null,
+    },
+    stages: base.stages.map((stage) => stage.stage === "PRELIMINARY_ANALYSIS"
+      ? { ...stage, result: completed ? "COMPLETE" : "INCOMPLETE" } : stage),
+    preliminary: {
+      project_id: precaseProject.id, customer_id: null,
+      project_row_version: completed ? precaseProject.row_version + 1 : precaseProject.row_version,
+      current_preliminary_import_batch_id: precaseBatch.id,
+      current_source_artifact_id: precaseSource.id,
+      current_preliminary_analysis_snapshot_id: completed ? precaseAnalysis.id : null,
+      current_preliminary_analysis_version: completed ? precaseAnalysis.version : null,
+      current_preliminary_result_artifact_id: null,
+      current_preliminary_result_version: null,
+      official_intake_commit_id: null,
+    },
+  };
+}
+
 function makeDocument(id, title) {
   return {
     document_id: id,
@@ -672,7 +703,7 @@ const server = http.createServer(async (request, response) => {
     if (nextNcc && !["normal", "empty", "loading", "error", "conflict", "processing", "no-candidates"].includes(nextNcc)) {
       return send(response, 400, { detail: "Unknown ncc fixture" });
     }
-    if (nextPrecase && !["upload", "structure", "review", "proposal", "selected", "materialized", "conflict", "stale"].includes(nextPrecase)) {
+    if (nextPrecase && !["upload", "structure", "review", "proposal", "selected", "materialized", "conflict", "stale", "analysis", "analysis-lost"].includes(nextPrecase)) {
       return send(response, 400, { detail: "Unknown Pre-case fixture" });
     }
     if (nextM365 && !["normal", "disconnected", "empty", "error", "denied", "limited", "read-only", "adoption-error", "exchange-error"].includes(nextM365)) {
@@ -695,6 +726,8 @@ const server = http.createServer(async (request, response) => {
       precaseScenario = nextPrecase;
       precaseProposalCommandId = null;
       precaseSelectedCommandId = null;
+      precaseAnalysis = null;
+      precaseAnalysisLostOnce = false;
     }
     if (nextM365) {
       m365Scenario = nextM365;
@@ -833,12 +866,68 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/api/v1/projects/precase-acceptance" && request.method === "GET") {
     return send(response, 200, precaseProject);
   }
+  if (url.pathname === "/api/v1/projects/precase-acceptance/case-state" && request.method === "GET") {
+    return send(response, 200, precaseCaseProjection());
+  }
+  if (url.pathname === "/api/v1/projects/precase-acceptance/preliminary-analyses" && request.method === "POST") {
+    const body = await readJson(request);
+    if (!precaseAnalysis) {
+      if (body.expected_project_version !== precaseProject.row_version ||
+          body.import_batch_id !== precaseBatch.id || body.source_artifact_id !== precaseSource.id ||
+          body.mapping_profile_usage_id !== "usage-precase" ||
+          !body.confirmed || body.line_manifest?.length !== 12 ||
+          body.line_manifest.some((line, index) => line.source_row_number !== index + 3 ||
+            !line.human_line_confirmed || line.has_unresolved_blocking_line)) {
+        return send(response, 409, { detail: "Current analysis authority changed" });
+      }
+      precaseAnalysis = {
+        id: "analysis-precase", project_id: precaseProject.id, version: 1,
+        import_batch_id: precaseBatch.id, source_artifact_id: precaseSource.id,
+        structure_snapshot_id: precaseSnapshot.id,
+        mapping_decision_id: "confirmation-precase",
+        mapping_profile_usage_id: "usage-precase",
+        mapping_decision_digest_sha256: "d".repeat(64),
+        profile_usage_mapping_digest_sha256: "d".repeat(64),
+        line_manifest: body.line_manifest,
+        line_manifest_digest_sha256: "e".repeat(64),
+        finalized_by_user_id: "user-acceptance", finalized_at: "2026-09-30T00:00:00Z",
+        idempotency_key: body.idempotency_key,
+      };
+    } else if (body.idempotency_key !== precaseAnalysis.idempotency_key) {
+      return send(response, 409, { detail: "Analysis already finalized" });
+    }
+    if (precaseScenario === "analysis-lost" && !precaseAnalysisLostOnce) {
+      precaseAnalysisLostOnce = true;
+      return send(response, 503, { detail: "Response lost after commit" });
+    }
+    return send(response, 201, { id: precaseAnalysis.id, project_id: precaseProject.id, version: 1 });
+  }
+  if (url.pathname === "/api/v1/projects/precase-acceptance/preliminary-analyses/analysis-precase" && request.method === "GET") {
+    if (!precaseAnalysis) return send(response, 404, { detail: "Analysis absent" });
+    const { idempotency_key, ...fact } = precaseAnalysis;
+    return send(response, 200, fact);
+  }
   const precaseBase = "/api/v1/projects/precase-acceptance/asset-imports";
   const precaseBatchPath = `${precaseBase}/batch-precase`;
   const precaseSourcePath = `${precaseBatchPath}/source-artifacts`;
   const precaseStructurePath = `${precaseSourcePath}/source-precase/structure-snapshots`;
   const precaseMappingPath = `${precaseBatchPath}/column-mapping`;
   if (url.pathname === precaseBase && request.method === "GET") return send(response, 200, [precaseBatch]);
+  if (url.pathname === `${precaseBatchPath}/rows` && request.method === "GET") {
+    const offset = Number(url.searchParams.get("offset") || 0);
+    const limit = Number(url.searchParams.get("limit") || 100);
+    const items = Array.from({ length: 12 }, (_, index) => ({
+      id: `staging-${index + 3}`, import_batch_id: precaseBatch.id,
+      source_row_number: index + 3, validation_status: "valid",
+      validation_errors: [], validation_warnings: [],
+      proposed_asset_name: `Máy cắt số ${index + 1}`,
+      proposed_quantity: index === 0 ? "0" : String(index + 1),
+    }));
+    return send(response, 200, {
+      project_id: precaseProject.id, import_batch_id: precaseBatch.id,
+      items: items.slice(offset, offset + limit), total: items.length, offset, limit,
+    });
+  }
   if (url.pathname === precaseSourcePath && request.method === "GET") {
     return send(response, 200, precaseScenario === "upload" ? [] : [precaseSource]);
   }
@@ -858,7 +947,8 @@ const server = http.createServer(async (request, response) => {
     return send(response, 201, precaseSnapshot);
   }
   if (url.pathname === `${precaseMappingPath}/state` && request.method === "GET") {
-    const selected = ["selected", "materialized"].includes(precaseScenario);
+    const selected = ["selected", "materialized", "analysis", "analysis-lost"].includes(precaseScenario);
+    const materialized = ["materialized", "analysis", "analysis-lost"].includes(precaseScenario);
     return send(response, 200, {
       project_id: precaseProject.id, batch_id: precaseBatch.id,
       current_batch_id: precaseBatch.id,
@@ -866,7 +956,7 @@ const server = http.createServer(async (request, response) => {
       selection_revision: selected ? 8 : 7,
       status: precaseScenario === "stale" ? "stale_lineage"
         : precaseScenario === "selected" ? "selected_unmaterialized"
-          : precaseScenario === "materialized" ? "materialized" : "no_selection",
+        : materialized ? "materialized" : "no_selection",
       official_intake_closed: false,
       selected_confirmation_decision_id: selected ? "confirmation-precase" : null,
       selected_structure_snapshot_id: selected ? precaseSnapshot.id : null,
@@ -877,10 +967,10 @@ const server = http.createServer(async (request, response) => {
       memory_scope: selected ? "none" : null, profile_id: null,
       selected_command_id: selected ? (precaseSelectedCommandId || "fixture-confirm") : null,
       selected_outcome: selected ? "accepted" : null,
-      selected_usage_id: precaseScenario === "materialized" ? "usage-precase" : null,
-      current_staging_usage_id: precaseScenario === "materialized" ? "usage-precase" : null,
-      materialized_asset_row_count: precaseScenario === "materialized" ? 12 : null,
-      materialized_mapping_digest_sha256: precaseScenario === "materialized" ? "d".repeat(64) : null,
+      selected_usage_id: materialized ? "usage-precase" : null,
+      current_staging_usage_id: materialized ? "usage-precase" : null,
+      materialized_asset_row_count: materialized ? 12 : null,
+      materialized_mapping_digest_sha256: materialized ? "d".repeat(64) : null,
       recent_proposals: precaseProposalCommandId ? [{ proposal_decision_id: "proposal-precase",
         source_artifact_id: precaseSource.id, structure_snapshot_id: precaseSnapshot.id,
         command_id: precaseProposalCommandId, terminal_outcomes: [] }] : [],

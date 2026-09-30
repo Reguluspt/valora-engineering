@@ -33,6 +33,7 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportStagingRow,
     ImportBatchStatus,
     ProjectOfficialIntakeCommit,
+    PreliminaryAnalysisSnapshot,
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -44,7 +45,8 @@ from app.modules.project_master_data.schemas import (
     PreliminaryCustomerBindRequest, PreliminaryBatchSwitchRequest,
     PreliminaryAnalysisFinalizeRequest, PreliminaryResultGenerateRequest,
     OfficialIntakeCommitRequest, PreliminaryLifecycleCommandResponse,
-    PreliminaryAnalysisCommandResponse, PreliminaryResultCommandResponse,
+    PreliminaryAnalysisCommandResponse, PreliminaryAnalysisReadResponse,
+    PreliminaryResultCommandResponse,
     OfficialIntakeCommitResponse,
     NccSelectionConfirmRequest, NccSelectionCurrentResponse, NccSelectionAggregateResponse,
 )
@@ -560,6 +562,26 @@ def finalize_project_preliminary_analysis(
             "source_artifact_id": snapshot.source_artifact_id}
 
 
+@router.get(
+    "/{project_id}/preliminary-analyses/{analysis_id}",
+    response_model=PreliminaryAnalysisReadResponse,
+)
+def get_project_preliminary_analysis(
+    project_id: uuid.UUID,
+    analysis_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    snapshot = db.query(PreliminaryAnalysisSnapshot).filter(
+        PreliminaryAnalysisSnapshot.organization_id == current_user.organization_id,
+        PreliminaryAnalysisSnapshot.project_id == project_id,
+        PreliminaryAnalysisSnapshot.id == analysis_id,
+    ).first()
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phân tích sơ bộ.")
+    return snapshot
+
+
 @router.post(
     "/{project_id}/preliminary-results",
     response_model=PreliminaryResultCommandResponse,
@@ -963,7 +985,10 @@ def list_project_asset_import_rows(
         query = query.filter(ProjectAssetImportStagingRow.validation_status == validation_status)
 
     total = query.count()
-    items = query.offset(offset).limit(limit).all()
+    items = query.order_by(
+        ProjectAssetImportStagingRow.source_row_number,
+        ProjectAssetImportStagingRow.id,
+    ).offset(offset).limit(limit).all()
 
     return {
         "project_id": project_id,

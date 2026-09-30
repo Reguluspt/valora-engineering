@@ -16,6 +16,7 @@ import {
   projectDocumentsPath,
   projectOverviewPath,
   projectPreliminaryIntakePath,
+  projectPreliminaryAnalysisPath,
   projectWorkbenchPath,
   projectNccSelectionPath,
   splitProjectRoute
@@ -174,5 +175,19 @@ describe("VALORA UI/UX v2.3 implementation contract", () => {
       view: "documents",
     });
     expect(APP_ROUTES.m365Return).toBe("/workbench/m365/return");
+  });
+
+  it("exposes a canonical Preliminary Analysis project route and recognizes it in splitProjectRoute", () => {
+    expect(APP_ROUTES.projectPreliminaryAnalysisSuffix).toBe("/preliminary-analysis");
+    expect(projectPreliminaryAnalysisPath("HD 01")).toBe("/workbench/projects/HD%2001/preliminary-analysis");
+    expect(splitProjectRoute("/workbench/projects/HD%2001/preliminary-analysis")).toEqual({
+      projectRef: "HD 01",
+      view: "preliminary-analysis",
+    });
+    expect(projectPreliminaryAnalysisPath("PRJ/2026/01")).toBe("/workbench/projects/PRJ%2F2026%2F01/preliminary-analysis");
+    expect(splitProjectRoute("/workbench/projects/PRJ%2F2026%2F01/preliminary-analysis")).toEqual({
+      projectRef: "PRJ/2026/01",
+      view: "preliminary-analysis",
+    });
   });
 });
