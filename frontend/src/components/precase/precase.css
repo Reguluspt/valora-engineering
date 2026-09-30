@@ -68,7 +68,8 @@
 }
 
 .precase-management-page,
-.precase-intake-page {
+.precase-intake-page,
+.precase-analysis-page {
   height: 100%;
   overflow-y: auto;
   padding: var(--valora-space-page);
@@ -135,6 +136,67 @@
   display: flex;
   flex-direction: column;
   gap: var(--valora-space-lg);
+}
+
+.precase-analysis-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--valora-space-lg);
+}
+
+.precase-analysis-page .valora-panel__body {
+  display: grid;
+  gap: var(--valora-space-md);
+}
+
+.precase-analysis-page .valora-panel__body > p {
+  margin: 0;
+}
+
+.precase-analysis-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.precase-analysis-table .valora-table {
+  min-width: 76rem;
+}
+
+.precase-analysis-table .valora-field {
+  min-width: 8rem;
+}
+
+.precase-analysis-table input[name="identity"] {
+  min-width: 14rem;
+}
+
+.precase-analysis-table input[name="accepted_price_basis"] {
+  min-width: 12rem;
+}
+
+.precase-analysis-table input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}
+
+.precase-analysis-confirm {
+  width: min(calc(100% - 2rem), 34rem);
+  max-height: calc(100% - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--valora-radius-surface);
+  color: var(--valora-color-text-primary);
+  background: var(--valora-color-surface-primary);
+}
+
+.precase-analysis-confirm::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.precase-analysis-confirm .valora-panel {
+  width: 100%;
+  margin: 0;
 }
 
 .precase-intake-header {

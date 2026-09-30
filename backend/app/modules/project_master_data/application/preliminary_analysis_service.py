@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.audit import log_audit_event
 from app.core.rbac import derive_effective_permissions
+from app.modules.excel_import.application.mapping_authority import authority_slot
 from app.modules.excel_import.models import (
     ColumnMappingDecision,
     ColumnMappingDecisionKind,
@@ -524,6 +525,23 @@ def finalize_preliminary_analysis(
             409,
             "mapping_profile_usage_digest_mismatch",
             "Digest của bản ghi sử dụng mapping không khớp.",
+        )
+    slot = authority_slot(db, org_id=org_id, project_id=project.id, lock=True)
+    if (
+        slot is None
+        or slot.import_batch_id != import_batch_id
+        or slot.source_artifact_id != artifact.id
+        or slot.structure_snapshot_id != structure.id
+        or slot.confirmation_decision_id != decision.id
+        or slot.selected_usage_id != usage.id
+        or slot.current_staging_usage_id != usage.id
+        or structure.source_checksum_sha256 != artifact.checksum_sha256
+        or usage.source_checksum_sha256 != artifact.checksum_sha256
+        or usage.structure_digest_sha256 != structure.analysis_digest_sha256
+    ):
+        _abort(
+            db, 409, "preliminary_analysis_mapping_not_current",
+            "Ánh xạ đã chọn chưa tạo dữ liệu tạm hiện hành.",
         )
 
     if project.row_version != expected_project_version:

@@ -10,6 +10,7 @@ import { ProjectListPage } from "./components/projects/ProjectListPage";
 import { PreliminaryRequestCreatePage } from "./components/precase/PreliminaryRequestCreatePage";
 import { PreliminaryRequestsPage } from "./components/precase/PreliminaryRequestsPage";
 import { PreliminaryIntakePage } from "./components/precase/PreliminaryIntakePage";
+import { PreliminaryAnalysisPage } from "./components/precase/PreliminaryAnalysisPage";
 import { M365ReturnPage, M365WorkspacePage } from "./components/m365/M365WorkspacePage";
 import { LoginPage } from "./auth/LoginPage";
 import { SessionProvider, useSession } from "./auth/SessionProvider";
@@ -80,6 +81,10 @@ export function AuthenticatedApp() {
 
     if (projectRoute?.view === "preliminary-intake") {
       return <PreliminaryIntakePage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
+    }
+
+    if (projectRoute?.view === "preliminary-analysis") {
+      return <PreliminaryAnalysisPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
     }
 
     if (projectRoute?.view === "workbench") {

@@ -522,6 +522,23 @@ class PreliminaryAnalysisSnapshotResponse(BaseSchema):
     finalized_at: datetime
 
 
+class PreliminaryAnalysisReadResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    version: int
+    import_batch_id: uuid.UUID
+    source_artifact_id: uuid.UUID
+    structure_snapshot_id: uuid.UUID
+    mapping_decision_id: uuid.UUID
+    mapping_profile_usage_id: uuid.UUID
+    mapping_decision_digest_sha256: str
+    profile_usage_mapping_digest_sha256: str
+    line_manifest: List[dict[str, object]]
+    line_manifest_digest_sha256: str
+    finalized_by_user_id: uuid.UUID
+    finalized_at: datetime
+
+
 class PreliminaryCustomerBindRequest(BaseSchema):
     model_config = ConfigDict(extra="forbid")
 
