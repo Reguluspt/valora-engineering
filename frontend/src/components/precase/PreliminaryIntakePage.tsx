@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { getProject, type ProjectSummary } from "../../api/projects";
@@ -214,7 +214,8 @@ function ResolvedPreliminaryIntake({
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error" | "sessionExpired" | "forbidden">("loading");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; tone: "info" | "warning" | "error" } | null>(null);
-  const [uncertain, setUncertain] = useState(() => Boolean(readPending(projectId)));
+  const pendingRef = useRef<PendingUnknown | null>(readPending(projectId));
+  const [uncertain, setUncertain] = useState(() => Boolean(pendingRef.current));
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [candidateIndex, setCandidateIndex] = useState<number | null>(null);
   const [proposal, setProposal] = useState<MappingProposal | null>(null);
@@ -226,6 +227,7 @@ function ResolvedPreliminaryIntake({
   const [replaceSource, setReplaceSource] = useState(false);
 
   const markUnknown = (pending: PendingUnknown) => {
+    pendingRef.current = pending;
     try { sessionStorage.setItem(pendingKey(projectId), JSON.stringify(pending)); } catch { /* Keep the in-memory lock. */ }
     setUncertain(true);
   };
@@ -260,10 +262,12 @@ function ResolvedPreliminaryIntake({
         : [];
       const next = { project, batches, batch, recovery, source, artifacts, snapshots };
       setData(next);
-      const pending = readPending(projectId);
+      const pending = readPending(projectId) || pendingRef.current;
       if (pending) {
+        pendingRef.current = pending;
         if (pendingResolved(pending, next)) {
           try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+          pendingRef.current = null;
           setUncertain(false);
           if (pendingSuperseded(pending, next)) {
             setNotice({ tone: "warning", text: "Quyền chọn đã thay đổi. Lệnh trước không còn áp dụng; hãy rà soát trạng thái hiện hành trước khi tiếp tục." });
@@ -298,7 +302,7 @@ function ResolvedPreliminaryIntake({
 
   const refresh = async () => {
     setNotice(null);
-    const pending = readPending(projectId);
+    const pending = readPending(projectId) || pendingRef.current;
     const fresh = await load();
     if (pending?.kind === "confirmation" && pending.confirmationPayload && fresh?.batch &&
       fresh.batch.id === pending.batchId && sourceIsCurrent(fresh) &&
@@ -317,6 +321,7 @@ function ResolvedPreliminaryIntake({
         const verified = await load();
         if (verified?.recovery?.selected_command_id === pending.confirmationPayload.command_id) {
           try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+          pendingRef.current = null;
           setUncertain(false);
           setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu xác nhận trước. Ánh xạ hiện hành lấy từ máy chủ." });
         }
@@ -341,6 +346,7 @@ function ResolvedPreliminaryIntake({
         if (verified?.recovery?.status === "materialized" &&
           verified.recovery.selected_confirmation_decision_id === pending.materializationPayload.confirmation_decision_id) {
           try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+          pendingRef.current = null;
           setUncertain(false);
           setNotice({ tone: "info", text: "Đã khôi phục đúng yêu cầu tạo dữ liệu tạm trước. Danh mục chính thức chưa thay đổi." });
         }
@@ -364,6 +370,7 @@ function ResolvedPreliminaryIntake({
         setFields(result.mapping_snapshot.fields.map((field) => ({ ...field })));
         setReviewed(false);
         try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
+        pendingRef.current = null;
         setUncertain(false);
         setNotice({ tone: "info", text: "Đã khôi phục đề xuất từ đúng yêu cầu trước. Hãy rà soát từng cột." });
       } catch (error) {

@@ -224,6 +224,25 @@ describe("PreliminaryIntakePage", () => {
     expect(api.uploadSourceArtifact).toHaveBeenCalledTimes(1);
   });
 
+  it("recovers an unknown upload in the same view when session storage is unavailable", async () => {
+    let currentSource: typeof source | null = null;
+    api.getMappingRecovery.mockImplementation(async () => recovery("no_selection", {
+      current_source_artifact_id: currentSource?.id || null,
+    }));
+    api.getSourceArtifact.mockImplementation(async () => currentSource);
+    api.listSourceArtifacts.mockImplementation(async () => currentSource ? [currentSource] : []);
+    api.uploadSourceArtifact.mockRejectedValue(new ApiError("network", 0));
+    sessionStorage.setItem = () => { throw new Error("storage denied"); };
+    const root = await mount();
+    act(() => root.root.findByType("input").props.onChange({ target: { files: [{ name: "assets.xlsx" }] } }));
+    await act(async () => button(root, "Tải tệp Excel").props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
+    currentSource = source;
+    await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
+    expect(JSON.stringify(root.toJSON())).not.toContain("Kết quả thao tác chưa rõ");
+    expect(api.uploadSourceArtifact).toHaveBeenCalledTimes(1);
+  });
+
   it("requires human review and sends the server revision with NULL-customer memory disabled", async () => {
     const root = await mount();
     await selectCandidate(root);
