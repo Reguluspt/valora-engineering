@@ -70,7 +70,25 @@ function readPending(projectId: string): PendingUnknown | null {
   }
 }
 
+function pendingSuperseded(pending: PendingUnknown, data: IntakeData): boolean {
+  const recovery = data.recovery;
+  if (!recovery) return false;
+  if (pending.kind === "confirmation" && pending.confirmationPayload) {
+    if (recovery.selected_command_id === pending.commandId) return false;
+    return recovery.official_intake_closed ||
+      recovery.selection_revision > pending.confirmationPayload.expected_selection_revision;
+  }
+  if (pending.kind === "materialization" && pending.materializationPayload) {
+    if (recovery.status === "materialized" &&
+      recovery.selected_confirmation_decision_id === pending.confirmationId) return false;
+    return recovery.official_intake_closed ||
+      recovery.selection_revision > pending.materializationPayload.expected_selection_revision;
+  }
+  return false;
+}
+
 function pendingResolved(pending: PendingUnknown, data: IntakeData): boolean {
+  if (pendingSuperseded(pending, data)) return true;
   switch (pending.kind) {
     case "batch": return Boolean(data.batch && data.project.current_preliminary_import_batch_id === data.batch.id);
     case "source": return Boolean(data.source && data.source.state === "available" &&
@@ -205,6 +223,9 @@ function ResolvedPreliminaryIntake({
         if (pendingResolved(pending, next)) {
           try { sessionStorage.removeItem(pendingKey(projectId)); } catch { /* In-memory state still updates. */ }
           setUncertain(false);
+          if (pendingSuperseded(pending, next)) {
+            setNotice({ tone: "warning", text: "Quyền chọn đã thay đổi. Lệnh trước không còn áp dụng; hãy rà soát trạng thái hiện hành trước khi tiếp tục." });
+          }
         } else {
           setUncertain(true);
         }
@@ -641,7 +662,6 @@ function ResolvedPreliminaryIntake({
           <div className="valora-panel__body">
             {recovery?.status === "unresolved_legacy_history" && <p className="precase-intake-warning">Lịch sử ánh xạ cũ chưa có lựa chọn hiện hành được xác minh. Rà soát cấu trúc hiện tại hoặc phân tích lại trước khi đề xuất mới.</p>}
             {recovery?.status === "selected_recovery_required" && <p className="precase-intake-warning">Dữ liệu tạm cũ không còn chứng minh được quyền sở hữu. Cần bản cấu trúc mới, đề xuất mới và xác nhận mới.</p>}
-            {recovery?.status === "stale_lineage" && <p className="precase-intake-warning">Chỉ dùng bản cấu trúc của tệp nguồn hiện hành; đề xuất và xác nhận lại trước khi tạo dữ liệu tạm.</p>}
             {data.snapshots.length === 0 ? (
               <p>Chưa có bản phân tích cấu trúc cho tệp nguồn hiện hành.</p>
             ) : (
@@ -728,7 +748,7 @@ function ResolvedPreliminaryIntake({
         </section>
       )}
 
-      {recovery && !replaceSource && ["selected_unmaterialized", "materialized", "selected_recovery_required"].includes(recovery.status) && recovery.mapping_snapshot && (
+      {recovery && !replaceSource && ["selected_unmaterialized", "materialized"].includes(recovery.status) && recovery.mapping_snapshot && (
         <section className="precase-intake-step valora-panel" data-mapping-stage="confirmed">
           <div className="valora-panel__header">Ánh xạ đã được người dùng xác nhận</div>
           <div className="valora-panel__body">

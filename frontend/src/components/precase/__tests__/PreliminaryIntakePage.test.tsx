@@ -337,17 +337,18 @@ describe("PreliminaryIntakePage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("Ánh xạ đã được người dùng xác nhận");
   });
 
-  it("does not replay an uncertain confirmation after selection revision changes", async () => {
+  it("retires an uncertain confirmation after a newer server revision invalidates it", async () => {
     const root = await mount();
     await selectCandidate(root);
     await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
     act(() => root.root.findByProps({ className: "precase-review-check" }).findByType("input").props.onChange({ target: { checked: true } }));
     api.confirmMapping.mockRejectedValueOnce(new ApiError("network", 0));
     await act(async () => button(root, "Xác nhận ánh xạ").props.onClick());
-    serverRecovery = recovery("no_selection", { selection_revision: 8 });
+    serverRecovery = recovery("stale_lineage", { selection_revision: 8 });
     await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
     expect(api.confirmMapping).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Kết quả thao tác chưa rõ");
+    expect(JSON.stringify(root.toJSON())).toContain("Lệnh trước không còn áp dụng");
   });
 
   it("allows a newly reviewed structure to recover an occupied old selection", async () => {
@@ -356,6 +357,7 @@ describe("PreliminaryIntakePage", () => {
       mapping_snapshot: mappingSnapshot,
     });
     const root = await mount();
+    expect(JSON.stringify(root.toJSON())).not.toContain("Ánh xạ đã được người dùng xác nhận");
     await selectCandidate(root);
     await act(async () => button(root, "Tạo đề xuất ánh xạ").props.onClick());
     expect(api.proposeMapping).toHaveBeenCalledTimes(1);
@@ -443,7 +445,7 @@ describe("PreliminaryIntakePage", () => {
     expect(root.root.findByProps({ className: "precase-materialized" }).children.join("")).toContain("chưa xác định số dòng");
   });
 
-  it("does not replay an uncertain materialization after the selected revision changes", async () => {
+  it("retires an uncertain materialization after the selected revision changes", async () => {
     serverRecovery = recovery("selected_unmaterialized", {
       selected_confirmation_decision_id: "cf-1", mapping_snapshot: mappingSnapshot,
     });
@@ -456,6 +458,7 @@ describe("PreliminaryIntakePage", () => {
     });
     await act(async () => button(root, "Kiểm tra trạng thái").props.onClick());
     expect(api.materializeMapping).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(root.toJSON())).toContain("Kết quả thao tác chưa rõ");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Kết quả thao tác chưa rõ");
+    expect(JSON.stringify(root.toJSON())).toContain("Lệnh trước không còn áp dụng");
   });
 });

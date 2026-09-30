@@ -1015,6 +1015,7 @@ def test_historical_null_customer_and_true_replay_survive_binding_and_intake(api
         "/api/v1/projects/preliminary-requests", headers=_headers(seeded),
     )
     assert management.status_code == 200, management.text
+    assert management.json()["total"] == 0
     assert all(
         item["project_id"] != str(seeded["project"].id)
         for item in management.json()["items"]
