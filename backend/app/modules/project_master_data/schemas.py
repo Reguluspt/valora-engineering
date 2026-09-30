@@ -249,6 +249,24 @@ class ProjectResponse(BaseSchema):
     updated_at: datetime
 
 
+class PreliminaryRequestManagementItem(BaseSchema):
+    project_id: uuid.UUID
+    code: str
+    name: str
+    customer_id: Optional[uuid.UUID]
+    current_batch_id: Optional[uuid.UUID]
+    has_retained_batches: bool
+    current_source_artifact_id: Optional[uuid.UUID]
+    current_source_state: Optional[str]
+
+
+class PreliminaryRequestManagementPage(BaseSchema):
+    items: list[PreliminaryRequestManagementItem]
+    total: int
+    page: int
+    page_size: int
+
+
 CaseStage = Literal[
     "PRELIMINARY_REQUEST",
     "PRELIMINARY_ANALYSIS",

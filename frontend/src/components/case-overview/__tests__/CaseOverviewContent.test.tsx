@@ -49,7 +49,7 @@ describe("CaseOverviewContent", () => {
         <CaseOverviewContent
           projectName="Hồ sơ HD-01"
           projection={buildProjection()}
-          workbenchPath="/workbench/projects/project-1"
+          projectRef="project-1"
           onNavigate={navigate}
         />
       );
@@ -64,6 +64,24 @@ describe("CaseOverviewContent", () => {
     expect(primaryActions).toHaveLength(1);
     act(() => primaryActions[0].props.onClick());
     expect(navigate).toHaveBeenCalledWith("/workbench/projects/project-1");
+  });
+
+  it("opens Preliminary Intake for the server's preliminary_request_pending route key", () => {
+    const projection = buildProjection();
+    projection.next_action = {
+      kind: "PENDING", stage: "PRELIMINARY_REQUEST",
+      semantic_route_key: "preliminary_request_pending", validation_issue_id: null,
+    };
+    const navigate = vi.fn();
+    let root: ReturnType<typeof create>;
+    act(() => {
+      root = create(<CaseOverviewContent projectName="Hồ sơ HD-01"
+        projection={projection} projectRef="HD 01" onNavigate={navigate} />);
+    });
+    const primary = root.root.findAllByProps({ "data-primary-action": true });
+    expect(primary).toHaveLength(1);
+    act(() => primary[0].props.onClick());
+    expect(navigate).toHaveBeenCalledWith("/workbench/projects/HD%2001/preliminary-intake");
   });
 
   it("keeps warning separate and does not invent a route for a blocker", () => {
@@ -89,7 +107,7 @@ describe("CaseOverviewContent", () => {
         <CaseOverviewContent
           projectName="Hồ sơ HD-01"
           projection={projection}
-          workbenchPath="/workbench/projects/project-1"
+          projectRef="project-1"
           onNavigate={vi.fn()}
         />
       );
@@ -111,7 +129,7 @@ describe("CaseOverviewContent", () => {
         <CaseOverviewContent
           projectName="Hồ sơ HD-01"
           projection={projection}
-          workbenchPath="/workbench/projects/project-1"
+          projectRef="project-1"
           onNavigate={vi.fn()}
         />
       );
@@ -136,7 +154,7 @@ describe("CaseOverviewContent", () => {
         <CaseOverviewContent
           projectName="Hồ sơ HD-01"
           projection={projection}
-          workbenchPath="/workbench/projects/project-1"
+          projectRef="project-1"
           onNavigate={vi.fn()}
         />
       );

@@ -5,6 +5,7 @@ import {
   projectWorkbenchPath,
   projectNccSelectionPath,
   projectDocumentsPath,
+  projectPreliminaryIntakePath,
   splitProjectRoute,
 } from "../../contracts/valoraV23";
 import type { AccountContext } from "../../api/auth";
@@ -52,11 +53,21 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
         <nav aria-label="Điều hướng chính">
           <ul className="nav-links">
             {navItem(
+              APP_ROUTES.preliminaryRequestManagement,
+              "Quản lý yêu cầu sơ bộ",
+              currentPath === APP_ROUTES.preliminaryRequestManagement
+                || currentPath === APP_ROUTES.preliminaryRequestCreate,
+            )}
+            {navItem(
               workbenchPath,
               t("nav.workbench"),
               projectRoute?.view === "workbench"
-                || currentPath.split("?", 1)[0] === APP_ROUTES.projectList
-                || currentPath === APP_ROUTES.preliminaryRequestCreate,
+                || currentPath.split("?", 1)[0] === APP_ROUTES.projectList,
+            )}
+            {projectRoute?.view === "preliminary-intake" && navItem(
+              projectPreliminaryIntakePath(projectRoute.projectRef),
+              "Upload & Mapping Excel",
+              true,
             )}
             {projectRoute && navItem(
               projectOverviewPath(projectRoute.projectRef),

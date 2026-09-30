@@ -958,7 +958,7 @@ def test_service_current_batch_and_customer_memory_fail_closed(mapping_db):
     _error_code(exc, 409, "mapping_batch_not_current")
 
 
-def test_historical_null_customer_and_true_replay_survive_binding_and_intake(mapping_db):
+def test_historical_null_customer_and_true_replay_survive_binding_and_intake(api_client, mapping_db):
     seeded = _api_seed(mapping_db)
     proposal_key, confirmation_key, usage_key = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     proposal = propose_column_mapping(
@@ -1011,6 +1011,14 @@ def test_historical_null_customer_and_true_replay_survive_binding_and_intake(map
         idempotency_key="g11g-intake-after-bind", confirmed=True,
     )
     assert mapping_db.query(ProjectOfficialIntakeCommit).count() == 1
+    management = api_client.get(
+        "/api/v1/projects/preliminary-requests", headers=_headers(seeded),
+    )
+    assert management.status_code == 200, management.text
+    assert all(
+        item["project_id"] != str(seeded["project"].id)
+        for item in management.json()["items"]
+    )
     state_after_intake = get_mapping_recovery_state(
         mapping_db, actor=seeded["user"], org_id=seeded["org"].id,
         project_id=seeded["project"].id, batch_id=seeded["batch"].id,
