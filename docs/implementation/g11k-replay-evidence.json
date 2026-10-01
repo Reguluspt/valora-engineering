@@ -1,0 +1,84 @@
+{
+  "outcomes": {
+    "analysis_finalize": {
+      "body": {
+        "expected_project_version": 2,
+        "id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+        "import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "version": 1
+      },
+      "status": 201
+    },
+    "customer_bind": {
+      "body": {
+        "committed_project_version": 3,
+        "expected_project_version": 2,
+        "previous_import_batch_id": null,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "receipt_id": "e50f6c27-2f93-4da5-a4b1-2ac8d43dfd8a",
+        "target_customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+        "target_import_batch_id": null
+      },
+      "status": 201
+    },
+    "mapping_confirmation": {
+      "body": {
+        "decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "memory_scope": "none",
+        "outcome": "accepted",
+        "profile_id": null,
+        "proposal_decision_id": "c3ffb9c8-aa86-4148-9480-6ad2164867f8",
+        "selection_revision": 1,
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+      },
+      "status": 201
+    },
+    "mapping_materialization": {
+      "body": {
+        "confirmation_decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "materialized_asset_row_count": 12,
+        "selection_revision": 2,
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9",
+        "usage_id": "9bb57122-a613-4b41-915a-e214fa7b5fb7"
+      },
+      "status": 201
+    },
+    "official_intake": {
+      "body": {
+        "customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+        "id": "d7eacc05-ec2e-4d3c-bd5b-a9882620c647",
+        "preliminary_result_artifact_id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+        "preliminary_result_version": 1,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "project_version_before": 3
+      },
+      "status": 201
+    },
+    "result_generate": {
+      "body": {
+        "content_checksum_sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+        "expected_project_version": 2,
+        "id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+        "preliminary_analysis_snapshot_id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "version": 1
+      },
+      "status": 201
+    }
+  },
+  "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+  "unchanged_case_fields": {
+    "current_preliminary_analysis_snapshot_id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+    "current_preliminary_import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+    "current_preliminary_result_artifact_id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+    "current_preliminary_result_version": 1,
+    "official_intake_commit_id": "d7eacc05-ec2e-4d3c-bd5b-a9882620c647",
+    "project_row_version": 3
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "intake_count": 1,
+  "intake_id": "d7eacc05-ec2e-4d3c-bd5b-a9882620c647",
+  "organization_id": "349bf377-be1b-4e01-9b41-f4ee14be0420",
+  "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+  "result_count": 1,
+  "result_id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+  "result_version": 1,
+  "sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+  "size": 5855,
+  "storage_key_present_in_database": true,
+  "store_type": "S3ObjectStorage"
+}

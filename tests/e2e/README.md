@@ -1,0 +1,13 @@
+# G1.1K real-stack closure harness
+
+This harness uses synthetic identities and workbook data. It sends real browser and API requests to the local Compose frontend, FastAPI, PostgreSQL and MinIO. It does not intercept responses or write lifecycle facts through SQL.
+
+1. Start the local stack from the repository root: `docker compose -p valora-g11k -f docker-compose.yml -f tests/e2e/compose.g11k.yml up -d --build`. The isolated MinIO endpoint is `http://localhost:59000` for host-side PostgreSQL/S3 tests.
+2. Apply the accepted migrations in the backend container: `docker exec valora-g11k-backend alembic upgrade head`. The expected sole head is `e2f3a4b5c6d7`.
+3. Set `G11K_SYNTHETIC_PASSWORD` in your local environment to a new synthetic password of at least 12 characters. Do not commit it. Copy `bootstrap_g11k.py` into the backend container and run it with that environment variable. It creates only synthetic tenants, users and an ACTIVE Customer, using the migrated standard roles; it grants no permissions.
+4. Install Playwright and a Chromium browser locally if needed. Set `G11K_BROWSER_CHANNEL=chrome` when using system Chrome. Set `G11K_PROJECT_CODE` to a unique synthetic code for a fresh dossier. Run `run_g11k_live.py` with Python 3.12 or newer from the repository root.
+5. Run `check_g11k_replay.py` and `check_g11k_negative.py` against the resulting dossier. The negative verifier reads `G11K_PROJECT_CODE`; the replay verifier reads `docs/implementation/g11k-runtime-evidence.json`.
+6. For read-only storage proof, copy `check_g11k_storage.py` into the backend container and run it with `G11K_PROJECT_ID` from the runtime JSON. Then run `generate_g11k_manifests.py` to verify and hash the 17 real-stack images and downloaded Result.
+7. For host-side PostgreSQL/S3 tests, use the migrated isolated test database and `S3_ENDPOINT_URL=http://localhost:59000`. Stage the exact candidate paths, then run `generate_g11k_review_manifest.py`; it stages the changed-file list, review JSON and SHA-256 sums. Hash verification uses committed Git blob bytes (`git show HEAD:path`), which avoids Windows checkout line-ending conversion. Record `git rev-parse HEAD` and the SHA-256 of the committed sums file in both independent review transcripts and the Draft PR. A commit cannot contain its own SHA in a file inside that commit.
+
+The committed final dossier used `G11K-E2E-20261001-007`. Its command receipts, Case State checkpoints, replay IDs, storage digest and screenshot hashes are in `docs/implementation/`. Each new full browser run replaces those candidate artifacts; review only one frozen Git snapshot at a time. The temporary pre-RBAC blocker image and early smoke script are preserved in the external recovery snapshot, not in this candidate.

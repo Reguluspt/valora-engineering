@@ -38,6 +38,7 @@ from app.modules.project_master_data.models import (
     Project,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
+    ProjectOfficialIntakeCommit,
 )
 
 __all__ = [
@@ -222,6 +223,20 @@ def _assert_transition(current: str, new: SourceArtifactState) -> None:
     allowed = VALID_TRANSITIONS.get(cur, frozenset())
     if new not in allowed:
         raise HTTPException(status_code=409, detail="Chuyển trạng thái nguồn không hợp lệ.")
+
+
+def _official_intake_closed(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID) -> bool:
+    return db.query(ProjectOfficialIntakeCommit.id).filter(
+        ProjectOfficialIntakeCommit.organization_id == org_id,
+        ProjectOfficialIntakeCommit.project_id == project_id,
+    ).first() is not None
+
+
+def _closed_source_error() -> HTTPException:
+    return HTTPException(status_code=409, detail={
+        "error_code": "source_official_intake_closed",
+        "detail": "Hồ sơ đã chuyển sang thẩm định chính thức.",
+    })
 
 
 def _audit(
@@ -448,6 +463,8 @@ def upload_source_artifact(
     )
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
+    if _official_intake_closed(db, org_id=org_id, project_id=project_id):
+        raise _closed_source_error()
 
     sanitized = sanitize_filename(file.filename or "source.xlsx")
     ext = ""
@@ -657,6 +674,21 @@ def upload_source_artifact(
             if art is None:
                 raise HTTPException(status_code=404, detail="Source artifact not found")
             return art
+
+        if _official_intake_closed(db, org_id=org_id, project_id=project_id):
+            _assert_transition(art.state, SourceArtifactState.ORPHANED)
+            art.state = SourceArtifactState.ORPHANED.value
+            art.orphaned_at = _utcnow()
+            art.failure_code = "official_intake_closed"
+            _audit(
+                db, org_id=org_id, actor_id=current_user.id,
+                event_name="ImportSourceArtifactOrphaned", entity_id=art.id,
+                payload={"import_batch_id": str(batch_id), "generation": art.generation,
+                         "reason": "official_intake_closed"},
+                correlation_id=correlation_id,
+            )
+            db.commit()
+            raise _closed_source_error()
 
         # Stale finish: newer available current already wins — this pending → orphan path
         if batch.current_source_artifact_id:
@@ -1024,6 +1056,26 @@ def reconcile_source_artifacts(
                 if ref_check(work, art):
                     if work.in_transaction():
                         work.rollback()
+                    continue
+
+                if art.state == SourceArtifactState.PENDING.value and _official_intake_closed(
+                    work, org_id=org_id, project_id=art.project_id,
+                ):
+                    _assert_transition(art.state, SourceArtifactState.ORPHANED)
+                    art.state = SourceArtifactState.ORPHANED.value
+                    art.orphaned_at = _utcnow()
+                    art.failure_code = "official_intake_closed"
+                    _audit(
+                        work, org_id=org_id, actor_id=actor_id,
+                        event_name="ImportSourceArtifactOrphaned", entity_id=art.id,
+                        payload={"import_batch_id": str(art.import_batch_id),
+                                 "generation": art.generation,
+                                 "reason": "official_intake_closed"},
+                        correlation_id=None, command_name="ReconcileImportSourceArtifact",
+                    )
+                    work.commit()
+                    committed = True
+                    marked_orphan += 1
                     continue
 
                 created_ts = _as_utc_timestamp(art.created_at, fallback=now_ts)

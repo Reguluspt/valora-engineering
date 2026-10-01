@@ -1,0 +1,1049 @@
+{
+  "authenticated_http_errors": [],
+  "case_state_checkpoints": {
+    "analysis_finalized": {
+      "kind": "PENDING",
+      "semantic_route_key": "preliminary_ready_pending",
+      "stage": "PRELIMINARY_READY",
+      "validation_issue_id": null
+    },
+    "created_request": {
+      "kind": "PENDING",
+      "semantic_route_key": "preliminary_request_pending",
+      "stage": "PRELIMINARY_REQUEST",
+      "validation_issue_id": null
+    },
+    "customer_bound": {
+      "kind": "PENDING",
+      "semantic_route_key": "official_intake_pending",
+      "stage": "OFFICIAL_INTAKE",
+      "validation_issue_id": null
+    },
+    "mapping_materialized": {
+      "kind": "PENDING",
+      "semantic_route_key": "preliminary_analysis_pending",
+      "stage": "PRELIMINARY_ANALYSIS",
+      "validation_issue_id": null
+    },
+    "official_intake_committed": {
+      "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+      "semantic_route_key": null,
+      "stage": null,
+      "validation_issue_id": null
+    },
+    "result_generated": {
+      "kind": "PENDING",
+      "semantic_route_key": "official_intake_pending",
+      "stage": "OFFICIAL_INTAKE",
+      "validation_issue_id": null
+    },
+    "source_uploaded": {
+      "kind": "PENDING",
+      "semantic_route_key": "preliminary_analysis_pending",
+      "stage": "PRELIMINARY_ANALYSIS",
+      "validation_issue_id": null
+    }
+  },
+  "commands": {
+    "analysis_finalize": {
+      "payload": {
+        "confirmed": true,
+        "expected_project_version": 2,
+        "idempotency_key": "g11i-cfe38f72-6152-42bc-94e8-18704ab7bf0c",
+        "import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "line_manifest": [
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 100000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy tiện CNC mẫu A",
+            "proposed_unit_price": 90000,
+            "quantity": 2,
+            "source_row_number": 2,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 101000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy phay CNC mẫu B",
+            "proposed_unit_price": 91000,
+            "quantity": 1,
+            "source_row_number": 3,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 102000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy nén khí mẫu C",
+            "proposed_unit_price": 92000,
+            "quantity": 3,
+            "source_row_number": 4,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 103000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Băng tải mẫu D",
+            "proposed_unit_price": 93000,
+            "quantity": 1,
+            "source_row_number": 5,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 104000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Robot hàn mẫu E",
+            "proposed_unit_price": 94000,
+            "quantity": 2,
+            "source_row_number": 6,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 105000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy đo mẫu F",
+            "proposed_unit_price": 95000,
+            "quantity": 4,
+            "source_row_number": 7,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 106000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Tủ điện mẫu G",
+            "proposed_unit_price": 96000,
+            "quantity": 2,
+            "source_row_number": 8,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 107000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Bơm công nghiệp mẫu H",
+            "proposed_unit_price": 97000,
+            "quantity": 3,
+            "source_row_number": 9,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 108000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy phát điện mẫu I",
+            "proposed_unit_price": 98000,
+            "quantity": 1,
+            "source_row_number": 10,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 109000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Xe nâng mẫu J",
+            "proposed_unit_price": 99000,
+            "quantity": 2,
+            "source_row_number": 11,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 110000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Lò sấy mẫu K",
+            "proposed_unit_price": 100000,
+            "quantity": 1,
+            "source_row_number": 12,
+            "transport_percentage": 2
+          },
+          {
+            "accepted_price_basis": "Giá tham chiếu tổng hợp đã rà soát",
+            "confirmed_reference_price": 111000,
+            "has_unresolved_blocking_line": false,
+            "human_line_confirmed": true,
+            "identity": "Máy đóng gói mẫu L",
+            "proposed_unit_price": 101000,
+            "quantity": 1,
+            "source_row_number": 13,
+            "transport_percentage": 2
+          }
+        ],
+        "mapping_decision_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "mapping_decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "mapping_profile_usage_id": "9bb57122-a613-4b41-915a-e214fa7b5fb7",
+        "profile_usage_mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+      },
+      "response": {
+        "expected_project_version": 2,
+        "id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+        "import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "version": 1
+      },
+      "status": 201
+    },
+    "analyze_structure": {
+      "response": {
+        "adapter_name": "xlsx-openpyxl",
+        "adapter_version": "s13-pr-002-v2",
+        "analysis_digest_sha256": "30f6b06c9d668818a000240b43c540e1ca192452ea1aeba85bd3dddd86bee2e6",
+        "candidate_count": 1,
+        "created_at": "2026-10-01T12:03:04.183473Z",
+        "created_by_user_id": "887b7a5f-ce2f-4277-9199-282a9513175d",
+        "disposition": "proposed",
+        "id": "d69332ea-1c97-4812-8e97-199fafb425b9",
+        "import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "rule_version": "s13-pr-003-v3",
+        "snapshot_version": 1,
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "source_checksum_sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77",
+        "structure_payload": {
+          "candidate_count": 1,
+          "candidates": [
+            {
+              "boundary_flags": [],
+              "boundary_reason": "sheet_end",
+              "candidate_table_bounds": {
+                "max_column": 7,
+                "max_row": 13,
+                "min_column": 1,
+                "min_row": 1
+              },
+              "confidence": 0.95,
+              "data_start_row": 2,
+              "header_end_row": 1,
+              "header_labels": [
+                "STT",
+                "Tên tài sản",
+                "Đặc điểm",
+                "ĐVT",
+                "Số lượng",
+                "Đơn giá",
+                "Thành tiền"
+              ],
+              "header_start_row": 1,
+              "reasons": [
+                "header_density",
+                "business_header_vocabulary",
+                "consistent_subsequent_rows",
+                "serial_number_pattern",
+                "mixed_data_types"
+              ],
+              "sheet_name": "Danh muc tai san"
+            }
+          ],
+          "disposition": "proposed",
+          "disposition_reasons": [],
+          "drift_reference": null,
+          "proposed_candidate_index": 0,
+          "row_classification": {
+            "candidate_table_bounds": {
+              "max_column": 7,
+              "max_row": 13,
+              "min_column": 1,
+              "min_row": 1
+            },
+            "counts": {
+              "asset": 12,
+              "empty": 0,
+              "note": 0,
+              "section": 0,
+              "subtotal": 0,
+              "total": 0,
+              "unresolved": 0
+            },
+            "data_start_row": 2,
+            "physical_rows_classified": 12,
+            "preview": [
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 2
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 3
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 4
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 5
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 6
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 7
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 8
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 9
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 10
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 11
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 12
+              },
+              {
+                "confidence": 0.94,
+                "reasons": [
+                  "serial_number_and_content"
+                ],
+                "row_class": "asset",
+                "row_number": 13
+              }
+            ],
+            "preview_truncated": false,
+            "sheet_name": "Danh muc tai san"
+          },
+          "rule_config": {
+            "ambiguity_margin": 0.08,
+            "candidate_limit": 25,
+            "clear_threshold": 0.62,
+            "column_evidence_sample": 24,
+            "data_sample_rows": 24,
+            "empty_column_separator_run": 1,
+            "header_group_min_columns": 3,
+            "header_group_min_families": 3,
+            "header_group_start_lookback": 2,
+            "header_scan_rows": 200,
+            "late_blank_header_edge_extension": 1,
+            "max_header_span": 3,
+            "post_total_tail": 3,
+            "repeated_core_family_threshold": 2,
+            "row_preview_limit": 200,
+            "trailing_note_unresolved_run": 3,
+            "vertical_blank_boundary_run": 2,
+            "vertical_unresolved_boundary_run": 2
+          },
+          "rule_version": "s13-pr-003-v3",
+          "source": {
+            "adapter_name": "xlsx-openpyxl",
+            "adapter_version": "s13-pr-002-v2",
+            "detected_format": "xlsx",
+            "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+            "source_checksum_sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77",
+            "source_generation": 1
+          }
+        }
+      },
+      "status": 201
+    },
+    "create_batch": {
+      "payload": {
+        "source_filename": "g11k_synthetic_assets.xlsx",
+        "source_sheet_name": null
+      },
+      "response": {
+        "created_at": "2026-10-01T12:03:03.173858Z",
+        "id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "invalid_rows": 0,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "source_filename": "g11k_synthetic_assets.xlsx",
+        "source_sheet_name": null,
+        "status": "created",
+        "total_rows": 0,
+        "updated_at": "2026-10-01T12:03:03.173861Z",
+        "valid_rows": 0,
+        "warning_rows": 0
+      },
+      "status": 201
+    },
+    "create_project": {
+      "payload": {
+        "code": "G11K-E2E-20261001-007",
+        "customer_id": null,
+        "description": "Dữ liệu tổng hợp dành riêng cho kiểm chứng E2E G1.1K.",
+        "name": "Danh mục thiết bị tổng hợp G1.1K"
+      },
+      "response": {
+        "code": "G11K-E2E-20261001-007",
+        "created_at": "2026-10-01T12:03:02.922099Z",
+        "current_preliminary_import_batch_id": null,
+        "customer_id": null,
+        "description": "Dữ liệu tổng hợp dành riêng cho kiểm chứng E2E G1.1K.",
+        "fee_amount": 0.0,
+        "fee_currency_id": null,
+        "id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "knowledge_status": "pending",
+        "name": "Danh mục thiết bị tổng hợp G1.1K",
+        "organization_id": "349bf377-be1b-4e01-9b41-f4ee14be0420",
+        "row_version": 1,
+        "signer_profile_id": null,
+        "status": "draft",
+        "updated_at": "2026-10-01T12:03:02.922102Z"
+      },
+      "status": 201
+    },
+    "customer_bind": {
+      "payload": {
+        "customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+        "expected_project_version": 2,
+        "idempotency_key": "g11j-4387f983-d402-4fe2-81e4-2f84dc55b4cd"
+      },
+      "response": {
+        "committed_project_version": 3,
+        "expected_project_version": 2,
+        "previous_import_batch_id": null,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "receipt_id": "e50f6c27-2f93-4da5-a4b1-2ac8d43dfd8a",
+        "target_customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+        "target_import_batch_id": null
+      },
+      "status": 201
+    },
+    "mapping_confirmation": {
+      "payload": {
+        "command_id": "18bca26b-b3cf-4495-9d8c-163ca1c5bc93",
+        "expected_selection_revision": 0,
+        "mapping_snapshot": {
+          "candidate": {
+            "candidate_index": 0,
+            "data_start_row": 2,
+            "header_end_row": 1,
+            "header_start_row": 1,
+            "max_column": 7,
+            "max_row": 13,
+            "min_column": 1,
+            "min_row": 1,
+            "sheet_name": "Danh muc tai san"
+          },
+          "contract_version": "s13-pr-004-v1",
+          "fields": [
+            {
+              "original_header": "STT",
+              "semantic_role": "row_number",
+              "source_column_index": 1,
+              "source_column_letter": "A"
+            },
+            {
+              "original_header": "Tên tài sản",
+              "semantic_role": "raw_asset_name",
+              "source_column_index": 2,
+              "source_column_letter": "B"
+            },
+            {
+              "original_header": "Đặc điểm",
+              "semantic_role": "raw_description",
+              "source_column_index": 3,
+              "source_column_letter": "C"
+            },
+            {
+              "original_header": "ĐVT",
+              "semantic_role": "unit",
+              "source_column_index": 4,
+              "source_column_letter": "D"
+            },
+            {
+              "original_header": "Số lượng",
+              "semantic_role": "quantity",
+              "source_column_index": 5,
+              "source_column_letter": "E"
+            },
+            {
+              "original_header": "Đơn giá",
+              "semantic_role": "customer_unit_price",
+              "source_column_index": 6,
+              "source_column_letter": "F"
+            },
+            {
+              "original_header": "Thành tiền",
+              "semantic_role": "customer_amount",
+              "source_column_index": 7,
+              "source_column_letter": "G"
+            }
+          ],
+          "source": {
+            "checksum_sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77",
+            "generation": 1,
+            "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e"
+          },
+          "structure": {
+            "analysis_digest_sha256": "30f6b06c9d668818a000240b43c540e1ca192452ea1aeba85bd3dddd86bee2e6",
+            "rule_version": "s13-pr-003-v3",
+            "snapshot_version": 1,
+            "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+          },
+          "template_fingerprint_sha256": "5ed29a253f0a2aa699ea4e57ebdb17980d0b1300709a43e9f8d7ce0f3a5832d0"
+        },
+        "memory_scope": "none",
+        "proposal_decision_id": "c3ffb9c8-aa86-4148-9480-6ad2164867f8",
+        "supersedes_profile_id": null
+      },
+      "recovery_after_reload": {
+        "batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "current_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+        "current_source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "current_staging_usage_id": null,
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "mapping_snapshot": {
+          "candidate": {
+            "candidate_index": 0,
+            "data_start_row": 2,
+            "header_end_row": 1,
+            "header_start_row": 1,
+            "max_column": 7,
+            "max_row": 13,
+            "min_column": 1,
+            "min_row": 1,
+            "sheet_name": "Danh muc tai san"
+          },
+          "contract_version": "s13-pr-004-v1",
+          "fields": [
+            {
+              "original_header": "STT",
+              "semantic_role": "row_number",
+              "source_column_index": 1,
+              "source_column_letter": "A"
+            },
+            {
+              "original_header": "Tên tài sản",
+              "semantic_role": "raw_asset_name",
+              "source_column_index": 2,
+              "source_column_letter": "B"
+            },
+            {
+              "original_header": "Đặc điểm",
+              "semantic_role": "raw_description",
+              "source_column_index": 3,
+              "source_column_letter": "C"
+            },
+            {
+              "original_header": "ĐVT",
+              "semantic_role": "unit",
+              "source_column_index": 4,
+              "source_column_letter": "D"
+            },
+            {
+              "original_header": "Số lượng",
+              "semantic_role": "quantity",
+              "source_column_index": 5,
+              "source_column_letter": "E"
+            },
+            {
+              "original_header": "Đơn giá",
+              "semantic_role": "customer_unit_price",
+              "source_column_index": 6,
+              "source_column_letter": "F"
+            },
+            {
+              "original_header": "Thành tiền",
+              "semantic_role": "customer_amount",
+              "source_column_index": 7,
+              "source_column_letter": "G"
+            }
+          ],
+          "source": {
+            "checksum_sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77",
+            "generation": 1,
+            "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e"
+          },
+          "structure": {
+            "analysis_digest_sha256": "30f6b06c9d668818a000240b43c540e1ca192452ea1aeba85bd3dddd86bee2e6",
+            "rule_version": "s13-pr-003-v3",
+            "snapshot_version": 1,
+            "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+          },
+          "template_fingerprint_sha256": "5ed29a253f0a2aa699ea4e57ebdb17980d0b1300709a43e9f8d7ce0f3a5832d0"
+        },
+        "materialized_asset_row_count": null,
+        "materialized_mapping_digest_sha256": null,
+        "memory_scope": "none",
+        "official_intake_closed": false,
+        "profile_id": null,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "recent_proposals": [
+          {
+            "command_id": "9aef4d98-885d-40ba-90c0-fa0f5141f296",
+            "proposal_decision_id": "c3ffb9c8-aa86-4148-9480-6ad2164867f8",
+            "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+            "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9",
+            "terminal_outcomes": [
+              {
+                "command_id": "18bca26b-b3cf-4495-9d8c-163ca1c5bc93",
+                "decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+                "outcome": "accepted"
+              }
+            ]
+          }
+        ],
+        "selected_candidate": {
+          "candidate_index": 0,
+          "data_start_row": 2,
+          "header_end_row": 1,
+          "header_start_row": 1,
+          "max_column": 7,
+          "max_row": 13,
+          "min_column": 1,
+          "min_row": 1,
+          "sheet_name": "Danh muc tai san"
+        },
+        "selected_command_id": "18bca26b-b3cf-4495-9d8c-163ca1c5bc93",
+        "selected_confirmation_decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "selected_outcome": "accepted",
+        "selected_source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "selected_structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9",
+        "selected_usage_id": null,
+        "selection_revision": 1,
+        "status": "selected_unmaterialized"
+      },
+      "response": {
+        "decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "memory_scope": "none",
+        "outcome": "accepted",
+        "profile_id": null,
+        "proposal_decision_id": "c3ffb9c8-aa86-4148-9480-6ad2164867f8",
+        "selection_revision": 1,
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+      },
+      "status": 201
+    },
+    "mapping_materialization": {
+      "payload": {
+        "command_id": "f96038d6-782c-416d-bc07-847abbf8fd84",
+        "confirmation_decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "expected_selection_revision": 1
+      },
+      "response": {
+        "confirmation_decision_id": "184c74d1-8eb5-4aed-bc87-8292cc34804a",
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "materialized_asset_row_count": 12,
+        "selection_revision": 2,
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9",
+        "usage_id": "9bb57122-a613-4b41-915a-e214fa7b5fb7"
+      },
+      "status": 201
+    },
+    "mapping_proposal": {
+      "payload": {
+        "candidate_index": 0,
+        "command_id": "9aef4d98-885d-40ba-90c0-fa0f5141f296",
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+      },
+      "response": {
+        "decision_id": "c3ffb9c8-aa86-4148-9480-6ad2164867f8",
+        "exact_profile_id": null,
+        "mapping_digest_sha256": "3a0a154a1fe1ad789d3495907d75bdbefdd2cd002525c8771798210961f46312",
+        "mapping_snapshot": {
+          "candidate": {
+            "candidate_index": 0,
+            "data_start_row": 2,
+            "header_end_row": 1,
+            "header_start_row": 1,
+            "max_column": 7,
+            "max_row": 13,
+            "min_column": 1,
+            "min_row": 1,
+            "sheet_name": "Danh muc tai san"
+          },
+          "contract_version": "s13-pr-004-v1",
+          "fields": [
+            {
+              "original_header": "STT",
+              "semantic_role": "row_number",
+              "source_column_index": 1,
+              "source_column_letter": "A"
+            },
+            {
+              "original_header": "Tên tài sản",
+              "semantic_role": "raw_asset_name",
+              "source_column_index": 2,
+              "source_column_letter": "B"
+            },
+            {
+              "original_header": "Đặc điểm",
+              "semantic_role": "raw_description",
+              "source_column_index": 3,
+              "source_column_letter": "C"
+            },
+            {
+              "original_header": "ĐVT",
+              "semantic_role": "unit",
+              "source_column_index": 4,
+              "source_column_letter": "D"
+            },
+            {
+              "original_header": "Số lượng",
+              "semantic_role": "quantity",
+              "source_column_index": 5,
+              "source_column_letter": "E"
+            },
+            {
+              "original_header": "Đơn giá",
+              "semantic_role": "customer_unit_price",
+              "source_column_index": 6,
+              "source_column_letter": "F"
+            },
+            {
+              "original_header": "Thành tiền",
+              "semantic_role": "customer_amount",
+              "source_column_index": 7,
+              "source_column_letter": "G"
+            }
+          ],
+          "source": {
+            "checksum_sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77",
+            "generation": 1,
+            "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e"
+          },
+          "structure": {
+            "analysis_digest_sha256": "30f6b06c9d668818a000240b43c540e1ca192452ea1aeba85bd3dddd86bee2e6",
+            "rule_version": "s13-pr-003-v3",
+            "snapshot_version": 1,
+            "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+          },
+          "template_fingerprint_sha256": "5ed29a253f0a2aa699ea4e57ebdb17980d0b1300709a43e9f8d7ce0f3a5832d0"
+        },
+        "organization_template_id": null,
+        "review_reasons": [
+          "human_confirmation_required"
+        ],
+        "review_required": true,
+        "similar_profile_ids": [],
+        "source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+        "structure_snapshot_id": "d69332ea-1c97-4812-8e97-199fafb425b9"
+      },
+      "status": 201
+    },
+    "official_intake": {
+      "payload": {
+        "confirmed": true,
+        "expected_preliminary_result_version": 1,
+        "expected_project_version": 3,
+        "idempotency_key": "g11j-4ab65b43-dabb-4802-be63-50b615884580",
+        "preliminary_result_artifact_id": "eb711804-8ed8-5017-a888-5e88551a8b2c"
+      },
+      "response": {
+        "customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+        "id": "d7eacc05-ec2e-4d3c-bd5b-a9882620c647",
+        "preliminary_result_artifact_id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+        "preliminary_result_version": 1,
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "project_version_before": 3
+      },
+      "status": 201
+    },
+    "result_generate": {
+      "payload": {
+        "confirmed": true,
+        "expected_project_version": 2,
+        "idempotency_key": "g11j-4220ca01-44ca-4ce6-8f09-c95b19945c14",
+        "preliminary_analysis_snapshot_id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80"
+      },
+      "response": {
+        "content_checksum_sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+        "expected_project_version": 2,
+        "id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+        "preliminary_analysis_snapshot_id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+        "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+        "version": 1
+      },
+      "status": 201
+    }
+  },
+  "post_intake_case_state": {
+    "blockers": [],
+    "capabilities": [
+      {
+        "available": true,
+        "provider_key": "preliminary_request_v2",
+        "stage": "PRELIMINARY_REQUEST",
+        "version": "pr01-prefix-v2"
+      },
+      {
+        "available": true,
+        "provider_key": "preliminary_analysis_v2",
+        "stage": "PRELIMINARY_ANALYSIS",
+        "version": "pr01-prefix-v2"
+      },
+      {
+        "available": true,
+        "provider_key": "preliminary_ready_v2",
+        "stage": "PRELIMINARY_READY",
+        "version": "pr01-prefix-v2"
+      },
+      {
+        "available": true,
+        "provider_key": "official_intake_commit_v1",
+        "stage": "OFFICIAL_INTAKE",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "ASSET_REVIEW",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "ASSET_WORKBENCH",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "PRICE_EVIDENCE",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "SUPPLIER_QUOTES",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "SUPPLIER_SELECTION",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "APPRAISAL_RESULT",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "DOCUMENT_WORKSPACE",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "DOCUMENT_SYNC_REVIEW",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "PUBLISHING_PREPARATION",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "PUBLISHING_EXCEPTION_REVIEW",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "PUBLISHING_CONFIRMATION",
+        "version": "pr01-prefix-v1"
+      },
+      {
+        "available": false,
+        "provider_key": null,
+        "stage": "PUBLISHED",
+        "version": "pr01-prefix-v1"
+      }
+    ],
+    "case_version": "9f7292cea1f36b4680d575454efa4b77d6c92ea2d380713d485f29cfdfa36fb8",
+    "current_stage": "OFFICIAL_INTAKE",
+    "next_action": {
+      "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+      "semantic_route_key": null,
+      "stage": null,
+      "validation_issue_id": null
+    },
+    "preliminary": {
+      "current_preliminary_analysis_snapshot_id": "be7ffd9b-4cc2-4486-ae11-7fbdab130e80",
+      "current_preliminary_analysis_version": 1,
+      "current_preliminary_import_batch_id": "64d54c2c-857c-4a6c-9b5d-41630ede701c",
+      "current_preliminary_result_artifact_id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+      "current_preliminary_result_version": 1,
+      "current_source_artifact_id": "3db634a7-51a5-4f68-98d7-24f43128085e",
+      "customer_id": "6610cf3c-a355-44e6-9c54-f1413bbff47b",
+      "official_intake_commit_id": "d7eacc05-ec2e-4d3c-bd5b-a9882620c647",
+      "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+      "project_row_version": 3
+    },
+    "stages": [
+      {
+        "provider_key": "preliminary_request_v2",
+        "result": "COMPLETE",
+        "stage": "PRELIMINARY_REQUEST"
+      },
+      {
+        "provider_key": "preliminary_analysis_v2",
+        "result": "COMPLETE",
+        "stage": "PRELIMINARY_ANALYSIS"
+      },
+      {
+        "provider_key": "preliminary_ready_v2",
+        "result": "COMPLETE",
+        "stage": "PRELIMINARY_READY"
+      },
+      {
+        "provider_key": "official_intake_commit_v1",
+        "result": "COMPLETE",
+        "stage": "OFFICIAL_INTAKE"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "ASSET_REVIEW"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "ASSET_WORKBENCH"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "PRICE_EVIDENCE"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "SUPPLIER_QUOTES"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "SUPPLIER_SELECTION"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "APPRAISAL_RESULT"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "DOCUMENT_WORKSPACE"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "DOCUMENT_SYNC_REVIEW"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "PUBLISHING_PREPARATION"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "PUBLISHING_EXCEPTION_REVIEW"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "PUBLISHING_CONFIRMATION"
+      },
+      {
+        "provider_key": null,
+        "result": "NOT_AVAILABLE",
+        "stage": "PUBLISHED"
+      }
+    ],
+    "stale": [],
+    "warnings": []
+  },
+  "project_code": "G11K-E2E-20261001-007",
+  "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+  "result_download": {
+    "sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+    "size": 5855
+  },
+  "result_metadata": {
+    "content_checksum_sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "created_at": "2026-10-01T12:03:09.684645Z",
+    "file_size_bytes": 5855,
+    "id": "eb711804-8ed8-5017-a888-5e88551a8b2c",
+    "original_filename": "ket-qua-so-bo-eb711804-8ed8-5017-a888-5e88551a8b2c.xlsx",
+    "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+    "source_snapshot_sha256": "10205fd2b71d58dc9c6982c389e0f8abf614745daf971e4ac76f833fbbbf25dc",
+    "version": 1
+  }
+}

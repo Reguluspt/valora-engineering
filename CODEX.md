@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-01 (G1.1J certified; RBAC-001 candidate; G1.1K paused)
+**Last reconciled:** 2026-10-01 (G1.1J and RBAC-001 certified; G1.1K candidate)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -113,13 +113,13 @@ at `181c48ce007d8885c49c0dbd52040a38fbaf8cec`. VF0 Frontend Visual Fidelity Alig
 MERGED/CERTIFIED through PR #65 and exact-main CI #520 at
 `e87f645f8ac44bfb7dd5d2688dbaa4e7411873a6`. G1.1J Result & Official Intake UX is
 MERGED/CERTIFIED through PR #66 and exact-main CI #523 at
-`21eb2e264a0f819cd3caa053fa0769128c5d06a0`. G1.1K Pre-case Product Closure / E2E started
-but is PAUSED: real-stack E2E reached Project creation and then standard `owner` was denied at the
-accepted Excel batch-create `workbench:edit` gate. The Product Owner accepted this existing
-permission for standard `owner` and `appraiser` roles only. RBAC-001 is the data-only role-grant
-candidate for that alignment; it does not change endpoint checks or grant other standard roles.
-G1.1K may resume only after RBAC-001 merges and its resulting exact-main CI succeeds. OS-G1 remains
-NOT COMPLETE; OS-G2 is NOT STARTED.
+`21eb2e264a0f819cd3caa053fa0769128c5d06a0`. RBAC-001 standard operator Workbench edit
+alignment is MERGED/CERTIFIED through PR #67 and exact-main CI #525 at
+`5fcb110c379b25079dd1b374de8a2e5b9c494dfd`. The data-only grant gives the existing
+`workbench:edit` permission to standard `owner` and `appraiser` roles; endpoint checks and other
+standard-role grants are unchanged. G1.1K Pre-case Product Closure / E2E has resumed from the
+preserved worktree and is a candidate. OS-G1 remains NOT COMPLETE until G1.1K integrates and
+exact-main CI succeeds; OS-G2 is NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

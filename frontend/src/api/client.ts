@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/+$/, "");
+const BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;

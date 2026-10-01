@@ -1,0 +1,20 @@
+{
+  "keyboard_focus": {
+    "tag": "A",
+    "visible": true
+  },
+  "management_primary_action_is_button": true,
+  "management_table_has_column_headers": true,
+  "overview_api_request_count_after_2s": 2,
+  "overview_case_state_request_count_after_2s": 1,
+  "overview_completed_state_present": true,
+  "overview_heading_present": true,
+  "overview_navigation_ms": 106,
+  "overview_no_horizontal_overflow": true,
+  "project_code": "G11K-E2E-20261001-007",
+  "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41",
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  }
+}

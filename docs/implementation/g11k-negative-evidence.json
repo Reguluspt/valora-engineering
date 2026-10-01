@@ -1,0 +1,169 @@
+{
+  "actors": {
+    "other_tenant_appraiser": {
+      "permissions": [
+        "project:asset_line:read",
+        "master_data:unit:read",
+        "project:preliminary_analysis:finalize",
+        "project:read",
+        "master_data:customer:update",
+        "master_data:supplier:update",
+        "master_data:reference:read",
+        "project:preliminary_result:generate",
+        "master_data:customer:create",
+        "project:review:complete",
+        "master_data:brand:create",
+        "master_data:customer:read",
+        "workbench:edit",
+        "project:create",
+        "master_data:supplier:read",
+        "master_data:supplier:create",
+        "master_data:brand:read",
+        "project:file:upload",
+        "project:official_intake:commit",
+        "project:update",
+        "project:archive",
+        "project:cancel"
+      ],
+      "roles": [
+        "appraiser"
+      ]
+    },
+    "owner": {
+      "permissions": [
+        "project:reject",
+        "project:asset_line:read",
+        "master_data:signer:create",
+        "master_data:unit:read",
+        "project:preliminary_analysis:finalize",
+        "master_data:customer:merge",
+        "project:read",
+        "master_data:signer:update",
+        "master_data:customer:update",
+        "master_data:supplier:update",
+        "master_data:reference:read",
+        "project:preliminary_result:generate",
+        "master_data:supplier:deactivate",
+        "project:approve",
+        "master_data:customer:create",
+        "project:review:complete",
+        "master_data:brand:create",
+        "master_data:customer:read",
+        "workbench:edit",
+        "master_data:reference:create",
+        "project:create",
+        "master_data:supplier:read",
+        "master_data:supplier:create",
+        "master_data:unit:create",
+        "master_data:brand:read",
+        "master_data:currency:create",
+        "project:file:upload",
+        "project:official_intake:commit",
+        "master_data:customer:deactivate",
+        "project:update",
+        "project:archive",
+        "project:cancel",
+        "master_data:supplier:merge"
+      ],
+      "roles": [
+        "owner"
+      ]
+    },
+    "viewer": {
+      "permissions": [
+        "master_data:reference:read",
+        "project:asset_line:read",
+        "master_data:supplier:read",
+        "master_data:unit:read",
+        "master_data:brand:read",
+        "project:read",
+        "master_data:customer:read"
+      ],
+      "roles": [
+        "viewer"
+      ]
+    }
+  },
+  "negative_project_id": "30864d41-d28f-44d7-85ed-0f598ed26fe8",
+  "outcomes": [
+    {
+      "check": "VIEWER_BATCH_DENIED",
+      "status": 403
+    },
+    {
+      "check": "VIEWER_RESULT_DENIED",
+      "status": 403
+    },
+    {
+      "check": "VIEWER_INTAKE_DENIED",
+      "status": 403
+    },
+    {
+      "check": "CROSS_TENANT_PROJECT",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_CASE_STATE",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_BATCH",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_SOURCE",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_MAPPING",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_ANALYSIS",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_RESULT",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_RESULT_CONTENT",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_CUSTOMER",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_BATCH_MUTATION",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_RESULT_MUTATION",
+      "status": 404
+    },
+    {
+      "check": "CROSS_TENANT_INTAKE_MUTATION",
+      "status": 404
+    },
+    {
+      "check": "POST_INTAKE_RESULT_CLOSED",
+      "status": 409
+    },
+    {
+      "check": "POST_INTAKE_SOURCE_CLOSED",
+      "status": 409
+    },
+    {
+      "check": "NO_ANALYSIS_RESULT_DENIED",
+      "status": 404
+    },
+    {
+      "check": "NO_RESULT_INTAKE_DENIED",
+      "status": 404
+    }
+  ],
+  "post_intake_commit_unchanged": true,
+  "post_intake_source_pointer_unchanged": true,
+  "project_id": "2f0f9cf9-8ca1-4725-95f5-aad81118fb41"
+}

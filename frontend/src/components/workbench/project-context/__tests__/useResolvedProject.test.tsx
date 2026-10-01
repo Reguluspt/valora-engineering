@@ -4,7 +4,10 @@ import { create, act } from "react-test-renderer";
 import { useResolvedProject } from "../useResolvedProject";
 import * as projectsApi from "../../../../api/projects";
 
-vi.mock("../../../../api/projects", () => ({ resolveProjectReference: vi.fn() }));
+vi.mock("../../../../api/projects", () => ({
+  getProject: vi.fn(),
+  resolveProjectReference: vi.fn(),
+}));
 
 function renderWithRef(initialRef: string | null) {
   let currentRef = { value: initialRef };
@@ -40,10 +43,27 @@ describe("useResolvedProject lifecycle", () => {
     expect(projectsApi.resolveProjectReference).not.toHaveBeenCalled();
   });
 
-  it("valid UUID — ready without resolver API call", () => {
+  it("valid UUID — reads exact Project identity without a resolver match", async () => {
+    (projectsApi.getProject as any).mockResolvedValue({
+      id: "aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff",
+      name: "Nhà máy Cơ khí An Phú",
+    });
     const { result } = renderWithRef("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
+    expect(result.current.state).toBe("loading");
+    await vi.waitFor(() => expect(result.current.state).toBe("ready"), { timeout: 2000 });
     expect(result.current.state).toBe("ready");
     expect(result.current.projectId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
+    expect(result.current.displayName).toBe("Nhà máy Cơ khí An Phú");
+    expect(projectsApi.getProject).toHaveBeenCalledWith("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
+    expect(projectsApi.resolveProjectReference).not.toHaveBeenCalled();
+  });
+
+  it("valid UUID — missing exact Project fails closed", async () => {
+    (projectsApi.getProject as any).mockRejectedValue({ status: 404 });
+    const { result } = renderWithRef("aaaaaaaa-bbbb-4ccc-8ddd-eeee0000ffff");
+    await vi.waitFor(() => expect(result.current.state).toBe("error"), { timeout: 2000 });
+    expect(result.current.projectId).toBeNull();
+    expect(result.current.error!.title).toBe("Không tìm thấy hồ sơ");
     expect(projectsApi.resolveProjectReference).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { resolveProjectReference } from "../../../api/projects";
+import { getProject, resolveProjectReference } from "../../../api/projects";
 import { isValidProjectUuid } from "../validators";
 
 export type ResolutionState = "idle" | "loading" | "ready" | "error";
@@ -45,15 +45,6 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       return;
     }
 
-    if (isValidProjectUuid(trimmed)) {
-      if (gen !== generationRef.current) return;
-      setProjectId(trimmed);
-      setDisplayName("Hồ sơ");
-      setState("ready");
-      setError(null);
-      return;
-    }
-
     if (UUID_RE.test(trimmed) && !isValidProjectUuid(trimmed)) {
       if (gen !== generationRef.current) return;
       setState("error");
@@ -70,7 +61,12 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
     setError(null);
 
     try {
-      const res = await resolveProjectReference(trimmed);
+      const res = isValidProjectUuid(trimmed)
+        ? await getProject(trimmed).then((project) => ({
+            project_id: project.id,
+            display_name: project.name,
+          }))
+        : await resolveProjectReference(trimmed);
       if (gen !== generationRef.current) return;
       setProjectId(res.project_id);
       setDisplayName(res.display_name);
