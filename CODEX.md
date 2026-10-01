@@ -1,13 +1,15 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-01 (G1.1J and RBAC-001 certified; G1.1K candidate)
+**Last reconciled:** 2026-10-01 (G1.1K / OS-G1 certified; OS-G2 on hold)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
 ## 1. Source of Truth
 
-Domain behavior must come from this read order:
+This is authority precedence when a source is relevant, not a required reading list for every task.
+The Gate Owner/Architect resolves project-wide authority and supplies a compact task contract;
+Codex reads the contract and only the authority sections needed for its bounded implementation.
 
 ```text
 1. Explicit current Product Owner decision — wins only in the scope it names
@@ -70,7 +72,7 @@ F2-PR-008 — CLOSED ON MAIN THROUGH PR #32 (Fluent 2 residual sweep / Astryx re
 OS-G0 Fluent 2 engineering closeout is COMPLETE ON MAIN at `51eab8648005186197d2fbb37a19bde4332aeaa5`,
 with exact-head CI #485 SUCCESS. G1.0 current-result integrity gate was subsequently merged by
 PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (exact-head CI #491 SUCCESS).
-OS-G1 authority work is active: ADR 0046 accepts optional Pre-case Customer, an explicit current
+OS-G1 authority history: ADR 0046 accepts optional Pre-case Customer, an explicit current
 batch pointer and versioned analysis/result currentness. G1.1A implements only nullable Customer
 snapshots, the current-batch persistence pointer, null-safe lineage constraints and first-batch
 initialization under `VALORA-TASK-OS-G1-1A-PRECASE-IDENTITY-CURRENT-BATCH-FOUNDATION`.
@@ -117,16 +119,17 @@ MERGED/CERTIFIED through PR #66 and exact-main CI #523 at
 alignment is MERGED/CERTIFIED through PR #67 and exact-main CI #525 at
 `5fcb110c379b25079dd1b374de8a2e5b9c494dfd`. The data-only grant gives the existing
 `workbench:edit` permission to standard `owner` and `appraiser` roles; endpoint checks and other
-standard-role grants are unchanged. G1.1K Pre-case Product Closure / E2E has resumed from the
-preserved worktree and is a candidate. OS-G1 remains NOT COMPLETE until G1.1K integrates and
-exact-main CI succeeds; OS-G2 is NOT STARTED.
+standard-role grants are unchanged. G1.1K / PR #68 is MERGED/CERTIFIED at
+`d283c690b9f014833fa5c98e1125939351966b81` with exact-main CI #527 SUCCESS. OS-G1 is
+CERTIFIED/CLOSED at this baseline. OS-G2 is NOT STARTED; it stays on HOLD through this task's
+integration and exact-main CI, then still requires its own Product Owner authorization.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
 READY verification does not compare it to the Analysis snapshot's historical Customer.
-Each runtime slice still requires an explicit Product Owner task packet. These SHAs are dated
-evidence, not a live-head claim.
-Neither G1.0 nor this authority closes the OS-G1 product journey or full North-star E2E.
+Each new runtime slice requires a Gate Owner compact task contract under current Product Owner
+authority. These SHAs are dated evidence, not a live-head claim. G1.0 alone did not close OS-G1;
+the G1.1K merge and exact-main CI above certified its Pre-case product journey.
 
 VALORA-STORAGE-LOCAL-001 — G6 ACCEPTED. Reviewed snapshot commit
 `d71a42e575f96d7cd8d9aac6c8aab2c60627c32f`; durable closeout evidence is recorded by
@@ -242,17 +245,14 @@ Do not claim Draft PR / Ready / merge without explicit authorization.
 Historical audit prose never overrides code + CI at a cited SHA.
 ```
 
-## 6. Required Output After Every Task
+## 6. Bounded Output After Every Task
 
 ```text
-Task ID
-Files changed
-Design/ADR sources
-Tests/gates run (raw counts)
-Known limitations
-Whether scope was respected
-Whether any ADR is needed
-Git SHAs (local/remote) when pushing
+Task ID and exact baseline/CI
+Files changed and scoped authority references
+Tests/gates run with raw results; known limitations and unresolved stops
+Local/remote HEAD and PR/CI status when applicable
+Ready or blocked for the assigned gate, without claiming a later gate
 ```
 
 ## 7. Stop Conditions
@@ -317,140 +317,69 @@ Frontend visibility is not security.
 No production secrets in repository content or fixtures.
 ```
 
-## 10. Project AI Execution Policy
+## 10. Lean Agent Execution Policy
 
-This section is the canonical reusable execution policy for AI-assisted VALORA work. Task-specific
-instructions may narrow or override routing only when they are explicit, documented and consistent
-with accepted architecture and security authority. A task override never grants cloud, credential,
-merge, deploy or release authority that the task does not already have.
+The [Lean Agent Protocol](docs/plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) defines the operating
+tiers; the [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) is the
+task handoff. Sections 3–9 and the permanent ENGINEERING_GUARDRAILS.md invariants remain binding.
+A task contract may narrow scope or require stronger gates, never weaken domain, security, tenant,
+audit, idempotency, human-approval or exact-SHA requirements.
 
-### 10.1 Roles and current implementations
+### 10.1 Responsibilities
 
-```text
-Lead / Architect / Product Owner
-  -> Codex: writer, orchestrator, authority interpreter and final gate owner
-  -> MECHANICAL_WORKER: Gemini 3.8 Flash High through Antigravity CLI
-  -> Codex verification
-  -> INDEPENDENT_REVIEWER_A: DeepSeek v4.1 Flash through OpenCode CLI
-  +  INDEPENDENT_REVIEWER_B: Gemini 3.1 Pro High through Antigravity CLI
-  -> Codex final gate, commit and push
-```
+- Gate Owner / Architect interprets project-wide authority, classifies risk, supplies a compact
+  contract and owns integration decisions. An agent task never grants itself the next product gate.
+- Codex verifies the exact baseline and CI, implements the bounded contract, inspects the actual
+  diff, runs risk-appropriate checks, adjudicates review findings and reports the exact result.
+  Codex commits or pushes only when the task authorizes it.
+- A mechanical worker is optional for specified repetitive work on exact files. It cannot reinterpret
+  authority, commit, push, change PR state, merge, deploy or use live credentials; its self-check
+  is not independent.
+- Independent reviewers are read-only and cannot mutate files, credentials, networks or cloud
+  resources. A required unavailable reviewer leaves the review INCOMPLETE.
 
-Role semantics are stable; model IDs and CLIs are current implementations and may change. At the
-start of a delegated run, query the CLI-supported model list and use the exact current ID rather
-than inventing or assuming one. Current implementations on 2026-09-19 are:
+Current provider implementations are unchanged: optional mechanical worker
+`gemini-3.8-flash-high` via `agy`; independent reviewers `opencode-go/deepseek-v4.1-flash`
+via `opencode` and `gemini-3.1-pro-high` via `agy`. Query the model list when invoking a provider;
+do not add one by inference. If Antigravity headless read permissions block a reviewer,
+`--dangerously-skip-permissions` may bypass only that read gate with the same strict read-only
+prompt; it grants no write or resource-mutation authority.
 
-| Role | Current implementation | Authority |
-|---|---|---|
-| Writer/orchestrator/final gate | Codex | Interprets authority, plans, writes, verifies, accepts/rejects findings, commits and pushes when authorized |
-| `MECHANICAL_WORKER` | `gemini-3.8-flash-high` via `agy` | May edit only exact bounded files in its task packet; never commits or pushes |
-| `INDEPENDENT_REVIEWER_A` | `opencode-go/deepseek-v4.1-flash` via `opencode` | Read-only independent review |
-| `INDEPENDENT_REVIEWER_B` | `gemini-3.1-pro-high` via `agy` | Read-only independent review |
+### 10.2 Task-scoped context and resume
 
-Only Codex may commit or push delegated output unless the Product Owner explicitly changes this
-policy. A worker must never merge, change PR state, deploy, release, use cloud credentials, mutate a
-live provider, broaden scope or reinterpret accepted ADR semantics.
+Begin with the compact contract, applicable permanent rules, its named authority sections, affected
+code and tests. The Section 1 list is precedence, not a requirement to read every source. Expand
+to neighboring subsystems only for a named dependency. Read whole files/authority sets or scan the
+repository only when the task explicitly requires it or a concrete conflict cannot be resolved
+within scope; record the reason. If the contract omits a needed domain or permission decision, stop
+for Gate Owner clarification rather than reconstructing or inventing it.
 
-### 10.2 Routing rule
+Every contract declares risk, baseline branch/SHA and exact CI, authority, allowed/forbidden scope,
+acceptance, tests and stop conditions. Keep a compact TASK_STATE with verified SHA, completed checks,
+blocker and next action when pausing. On resume, fetch and revalidate HEAD and CI; stale state is
+not authority.
 
-```text
-HIGH MECHANICAL LOAD + LOW ARCHITECTURE AMBIGUITY
-  -> delegate to MECHANICAL_WORKER
+### 10.3 Proportional verification
 
-LOW CODE VOLUME + HIGH DECISION IMPACT
-  -> Codex retains the work
-```
+- T0: focused edit-loop checks.
+- T1: affected subsystem regression.
+- T2: candidate lint, type, build and security gates appropriate to the changed scope.
+- T3: full local, real-stack or E2E only for Product/Security/high-risk closeout or an explicit task
+  requirement. Full suites are not mandatory on every edit loop.
+- T4: exact-head PR CI and, after merge, exact-main CI wherever the existing gate requires them.
+  No parent/earlier green run certifies a changed HEAD, including a docs-only baseline.
 
-Delegate boilerplate, repetitive tests from a locked matrix, fixtures, DTO/request plumbing,
-deterministic transformations, documentation synchronization, mechanical refactors, renames,
-lint/import/type corrections and targeted test execution. Codex retains architecture, ADR meaning,
-security boundaries, transaction and concurrency semantics, idempotency, lost-response recovery,
-authorization, storage authority, IAM/KMS policy, migration strategy and production gates.
+Low risk uses Codex verification and required CI. Medium risk adds one independent reviewer only
+when materially useful and named in the contract. High/Product/Security risk requires a frozen
+snapshot, two independent reviewers, Gate Owner and applicable CI/E2E. Thus dual review is not the
+default for Low/Medium work. Reviewers receive the same exact HEAD, changed-file/hash evidence and
+scoped authority. A changed reviewed file invalidates its prior review; Codex classifies findings
+as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY and reruns required review on the new HEAD.
 
-For `VALORA-STORAGE-S3-SPIKE-001` G4, the task-specific instruction that Codex is the sole writer
-overrides mechanical-worker write authority. DeepSeek and Gemini remain read-only reviewers.
+### 10.4 Delivery
 
-### 10.3 Required worker task packet
-
-Every delegated implementation uses a bounded packet with all of these fields:
-
-```text
-TASK ID
-GOAL
-AUTHORITY
-CONTEXT
-ALLOWED FILES
-FORBIDDEN FILES
-IMPLEMENTATION INSTRUCTIONS
-INVARIANTS
-TESTS TO RUN
-STOP CONDITIONS
-OUTPUT FORMAT
-```
-
-The packet must name exact files, invariants, tests and stop conditions. Prompts such as `fix
-project`, `complete everything` or `solve all issues` are prohibited. The default workspace is
-`F:\Project Valora\valora-operational-frontend`.
-
-After worker execution, Codex must inspect the actual `git diff`; a worker summary is not acceptance
-evidence. Codex then runs relevant tests and static gates before seeking independent review.
-
-### 10.4 Review independence and snapshot discipline
-
-Worker self-checks are labeled `WORKER SELF-CHECK`. If Gemini 3.8 Flash High implemented a change,
-its own self-review is not independent acceptance evidence for that change. Independent acceptance
-uses both configured reviewers unless a task explicitly defines another accepted gate.
-
-DeepSeek and Gemini 3.1 Pro High are read-only. They must not modify/create files, apply patches,
-commit, push, use credentials, run cloud commands, mutate networks/resources or decide a Product
-Owner gate. Codex verifies every finding before applying it and classifies findings as `VALID`,
-`INVALID`, `DUPLICATE`, `OUT_OF_SCOPE` or `ADVISORY`.
-
-Both reviewers must receive the same frozen snapshot: Git HEAD, relevant-file manifest, SHA-256
-hashes and governing docs/code. If any reviewed file changes, both reviews are invalid and must be
-rerun on a new manifest. Do not report Codex review or worker self-review as independent evidence.
-If a required provider is unavailable, record `INDEPENDENT REVIEW INCOMPLETE`; never fabricate or
-substitute a verdict.
-
-### 10.5 Stop and escalation rules
-
-A worker stops on conflicting authority, undefined contract, architecture or security ambiguity,
-persistence-semantic change, cloud credential/live-provider requirement, production migration or
-unexpected blast radius. It must not work around the conflict. Codex escalates to the Lead/Architect
-when a decision exceeds accepted authority.
-
-The normal sequence is:
-
-```text
-Codex plans
-  -> bounded worker implementation when routing permits
-  -> Codex inspects diff and verifies/tests
-  -> both independent reviewers inspect one exact snapshot
-  -> Codex resolves verified findings and reruns invalidated reviews
-  -> Codex commits
-  -> Codex pushes only when authorized
-```
-
-### 10.6 Current provider command forms
-
-DeepSeek read-only reviewer:
-
-```text
-opencode run -m opencode-go/deepseek-v4.1-flash "<strict read-only review prompt>"
-```
-
-Gemini read-only reviewer:
-
-```text
-agy -p "<strict read-only review prompt>" --mode plan --model gemini-3.1-pro-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
-```
-
-Gemini mechanical worker, after `agy models` confirms the exact ID:
-
-```text
-agy -p "<bounded worker task packet>" --mode accept-edits --model gemini-3.8-flash-high --effort high --print-timeout 0 --add-dir "F:\Project Valora\valora-operational-frontend"
-```
-
-If Antigravity headless read permissions block a reviewer, `--dangerously-skip-permissions` may be
-used only to bypass the read gate with the same strict read-only prompt. It never grants repository,
-credential, network or cloud mutation authority.
+Prefer one PR per coherent vertical capability where practical, with machine-generated evidence
+and a bounded final report. Tests or an explicit docs-only N/A are required. Keep the PR Draft
+until its authorized gate owner advances it; do not infer Ready, merge, deployment or later-phase
+authorization from implementation completion. Stop on baseline mismatch, conflicting authority,
+security/tenant ambiguity, missing prerequisite, unapproved architecture change or scope expansion.
