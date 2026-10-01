@@ -17,6 +17,12 @@ Gate Owner / Architect interprets project-wide authority, declares risk and issu
 
 Authority precedence is not a reading checklist. The contract must state task ID, objective, exact baseline and CI, risk, compressed invariants, exact references, allowed/forbidden scope, acceptance, tests and stop conditions. A missing decision goes back to Gate Owner; Codex does not reconstruct project history or invent domain behavior. Every PR should deliver one coherent vertical capability where practical.
 
+## Gate Owner Session Rebaseline
+
+The repository is long-term authority; chat history is working memory only. Rebaseline on a fresh Gate Owner session and after a PR merge, exact-main CI result, Product Gate close, ADR acceptance, or material blocker or scope change. Fetch live main; read the relevant current CODEX policy and compact task state; verify the exact CI for the claimed checkpoint; then read only the governing authority needed for the active task. Live repository state wins over a handoff, memory or prior chat.
+
+Before directing work, output a short readiness record: live main SHA, CODEX blob SHA, current gate, active task, conflicts and next authorized action. Collapse historical gates to their certified checkpoint status; do not replay all prior task history by default.
+
 ## Verification tiers
 
 | Tier | Gate |

@@ -36,6 +36,8 @@
 ## TASK_STATE
 Persist at interruption; revalidate SHA/CI on resume. Do not include secrets.
 
+**SESSION REBASELINE:** On a fresh session or [material checkpoint](VALORA_LEAN_AGENT_PROTOCOL_V1.md#gate-owner-session-rebaseline), check live main, CODEX blob, exact CI, current gate/task, conflicts and next authorized action before issuing the contract.
+
 ```json
 {
   "task_id": "VALORA-TASK-EXAMPLE",
