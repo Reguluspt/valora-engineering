@@ -1,0 +1,7 @@
+CODEX.md
+backend/alembic/versions/e2f3a4b5c6d7_grant_standard_operator_workbench_edit.py
+backend/tests/test_g11e_rbac_postgresql.py
+backend/tests/test_g1_rbac_001_postgresql.py
+docs/implementation/G1_RBAC_001_CHANGED_FILES.txt
+docs/implementation/G1_RBAC_001_SHA256SUMS.txt
+docs/implementation/G1_RBAC_001_STANDARD_OPERATOR_WORKBENCH_EDIT_EVIDENCE.md
