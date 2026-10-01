@@ -42,6 +42,7 @@ let precaseProposalCommandId = null;
 let precaseSelectedCommandId = null;
 let precaseAnalysis = null;
 let precaseAnalysisLostOnce = false;
+let completionScenario = "ready";
 let nccLines = [];
 let nccIdempotencyMap = new Map();
 
@@ -502,6 +503,29 @@ const precaseProject = {
   customer_id: null,
   current_preliminary_import_batch_id: "batch-precase",
 };
+const completionProject = {
+  ...projectFixture,
+  id: "completion-acceptance",
+  code: "SB-2026-011",
+  name: "Dây chuyền CNC An Phú",
+  customer_id: null,
+  current_preliminary_import_batch_id: "batch-completion",
+  row_version: 7,
+};
+const completionCustomer = {
+  id: "customer-completion", organization_id: "organization-acceptance",
+  legal_name: "Công ty TNHH Thiết bị An Phú", display_name: "Thiết bị An Phú",
+  tax_code: "0101234567", contact_phone: "0900123456", address: "Hà Nội",
+  province_id: null, contact_name: null, contact_email: null, notes: null,
+  status: "active", warnings: null,
+};
+const completionResult = {
+  id: "result-completion", project_id: completionProject.id, version: 2,
+  original_filename: "ket-qua-so-bo-v2.xlsx",
+  content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  file_size_bytes: 4096, content_checksum_sha256: "a".repeat(64),
+  source_snapshot_sha256: "b".repeat(64), created_at: "2026-09-30T08:30:00Z",
+};
 const precaseBatch = {
   id: "batch-precase", project_id: "precase-acceptance", status: "created",
   source_filename: "Danh_muc_thiet_bi.xlsx", source_sheet_name: null,
@@ -630,6 +654,56 @@ function precaseCaseProjection() {
   };
 }
 
+function completionProjection() {
+  const unavailable = completionScenario === "unavailable";
+  const hasResult = !["ready", "unavailable"].includes(completionScenario);
+  const bound = ["intake", "blocking", "committed"].includes(completionScenario);
+  const committed = completionScenario === "committed";
+  const blocker = completionScenario === "blocking" ? [{
+    id: "completion-blocker", target_type: "project", target_id: completionProject.id,
+    severity: "blocking", status: "open", row_version: 1,
+  }] : [];
+  return {
+    case_version: (committed ? "d" : bound ? "c" : hasResult ? "b" : "a").repeat(64),
+    current_stage: committed ? "OFFICIAL_INTAKE" : hasResult ? "OFFICIAL_INTAKE" : "PRELIMINARY_READY",
+    next_action: committed
+      ? { kind: "NO_AUTHORIZED_DOWNSTREAM_ACTION", stage: null, semantic_route_key: null, validation_issue_id: null }
+      : blocker.length
+        ? { kind: "BLOCKER", stage: "OFFICIAL_INTAKE", semantic_route_key: null, validation_issue_id: blocker[0].id }
+        : unavailable
+          ? { kind: "UNAVAILABLE", stage: "PRELIMINARY_READY", semantic_route_key: null, validation_issue_id: null }
+        : hasResult
+          ? { kind: "PENDING", stage: "OFFICIAL_INTAKE", semantic_route_key: "official_intake_pending", validation_issue_id: null }
+          : { kind: "PENDING", stage: "PRELIMINARY_READY", semantic_route_key: "preliminary_ready_pending", validation_issue_id: null },
+    stages: caseStages.map((stage, index) => ({
+      stage,
+      result: index < 2 ? "COMPLETE" : index === 2 ? unavailable ? "NOT_AVAILABLE" : hasResult ? "COMPLETE" : "INCOMPLETE"
+        : index === 3 ? committed ? "COMPLETE" : blocker.length ? "BLOCKED" : "INCOMPLETE"
+          : "NOT_AVAILABLE",
+      provider_key: index < 4 ? `${stage.toLowerCase()}_v1` : null,
+    })),
+    blockers: blocker,
+    warnings: hasResult ? [{ id: "completion-warning", target_type: "project", target_id: completionProject.id,
+      severity: "warning", status: "open", row_version: 1 }] : [],
+    stale: [],
+    capabilities: caseStages.map((stage, index) => ({
+      stage, available: index < 4, provider_key: index < 4 ? `${stage.toLowerCase()}_v1` : null,
+      version: "pr01-prefix-v1",
+    })),
+    preliminary: {
+      project_id: completionProject.id, customer_id: bound ? completionCustomer.id : null,
+      project_row_version: bound ? 8 : 7,
+      current_preliminary_import_batch_id: "batch-completion",
+      current_source_artifact_id: "source-completion",
+      current_preliminary_analysis_snapshot_id: "analysis-completion",
+      current_preliminary_analysis_version: 2,
+      current_preliminary_result_artifact_id: hasResult ? completionResult.id : null,
+      current_preliminary_result_version: hasResult ? completionResult.version : null,
+      official_intake_commit_id: committed ? "intake-completion" : null,
+    },
+  };
+}
+
 function makeDocument(id, title) {
   return {
     document_id: id,
@@ -689,6 +763,7 @@ const server = http.createServer(async (request, response) => {
     const nextWorkbench = url.searchParams.get("workbench");
     const nextNcc = url.searchParams.get("ncc");
     const nextPrecase = url.searchParams.get("precase");
+    const nextCompletion = url.searchParams.get("completion");
     const nextM365 = url.searchParams.get("m365");
     const nextM365Classification = url.searchParams.get("m365_classification");
     if (nextCase && !["normal", "blocking", "warning", "stale", "unavailable", "loading", "error"].includes(nextCase)) {
@@ -705,6 +780,9 @@ const server = http.createServer(async (request, response) => {
     }
     if (nextPrecase && !["upload", "structure", "review", "proposal", "selected", "materialized", "conflict", "stale", "analysis", "analysis-lost"].includes(nextPrecase)) {
       return send(response, 400, { detail: "Unknown Pre-case fixture" });
+    }
+    if (nextCompletion && !["ready", "generated", "selection", "intake", "blocking", "committed", "unavailable"].includes(nextCompletion)) {
+      return send(response, 400, { detail: "Unknown completion fixture" });
     }
     if (nextM365 && !["normal", "disconnected", "empty", "error", "denied", "limited", "read-only", "adoption-error", "exchange-error"].includes(nextM365)) {
       return send(response, 400, { detail: "Unknown M365 fixture" });
@@ -729,6 +807,7 @@ const server = http.createServer(async (request, response) => {
       precaseAnalysis = null;
       precaseAnalysisLostOnce = false;
     }
+    if (nextCompletion) completionScenario = nextCompletion;
     if (nextM365) {
       m365Scenario = nextM365;
       documents = nextM365 === "empty" ? [] : [makeDocument("document-1", "Báo cáo hiện trạng")];
@@ -740,6 +819,7 @@ const server = http.createServer(async (request, response) => {
       workbench: workbenchScenario,
       ncc: nccScenario,
       precase: precaseScenario,
+      completion: completionScenario,
       m365: m365Scenario,
       m365_classification: m365Classification,
     });
@@ -765,7 +845,8 @@ const server = http.createServer(async (request, response) => {
       organization_slug: "chi-nhanh-gia-lai",
       status: "active",
       roles: ["operator"],
-      permissions: m365Scenario === "limited" ? ["project:read"] : ["project:read", "project:update"],
+      permissions: m365Scenario === "limited" ? ["project:read"] :
+        ["project:read", "project:update", "master_data:customer:read", "project:preliminary_result:generate", "project:official_intake:commit"],
     });
   }
   if (url.pathname === "/api/v1/auth/logout" && request.method === "POST") {
@@ -776,6 +857,68 @@ const server = http.createServer(async (request, response) => {
 
   if (url.pathname === "/health" && request.method === "GET") {
     return send(response, 200, { status: "healthy" });
+  }
+
+  const completionBase = "/api/v1/projects/completion-acceptance";
+  if (url.pathname === completionBase && request.method === "GET") {
+    const bound = ["intake", "blocking", "committed"].includes(completionScenario);
+    return send(response, 200, { ...completionProject, customer_id: bound ? completionCustomer.id : null,
+      row_version: bound ? 8 : 7 });
+  }
+  if (url.pathname === `${completionBase}/case-state` && request.method === "GET") {
+    return send(response, 200, completionProjection());
+  }
+  if (url.pathname === `${completionBase}/preliminary-results/${completionResult.id}` && request.method === "GET") {
+    return ["ready", "unavailable"].includes(completionScenario)
+      ? send(response, 404, { detail: "Not found" }) : send(response, 200, completionResult);
+  }
+  if (url.pathname === `${completionBase}/preliminary-results/${completionResult.id}/content` && request.method === "GET") {
+    response.writeHead(200, {
+      "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Origin": "http://localhost:5173",
+      "Content-Type": completionResult.content_type,
+      "Content-Disposition": 'attachment; filename="ket-qua-so-bo-v2.xlsx"',
+    });
+    response.end(Buffer.from("fixture-xlsx-content"));
+    return;
+  }
+  if (url.pathname === `${completionBase}/preliminary-results` && request.method === "POST") {
+    const body = await readJson(request);
+    if (completionScenario !== "ready" || body.preliminary_analysis_snapshot_id !== "analysis-completion" ||
+        body.expected_project_version !== 7 || body.confirmed !== true || !body.idempotency_key) {
+      return send(response, 409, { detail: "Result authority changed" });
+    }
+    completionScenario = "generated";
+    return send(response, 201, { id: completionResult.id, project_id: completionProject.id, version: completionResult.version });
+  }
+  if (url.pathname === `${completionBase}/preliminary-customer` && request.method === "POST") {
+    const body = await readJson(request);
+    if (!["generated", "selection"].includes(completionScenario) || body.customer_id !== completionCustomer.id ||
+        body.expected_project_version !== 7 || !body.idempotency_key) {
+      return send(response, 409, { detail: "Customer authority changed" });
+    }
+    completionScenario = "intake";
+    return send(response, 201, { receipt_id: "customer-receipt", target_customer_id: completionCustomer.id,
+      committed_project_version: 8 });
+  }
+  if (url.pathname === `${completionBase}/official-intake` && request.method === "POST") {
+    const body = await readJson(request);
+    if (completionScenario !== "intake" || body.preliminary_result_artifact_id !== completionResult.id ||
+        body.expected_preliminary_result_version !== 2 || body.expected_project_version !== 8 ||
+        body.confirmed !== true || !body.idempotency_key) {
+      return send(response, 409, { detail: "Intake authority changed" });
+    }
+    completionScenario = "committed";
+    return send(response, 201, { id: "intake-completion", project_id: completionProject.id,
+      preliminary_result_artifact_id: completionResult.id, preliminary_result_version: 2 });
+  }
+  if (url.pathname === "/api/v1/master-data/customers/customer-completion" && request.method === "GET") {
+    return send(response, 200, completionCustomer);
+  }
+  if (url.pathname === "/api/v1/master-data/customers" && request.method === "GET") {
+    const query = (url.searchParams.get("q") || "").toLocaleLowerCase("vi-VN");
+    return send(response, 200, [completionCustomer].filter((item) =>
+      !query || [item.legal_name, item.display_name, item.tax_code, item.contact_phone]
+        .some((value) => value?.toLocaleLowerCase("vi-VN").includes(query))));
   }
 
   if (url.pathname === "/api/v1/workbench/sessions" && request.method === "POST") {
@@ -1001,6 +1144,10 @@ const server = http.createServer(async (request, response) => {
       confirmation_decision_id: "confirmation-precase", selection_revision: 8 });
   }
   if (url.pathname === "/api/v1/projects/resolve" && request.method === "GET") {
+    if (url.searchParams.get("ref") === "completion-acceptance") {
+      return send(response, 200, { project_id: completionProject.id,
+        display_name: completionProject.name, matched_by: "code" });
+    }
     if (url.searchParams.get("ref") === "precase-acceptance") {
       return send(response, 200, {
         project_id: precaseProject.id,

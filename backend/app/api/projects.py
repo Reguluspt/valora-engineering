@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 import re
 from typing import Optional, List
@@ -34,6 +35,7 @@ from app.modules.project_master_data.models import (
     ImportBatchStatus,
     ProjectOfficialIntakeCommit,
     PreliminaryAnalysisSnapshot,
+    PreliminaryResultArtifact,
 )
 from app.modules.project_master_data.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -47,6 +49,7 @@ from app.modules.project_master_data.schemas import (
     OfficialIntakeCommitRequest, PreliminaryLifecycleCommandResponse,
     PreliminaryAnalysisCommandResponse, PreliminaryAnalysisReadResponse,
     PreliminaryResultCommandResponse,
+    PreliminaryResultReadResponse,
     OfficialIntakeCommitResponse,
     NccSelectionConfirmRequest, NccSelectionCurrentResponse, NccSelectionAggregateResponse,
 )
@@ -107,6 +110,9 @@ from app.modules.excel_import.application.column_mapping_service import (
 )
 from app.modules.excel_import.application.mapping_recovery_service import get_mapping_recovery_state
 from app.modules.excel_import.models import ImportSourceArtifact
+from app.modules.excel_import.infrastructure.object_storage import (
+    ObjectNotFound, ObjectStorageError, _read_stream_bounded, get_object_storage,
+)
 from app.modules.excel_import.schemas import (
     ImportSourceArtifactResponse,
     MappingConfirmationRequest,
@@ -607,6 +613,71 @@ def generate_project_preliminary_result(
             "expected_project_version": payload.expected_project_version,
             "preliminary_analysis_snapshot_id": payload.preliminary_analysis_snapshot_id,
             "content_checksum_sha256": artifact.content_checksum_sha256}
+
+
+def _scoped_preliminary_result(
+    db: Session, *, organization_id: uuid.UUID, project_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+) -> PreliminaryResultArtifact:
+    artifact = db.query(PreliminaryResultArtifact).filter(
+        PreliminaryResultArtifact.organization_id == organization_id,
+        PreliminaryResultArtifact.project_id == project_id,
+        PreliminaryResultArtifact.id == artifact_id,
+    ).first()
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy kết quả sơ bộ.")
+    return artifact
+
+
+@router.get(
+    "/{project_id}/preliminary-results/{artifact_id}",
+    response_model=PreliminaryResultReadResponse,
+)
+def get_project_preliminary_result(
+    project_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    return _scoped_preliminary_result(
+        db, organization_id=current_user.organization_id,
+        project_id=project_id, artifact_id=artifact_id,
+    )
+
+
+@router.get("/{project_id}/preliminary-results/{artifact_id}/content")
+def download_project_preliminary_result(
+    project_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("project:read")),
+):
+    artifact = _scoped_preliminary_result(
+        db, organization_id=current_user.organization_id,
+        project_id=project_id, artifact_id=artifact_id,
+    )
+    content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if artifact.file_size_bytes < 1 or artifact.file_size_bytes > 10 * 1024 * 1024 or artifact.content_type != content_type:
+        raise HTTPException(status_code=503, detail="Tệp kết quả sơ bộ chưa khả dụng.")
+    try:
+        with get_object_storage().open_stream(artifact.storage_object_key) as stream:
+            content = _read_stream_bounded(
+                stream, max_bytes=10 * 1024 * 1024,
+                expected_size=artifact.file_size_bytes,
+            )
+    except (ObjectNotFound, ObjectStorageError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Tệp kết quả sơ bộ chưa khả dụng.") from exc
+    if hashlib.sha256(content).hexdigest() != artifact.content_checksum_sha256:
+        raise HTTPException(status_code=503, detail="Tệp kết quả sơ bộ chưa khả dụng.")
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="ket-qua-so-bo-v{artifact.version}.xlsx"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post(

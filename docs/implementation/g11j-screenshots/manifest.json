@@ -1,0 +1,110 @@
+{
+  "synthetic_only": true,
+  "route": "/workbench/projects/completion-acceptance/preliminary-completion",
+  "captures": [
+    {
+      "candidate": "docs/implementation/g11j-screenshots/01-result-ready.png",
+      "viewport": "1440x900",
+      "state": "result-ready",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/02-result-generated.png",
+      "viewport": "1440x900",
+      "state": "result-generated/customer-unbound",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/03-customer-selected.png",
+      "viewport": "1440x900",
+      "state": "customer-selected/unbound",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/04-customer-bound.png",
+      "viewport": "1440x900",
+      "state": "customer-bound/intake-ready",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/05-intake-confirmation.png",
+      "viewport": "1440x900",
+      "state": "intake-confirmation",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/07-intake-frozen.png",
+      "viewport": "1440x900",
+      "state": "intake-committed/read-only",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/06-blocking-issue.png",
+      "viewport": "1440x900",
+      "state": "open-blocking-issue",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/g11j-screenshots/08-result-unavailable.png",
+      "viewport": "1440x900",
+      "state": "result-unavailable",
+      "authority_type": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf#page=4",
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    }
+  ]
+}

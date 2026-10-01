@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CaseStateResponse } from "../../../api/caseState";
 import { CANONICAL_CASE_STAGES } from "../../../contracts/valoraV23";
 import { CaseOverviewContent } from "../CaseOverviewPage";
+import { mappedNextActionPath } from "../caseOverviewPresentation";
 
 function buildProjection(): CaseStateResponse {
   return {
@@ -48,6 +49,22 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it("maps only the two new server route keys to the shared completion surface", () => {
+    const pending = (key: string) => ({
+      kind: "PENDING" as const, stage: "PRELIMINARY_READY" as const,
+      semantic_route_key: key, validation_issue_id: null,
+    });
+    expect(mappedNextActionPath(pending("preliminary_ready_pending"), "project-1"))
+      .toBe("/workbench/projects/project-1/preliminary-completion");
+    expect(mappedNextActionPath(pending("official_intake_pending"), "project-1"))
+      .toBe("/workbench/projects/project-1/preliminary-completion");
+    expect(mappedNextActionPath(pending("preliminary_request_pending"), "project-1"))
+      .toBe("/workbench/projects/project-1/preliminary-intake");
+    expect(mappedNextActionPath(pending("preliminary_analysis_pending"), "project-1"))
+      .toBe("/workbench/projects/project-1/preliminary-analysis");
+    expect(mappedNextActionPath(pending("unknown"), "project-1")).toBeNull();
+  });
+
   it("renders all server-ordered stages and one mapped primary action", () => {
     const navigate = vi.fn();
     let root: ReturnType<typeof create>;

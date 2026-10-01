@@ -603,6 +603,18 @@ class PreliminaryResultCommandResponse(BaseSchema):
     content_checksum_sha256: str
 
 
+class PreliminaryResultReadResponse(BaseSchema):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    version: int
+    original_filename: str
+    content_type: str
+    file_size_bytes: int
+    content_checksum_sha256: str
+    source_snapshot_sha256: str
+    created_at: datetime
+
+
 class OfficialIntakeCommitResponse(BaseSchema):
     id: uuid.UUID
     project_id: uuid.UUID

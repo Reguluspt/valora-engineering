@@ -101,6 +101,31 @@ export async function request<T>(path: string, options: RequestInit = {}, isRetr
   }
 }
 
+export async function requestBlob(path: string, isRetry = false): Promise<Blob> {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  try {
+    const response = await fetch(`${BASE_URL}${normalizedPath}`, { credentials: "include" });
+    if (response.status === 401 && !isRetry) {
+      await request("/api/v1/auth/refresh", { method: "POST" }, true);
+      return requestBlob(path, true);
+    }
+    if (!response.ok) {
+      let detail: any = null;
+      try { detail = await response.json(); } catch { /* The server may return no JSON. */ }
+      throw new ApiError(
+        detail?.detail?.detail || (typeof detail?.detail === "string" ? detail.detail : null) || `HTTP error ${response.status}`,
+        response.status,
+        detail?.detail?.error_code,
+        detail,
+      );
+    }
+    return await response.blob();
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError("Không thể tải tệp kết quả sơ bộ.", 0);
+  }
+}
+
 export interface HealthResponse {
   status: string;
   database?: string;

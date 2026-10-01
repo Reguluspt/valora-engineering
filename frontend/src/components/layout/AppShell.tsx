@@ -7,6 +7,7 @@ import {
   projectDocumentsPath,
   projectPreliminaryIntakePath,
   projectPreliminaryAnalysisPath,
+  projectPreliminaryCompletionPath,
   splitProjectRoute,
 } from "../../contracts/valoraV23";
 import type { AccountContext } from "../../api/auth";
@@ -30,12 +31,14 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
   const isPrecase = currentPath === APP_ROUTES.preliminaryRequestManagement
     || currentPath === APP_ROUTES.preliminaryRequestCreate
     || currentView === "preliminary-intake"
-    || currentView === "preliminary-analysis";
+    || currentView === "preliminary-analysis"
+    || currentView === "preliminary-completion";
   const pageLabel = currentPath.split("?", 1)[0] === APP_ROUTES.m365Return ? "Kết nối Microsoft 365"
     : currentPath === APP_ROUTES.preliminaryRequestCreate ? "Tạo yêu cầu sơ bộ"
     : currentPath === APP_ROUTES.preliminaryRequestManagement ? "Quản lý yêu cầu sơ bộ"
     : currentView === "preliminary-intake" ? "Upload & Mapping Excel"
     : currentView === "preliminary-analysis" ? "Phân tích danh mục"
+    : currentView === "preliminary-completion" ? "Kết quả sơ bộ & tiếp nhận"
     : currentView === "overview" ? "Tổng quan hồ sơ"
     : currentView === "documents" ? "Không gian tài liệu"
     : currentView === "ncc-selection" ? "Chọn NCC đã xác nhận giá"
@@ -121,6 +124,12 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
                   "Phân tích danh mục",
                   true,
                   "▥",
+                )}
+                {currentView === "preliminary-completion" && navItem(
+                  projectPreliminaryCompletionPath(projectRoute.projectRef),
+                  "Kết quả & tiếp nhận",
+                  true,
+                  "◫",
                 )}
               </ul>
             </>
