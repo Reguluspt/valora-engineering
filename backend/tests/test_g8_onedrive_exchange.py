@@ -80,6 +80,7 @@ from app.modules.project_master_data.models import (
     OrganizationStatus,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
+    ProjectOfficialIntakeCommit,
     UserRole,
     UserStatus,
 )
@@ -107,6 +108,7 @@ EXCHANGE_TABLES = [
     ColumnMappingProfileUsage.__table__,
     ProjectColumnMappingAuthority.__table__,
     ProjectAssetImportStagingRow.__table__,
+    ProjectOfficialIntakeCommit.__table__,
     DocumentStorageExecutionIntent.__table__,
     DocumentStorageCandidate.__table__,
     DocumentStorageExecutionState.__table__,

@@ -1,0 +1,18 @@
+services:
+  postgres:
+    container_name: valora-g11k-postgres
+    ports: !override
+      - "55435:5432"
+  redis:
+    container_name: valora-g11k-redis
+    ports: !override []
+  minio:
+    container_name: valora-g11k-minio
+    ports: !override
+      - "59000:9000"
+  backend:
+    container_name: valora-g11k-backend
+  frontend:
+    container_name: valora-g11k-frontend
+  worker:
+    container_name: valora-g11k-worker

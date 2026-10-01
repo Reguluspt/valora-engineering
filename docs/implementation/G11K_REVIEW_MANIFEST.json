@@ -1,0 +1,223 @@
+{
+  "baseline_ci": [
+    {
+      "conclusion": "success",
+      "head_sha": "21eb2e264a0f819cd3caa053fa0769128c5d06a0",
+      "number": 523,
+      "run_id": 36823627276
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "5fcb110c379b25079dd1b374de8a2e5b9c494dfd",
+      "number": 525,
+      "run_id": 36845969447
+    }
+  ],
+  "baseline_main_sha": "5fcb110c379b25079dd1b374de8a2e5b9c494dfd",
+  "changed_file_count": 49,
+  "evidence": {
+    "browser_sanity": "docs/implementation/g11k-browser-sanity-evidence.json",
+    "negative": "docs/implementation/g11k-negative-evidence.json",
+    "replay": "docs/implementation/g11k-replay-evidence.json",
+    "report": "docs/implementation/G11K_PRECASE_PRODUCT_CLOSURE_E2E_EVIDENCE.md",
+    "runtime": "docs/implementation/g11k-runtime-evidence.json",
+    "storage": "docs/implementation/g11k-storage-evidence.json",
+    "visual": "docs/implementation/g11k-screenshots/manifest.json",
+    "workbook": "tests/e2e/fixtures/g11k_synthetic_assets.xlsx"
+  },
+  "files": [
+    {
+      "path": "CODEX.md",
+      "sha256": "9bf97c3442f54bf0aaf31adf2d6ee8d7e6378aeefbdc8039d4f52b82837cf713"
+    },
+    {
+      "path": "backend/app/modules/excel_import/application/source_artifact_service.py",
+      "sha256": "7f5a463dc79871325ec4890657206dd4fcdd0e87223c5b50a22d7e3eb0c13f20"
+    },
+    {
+      "path": "backend/tests/test_g11g_column_mapping_api.py",
+      "sha256": "442ec771698b0e6250569fb676f67486e509efb30cb7a09cd069e586c0f9bdc8"
+    },
+    {
+      "path": "backend/tests/test_g8_onedrive_exchange.py",
+      "sha256": "25ec33b8051615c6772f4bcab6f6edf33d866cb74726f4b660c91bb0d20f37da"
+    },
+    {
+      "path": "docs/implementation/G11K_CHANGED_FILES.txt",
+      "sha256": "b3be001de284b4becbf0f49864b1162d245bf7409bdd41164970156df59b546a"
+    },
+    {
+      "path": "docs/implementation/G11K_PRECASE_PRODUCT_CLOSURE_E2E_EVIDENCE.md",
+      "sha256": "34f7e4a213ce7e5e9038dda599b36e7a23f5447b6be059d0d8687f3badc48411"
+    },
+    {
+      "path": "docs/implementation/g11k-browser-sanity-evidence.json",
+      "sha256": "ead29509aa8ded5f1044d2e954b00788815dfbfe0d59007b387997fea15d34ac"
+    },
+    {
+      "path": "docs/implementation/g11k-negative-evidence.json",
+      "sha256": "a293de6a7b4b0f30f18c1d36412e7d5617219a95488793314dc7b26451ca4c52"
+    },
+    {
+      "path": "docs/implementation/g11k-replay-evidence.json",
+      "sha256": "2e3b36c4ee26c5906d93d4936ce6c6b88fcb53a2b3b53b9ffc1a4c9ed4eeae21"
+    },
+    {
+      "path": "docs/implementation/g11k-runtime-evidence.json",
+      "sha256": "5cb5c0282c839486ad9520017d7c94db1b98d020843c5283b0ae783f7567b634"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/01-precase-management.png",
+      "sha256": "7b591d3955e541b2fed7f537fcee224ab37fa0315a784ccb6e6933e8da6226ef"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/02-created-intake-start.png",
+      "sha256": "ebabd0173ea598f477dc71eaa063ebd7ad0c73ac5c7e7bb2de435eef4831c681"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/03-upload-actionable.png",
+      "sha256": "31819c24fe2c6d61a233e901e094643daebae5b3cb123d4076009b86e02ed258"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/04-structure-review.png",
+      "sha256": "c78ab62dfdaae0c3faddb19ab821777e13daa2a4399bbd5b8d5765a11b3c39eb"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/05-mapping-proposal.png",
+      "sha256": "10225dbf53c884232f207e30af2182527a70126f22f8aa03bb59672c2fe6c0c8"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/06-mapping-confirmed.png",
+      "sha256": "1d3aeb8f7fa88ad9850aa4bf50f4df6cb1813842d4db8a9f8de39c7df9f64c74"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/07-staging-materialized.png",
+      "sha256": "c46b7c9bb2258b71532e8dc3a61d3ab42076f031dd9c61e4f052a9285128d9fd"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/08-case-overview-preanalysis.png",
+      "sha256": "babf9f14c18f039c7fbaa067cb864e43db5ba0cef0bbbde573c740d083665af8"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/09-analysis-review.png",
+      "sha256": "a23ef29ef47ec4492039cebf87c34276f098e50706e1717be046f15f7a506861"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/10-analysis-finalized.png",
+      "sha256": "bc490de2ac78e6801454945fc9689627b3b0a57a00f429ef00fb39ba14b0ce5e"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/11-result-ready.png",
+      "sha256": "1ebb9076cec2107cc1712360b50ed745884fbcb8d6641ed19fc91e4a2f9dbe7c"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/12-result-created.png",
+      "sha256": "e97fe6aa7b11be77eea2f5b131f20fc13f364ef37a030e9c77422ec0a2b91efc"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/13-customer-selected.png",
+      "sha256": "eacf6f322e04e1866ea64ec2e5bd87c9846c7cf1032024502c0efab77df40a4c"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/14-customer-bound.png",
+      "sha256": "0868dbe548133864a7898deb0afdcceed49b21b3655cda608ef9cfa781bad3ab"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/15-official-intake-confirmation.png",
+      "sha256": "c193f38ea03e05491ff0e04882323f99cc2d3d92f6dfc9be762b541778a456ad"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/16-official-intake-committed.png",
+      "sha256": "ec387e59a604f8c802d97e3f71e504e15a902fff6dd610909d4af3bbe5b5fa5f"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/17-case-overview-post-intake.png",
+      "sha256": "73eda0084f78f950fce939641eeeff77b7fc95fc2fe081ea6e3d27907791a965"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/g11k-result-downloaded.xlsx",
+      "sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99"
+    },
+    {
+      "path": "docs/implementation/g11k-screenshots/manifest.json",
+      "sha256": "35afcfc1a3a36cced3c7a366197847c4afb99a5befaa566a7937680483d378a7"
+    },
+    {
+      "path": "docs/implementation/g11k-storage-evidence.json",
+      "sha256": "2ea0c48b5223e2cad04895b28f311cf8318ad04e4a70a26ebb3abe238dc90529"
+    },
+    {
+      "path": "frontend/src/api/__tests__/client.test.ts",
+      "sha256": "1ccc86d658e6a1e69f8c6d9d0374f5794273760780b5d14a4f60d63be4d118b6"
+    },
+    {
+      "path": "frontend/src/api/__tests__/projects.test.ts",
+      "sha256": "fcc036460b3751882311c7f4af555088cf4cbd78d8b65f75d965980d20a00a9c"
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "sha256": "4f50eab03186600b6ccf5755c75902a6be2a157a77aa9bab123da1310ec223d6"
+    },
+    {
+      "path": "frontend/src/components/workbench/project-context/__tests__/useResolvedProject.test.tsx",
+      "sha256": "6cb1504cd0835f622f95c7c1094d4b0ad1b9a772f4edf75b925c6e651f63a159"
+    },
+    {
+      "path": "frontend/src/components/workbench/project-context/useResolvedProject.ts",
+      "sha256": "6b3ce3f39abcf102b9bf85fffd139fb55a9367d3c02bcde2e50e707aa4ddd4a8"
+    },
+    {
+      "path": "tests/e2e/README.md",
+      "sha256": "8cb2a5b1b4fa5addf74c08b468528a2f31a86429208fe8389055c4b9781f7d75"
+    },
+    {
+      "path": "tests/e2e/bootstrap_g11k.py",
+      "sha256": "79daf7362c5466e1599847e5d60a42ce461412af6988e06e900d465e081f9aec"
+    },
+    {
+      "path": "tests/e2e/check_g11k_browser_sanity.py",
+      "sha256": "9681a78bac377204d4ff82e374d7421558e8385f5fef961747ebe7ffcd97f6aa"
+    },
+    {
+      "path": "tests/e2e/check_g11k_negative.py",
+      "sha256": "3d30159f4bfdba48913d4037a565b877125d27a77121501517ebb4ef673438a5"
+    },
+    {
+      "path": "tests/e2e/check_g11k_replay.py",
+      "sha256": "ceb7455d626b0ff48f8a3148fa898408ebdc8135eed63094611702ca44802c12"
+    },
+    {
+      "path": "tests/e2e/check_g11k_storage.py",
+      "sha256": "7d96ddd7778c9460e94ac78cfc7c92fc427284ad0d5f436ae5e46323c4438ef3"
+    },
+    {
+      "path": "tests/e2e/compose.g11k.yml",
+      "sha256": "50dbbfbaee9667f6e5716eba69961bdeb8dc1dba02f3a2d08b248f1c713f9329"
+    },
+    {
+      "path": "tests/e2e/fixtures/g11k_synthetic_assets.xlsx",
+      "sha256": "4758904d60dfa1eb04ef95ac3312b4e16cc337df53b4c750b56195e0d0df7c77"
+    },
+    {
+      "path": "tests/e2e/generate_g11k_manifests.py",
+      "sha256": "a10f7ccbe5f4e99063e3e57dd8687ee844c77e5c64649fca8fe6dcc0222de990"
+    },
+    {
+      "path": "tests/e2e/generate_g11k_review_manifest.py",
+      "sha256": "36b00f2d98595fe3373e2c698b41d71624ca73027aac2d5e7b6f4a02672eeb6d"
+    },
+    {
+      "path": "tests/e2e/generate_g11k_workbook.py",
+      "sha256": "d7eb2d80ea73adc81f50f4411e0d56130542b23d161d49b8c31e81f5de9f42b7"
+    },
+    {
+      "path": "tests/e2e/run_g11k_live.py",
+      "sha256": "aee0e920220afea36059755c10e74481a1b155d3a61be45993e96b4a60cdfa16"
+    }
+  ],
+  "frozen_head_binding": "Resolve git rev-parse HEAD; exact SHA is recorded in review transcripts and Draft PR",
+  "project_code": "G11K-E2E-20261001-007",
+  "schema": "valora-g11k-review-manifest-v1",
+  "source_pdf_and_screen_authority": "docs/design/visual-reference/v2.3/README.md",
+  "task_id": "VALORA-TASK-OS-G1-1K-PRECASE-PRODUCT-CLOSURE-E2E"
+}

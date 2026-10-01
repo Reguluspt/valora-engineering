@@ -13,6 +13,14 @@ describe("Central API Client Tests", () => {
     vi.unstubAllGlobals();
   });
 
+  it("uses the same-origin API proxy when no API base URL is configured", async () => {
+    (fetch as any).mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({}) });
+
+    await request("/api/v1/projects", { method: "POST", body: "{}" });
+
+    expect(fetch).toHaveBeenCalledWith("/api/v1/projects", expect.any(Object));
+  });
+
   it("attaches CSRF header to state-mutating requests when cookie is present", async () => {
     document.cookie = "XSRF-TOKEN=test_csrf_token_value";
     

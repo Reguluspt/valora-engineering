@@ -1002,6 +1002,9 @@ def test_historical_null_customer_and_true_replay_survive_binding_and_intake(api
         expected_project_version=seeded["project"].row_version,
         idempotency_key="g11g-result-after-bind", confirmed=True,
     )
+    pending_source = _pending_reconcile_source(
+        mapping_db, seeded, seeded["batch"], generation=2,
+    )
     commit_project_official_intake(
         mapping_db, actor=seeded["user"], org_id=seeded["org"].id,
         project_id=seeded["project"].id,
@@ -1011,6 +1014,27 @@ def test_historical_null_customer_and_true_replay_survive_binding_and_intake(api
         idempotency_key="g11g-intake-after-bind", confirmed=True,
     )
     assert mapping_db.query(ProjectOfficialIntakeCommit).count() == 1
+    frozen_source_id = seeded["batch"].current_source_artifact_id
+    source_count_before = mapping_db.query(ImportSourceArtifact).count()
+    denied_source = api_client.post(
+        f"/api/v1/projects/{seeded['project'].id}/asset-imports/"
+        f"{seeded['batch'].id}/source-artifacts",
+        headers=_headers(seeded),
+        files={"file": (
+            "after-intake.xlsx", io.BytesIO(_make_xlsx_bytes()),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )},
+    )
+    assert denied_source.status_code == 409, denied_source.text
+    assert denied_source.json()["detail"]["error_code"] == "source_official_intake_closed"
+    assert mapping_db.query(ImportSourceArtifact).count() == source_count_before
+    stats = reconcile_source_artifacts(
+        mapping_db, storage=seeded["storage"], max_items=10,
+        actor_id=seeded["user"].id, org_id=seeded["org"].id,
+    )
+    assert stats["errors"] == 0
+    assert mapping_db.get(ImportSourceArtifact, pending_source.id).state == "orphaned"
+    assert seeded["batch"].current_source_artifact_id == frozen_source_id
     management = api_client.get(
         "/api/v1/projects/preliminary-requests", headers=_headers(seeded),
     )

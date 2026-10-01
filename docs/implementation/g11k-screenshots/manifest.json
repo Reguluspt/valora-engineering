@@ -1,0 +1,198 @@
+{
+  "authority_index": "docs/design/visual-reference/v2.3/README.md",
+  "downloaded_result": {
+    "file": "g11k-result-downloaded.xlsx",
+    "sha256": "33114e501fd5773ecaf41c8f9b2351f83db01cc33489a3a4368ee61ec5d72e99",
+    "size": 5855
+  },
+  "images": [
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "01-precase-management.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "7b591d3955e541b2fed7f537fcee224ab37fa0315a784ccb6e6933e8da6226ef",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S02 Pre-case management",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "02-created-intake-start.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "ebabd0173ea598f477dc71eaa063ebd7ad0c73ac5c7e7bb2de435eef4831c681",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S03/S04 creation and intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "03-upload-actionable.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "31819c24fe2c6d61a233e901e094643daebae5b3cb123d4076009b86e02ed258",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S04 Upload & Mapping",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "04-structure-review.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "c78ab62dfdaae0c3faddb19ab821777e13daa2a4399bbd5b8d5765a11b3c39eb",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S04 Upload & Mapping",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "05-mapping-proposal.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "10225dbf53c884232f207e30af2182527a70126f22f8aa03bb59672c2fe6c0c8",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S04 Upload & Mapping",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "06-mapping-confirmed.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "1d3aeb8f7fa88ad9850aa4bf50f4df6cb1813842d4db8a9f8de39c7df9f64c74",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S04 Upload & Mapping",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "07-staging-materialized.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "c46b7c9bb2258b71532e8dc3a61d3ab42076f031dd9c61e4f052a9285128d9fd",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S04 Upload & Mapping",
+      "width": 1440
+    },
+    {
+      "authority": "EXACT_VISUAL_BASELINE",
+      "file": "08-case-overview-preanalysis.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+      "sha256": "babf9f14c18f039c7fbaa067cb864e43db5ba0cef0bbbde573c740d083665af8",
+      "source_page": "3",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S10 Case Overview",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "09-analysis-review.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "a23ef29ef47ec4492039cebf87c34276f098e50706e1717be046f15f7a506861",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S05 Preliminary Analysis",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY",
+      "file": "10-analysis-finalized.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "bc490de2ac78e6801454945fc9689627b3b0a57a00f429ef00fb39ba14b0ce5e",
+      "source_page": "6",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S05 Preliminary Analysis",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "11-result-ready.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "1ebb9076cec2107cc1712360b50ed745884fbcb8d6641ed19fc91e4a2f9dbe7c",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "12-result-created.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "e97fe6aa7b11be77eea2f5b131f20fc13f364ef37a030e9c77422ec0a2b91efc",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "13-customer-selected.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "eacf6f322e04e1866ea64ec2e5bd87c9846c7cf1032024502c0efab77df40a4c",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "14-customer-bound.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "0868dbe548133864a7898deb0afdcceed49b21b3655cda608ef9cfa781bad3ab",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "15-official-intake-confirmation.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "c193f38ea03e05491ff0e04882323f99cc2d3d92f6dfc9be762b541778a456ad",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT",
+      "file": "16-official-intake-committed.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "ec387e59a604f8c802d97e3f71e504e15a902fff6dd610909d4af3bbe5b5fa5f",
+      "source_page": "4",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "surface": "S09 Result / Official Intake",
+      "width": 1440
+    },
+    {
+      "authority": "EXACT_VISUAL_BASELINE",
+      "file": "17-case-overview-post-intake.png",
+      "height": 900,
+      "reference": "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+      "sha256": "73eda0084f78f950fce939641eeeff77b7fc95fc2fe081ea6e3d27907791a965",
+      "source_page": "3",
+      "source_pdf": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "surface": "S10 Case Overview",
+      "width": 1440
+    }
+  ],
+  "source": "Real authenticated browser, frontend + FastAPI + PostgreSQL + S3 object storage"
+}
