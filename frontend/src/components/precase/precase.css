@@ -1,14 +1,14 @@
 .precase-create-page {
   height: 100%;
   overflow-y: auto;
-  padding: var(--valora-space-page);
+  padding: var(--valora-space-lg) var(--valora-space-xl);
   background: var(--valora-color-canvas);
   color: var(--valora-color-text-primary);
 }
 
 .precase-create-header {
   max-width: 52rem;
-  margin-bottom: var(--valora-space-xl);
+  margin-bottom: var(--valora-space-md);
 }
 
 .precase-create-header p {
@@ -38,7 +38,7 @@
 
 .precase-create-fields {
   display: grid;
-  gap: var(--valora-space-lg);
+  gap: var(--valora-space-md);
 }
 
 .precase-create-fields label {
@@ -72,7 +72,7 @@
 .precase-analysis-page {
   height: 100%;
   overflow-y: auto;
-  padding: var(--valora-space-page);
+  padding: var(--valora-space-lg) var(--valora-space-xl);
   background: var(--valora-color-canvas);
   color: var(--valora-color-text-primary);
 }
@@ -83,7 +83,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--valora-space-2xl);
-  margin-bottom: var(--valora-space-xl);
+  margin-bottom: var(--valora-space-md);
 }
 
 .precase-management-header p,
@@ -113,6 +113,22 @@
   overflow-x: auto;
 }
 
+.precase-queue-toolbar {
+  display: flex;
+  min-height: var(--valora-control-height-large);
+  gap: var(--valora-space-sm);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--valora-space-xs) var(--valora-space-md);
+  border: 1px solid var(--valora-color-border-subtle);
+  border-bottom: 0;
+  border-radius: var(--valora-radius-surface) var(--valora-radius-surface) 0 0;
+  background: var(--valora-color-surface-primary);
+}
+
+.precase-queue-toolbar span { color: var(--valora-color-text-subtle); font-size: var(--valora-font-size-caption); }
+.precase-queue-toolbar + .precase-management-table { border-top-left-radius: 0; border-top-right-radius: 0; }
+
 .precase-management-table td:first-child strong,
 .precase-management-code {
   display: block;
@@ -128,26 +144,59 @@
   justify-content: flex-end;
   align-items: center;
   gap: var(--valora-space-sm);
-  margin-top: var(--valora-space-lg);
+  margin-top: var(--valora-space-sm);
   font-size: var(--valora-font-size-body-secondary);
 }
 
 .precase-intake-page {
   display: flex;
   flex-direction: column;
-  gap: var(--valora-space-lg);
+  gap: var(--valora-space-sm);
 }
 
 .precase-analysis-page {
   display: flex;
   flex-direction: column;
-  gap: var(--valora-space-lg);
+  gap: var(--valora-space-sm);
 }
+
+.precase-analysis-summary,
+.precase-workflow-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-surface);
+  background: var(--valora-color-surface-primary);
+}
+
+.precase-workflow-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.precase-analysis-summary > div,
+.precase-workflow-strip > div {
+  min-width: 0;
+  padding: var(--valora-space-md);
+}
+
+.precase-analysis-summary > div + div,
+.precase-workflow-strip > div + div { border-left: 1px solid var(--valora-color-border-subtle); }
+
+.precase-analysis-summary span,
+.precase-workflow-strip span { display: block; color: var(--valora-color-text-subtle); font-size: var(--valora-font-size-caption); }
+
+.precase-analysis-summary strong,
+.precase-workflow-strip strong { display: block; margin-top: var(--valora-space-xs); font-size: var(--valora-font-size-body); }
+
+.precase-workflow-strip strong { margin: 0 0 var(--valora-space-xs); }
 
 .precase-analysis-page .valora-panel__body {
   display: grid;
-  gap: var(--valora-space-md);
+  gap: var(--valora-space-sm);
 }
+
+.precase-analysis-page .valora-panel__header { font-weight: var(--valora-font-weight-semibold); }
+.precase-analysis-page [data-analysis-state="completed"] { border-top: 3px solid var(--valora-color-status-success-foreground); }
+.precase-analysis-page [data-analysis-state="completed"] .valora-panel__header { color: var(--valora-color-status-success-foreground); }
+.precase-analysis-page .valora-table td { white-space: nowrap; }
 
 .precase-analysis-page .valora-panel__body > p {
   margin: 0;
@@ -159,19 +208,19 @@
 }
 
 .precase-analysis-table .valora-table {
-  min-width: 76rem;
+  min-width: 70rem;
 }
 
 .precase-analysis-table .valora-field {
-  min-width: 8rem;
+  min-width: 7rem;
 }
 
 .precase-analysis-table input[name="identity"] {
-  min-width: 14rem;
+  min-width: 12rem;
 }
 
 .precase-analysis-table input[name="accepted_price_basis"] {
-  min-width: 12rem;
+  min-width: 11rem;
 }
 
 .precase-analysis-table input[type="checkbox"] {
@@ -206,7 +255,7 @@
 .precase-intake-summary .valora-panel__body {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--valora-space-lg);
+  gap: var(--valora-space-md);
 }
 
 .precase-intake-summary .valora-panel__body > div {
@@ -233,8 +282,20 @@
 .precase-intake-step .valora-panel__body {
   display: grid;
   justify-items: start;
-  gap: var(--valora-space-lg);
+  gap: var(--valora-space-md);
 }
+
+.precase-prior-step > summary {
+  padding: var(--valora-space-sm) var(--valora-space-lg);
+  color: var(--valora-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--valora-font-size-body-secondary);
+}
+
+.precase-prior-step > summary:focus-visible { outline: none; box-shadow: var(--valora-focus-ring); }
+.precase-prior-step[open] > summary { border-bottom: 1px solid var(--valora-color-border-subtle); }
+
+.precase-intake-step:has(.valora-button--primary:not(:disabled)) { border-top: 3px solid var(--valora-color-brand-background); }
 
 .precase-intake-step p {
   margin: 0;
@@ -342,4 +403,7 @@
   .precase-intake-summary .valora-panel__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .precase-analysis-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .precase-analysis-summary > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--valora-color-border-subtle); }
+  .precase-analysis-summary > div:nth-child(4) { border-top: 1px solid var(--valora-color-border-subtle); }
 }

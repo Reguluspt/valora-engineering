@@ -50,7 +50,7 @@ export function ProjectListPage({
   }, [load]);
 
   return (
-    <main className="project-list-page">
+    <div className="project-list-page">
       <header className="project-list-header">
         <div>
           <p>Hồ sơ của đơn vị</p>
@@ -160,6 +160,6 @@ export function ProjectListPage({
           </table>
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,0 +1,157 @@
+{
+  "synthetic_only": true,
+  "captures": [
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s10-overview-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/project-acceptance/overview",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s02-management-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/preliminary-requests",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s03-create-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/preliminary-requests/new",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s11-asset-confirmation-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s04-upload-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/precase-acceptance/preliminary-intake",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s04-mapping-review-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/precase-acceptance/preliminary-intake + synthetic proposal",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s05-analysis-editable-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/precase-acceptance/preliminary-analysis",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s05-analysis-completed-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/precase-acceptance/preliminary-analysis + confirmed synthetic rows",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s04-conflict-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/precase-acceptance/preliminary-intake + synthetic 409",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s12-workbench-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/workbench-acceptance",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s13-asset-context-drawer-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/workbench-acceptance + drawer",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/s13-asset-context-drawer-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/price-evidence-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/workbench-acceptance + price/evidence drawer",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/price-evidence-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/ncc-selection-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/project-acceptance/ncc-selection + drawer",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/ncc-selection-iteration-1-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/ncc-selection-candidate-selected-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/project-acceptance/ncc-selection + eligible quote selected",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/ncc-selection-iteration-1-approved.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/m365-workspace-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/projects/project-acceptance/documents",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md",
+        "docs/design/visual-reference/v2.3/baselines/m365-return-revalidation-iteration-1.png"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/m365-oauth-return-1440x900.png",
+      "viewport": "1440x900",
+      "fixture": "/workbench/m365/return",
+      "authority_type": "VISUAL_GRAMMAR_ONLY",
+      "references": [
+        "docs/design/visual-reference/v2.3/README.md"
+      ]
+    },
+    {
+      "candidate": "docs/implementation/vf0-screenshots/s10-overview-1920x1080.png",
+      "viewport": "1920x1080",
+      "fixture": "/workbench/projects/project-acceptance/overview",
+      "authority_type": "EXACT_VISUAL_BASELINE",
+      "references": [
+        "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png"
+      ]
+    }
+  ]
+}

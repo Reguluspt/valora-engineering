@@ -1,0 +1,233 @@
+{
+  "schema": "valora-vf0-review-manifest-v1",
+  "review_round": 2,
+  "base_sha": "181c48ce007d8885c49c0dbd52040a38fbaf8cec",
+  "scope": "All changed content except this manifest itself",
+  "changed_file_count": 54,
+  "files": [
+    {
+      "path": "CODEX.md",
+      "sha256": "b10dde785e85e2f69ace664dffb099b90b9928e839a76bd5a89cbe3960d0195a"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/README.md",
+      "sha256": "bb954fdb5c90db9dc8bbbc16e7573fcb578580ba3ab21b773a3e8f00393a481d"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_AUDIT_LINEAGE_ENTRYPOINT_BASELINE_Part_2B.pdf",
+      "sha256": "026c0e4a9559654030e11a712536a8761aced09d8815180dfc83981b115cb530"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_FINAL_NORTH_STAR_IMPLEMENTATION_CLOSURE_Part_2C.pdf",
+      "sha256": "55d3bfb51e131b698cce120629a741af7ed57280a40851ea4004e2bfe31116bf"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/VALORA_UIUX_Handoff_v2.3_RELEASE_CONFIRMATION_BASELINE_Part_1.pdf",
+      "sha256": "d4a02dc3d7003feeb83ba2d61b9c4aebced6133cd97799e5e405c08e16e03cdf"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/audit-lineage-entrypoint-pattern-board-iteration-1.png",
+      "sha256": "c77053eb93fafc0cab1b015acebfa85d175cf84d5821177320bde90e444e0660"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/cross-product-state-pattern-board-iteration-1.png",
+      "sha256": "a32022d34f646fa21b428d8d97e065081f55b0f8d068476372b4a6a4d5e353c3"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/m365-return-revalidation-iteration-1.png",
+      "sha256": "8f6478eac97ee4b6c384d0609165c74165803fad97fa569f74cf1b53986fd196"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/ncc-selection-iteration-1-approved.png",
+      "sha256": "08259161073af0011a72b82c361f3118c152a2ad928ba9c3515d7d4724b9e045"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/nccq-iteration-6-approved.png",
+      "sha256": "058909d5c6f7be05fae0b8a6616b183ee35ead20a1e3d62417b3581b1141d09c"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/price-evidence-approved.png",
+      "sha256": "077e4193f2d0574e7186b8903e8832a2a8562e4b124e86eec2afa6b5c092f662"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/s10-orchestration-hub-iteration-2-approved.png",
+      "sha256": "f0a4a77ba85c54e2fea16965f42f6b9ea77f0a5767f0892bb6b55038e2653826"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/s11-asset-confirmation-approved.png",
+      "sha256": "cd5a8f8c6b9aa96e2aa16bf6fc1b96ad8ed7907f0c3ac21148ee67fb1f219417"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/s12-workbench-approved.png",
+      "sha256": "8a2f15a22c1aeeec9bc9e4a1b90275a08c5ad2e2ae07c2e97965c4b72b6e0936"
+    },
+    {
+      "path": "docs/design/visual-reference/v2.3/baselines/s13-asset-context-drawer-approved.png",
+      "sha256": "50a99c2807564d1694889a6e74fac175ea7b27fbc14852e4b72f8eb7c687ff2c"
+    },
+    {
+      "path": "docs/implementation/VF0_VISUAL_FIDELITY_EVIDENCE.md",
+      "sha256": "1b839e49b82603b3f588d66df555b79b8b0d334c6f128da0ff26375c63d333f3"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/m365-oauth-return-1440x900.png",
+      "sha256": "ccfe1e55859ce5ca5d43f7cac4a39a81ea15a2bf2718d197200d94461facef2c"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/m365-workspace-1440x900.png",
+      "sha256": "f21b3de462af7fc6a6f6ff1b4224ef7e6162bab236112e085e546c8a2817e871"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/manifest.json",
+      "sha256": "750b96feed625d1b50884de42018fe479041e2feab6c2776c622d7dc7772ad15"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/ncc-selection-1440x900.png",
+      "sha256": "f61e964ec1f943ef6e62b81dce35cc792b6b0fe348f370cd39d7ace3f3b6c225"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/ncc-selection-candidate-selected-1440x900.png",
+      "sha256": "31798c106c2b76e5a617092457ce11fdf9b7fd484ef8997b3ec401bbf17a262c"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/price-evidence-1440x900.png",
+      "sha256": "10f3f90e3f185e38301233d6fb284e9121df4d1ff1b61bd9457d3af57ed81bbc"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s02-management-1440x900.png",
+      "sha256": "8df0ba6a37aa780cf9a0f9a2f100a86014a583f6e73248698d65b6281136b389"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s03-create-1440x900.png",
+      "sha256": "dda74309cb5976ca40724336bcafb88375058e31d96c6fa9ad10405b2e50e425"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s04-conflict-1440x900.png",
+      "sha256": "799755ebe5a1f61bd9e8d26c3c7ae8ebb0cbe539010c5ee2314acb1657a96825"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s04-mapping-review-1440x900.png",
+      "sha256": "4737f84df83ac8ae7ba0f96a4c113194074cb4284a131792e71c1bba64832030"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s04-upload-1440x900.png",
+      "sha256": "a399746ce11ecd04b91de0af831c313bdef40fffccacb10f9b81f79d085f9c44"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s05-analysis-completed-1440x900.png",
+      "sha256": "29214ca4dfdd738af49a684e18dcddabad01f035e4ba0bcd16223a9dcc25e7be"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s05-analysis-editable-1440x900.png",
+      "sha256": "db8fdd4df1fbebeca789890823f6b3099221cacbf7efa839d046716a11f89456"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s10-overview-1440x900.png",
+      "sha256": "9598eb8b7c1417ef38515094a12a889019bf5e7c5a07c2cc69eeaa25b6f9ea64"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s10-overview-1920x1080.png",
+      "sha256": "89155a8cfda97e6375794b3e6ae06ca42db4d4eaa46f5ba6c74558dcf7e96248"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s12-workbench-1440x900.png",
+      "sha256": "22c286b50cd968beaca4bd90b5be30d5296ea9776314275cf20ee8479096952b"
+    },
+    {
+      "path": "docs/implementation/vf0-screenshots/s13-asset-context-drawer-1440x900.png",
+      "sha256": "49871fd00731694aa44bb91c3baf6dbc13d55a09965c0849917883d686515ec1"
+    },
+    {
+      "path": "frontend/scripts/capture-vf0-screenshots.py",
+      "sha256": "d3de4e5bd23f2194f804b58f8b6e38da6a848438cfcdadc78cb72da8a67ddde2"
+    },
+    {
+      "path": "frontend/src/components/case-overview/CaseOverviewPage.tsx",
+      "sha256": "6b56f1947ca1bf097684b316f906e29e78d936363b5191c25af47e0879cc3591"
+    },
+    {
+      "path": "frontend/src/components/case-overview/caseOverview.css",
+      "sha256": "5455366571c28ad064a80a855f2dc51ddc5f3a5a3498e01fee988b3f03a3b30d"
+    },
+    {
+      "path": "frontend/src/components/layout/AppShell.tsx",
+      "sha256": "b2203e94eeed48c2bfbcad4a8cf426814e481b9936a2986390de1021cece48b2"
+    },
+    {
+      "path": "frontend/src/components/layout/WorkbenchLayout.tsx",
+      "sha256": "6171b52b3f79df67dd6945488075426d3d464935c511f6e101ef53206b0037a7"
+    },
+    {
+      "path": "frontend/src/components/layout/__tests__/AppShell.route.test.tsx",
+      "sha256": "6fc71a05e926a75f15df01f7ec6db3ea7f2de253360c9d6034c58f582bc6cf09"
+    },
+    {
+      "path": "frontend/src/components/m365/M365WorkspacePage.tsx",
+      "sha256": "ff803ccbe6043270514be2812f685df35012f00eae15eaad9e232ac21fe07054"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/NccSelectionPage.tsx",
+      "sha256": "24b2db6224fb293eaa03f4113d73a56f33bb23475052d26153a9328e6ce75b02"
+    },
+    {
+      "path": "frontend/src/components/ncc-selection/nccSelection.css",
+      "sha256": "b338d9a5a463035fe388c302ff2b5546171249a8b502012ed7da2642b0b51633"
+    },
+    {
+      "path": "frontend/src/components/precase/PreliminaryAnalysisPage.tsx",
+      "sha256": "194e8a9f6312a0a43a0ed2d9474565d26d051a74021d256863e8a4d091d7b06a"
+    },
+    {
+      "path": "frontend/src/components/precase/PreliminaryIntakePage.tsx",
+      "sha256": "4e2994bc531a60c6fdd381d85859d09b559e61687e0106ba678be21586c7b37e"
+    },
+    {
+      "path": "frontend/src/components/precase/PreliminaryRequestCreatePage.tsx",
+      "sha256": "2148d7402935346c0343f8ef3d6d3b29fddc72d445929068067c7495d50c0b55"
+    },
+    {
+      "path": "frontend/src/components/precase/PreliminaryRequestsPage.tsx",
+      "sha256": "3b6376600bb79907264c5b0778c2c8121f9f893a8ad9c238ceb5849981e16be8"
+    },
+    {
+      "path": "frontend/src/components/precase/precase.css",
+      "sha256": "e064dd572f54df67201f35b8acc22948dea8e9cfbd47f8d01b9b0d13ece79b1a"
+    },
+    {
+      "path": "frontend/src/components/projects/ProjectListPage.tsx",
+      "sha256": "1fe0d0eb248f6831e4f7e0c0df637eb133525054e6574c93538b07d95566456e"
+    },
+    {
+      "path": "frontend/src/components/workbench/AssetGrid.tsx",
+      "sha256": "8edf729743aa124d91b60837cfd6c06637211ce5f03dd7d285af985599c92a67"
+    },
+    {
+      "path": "frontend/src/components/workbench/AssetGridToolbar.tsx",
+      "sha256": "70f73e82c036253bb26d14ae5bd3c6df2b1fd86a3d9f1138134ec49aad8403de"
+    },
+    {
+      "path": "frontend/src/components/workbench/__tests__/AssetGrid.interactions.test.tsx",
+      "sha256": "f866a9fb339783fb0a36115ccb35d01c1929a75d3c0b788f655c373e79dd721f"
+    },
+    {
+      "path": "frontend/src/components/workbench/workbench.css",
+      "sha256": "2dc8edefa9962c2f73c403c14a994b788037e4969455837f7e9082d891e39c03"
+    },
+    {
+      "path": "frontend/src/index.css",
+      "sha256": "798865c345c7909c0bf2373a256d36303cc515ffa18dc9de05204e2c3ffcb796"
+    },
+    {
+      "path": "frontend/src/styles/fluent2-tokens.css",
+      "sha256": "c76e748d72c071f2ddfe062995b54dc4b660c3653a52caf2ad81705815466bc6"
+    }
+  ],
+  "gate": {
+    "frontend_tests": "287 passed, 0 skipped, 42 files",
+    "lint": "PASS",
+    "build": "PASS",
+    "npm_audit_vulnerabilities": 0,
+    "browser_captures": 16,
+    "browser_rerun_hashes_identical": true
+  }
+}

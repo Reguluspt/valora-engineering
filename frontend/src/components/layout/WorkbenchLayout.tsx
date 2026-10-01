@@ -209,6 +209,12 @@ function WorkbenchLayoutInner({
         onNavigateOverview={onNavigateOverview}
       />
 
+      <div className="workbench-summary" aria-label="Tóm tắt danh mục tài sản">
+        <div><span>Tổng tài sản</span><strong>{gridLoading || gridFriendlyError ? "—" : totalCount}</strong></div>
+        <div><span>Đang hiển thị</span><strong>{gridLoading || gridFriendlyError ? "—" : loadedCount}</strong></div>
+        <div><span>Trường nháp đang sửa</span><strong>{draftsCount}</strong></div>
+      </div>
+
       {(conflictError || syncConflict) && (
         <ConflictWarning
           onResolve={() => {
@@ -268,7 +274,7 @@ function WorkbenchLayoutInner({
       </div>
 
       <div className="workbench-body">
-        <main className="workbench-grid-pane">
+        <div className="workbench-grid-pane">
           {children || (
             gridLoading ? (
               <div className="workbench-page-state" role="status">
@@ -311,7 +317,7 @@ function WorkbenchLayoutInner({
               </>
             )
           )}
-        </main>
+        </div>
         {activeRow && drawerOpen && (
           <div id="asset-context-drawer" className="workbench-drawer-layer">
             <WorkbenchRightPanelShell

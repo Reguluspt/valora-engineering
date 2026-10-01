@@ -1,6 +1,6 @@
 import React from "react";
 
-import type { CaseStateIssue, CaseStateResponse } from "../../api/caseState";
+import type { CaseStage, CaseStateIssue, CaseStateResponse } from "../../api/caseState";
 import { useResolvedProject } from "../workbench/project-context";
 import {
   CASE_RESULT_LABELS,
@@ -15,6 +15,16 @@ interface CaseOverviewPageProps {
   projectRef: string;
   onNavigate: (path: string) => void;
 }
+
+const PROGRESS_GROUPS: ReadonlyArray<{ label: string; stageKeys: readonly CaseStage[] }> = [
+  { label: "Yêu cầu sơ bộ & tiếp nhận", stageKeys: ["PRELIMINARY_REQUEST", "PRELIMINARY_ANALYSIS", "PRELIMINARY_READY", "OFFICIAL_INTAKE"] },
+  { label: "Danh mục tài sản", stageKeys: ["ASSET_REVIEW", "ASSET_WORKBENCH"] },
+  { label: "Nguồn giá & chứng cứ", stageKeys: ["PRICE_EVIDENCE"] },
+  { label: "Báo giá NCC", stageKeys: ["SUPPLIER_QUOTES"] },
+  { label: "Chọn NCC", stageKeys: ["SUPPLIER_SELECTION"] },
+  { label: "Kết quả thẩm định", stageKeys: ["APPRAISAL_RESULT"] },
+  { label: "Tài liệu & phát hành", stageKeys: ["DOCUMENT_WORKSPACE", "DOCUMENT_SYNC_REVIEW", "PUBLISHING_PREPARATION", "PUBLISHING_EXCEPTION_REVIEW", "PUBLISHING_CONFIRMATION", "PUBLISHED"] },
+];
 
 export function CaseOverviewPage({ projectRef, onNavigate }: CaseOverviewPageProps) {
   const resolved = useResolvedProject(projectRef);
@@ -92,13 +102,14 @@ export function CaseOverviewContent({
   const actionPath = mappedNextActionPath(projection.next_action, projectRef);
   const completeCount = projection.stages.filter((stage) => stage.result === "COMPLETE").length;
   const unavailableCount = projection.stages.filter((stage) => stage.result === "NOT_AVAILABLE").length;
+  const completionPercent = Math.round((completeCount / projection.stages.length) * 100) || 0;
 
   return (
-    <main className="case-overview-page">
+    <div className="case-overview-page">
       <header className="case-overview-header">
         <div>
-          <p className="case-overview-kicker">Tổng quan hồ sơ</p>
-          <h1>{projectName}</h1>
+          <h1>Tổng quan hồ sơ</h1>
+          <p className="case-overview-project-name">{projectName}</p>
           <p className="case-overview-subtitle">
             Theo dõi các bước bắt buộc và mở đúng việc cần xử lý tiếp theo.
           </p>
@@ -110,6 +121,9 @@ export function CaseOverviewContent({
           <span>Trạng thái hồ sơ</span>
           <strong>{currentStageLabel}</strong>
           <small>{completeCount}/{projection.stages.length} bước đã xác nhận hoàn tất{unavailableCount > 0 ? ` · ${unavailableCount} bước chưa khả dụng` : ""}</small>
+          <div className="case-completion-track" role="progressbar" aria-label="Tiến độ các bước bắt buộc" aria-valuemin={0} aria-valuemax={projection.stages.length} aria-valuenow={completeCount}>
+            <span style={{ width: `${completionPercent}%` }} />
+          </div>
         </div>
         <SummaryMetric label="Vấn đề ngăn bước" value={String(projection.blockers.length)} tone={projection.blockers.length ? "danger" : "neutral"} />
         <SummaryMetric label="Cảnh báo" value={String(projection.warnings.length)} tone={projection.warnings.length ? "warning" : "neutral"} />
@@ -147,6 +161,29 @@ export function CaseOverviewContent({
                 );
               })}
             </div>
+            <div className="case-stage-legend" aria-label="Chú thích trạng thái bước">
+              {Array.from(new Set(projection.stages.map((stage) => stage.result))).map((result) => (
+                <span className={`case-stage-legend-item case-stage-legend-item--${result.toLowerCase().replace(/_/g, "-")}`} key={result}>{CASE_RESULT_LABELS[result]}</span>
+              ))}
+            </div>
+          </section>
+
+          <div className="case-overview-detail-grid">
+          <section className="case-overview-section case-group-progress" aria-labelledby="case-group-progress-title">
+            <div className="case-overview-section-heading"><h2 id="case-group-progress-title">Tiến độ chi tiết theo nhóm</h2></div>
+            <div className="case-group-list">
+              {PROGRESS_GROUPS.map((group) => {
+                const stages = projection.stages.filter((stage) => group.stageKeys.includes(stage.stage));
+                const complete = stages.filter((stage) => stage.result === "COMPLETE").length;
+                return <div className="case-group-row" key={group.label}>
+                  <span>{group.label}</span>
+                  <div className="case-group-track" role="progressbar" aria-label={group.label} aria-valuemin={0} aria-valuemax={group.stageKeys.length} aria-valuenow={complete}>
+                    <span style={{ width: `${Math.round((complete / group.stageKeys.length) * 100) || 0}%` }} />
+                  </div>
+                  <strong>{complete}/{group.stageKeys.length}</strong>
+                </div>;
+              })}
+            </div>
           </section>
 
           <div className="case-issue-grid">
@@ -180,6 +217,7 @@ export function CaseOverviewContent({
                 </ul>
               )}
             </section>
+          </div>
           </div>
         </div>
 
@@ -217,13 +255,9 @@ export function CaseOverviewContent({
             <span>Hệ thống chưa cung cấp hoạt động gần đây của hồ sơ.</span>
           </section>
 
-          <footer className="case-version">
-            <span>Phiên bản trạng thái</span>
-            <code title={projection.case_version}>{projection.case_version.slice(0, 12)}</code>
-          </footer>
         </aside>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -279,7 +313,7 @@ function IssueSection({
 
 function CaseOverviewSkeleton() {
   return (
-    <main className="case-overview-page case-overview-skeleton" role="status" aria-live="polite" aria-label="Đang tải trạng thái hồ sơ">
+    <div className="case-overview-page case-overview-skeleton" role="status" aria-live="polite" aria-label="Đang tải trạng thái hồ sơ">
       <div className="valora-skeleton case-skeleton-line case-skeleton-line--title" />
       <div className="valora-skeleton case-skeleton-line case-skeleton-line--subtitle" />
       <div className="case-skeleton-metrics">
@@ -289,7 +323,7 @@ function CaseOverviewSkeleton() {
         <div className="valora-skeleton" />
         <div className="valora-skeleton" />
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -307,12 +341,12 @@ function CaseOverviewError({
   onRetry: () => void;
 }) {
   return (
-    <main className="case-overview-error" data-state={dataState} role="alert">
+    <div className="case-overview-error" data-state={dataState} role="alert">
       <p>Tổng quan hồ sơ</p>
       <h1>{title}</h1>
       <span>{message}</span>
       <small>{nextAction}</small>
       <button className="valora-button valora-button--primary" type="button" onClick={onRetry}>Tải lại trạng thái</button>
-    </main>
+    </div>
   );
 }

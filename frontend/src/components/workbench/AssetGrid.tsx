@@ -81,7 +81,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
   // Virtualization Scroll Container Ref
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = 400; // Fixed view window height
-  const rowHeight = 60; // Expected row height
+  const rowHeight = 44; // Matches the dense Workbench row geometry.
 
   // 1. Sort and Filter
   const filteredAndSortedRows = useMemo(() => {
