@@ -46,7 +46,9 @@ Until the new provider and authority are accepted and wired, preserve the curren
 | Same batch is `ready_for_review` with all valid rows | `asset_import_apply_confirm`; same typed context and expected version; explicit human confirmation required. |
 | Exact batch is Applied; lines need review | `asset_review_line_pending`; Project, first deterministic pending line ID and line version. |
 | Open blocking issue | Blocker action for the scoped issue ID/version takes precedence; no Apply CTA. |
-| Lineage stale, absent/ambiguous current batch, or recovery would need closed Pre-case mutation | No unsafe Apply or disabled Pre-case route; typed stale/block reason, no action route until a recovery contract is approved. |
+| Applied line is `flagged`/`rejected`/`invalid` | `asset_review_line_blocked`; Project, first deterministic affected line ID/version and reason; route to human line review under ADR 0028, never auto-resolve. |
+| Zero/invalid/warning staging rows, pre-existing/unaccounted official lines, or recovery needs closed Pre-case mutation | `BLOCKER` with typed reason and affected batch/line IDs where scoped; no unsafe Apply or disabled Pre-case route until a recovery contract is approved. |
+| Lineage stale or current batch absent/ambiguous | Typed stale reason and involved authority IDs; no action route until the conflict is resolved by an approved recovery command. |
 
 Warnings stay visible without becoming blockers. Resume may retain a still-valid line context but cannot override blocker/stale precedence. The future `case_version` must cover Intake/Result identity, batch/selection/validation/Apply generation, official-line membership and row versions, and scoped issue versions. Current [Case State schema](../../backend/app/modules/project_master_data/schemas.py) has `STALE` stage result but no `IN_PROGRESS` wire value or stale-specific Next Action kind; the successor Case State contract must settle those mappings and typed context before API/UI work.
 
