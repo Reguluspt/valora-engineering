@@ -30,7 +30,7 @@ def _engine():
     engine = create_engine(url, connect_args={"connect_timeout": 5})
     with engine.connect() as connection:
         head = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert head == "d1e2f3a4b5c6"
+    assert head == "e2f3a4b5c6d7"
     return engine
 
 
