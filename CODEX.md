@@ -249,7 +249,7 @@ Historical audit prose never overrides code + CI at a cited SHA.
 
 ```text
 Task ID and exact baseline/CI
-Files changed and scoped authority references
+Files changed and scoped authority references; scope respected and ADR need
 Tests/gates run with raw results; known limitations and unresolved stops
 Local/remote HEAD and PR/CI status when applicable
 Ready or blocked for the assigned gate, without claiming a later gate
@@ -317,7 +317,7 @@ Frontend visibility is not security.
 No production secrets in repository content or fixtures.
 ```
 
-## 10. Lean Agent Execution Policy
+## 10. Project AI Execution Policy
 
 The [Lean Agent Protocol](docs/plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) defines the operating
 tiers; the [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) is the
