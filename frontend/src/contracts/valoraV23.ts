@@ -50,6 +50,7 @@ export const APP_ROUTES = {
   projectDetailPrefix: "/workbench/projects/",
   projectPreliminaryIntakeSuffix: "/preliminary-intake",
   projectPreliminaryAnalysisSuffix: "/preliminary-analysis",
+  projectPreliminaryCompletionSuffix: "/preliminary-completion",
   projectOverviewSuffix: "/overview",
   projectNccSelectionSuffix: "/ncc-selection",
   projectDocumentsSuffix: "/documents",
@@ -81,6 +82,10 @@ export function projectPreliminaryAnalysisPath(projectRef: string): string {
   return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectPreliminaryAnalysisSuffix}`;
 }
 
+export function projectPreliminaryCompletionPath(projectRef: string): string {
+  return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectPreliminaryCompletionSuffix}`;
+}
+
 export function projectNccSelectionPath(projectRef: string): string {
   return `${projectWorkbenchPath(projectRef)}${APP_ROUTES.projectNccSelectionSuffix}`;
 }
@@ -91,13 +96,14 @@ export function projectDocumentsPath(projectRef: string): string {
 
 export function splitProjectRoute(path: string): {
   projectRef: string;
-  view: "overview" | "workbench" | "preliminary-intake" | "preliminary-analysis" | "ncc-selection" | "documents";
+  view: "overview" | "workbench" | "preliminary-intake" | "preliminary-analysis" | "preliminary-completion" | "ncc-selection" | "documents";
 } | null {
   const pathname = path.split("?", 1)[0];
   if (!pathname.startsWith(APP_ROUTES.projectDetailPrefix)) return null;
   const remainder = pathname.slice(APP_ROUTES.projectDetailPrefix.length);
   const isPreliminaryIntake = remainder.endsWith(APP_ROUTES.projectPreliminaryIntakeSuffix);
   const isPreliminaryAnalysis = remainder.endsWith(APP_ROUTES.projectPreliminaryAnalysisSuffix);
+  const isPreliminaryCompletion = remainder.endsWith(APP_ROUTES.projectPreliminaryCompletionSuffix);
   const isNccSelection = remainder.endsWith(APP_ROUTES.projectNccSelectionSuffix);
   const isOverview = remainder.endsWith(APP_ROUTES.projectOverviewSuffix);
   const isDocuments = remainder.endsWith(APP_ROUTES.projectDocumentsSuffix);
@@ -105,6 +111,8 @@ export function splitProjectRoute(path: string): {
     ? remainder.slice(0, -APP_ROUTES.projectPreliminaryIntakeSuffix.length)
     : isPreliminaryAnalysis
       ? remainder.slice(0, -APP_ROUTES.projectPreliminaryAnalysisSuffix.length)
+    : isPreliminaryCompletion
+      ? remainder.slice(0, -APP_ROUTES.projectPreliminaryCompletionSuffix.length)
     : isNccSelection
       ? remainder.slice(0, -APP_ROUTES.projectNccSelectionSuffix.length)
     : isDocuments
@@ -120,6 +128,8 @@ export function splitProjectRoute(path: string): {
         ? "preliminary-intake"
         : isPreliminaryAnalysis
           ? "preliminary-analysis"
+        : isPreliminaryCompletion
+          ? "preliminary-completion"
         : isNccSelection
           ? "ncc-selection"
         : isDocuments

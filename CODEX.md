@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-30 (ADR 0047 accepted; F0, G1.1H and G1.1I merged and certified; VF0 candidate)
+**Last reconciled:** 2026-10-01 (VF0 merged and certified; G1.1J candidate)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -110,8 +110,9 @@ a Project/batch recovery GET. G1.1H Pre-case Intake & Mapping UX is MERGED/CERTI
 through PR #63 and exact-main CI #516 at `ccf857a95365251f305132178aa0010182b3df0e`.
 G1.1I Preliminary Analysis & Review UX is MERGED/CERTIFIED through PR #64 and exact-main CI #518
 at `181c48ce007d8885c49c0dbd52040a38fbaf8cec`. VF0 Frontend Visual Fidelity Alignment is
-an implementation candidate. G1.1J Result & Official Intake UX is NOT STARTED and blocked until
-VF0 merges and its resulting exact-main CI succeeds. OS-G2 is NOT STARTED.
+MERGED/CERTIFIED through PR #65 and exact-main CI #520 at
+`e87f645f8ac44bfb7dd5d2688dbaa4e7411873a6`. G1.1J Result & Official Intake UX is an
+implementation candidate. G1.1K Pre-case Product Closure / E2E and OS-G2 are NOT STARTED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

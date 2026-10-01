@@ -1,5 +1,5 @@
 import type { CaseStage, CaseStageResult, CaseStateNextAction } from "../../api/caseState";
-import { projectPreliminaryAnalysisPath, projectPreliminaryIntakePath, projectWorkbenchPath } from "../../contracts/valoraV23";
+import { projectPreliminaryAnalysisPath, projectPreliminaryCompletionPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
 
 export const CASE_STAGE_LABELS: Record<CaseStage, string> = {
   PRELIMINARY_REQUEST: "Yêu cầu sơ bộ",
@@ -30,11 +30,6 @@ export const CASE_RESULT_LABELS: Record<CaseStageResult, string> = {
   NOT_AVAILABLE: "Chưa khả dụng",
 };
 
-const WORKBENCH_ROUTE_KEYS = new Set([
-  "preliminary_ready_pending",
-  "official_intake_pending",
-]);
-
 export function mappedNextActionPath(
   nextAction: CaseStateNextAction | null,
   projectRef: string
@@ -47,9 +42,11 @@ export function mappedNextActionPath(
   if (nextAction.semantic_route_key === "preliminary_analysis_pending") {
     return projectPreliminaryAnalysisPath(projectRef);
   }
-  return WORKBENCH_ROUTE_KEYS.has(nextAction.semantic_route_key)
-    ? projectWorkbenchPath(projectRef)
-    : null;
+  if (nextAction.semantic_route_key === "preliminary_ready_pending" ||
+      nextAction.semantic_route_key === "official_intake_pending") {
+    return projectPreliminaryCompletionPath(projectRef);
+  }
+  return null;
 }
 
 export function nextActionCopy(nextAction: CaseStateNextAction | null): {

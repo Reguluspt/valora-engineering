@@ -158,12 +158,13 @@ def list_customers(
     query = db.query(Customer).filter(Customer.organization_id == org_id)
 
     if q:
-        # Search by legal_name, display_name, tax_code
+        # S09 master selection accepts name, tax code and contact phone.
         query = query.filter(
             or_(
                 Customer.legal_name.ilike(f"%{q}%"),
                 Customer.display_name.ilike(f"%{q}%"),
-                Customer.tax_code.ilike(f"%{q}%")
+                Customer.tax_code.ilike(f"%{q}%"),
+                Customer.contact_phone.ilike(f"%{q}%"),
             )
         )
     if status:
@@ -175,6 +176,21 @@ def list_customers(
     offset = (page - 1) * page_size
     customers = query.offset(offset).limit(page_size).all()
     return customers
+
+
+@router.get("/customers/{customer_id}", response_model=CustomerResponse)
+def get_customer(
+    customer_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("master_data:customer:read")),
+):
+    customer = db.query(Customer).filter(
+        Customer.organization_id == current_user.organization_id,
+        Customer.id == customer_id,
+    ).first()
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
+    return customer
 
 
 @router.patch("/customers/{customer_id}", response_model=CustomerResponse)

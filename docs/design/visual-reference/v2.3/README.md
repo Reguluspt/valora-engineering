@@ -41,7 +41,7 @@ The **Price & Evidence** PNG is an exact baseline for its approved standalone sc
 
 ## Production surfaces without an exact approved mockup in this bundle
 
-The AppShell and project-list/workbench entry use the approved global VALORA Fluent 2 light visual grammar and the applicable screen baselines above. S02, S03, S04, and S05 are each `VISUAL_GRAMMAR_ONLY`: the canonical handoff inventories them as product surfaces but these source documents do not supply an approved exact whole-screen mockup for them. Apply the shared shell, compact desktop table/form density, status, spacing, contextual panels, and action hierarchy without inventing business sections. Do not label their candidate screenshots as pixel matches.
+The AppShell and project-list/workbench entry use the approved global VALORA Fluent 2 light visual grammar and the applicable screen baselines above. S02, S03, S04, and S05 are each `VISUAL_GRAMMAR_ONLY`: the canonical handoff inventories them as product surfaces but these source documents do not supply an approved exact whole-screen mockup for them. S09 is `VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT`: Part 1 PDF p. 4 and the canonical v2.3 master establish the approved S09 information groups and semantics, but the three persisted PDFs contain no exact S09 whole-screen mockup. Apply the shared shell, compact desktop table/form density, status, spacing, contextual panels, and action hierarchy without inventing business sections. Do not label these candidate screenshots as pixel matches.
 
 | Surface | Authority type | Current iteration/reference |
 | --- | --- | --- |
@@ -50,6 +50,7 @@ The AppShell and project-list/workbench entry use the approved global VALORA Flu
 | S03 Tạo yêu cầu sơ bộ | `VISUAL_GRAMMAR_ONLY` | Current v2.3 canonical flow and shared product grammar |
 | S04 Upload & Mapping Excel | `VISUAL_GRAMMAR_ONLY` | Current G1.1H mapping contract and shared product grammar |
 | S05 Phân tích danh mục | `VISUAL_GRAMMAR_ONLY` | Current G1.1I analysis contract and shared product grammar |
+| S09 Kết quả sơ bộ → Chuyển sang thẩm định chính thức | `VISUAL_GRAMMAR_ONLY_WITH_APPROVED_LAYOUT_CONTRACT` | Part 1 PDF p. 4, S09 approved information layout and canonical v2.3 semantics; no exact S09 mockup image in this bundle |
 | Workbench price/evidence context tab | `VISUAL_GRAMMAR_ONLY` | Current Workbench panel; Part 1 p. 16 is an exact reference for a separate full screen |
 | M365 Workspace and OAuth connection callback | `VISUAL_GRAMMAR_ONLY` | Current M365 runtime; Part 2B p. 8 specifically depicts Word return/revalidation |
 
