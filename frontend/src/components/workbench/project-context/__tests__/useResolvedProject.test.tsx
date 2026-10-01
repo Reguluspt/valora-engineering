@@ -136,6 +136,7 @@ describe("useResolvedProject lifecycle", () => {
     const { result } = renderWithRef("00000000-0000-0000-0000-000000000000");
     expect(result.current.state).toBe("error");
     expect(result.current.error!.title).toBe("Mã hồ sơ không hợp lệ");
+    expect(result.current.error!.message).toBe("Mã định danh hồ sơ không hợp lệ.");
     expect(projectsApi.resolveProjectReference).not.toHaveBeenCalled();
   });
 });

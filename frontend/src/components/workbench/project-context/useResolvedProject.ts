@@ -50,7 +50,7 @@ export function useResolvedProject(routeRef: string | null): ResolvedProject {
       setState("error");
       setError({
         title: "Mã hồ sơ không hợp lệ",
-        message: "Không thể sử dụng mã dự án rỗng.",
+        message: "Mã định danh hồ sơ không hợp lệ.",
         nextAction: "Vui lòng chọn một hồ sơ từ danh sách.",
       });
       return;

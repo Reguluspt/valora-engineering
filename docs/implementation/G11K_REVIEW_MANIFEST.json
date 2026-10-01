@@ -160,11 +160,11 @@
     },
     {
       "path": "frontend/src/components/workbench/project-context/__tests__/useResolvedProject.test.tsx",
-      "sha256": "65787c8f9d217013799a0a9242b7237d94cc1a9059971fe36b62292f960cb278"
+      "sha256": "6cb1504cd0835f622f95c7c1094d4b0ad1b9a772f4edf75b925c6e651f63a159"
     },
     {
       "path": "frontend/src/components/workbench/project-context/useResolvedProject.ts",
-      "sha256": "28f0f37468b8dff1739744fe317a47f30d57240e7b6073cb0be794a643400f06"
+      "sha256": "6b3ce3f39abcf102b9bf85fffd139fb55a9367d3c02bcde2e50e707aa4ddd4a8"
     },
     {
       "path": "tests/e2e/README.md",
