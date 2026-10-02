@@ -45,7 +45,7 @@ def _apply(db, entry, case_version):
     )
 
 
-def _run_ordered_pair(db, holder_command, waiter_command, *, holder_lock_number=1):
+def _run_ordered_pair(db, holder_command, waiter_command, *, holder_lock_number=1, lock_table="projects"):
     """Pause a returned Project lock, then prove the competitor blocks on that Project."""
     engine = db.get_bind()
     db.rollback()
@@ -67,9 +67,9 @@ def _run_ordered_pair(db, holder_command, waiter_command, *, holder_lock_number=
     def after_sql(connection, cursor, statement, parameters, context, executemany):
         label = worker_labels.get(threading.get_ident())
         normalized = " ".join(statement.lower().split())
-        if label not in project_lock_counts or "for update" not in normalized:
+        if label not in project_lock_counts or not any(c in normalized for c in ("for update", "for share")):
             return
-        if ".projects " not in normalized and "from projects " not in normalized:
+        if f".{lock_table} " not in normalized and f"from {lock_table} " not in normalized:
             return
         project_lock_counts[label] += 1
         if label == "holder" and project_lock_counts[label] == holder_lock_number:
@@ -117,9 +117,9 @@ def _run_ordered_pair(db, holder_command, waiter_command, *, holder_lock_number=
         assert observed is not None
         assert observed["wait_event_type"] == "Lock", observed
         assert pids["holder"] in observed["blockers"], observed
-        assert "projects" in observed["query"].lower(), observed
-        assert "projects" in executing_sql["waiter"].lower(), executing_sql
-        assert "for update" in executing_sql["waiter"].lower(), executing_sql
+        assert lock_table in observed["query"].lower(), observed
+        assert lock_table in executing_sql["waiter"].lower(), executing_sql
+        assert any(c in executing_sql["waiter"].lower() for c in ("for update", "for share")), executing_sql
         release_holder.set()
         holder.join(timeout=30)
         waiter.join(timeout=30)

@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A2 certified; A3 authority gate active)
+**Last reconciled:** 2026-10-02 (OS-G2 A3 certified; A4 backend implementation active)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -133,8 +133,10 @@ OS-G2 A2 / Issue #75 / PR #76 is MERGED/CERTIFIED at
 Apply v2, the atomic initial-set seal and shared Case State v2 / `asset_review_v1` backend slice.
 OS-G2 A3 / Issue #77 authority was ACCEPTED by the Product Owner on 2026-10-02. ADR 0049 and
 `docs/implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md` are accepted authority.
-PR #78 remains under Gate Owner integration control. A3 runtime, migration, API, UI, RBAC and
-stages after ASSET_REVIEW remain UNAUTHORIZED; no merge or certification is implied.
+PR #78 is MERGED/CERTIFIED at `27bebb73e35c540c7cea870b1b2fd5a26a55b2c9`, exact-main CI #542
+SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority. OS-G2 A4 /
+Issue #79 authorizes only the backend validation/review/proof/receipt and Case State v3 slice.
+Frontend/UI, membership mutation, new RBAC and stages after ASSET_REVIEW remain UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

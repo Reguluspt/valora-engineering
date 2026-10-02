@@ -55,6 +55,7 @@ def _evaluate(snapshot, **options):
     return evaluate_asset_review_provider(
         snapshot, effective_permissions=options.pop(
             "effective_permissions", {"workbench:edit", "project:update"}),
+        has_active_session=options.pop("has_active_session", True),
         **options,
     )
 
@@ -200,18 +201,15 @@ def test_preexisting_manual_line_blocks_and_historical_linked_apply_is_stale():
     assert result.next_action["context"]["reason_code"] == "manual_line_conflict"
 
 
-def test_full_set_accepted_and_valid_is_complete_without_prices():
+def test_full_set_stored_strings_never_complete_without_proofs():
     snapshot = _snapshot(sealed=True)
     snapshot.issues = [_issue(snapshot, severity="warning")]
     for line in snapshot.lines:
         line.review_status = "accepted"
         line.validation_status = "valid"
     result = _evaluate(snapshot)
-    assert result.result == "COMPLETE"
-    assert result.next_action == {
-        "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION", "stage": None,
-        "semantic_route_key": None, "validation_issue_id": None, "context": None,
-    }
+    assert result.result == "INCOMPLETE"
+    assert result.next_action["semantic_route_key"] == "asset_review_line_validate_required"
     snapshot.lines[1].validation_status = "unvalidated"
     assert _evaluate(snapshot).result == "INCOMPLETE"
 
@@ -222,7 +220,7 @@ def test_first_line_uses_initial_staging_order_instead_of_query_order():
     snapshot.lines.reverse()
     result = _evaluate(snapshot)
     assert result.next_action["context"]["line_id"] == str(uuid.UUID(int=30))
-    assert result.next_action["semantic_route_key"] == "asset_review_line_pending"
+    assert result.next_action["semantic_route_key"] == "asset_review_line_validate_required"
     CaseStateNextActionResponse.model_validate(result.next_action)
 
 
@@ -240,9 +238,11 @@ def test_negative_member_blocks_before_stale(review, validation, reason):
     snapshot.seal_current = False
     snapshot.stale = ["lineage_mismatch"]
     result = _evaluate(snapshot)
-    assert result.result == "BLOCKED"
-    assert result.next_action["semantic_route_key"] == "asset_review_line_blocked"
-    assert result.next_action["context"]["reason_code"] == reason
+    assert result.result == ("STALE" if validation == "invalid" else "BLOCKED")
+    assert result.next_action["semantic_route_key"] == (
+        "asset_review_stale_recovery" if validation == "invalid" else "asset_review_line_blocked")
+    assert result.next_action["context"]["reason_code"] == (
+        "lineage_mismatch" if validation == "invalid" else reason)
 
 
 @pytest.mark.parametrize("sealed", [False, True])
@@ -256,7 +256,7 @@ def test_non_draft_unfinished_work_blocks_but_complete_set_remains_complete(seal
     if sealed:
         for line in snapshot.lines:
             line.review_status, line.validation_status = "accepted", "valid"
-        assert _evaluate(snapshot).result == "COMPLETE"
+        assert _evaluate(snapshot).result == "BLOCKED"
 
 
 @pytest.mark.parametrize("sealed", [False, True])
@@ -280,7 +280,7 @@ def test_line_review_uses_existing_workbench_commit_permission():
     assert _evaluate(snapshot, effective_permissions={"project:update"}).next_action[
         "kind"] == "UNAVAILABLE"
     assert _evaluate(snapshot, effective_permissions={"workbench:edit"}).next_action[
-        "semantic_route_key"] == "asset_review_line_pending"
+        "semantic_route_key"] == "asset_review_line_validate_required"
     snapshot = _snapshot()
     snapshot.issues = []
     assert _evaluate(snapshot, effective_permissions={"project:update"}).next_action[
@@ -344,7 +344,7 @@ def test_domain_diagnostics_are_typed_separately_from_validation_issues():
     assert CaseStateStageResponse.model_validate(legacy).model_dump(mode="json") == legacy
     with pytest.raises(ValidationError):
         CaseStateStageResponse.model_validate({
-            "stage": "ASSET_REVIEW", "result": "BLOCKED", "provider_key": "asset_review_v1",
+            "stage": "ASSET_REVIEW", "result": "BLOCKED", "provider_key": "asset_review_line_decision_v1",
             "diagnostics": [{"stage": "ASSET_REVIEW", "reason_code": "invented_reason"}],
         })
 
@@ -373,7 +373,7 @@ def test_provider_consumes_genuine_postgresql_authority_and_issue_models(entry_d
     )
     snapshot = resolve_authority(db, **scope, locked=True)
     action = _evaluate(snapshot).next_action
-    assert action["semantic_route_key"] == "asset_review_line_pending"
+    assert action["semantic_route_key"] == "asset_review_line_validate_required"
     CaseStateNextActionResponse.model_validate(action)
     rule = ValidationRule(rule_code=f"g2-provider-{uuid.uuid4().hex[:8]}",
                           category="evidence", name="Provider scoped blocker", is_blocking=True)
@@ -394,5 +394,5 @@ def test_provider_consumes_genuine_postgresql_authority_and_issue_models(entry_d
         line.review_status, line.validation_status = "accepted", "valid"
     db.flush()
     snapshot = resolve_authority(db, **scope, locked=True)
-    assert _evaluate(snapshot).result == "COMPLETE"
+    assert _evaluate(snapshot).result == "INCOMPLETE"
     assert not db.new and not db.dirty and not db.deleted

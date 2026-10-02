@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import HTTPException
@@ -20,7 +20,7 @@ from app.modules.project_master_data.models import (
 )
 
 CONTRACT_VERSION = "s12-post-intake-guarded-apply-v2"
-CASE_CONTRACT = "global-case-state-v2-asset-review-v1"
+CASE_CONTRACT = "global-case-state-v3-asset-review-line-decision-v1"
 REGISTERED_INPUTS = ("proposed_asset_name", "proposed_description", "proposed_quantity",
                      "proposed_unit", "proposed_raw_price", "proposed_currency")
 
@@ -74,6 +74,8 @@ class AuthoritySnapshot:
     entry_manifest: dict
     case_version: str
     facts: list[str]
+    line_proofs: dict = field(default_factory=dict)
+    references: dict = field(default_factory=dict)
 
 
 def lock_project(db, *, org_id, project_id):
@@ -149,6 +151,11 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
             source = current_source(db, org_id=org_id, project_id=project_id, batch=batch) if batch else None
         except CurrentBatchUnresolved:
             batch = source = None
+        if locked and batch is not None:
+            from app.modules.project_master_data.models import ProjectAssetImportBatch
+            batch = db.query(ProjectAssetImportBatch).filter_by(
+                id=batch.id, organization_id=org_id, project_id=project_id
+            ).populate_existing().with_for_update().one()
         slot = authority_slot(db, org_id=org_id, project_id=project_id)
         usage = None
         if slot and slot.current_staging_usage_id:
@@ -177,6 +184,10 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
             rows_query = rows_query.with_for_update()
             lines_query = lines_query.with_for_update()
         rows, lines = rows_query.all(), lines_query.all()
+        from app.modules.project_master_data.application.asset_line_proofs import (
+            load_references, resolve_line_proofs,
+        )
+        references = load_references(db, lines, locked=locked)
         line_ids = [line.id for line in lines]
         issues = db.query(ValidationIssue).filter(
             or_(and_(ValidationIssue.target_type.in_(("project", "Project")),
@@ -246,6 +257,9 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
             and seal.membership_version == 1 and seal.contract_version == CONTRACT_VERSION)
         if intake and batch and str(getattr(batch.status, "value", batch.status)) == "applied" and not seal_current:
             stale.append("seal_mismatch")
+        line_proofs, proof_facts = resolve_line_proofs(db, org_id=org_id,
+            project_id=project_id, lines=lines, references=references,
+            seal=seal, seal_current=seal_current)
         generation = []
         if batch:
             generation = [str(a.id) for a in db.query(AuditEvent).filter(
@@ -290,9 +304,10 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
                 "target_id": str(i.target_id), "severity": str(getattr(i.severity,"value",i.severity)),
                 "status": str(getattr(i.status,"value",i.status))} for i in issues],
             "conflicts": sorted(set(stale)),
+            "line_decision_authority": proof_facts,
         }
         facts = sorted([p.fact_token for p in prefix] + ["asset_review_authority_v1:" + canonical_digest(added)])
         case_version, facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
         return AuthoritySnapshot(project, prefix, batch, source, analysis, result, intake, slot,
             usage, rows, lines, issues, seal, lineage_current, seal_current,
-            sorted(set(stale)), manifest, case_version, facts)
+            sorted(set(stale)), manifest, case_version, facts, line_proofs, references)
