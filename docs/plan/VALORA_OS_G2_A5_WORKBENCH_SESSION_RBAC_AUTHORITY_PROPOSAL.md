@@ -1,10 +1,10 @@
 # OS-G2 A5R — Workbench Session Open RBAC Authority Proposal
 
-**Status: PROPOSED / PRODUCT OWNER DECISION REQUIRED**  
-**Task:** Issue #82 — VALORA-TASK-OS-G2-A5R-WORKBENCH-SESSION-OPEN-RBAC-AUTHORITY  
-**Date:** 2026-10-02  
-**Risk:** HIGH — authorization policy / standard-role capability  
-**Verified baseline:** `origin/main` = `416157e6330f861127455a66fd5df9c0972bc02a`; exact-main [CI #545 SUCCESS](https://github.com/Reguluspt/valora-engineering/actions/runs/37004731799).  
+**Status: PROPOSED / PRODUCT OWNER DECISION REQUIRED**
+**Task:** Issue #82 — VALORA-TASK-OS-G2-A5R-WORKBENCH-SESSION-OPEN-RBAC-AUTHORITY
+**Date:** 2026-10-02
+**Risk:** HIGH — authorization policy / standard-role capability
+**Verified baseline:** `origin/main` = `416157e6330f861127455a66fd5df9c0972bc02a`; exact-main [CI #545 SUCCESS](https://github.com/Reguluspt/valora-engineering/actions/runs/37004731799).
 **Scope:** authority proposal only. No permission grant or runtime implementation is authorized by this document.
 
 ## 1. Exact blocker and existing authority
