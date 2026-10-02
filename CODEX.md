@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A4 certified; A5 product closure active)
+**Last reconciled:** 2026-10-02 (A5R2 certified; A5 product closure resumed)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -134,11 +134,15 @@ Apply v2, the atomic initial-set seal and shared Case State v2 / `asset_review_v
 OS-G2 A3 / Issue #77 authority was ACCEPTED by the Product Owner on 2026-10-02. ADR 0049 and
 `docs/implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md` are accepted authority.
 PR #78 is MERGED/CERTIFIED at `27bebb73e35c540c7cea870b1b2fd5a26a55b2c9`, exact-main CI #542
-SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority. OS-G2 A4 /
-Issue #79 / PR #80 is MERGED/CERTIFIED at `416157e6330f861127455a66fd5df9c0972bc02a`,
-exact-main CI #545 SUCCESS. OS-G2 A5 / Issue #81 is the active authorized ASSET_REVIEW
-product-closure UX/E2E slice in the existing Workbench. Membership mutation, new RBAC and
-ASSET_WORKBENCH+ remain UNAUTHORIZED.
+SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority.
+OS-G2 A4 / Issue #79 / PR #80 is MERGED/CERTIFIED at
+`416157e6330f861127455a66fd5df9c0972bc02a`, exact-main CI #545 SUCCESS. A5R / Issue #82 / PR #83 is
+MERGED/CERTIFIED at `d20f121b0f62c539836fde35308edbfc6d928e5d`, exact-main CI #549 SUCCESS.
+A5R D1 was ACCEPTED by the Product Owner on 2026-10-02. A5R2 / Issue #84 is CLOSED/CERTIFIED:
+PR #85 squash merged at `7c52a41a84b21b63182429d5c5740e76783ea4e6`, exact-main CI #552 SUCCESS.
+Alembic head `b5c6d7e8f9a0` grants existing `workbench:open` to standard `owner` and `appraiser` only.
+OS-G2 A5 / Issue #81 resumes the authorized ASSET_REVIEW product-closure UX/E2E slice in the
+existing Workbench. Membership mutation, further RBAC and ASSET_WORKBENCH+ remain UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
