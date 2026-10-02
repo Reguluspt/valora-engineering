@@ -3,7 +3,10 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
@@ -30,7 +33,9 @@ def _engine():
     engine = create_engine(url, connect_args={"connect_timeout": 5})
     with engine.connect() as connection:
         head = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert head == "e2f3a4b5c6d7"
+    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
+    current_head = ScriptDirectory.from_config(config).get_current_head()
+    assert head == current_head
     return engine
 
 

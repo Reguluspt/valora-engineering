@@ -14,6 +14,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import get_db
+from app.db.session import get_case_state_db
 from app.main import app
 from app.modules.project_master_data.application.case_state_projection import (
     get_case_state_projection,
@@ -38,7 +39,10 @@ def _postgres_engine_or_skip():
         if os.getenv("CI") == "true":
             pytest.fail("CI=true requires PostgreSQL TEST_DATABASE_URL for PR-01 case-state projection")
         pytest.skip("PR-01 case-state projection proof requires PostgreSQL TEST_DATABASE_URL")
-    engine = create_engine(url, connect_args={"connect_timeout": 5}, pool_pre_ping=True)
+    engine = create_engine(
+        url, connect_args={"connect_timeout": 5}, pool_pre_ping=True,
+        isolation_level="REPEATABLE READ",
+    )
     with engine.connect() as connection:
         exists = connection.execute(
             text("SELECT to_regclass('project_official_intake_commits')")
@@ -244,6 +248,7 @@ def test_postgresql_http_endpoint_is_read_only() -> None:
         statements.append(statement)
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_case_state_db] = override_get_db
     event.listen(engine, "before_cursor_execute", before_cursor_execute)
     try:
         initial_audits = db.query(AuditEvent).count()
@@ -263,6 +268,7 @@ def test_postgresql_http_endpoint_is_read_only() -> None:
     finally:
         event.remove(engine, "before_cursor_execute", before_cursor_execute)
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_case_state_db, None)
         db.close()
         _cleanup(SessionLocal, ids)
         engine.dispose()

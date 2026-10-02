@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import datetime
 import hashlib
-import json
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -19,6 +18,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.contracts.uiux_v23 import CANONICAL_CASE_STAGES
 from app.core.rbac import derive_effective_permissions
+from app.modules.project_master_data.application.asset_review_authority import (
+    canonical_json, resolve_authority, compute_case_version as authority_case_version,
+)
 from app.modules.excel_import.models import (
     ImportSourceArtifactState,
 )
@@ -87,6 +89,7 @@ class InternalNextAction:
     stage: str | None
     semantic_route_key: str | None
     validation_issue_id: str | None = None
+    context: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -99,14 +102,15 @@ class StageCapability:
     version: str = "pr01-prefix-v1"
 
 
-CAPABILITY_REGISTRY_VERSION = "pr01-prefix-v2"
+CAPABILITY_REGISTRY_VERSION = "global-case-state-v2-asset-review-v1"
 
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_ANALYSIS", available=True, provider_key="preliminary_analysis_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_READY", available=True, provider_key="preliminary_ready_v2", version="pr01-prefix-v2"),
     StageCapability("OFFICIAL_INTAKE", available=True, provider_key="official_intake_commit_v1"),
-    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[4:]),
+    StageCapability("ASSET_REVIEW", available=True, provider_key="asset_review_v1", version="asset_review_v1"),
+    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[5:]),
 )
 
 
@@ -118,6 +122,7 @@ class StageProjection:
     result: str  # COMPLETE | INCOMPLETE | BLOCKED | NOT_AVAILABLE
     provider_key: str | None = None
     fact_token: str | None = None
+    diagnostics: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
@@ -148,9 +153,7 @@ class CaseStateProjection:
 
 
 def _canonical_json(payload: Any) -> bytes:
-    return json.dumps(
-        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    return canonical_json(payload)
 
 
 def _sha256_hex(payload: bytes) -> str:
@@ -425,16 +428,7 @@ def compute_case_version(
     facts: list[str],
 ) -> tuple[str, list[str]]:
     """Compute deterministic case_version token from sorted facts."""
-    sorted_facts = sorted(facts)
-    envelope = {
-        "contract": "global-case-state-v1",
-        "facts": sorted_facts,
-        "organization_id": str(org_id).lower(),
-        "project_id": str(project_id).lower(),
-    }
-    encoded = _canonical_json(envelope)
-    token = _sha256_hex(encoded)
-    return token, sorted_facts
+    return authority_case_version(org_id=org_id, project_id=project_id, facts=facts)
 
 
 def determine_current_stage(
@@ -454,6 +448,8 @@ def determine_current_stage(
         return "PRELIMINARY_ANALYSIS"
     if leading_complete == 2:
         return "PRELIMINARY_READY"
+    if leading_complete == 4 and len(stage_results) > 4 and stage_results[4].provider_key == "asset_review_v1":
+        return "ASSET_REVIEW"
     return "OFFICIAL_INTAKE"
 
 
@@ -512,8 +508,14 @@ def get_case_state_projection(
     org_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> CaseStateProjection:
+    with db.no_autoflush:
+        return _get_case_state_projection(db, actor=actor, org_id=org_id, project_id=project_id)
+
+
+def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
+                               project_id: uuid.UUID) -> CaseStateProjection:
     """Compute Global Case State for one tenant-scoped Project in one read transaction."""
-    _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
+    persisted_actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
 
     project = (
         db.query(Project)
@@ -528,24 +530,8 @@ def get_case_state_projection(
         )
 
     try:
-        request_result = evaluate_preliminary_request_provider(
-            db, org_id=org_id, project_id=project_id
-        )
-        analysis_result = evaluate_preliminary_analysis_provider(
-            db,
-            org_id=org_id,
-            project_id=project_id,
-            req_provider_result=request_result,
-        )
-        ready_result = evaluate_preliminary_ready_provider(
-            db,
-            org_id=org_id,
-            project_id=project_id,
-            analysis_provider_result=analysis_result,
-        )
-        official_result = evaluate_official_intake_provider(
-            db, org_id=org_id, project_id=project_id
-        )
+        authority = resolve_authority(db, org_id=org_id, project_id=project_id)
+        request_result, analysis_result, ready_result, official_result = authority.prefix
         blockers = get_official_intake_open_blockers(
             db, org_id=org_id, project_id=project_id
         )
@@ -599,29 +585,19 @@ def get_case_state_projection(
             provider_key=None,
             fact_token=None,
         )
-        for stage in CANONICAL_CASE_STAGES[4:]
+        for stage in CANONICAL_CASE_STAGES[5:]
     )
 
-    facts: list[str] = [
-        request_result.fact_token,
-        analysis_result.fact_token,
-        ready_result.fact_token,
-        official_result.fact_token,
-    ]
-    facts.extend(
-        f"validation_issue_blocker_v1:{str(issue.id).lower()}:rv{issue.row_version}:open"
-        for issue in blockers
-    )
-    facts.extend(
-        f"validation_issue_warning_v1:{str(issue.id).lower()}:rv{issue.row_version}:open"
-        for issue in warnings
-    )
-
-    case_version, sorted_facts = compute_case_version(
-        org_id=org_id, project_id=project_id, facts=facts
-    )
+    from app.modules.project_master_data.application.asset_review_provider import evaluate_asset_review_provider
+    asset = evaluate_asset_review_provider(authority,
+        effective_permissions=derive_effective_permissions(persisted_actor, db))
+    stage_projections.insert(4, StageProjection("ASSET_REVIEW", asset.result, "asset_review_v1",
+        diagnostics=asset.blockers + asset.stale))
+    case_version, sorted_facts = authority.case_version, authority.facts
     current_stage = determine_current_stage(stage_projections)
     next_action = determine_internal_next_action(stage_projections, blockers=blockers)
+    if all(stage.result == "COMPLETE" for stage in stage_projections[:4]):
+        next_action = InternalNextAction(**asset.next_action) if asset.next_action else None
 
     blocker_dicts = [
         {
@@ -653,7 +629,7 @@ def get_case_state_projection(
         stages=stage_projections,
         blockers=blocker_dicts,
         warnings=warning_dicts,
-        stale=[],
+        stale=asset.stale,
         facts=sorted_facts,
         capabilities=STATIC_STAGE_CAPABILITIES,
         preliminary={

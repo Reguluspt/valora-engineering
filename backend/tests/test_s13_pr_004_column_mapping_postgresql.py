@@ -475,6 +475,7 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "project_asset_review_seals",
             "column_mapping_legacy_selection_receipts",
             "project_column_mapping_authorities",
         "preliminary_project_lifecycle_command_receipts",

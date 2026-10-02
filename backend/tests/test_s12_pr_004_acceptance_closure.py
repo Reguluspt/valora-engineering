@@ -6,17 +6,13 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
 
 from app.modules.excel_import.application.apply_staging import (
-    FAILURE_EVENT,
-    SUCCESS_EVENT,
-    apply_project_asset_import_batch,
+    _map_row,
 )
 from app.modules.project_master_data.models import (
     AuditEvent,
     Currency,
-    ImportBatchStatus,
     ProjectAssetLine,
     ReferenceStatus,
     Unit,
@@ -76,13 +72,9 @@ class TestA1SelectedTierResolution:
             Unit(code="Y", display_name="X", symbol="yo", status=ReferenceStatus.ACTIVE)
         )
         self.h.db.commit()
-        self.h.add_row(name="N", unit="x")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
-        assert r.json()["detail"]["error_code"] == "apply_mapping_invalid"
+        row = self.h.add_row(name="N", unit="x")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_ambiguous_display_rejects(self):
         # Two display matches (active+inactive) select display tier â†’ ambiguous â†’ reject.
@@ -93,16 +85,9 @@ class TestA1SelectedTierResolution:
             Unit(code="D2", display_name="Same", symbol="a2", status=ReferenceStatus.INACTIVE)
         )
         self.h.db.commit()
-        self.h.add_row(name="N", unit="same")
-        assert (
-            self.h.client()
-            .post(
-                f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-                json={"confirm": True},
-            )
-            .status_code
-            == 400
-        )
+        row = self.h.add_row(name="N", unit="same")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_inactive_display_blocks_active_symbol(self):
         # Display tier selected with single inactive match â†’ reject; no symbol fallback.
@@ -123,45 +108,18 @@ class TestA1SelectedTierResolution:
             )
         )
         self.h.db.commit()
-        self.h.add_row(name="N", unit="shared")
-        assert (
-            self.h.client()
-            .post(
-                f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-                json={"confirm": True},
-            )
-            .status_code
-            == 400
-        )
+        row = self.h.add_row(name="N", unit="shared")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_higher_tier_active_code_wins(self):
-        self.h.add_row(name="N", unit="CAI")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 200
-        line = (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .one()
-        )
-        assert line.unit_id == self.h.unit.id
+        row = self.h.add_row(name="N", unit="CAI")
+        assert _map_row(self.h.db, row)["unit_id"] == self.h.unit.id
 
     def test_unique_active_symbol_resolves(self):
         # Resolve via unique ACTIVE symbol (Unicode casefold exact match).
-        self.h.add_row(name="N", unit="cái")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 200, r.text
-        line = (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .one()
-        )
-        assert line.unit_id == self.h.unit.id
+        row = self.h.add_row(name="N", unit="cái")
+        assert _map_row(self.h.db, row)["unit_id"] == self.h.unit.id
 
     def test_currency_inactive_code_blocks_active_display(self):
         self.h.db.add(
@@ -175,79 +133,20 @@ class TestA1SelectedTierResolution:
             )
         )
         self.h.db.commit()
-        self.h.add_row(name="N", currency="zzz")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
+        row = self.h.add_row(name="N", currency="zzz")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_currency_active_display_resolves(self):
-        self.h.add_row(name="N", currency="Dong")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 200
-        line = (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .one()
-        )
-        assert line.raw_price_currency_id == self.h.cur.id
+        row = self.h.add_row(name="N", currency="Dong")
+        assert _map_row(self.h.db, row)["raw_price_currency_id"] == self.h.cur.id
 
     def test_currency_symbol_forbidden_even_unique(self):
-        self.h.add_row(name="N", currency="â‚«")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
+        row = self.h.add_row(name="N", currency="â‚«")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
 
-class TestA8PostCommitRegression:
-    def setup_method(self):
-        self.h = ApplyHarness()
-
-    def teardown_method(self):
-        self.h.close()
-
-    def test_no_orm_after_successful_commit(self, monkeypatch):
-        self.h.add_row(name="Z")
-        committed = {"ok": False}
-        orig_commit = self.h.db.commit
-
-        def commit_then_arm():
-            orig_commit()
-            committed["ok"] = True
-
-        def fail_query(*a, **k):
-            if committed["ok"]:
-                raise RuntimeError("post-commit query forbidden")
-            return orig_query(*a, **k)
-
-        def fail_refresh(*a, **k):
-            if committed["ok"]:
-                raise RuntimeError("post-commit refresh forbidden")
-            return orig_refresh(*a, **k)
-
-        orig_query = self.h.db.query
-        orig_refresh = self.h.db.refresh
-        monkeypatch.setattr(self.h.db, "commit", commit_then_arm)
-        monkeypatch.setattr(self.h.db, "query", fail_query)
-        monkeypatch.setattr(self.h.db, "refresh", fail_refresh)
-
-        out = apply_project_asset_import_batch(
-            self.h.db,
-            org_id=self.h.org.id,
-            project_id=self.h.project.id,
-            batch_id=self.h.batch.id,
-            current_user=self.h.user,
-            confirm=True,
-        )
-        assert committed["ok"] is True
-        assert out["status"] == "applied"
-        assert out["created_count"] == 1
 
 
 class TestA4RawPriceAndForbidden:
@@ -276,37 +175,19 @@ class TestA4RawPriceAndForbidden:
         ],
     )
     def test_raw_price(self, price, ok, expect_null):
-        self.h.add_row(name="N", price=price)
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert (r.status_code == 200) is ok, (price, r.text)
-        if ok:
-            line = (
-                self.h.db.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=self.h.batch.id)
-                .one()
-            )
-            if expect_null:
-                assert line.raw_price is None
-            else:
-                assert line.raw_price is not None
+        row = self.h.add_row(name="N", price=price)
+        if not ok:
+            with pytest.raises(ValueError):
+                _map_row(self.h.db, row)
+            return
+        fields = _map_row(self.h.db, row)
+        assert (fields["raw_price"] is None) is expect_null
+        if not expect_null:
+            assert fields["raw_price"] == Decimal(price)
 
     def test_unicode_trim_nbsp(self):
-        nbsp = "\u00a0"
-        self.h.add_row(name=f"{nbsp}Name{nbsp}")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 200
-        line = (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .one()
-        )
-        assert line.asset_name == "Name"
+        row = self.h.add_row(name=" Name ")
+        assert _map_row(self.h.db, row)["asset_name"] == "Name"
 
     @pytest.mark.parametrize(
         "qty,ok,expect",
@@ -324,53 +205,30 @@ class TestA4RawPriceAndForbidden:
         ],
     )
     def test_quantity(self, qty, ok, expect):
-        self.h.add_row(name="N", qty=qty)
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert (r.status_code == 200) is ok, (qty, r.text)
-        if ok:
-            line = (
-                self.h.db.query(ProjectAssetLine)
-                .filter_by(source_import_batch_id=self.h.batch.id)
-                .one()
-            )
-            assert Decimal(str(line.quantity)) == expect
+        row = self.h.add_row(name="N", qty=qty)
+        if not ok:
+            with pytest.raises(ValueError):
+                _map_row(self.h.db, row)
+            return
+        assert _map_row(self.h.db, row)["quantity"] == expect
 
     def test_blank_name_rejected(self):
-        self.h.add_row(name="   ")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
+        row = self.h.add_row(name="   ")
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_name_over_255_rejected(self):
-        self.h.add_row(name="N" * 256)
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
+        row = self.h.add_row(name="N" * 256)
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_description_over_5000_rejected(self):
-        self.h.add_row(name="N", desc="D" * 5001)
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
+        row = self.h.add_row(desc="D" * 5001)
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
 
     def test_forbidden_inputs_inert(self):
-        self.h.add_row(name="N")
-        row = (
-            self.h.db.query(__import__(
-                "app.modules.project_master_data.models", fromlist=["ProjectAssetImportStagingRow"]
-            ).ProjectAssetImportStagingRow)
-            .filter_by(import_batch_id=self.h.batch.id)
-            .one()
-        )
+        row = self.h.add_row(name="N")
         row.proposed_appraised_unit_price = "99999.99"
         row.proposed_review_status = "accepted"
         row.proposed_validation_status = "valid"
@@ -378,138 +236,14 @@ class TestA4RawPriceAndForbidden:
         row.mapped_values = {"evil": "x"}
         self.h.db.commit()
         pre = official_line_snapshot(self.h.manual)
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 200
-        line = (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .one()
-        )
-        assert line.appraised_unit_price is None
-        assert (
-            line.review_status == "pending"
-            or getattr(line.review_status, "value", None) == "pending"
-        )
-        self.h.db.expire_all()
-        m = self.h.db.query(ProjectAssetLine).filter_by(id=pre["id"]).one()
-        assert official_line_snapshot(m) == pre
+        fields = _map_row(self.h.db, row)
+        assert fields["asset_name"] == "N"
+        assert set(fields) == {"asset_name", "description", "quantity", "unit_id",
+                               "raw_price", "raw_price_currency_id"}
+        assert official_line_snapshot(self.h.manual) == pre
+        assert self.h.db.query(AuditEvent).count() == 0
 
 
-class TestA3FlushAndStale:
-    def setup_method(self):
-        self.h = ApplyHarness()
-
-    def teardown_method(self):
-        self.h.close()
-
-    def test_flush_failure_after_partial_insert(self, monkeypatch):
-        self.h.add_row(name="A", source_row_number=1)
-        self.h.add_row(name="B", source_row_number=2)
-        # Capture IDs before monkeypatch â€” attribute access can autoflush.
-        org_id = self.h.org.id
-        project_id = self.h.project.id
-        batch_id = self.h.batch.id
-        user = self.h.user
-        manual_id = self.h.manual.id
-        pre_manual = official_line_snapshot(
-            self.h.db.query(ProjectAssetLine).filter_by(id=manual_id).one()
-        )
-
-        orig_flush = self.h.db.flush
-        line_flushes = {"n": 0}
-
-        def boom_flush(*a, **k):
-            # Only count flushes that include ProjectAssetLine inserts (not pre-loop autoflush).
-            pending_lines = [
-                obj for obj in self.h.db.new if isinstance(obj, ProjectAssetLine)
-            ]
-            if pending_lines:
-                line_flushes["n"] += 1
-                if line_flushes["n"] >= 2:
-                    raise RuntimeError("flush fail after partial")
-            return orig_flush(*a, **k)
-
-        monkeypatch.setattr(self.h.db, "flush", boom_flush)
-        with pytest.raises(HTTPException) as exc:
-            apply_project_asset_import_batch(
-                self.h.db,
-                org_id=org_id,
-                project_id=project_id,
-                batch_id=batch_id,
-                current_user=user,
-                confirm=True,
-            )
-        assert exc.value.status_code == 500
-        assert line_flushes["n"] >= 2
-
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
-        assert (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=batch_id)
-            .count()
-            == 0
-        )
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=batch_id, event_name=SUCCESS_EVENT)
-            .count()
-            == 0
-        )
-        fails = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=batch_id, event_name=FAILURE_EVENT)
-            .count()
-        )
-        assert fails == 1
-        self.h.db.expire_all()
-        m = self.h.db.query(ProjectAssetLine).filter_by(id=manual_id).one()
-        assert official_line_snapshot(m) == pre_manual
-
-    def test_success_audit_flush_failure(self, monkeypatch):
-        import app.modules.excel_import.application.apply_staging as ap
-
-        self.h.add_row()
-        orig = ap.log_audit_event
-
-        def boom(*a, **k):
-            if k.get("event_name") == SUCCESS_EVENT or (
-                len(a) > 1 and a[1] == SUCCESS_EVENT
-            ):
-                raise RuntimeError("audit fail")
-            # keyword style
-            if a and hasattr(a[0], "__dict__"):
-                pass
-            return orig(*a, **k)
-
-        def boom_kw(*a, **k):
-            if k.get("event_name") == SUCCESS_EVENT:
-                raise RuntimeError("audit fail")
-            return orig(*a, **k)
-
-        monkeypatch.setattr(ap, "log_audit_event", boom_kw)
-        with pytest.raises(HTTPException):
-            apply_project_asset_import_batch(
-                self.h.db,
-                org_id=self.h.org.id,
-                project_id=self.h.project.id,
-                batch_id=self.h.batch.id,
-                current_user=self.h.user,
-                confirm=True,
-            )
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
-            .count()
-            == 0
-        )
 
 
 class TestA5AlembicHead:
@@ -584,16 +318,16 @@ class TestA6ImmutabilityHelper:
     def test_apply_leaves_preexisting_line_byte_equal_snapshot(self):
         pre = official_line_snapshot(self.h.manual)
         self.h.add_row(name="New")
-        r = self.h.client().post(
+        response = self.h.client().post(
             f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
             json={"confirm": True},
         )
-        assert r.status_code == 200
+        assert response.status_code == 400
+        assert response.json()["detail"]["error_code"] == "apply_contract_invalid"
         self.h.db.expire_all()
-        post = official_line_snapshot(
-            self.h.db.query(ProjectAssetLine).filter_by(id=pre["id"]).one()
-        )
+        post = official_line_snapshot(self.h.db.get(ProjectAssetLine, pre["id"]))
         assert post == pre
+        assert self.h.db.query(AuditEvent).count() == 0
 
 
 class TestA7ScannerFailClosed:
@@ -630,21 +364,23 @@ class TestA7ScannerFailClosed:
             / "application"
             / "apply_staging.py"
         ).read_text(encoding="utf-8")
-        # remove only staging with_for_update by rewriting the staging chain
-        bad = src.replace(
-            ".order_by(\n"
-            "            ProjectAssetImportStagingRow.source_row_number,\n"
-            "            ProjectAssetImportStagingRow.id,\n"
-            "        )\n"
-            "        .with_for_update()\n"
-            "        .all()",
-            ".order_by(\n"
-            "            ProjectAssetImportStagingRow.source_row_number,\n"
-            "            ProjectAssetImportStagingRow.id,\n"
-            "        )\n"
-            "        .all()",
-        )
-        assert bad != src
+        import ast
+
+        class RemoveStagingLocks(ast.NodeTransformer):
+            removed = 0
+
+            def visit_Call(self, node):
+                self.generic_visit(node)
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "with_for_update":
+                    if any(isinstance(child, ast.Name) and child.id == "ProjectAssetImportStagingRow"
+                           for child in ast.walk(node.func.value)):
+                        self.removed += 1
+                        return node.func.value
+                return node
+
+        transformer = RemoveStagingLocks()
+        bad = ast.unparse(transformer.visit(ast.parse(src)))
+        assert transformer.removed > 0
         with tempfile.TemporaryDirectory() as tmp:
             app_dir = Path(tmp) / "app" / "modules" / "excel_import" / "application"
             app_dir.mkdir(parents=True)

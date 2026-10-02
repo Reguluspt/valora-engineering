@@ -20,6 +20,7 @@ from app.modules.excel_import.application.apply_staging import (
     FAILURE_EVENT,
     SUCCESS_EVENT,
     apply_project_asset_import_batch,
+    _map_row,
 )
 from app.modules.excel_import.application.validate_staging import (
     validate_project_asset_import_batch,
@@ -251,265 +252,139 @@ class ApplyHarness:
 
 
 class TestApplyApiAndEligibility:
+    """V2 activation closes synthetic legacy entry; mapping rules remain unit-tested."""
+
     def setup_method(self):
         self.h = ApplyHarness()
 
     def teardown_method(self):
         self.h.close()
 
-    def test_confirm_required(self):
+    def assert_denial_preserved(self):
+        self.h.assert_manual_immutable()
+        assert self.h.db.query(ProjectAssetLine).count() == 1
+        assert self.h.db.query(AuditEvent).filter(
+            AuditEvent.event_name.in_((SUCCESS_EVENT, FAILURE_EVENT)),
+        ).count() == 0
+        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
+
+    @pytest.mark.parametrize("payload", [{}, {"confirm": False}])
+    def test_confirm_required(self, payload):
         self.h.add_row()
-        c = self.h.client()
-        url = f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply"
-        r = c.post(url, json={})
-        assert r.status_code == 400
-        assert r.json()["detail"]["error_code"] == "apply_confirmation_required"
-        r2 = c.post(url, json={"confirm": False})
-        assert r2.status_code == 400
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
-            .count()
-            == 0
+        response = self.h.client().post(
+            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
+            json=payload,
         )
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .count()
-            == 0
+        assert response.status_code == 400
+        assert response.json()["detail"]["error_code"] == "apply_confirmation_required"
+        self.assert_denial_preserved()
+
+    @pytest.mark.parametrize("payload", [
+        {"confirm": True},
+        {"confirm": True, "contract_version": "s12-pr-004-v1"},
+        {"confirm": True, "contract_version": CONTRACT_VERSION},
+        {"confirm": True, "contract_version": CONTRACT_VERSION, "expected_case_version": "bad"},
+        {"confirm": True, "contract_version": "unsupported", "expected_case_version": "a" * 64},
+    ])
+    def test_legacy_or_invalid_request_cannot_mutate(self, payload):
+        row = self.h.add_row()
+        before = (row.validation_status, row.proposed_asset_name, row.mapped_values)
+        response = self.h.client().post(
+            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
+            json=payload,
         )
+        assert response.status_code == 400
+        assert response.json()["detail"]["error_code"] == "apply_contract_invalid"
+        self.h.db.refresh(row)
+        assert (row.validation_status, row.proposed_asset_name, row.mapped_values) == before
+        self.assert_denial_preserved()
+
+    def test_internal_legacy_entry_cannot_mutate(self):
+        self.h.add_row()
+        with pytest.raises(HTTPException) as denied:
+            apply_project_asset_import_batch(
+                self.h.db, org_id=self.h.org.id, project_id=self.h.project.id,
+                batch_id=self.h.batch.id, current_user=self.h.user, confirm=True,
+            )
+        assert denied.value.status_code == 400
+        assert denied.value.detail["error_code"] == "apply_contract_invalid"
+        self.assert_denial_preserved()
 
     def test_not_draft(self):
         self.h.add_row()
         self.h.project.status = ProjectWorkflowStatus.SUBMITTED
         self.h.db.commit()
-        r = self.h.client().post(
+        response = self.h.client().post(
             f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
+            json={"confirm": True, "contract_version": CONTRACT_VERSION,
+                  "expected_case_version": "a" * 64},
         )
-        assert r.status_code == 400
-        assert r.json()["detail"]["error_code"] == "apply_project_not_draft"
+        assert response.status_code == 400
+        assert response.json()["detail"]["error_code"] == "apply_project_not_draft"
+        self.assert_denial_preserved()
 
     def test_safe_404(self):
-        self.h.add_row()
-        r = self.h.client().post(
+        response = self.h.client().post(
             f"/api/v1/projects/{uuid.uuid4()}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
+            json={"confirm": True, "contract_version": CONTRACT_VERSION,
+                  "expected_case_version": "a" * 64},
         )
-        assert r.status_code == 404
+        assert response.status_code == 404
+        self.assert_denial_preserved()
 
-    def test_batch_state_and_rows_not_ready(self):
+    def test_batch_state_then_intake_prerequisite_denied(self):
         self.h.batch.status = ImportBatchStatus.PARSED
         self.h.db.commit()
         self.h.add_row()
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 409
-        assert r.json()["detail"]["error_code"] == "apply_state_not_allowed"
-
+        payload = {"confirm": True, "contract_version": CONTRACT_VERSION,
+                   "expected_case_version": "a" * 64}
+        url = f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply"
+        response = self.h.client().post(url, json=payload)
+        assert response.status_code == 409
+        assert response.json()["detail"]["error_code"] == "apply_state_not_allowed"
         self.h.batch.status = ImportBatchStatus.READY_FOR_REVIEW
         self.h.db.commit()
         self.h.add_row(status=ImportRowValidationStatus.INVALID)
-        r2 = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r2.status_code == 409
-        assert r2.json()["detail"]["error_code"] == "apply_rows_not_ready"
+        response = self.h.client().post(url, json=payload)
+        assert response.status_code == 409
+        assert response.json()["detail"]["error_code"] == "apply_intake_required"
+        self.assert_denial_preserved()
 
-    def test_success_mapping_lineage_order_and_audit(self):
-        r2 = self.h.add_row(name="B-asset", qty="2", unit="Cái", source_row_number=2)
-        r1 = self.h.add_row(
-            name="  A-asset  ",
-            qty="",
-            unit="cai",
-            desc="  hello  ",
-            price="10.50",
-            currency="vnd",
-            source_row_number=1,
-        )
-        # force order: source_row 1 then 2
-        self.h.db.refresh(r1)
-        self.h.db.refresh(r2)
-        res = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert res.status_code == 200, res.text
-        body = res.json()
-        assert body["status"] == "applied"
-        assert body["created_count"] == 2
-        assert [x["source_row_number"] for x in body["created_lines"]] == [1, 2]
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.APPLIED
-        line1 = self.h.db.query(ProjectAssetLine).filter_by(
-            id=uuid.UUID(str(body["created_lines"][0]["line_id"]))
-        ).one()
-        assert line1.asset_name == "A-asset"
-        assert line1.description == "hello"
-        assert Decimal(str(line1.quantity)) == Decimal("1.0000")
-        assert line1.unit_id == self.h.unit.id
-        assert Decimal(str(line1.raw_price)) == Decimal("10.50")
-        assert line1.raw_price_currency_id == self.h.cur.id
-        assert line1.review_status == "pending" or line1.review_status.value == "pending"
-        assert (
-            line1.validation_status == "unvalidated"
-            or line1.validation_status.value == "unvalidated"
-        )
-        assert line1.source_import_batch_id == self.h.batch.id
-        assert line1.source_staging_row_id is not None
-        assert line1.row_version == 1
-        # forbidden spreadsheet fields not applied
-        assert line1.appraised_unit_price is None
-        succ = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
-            .all()
-        )
-        assert len(succ) == 1
-        p = succ[0].payload
-        assert p["contract_version"] == CONTRACT_VERSION
-        assert set(p.keys()) == {
-            "contract_version",
-            "organization_id",
-            "project_id",
-            "batch_id",
-            "source_status",
-            "target_status",
-            "total_rows",
-            "created_count",
+    def test_registered_mapping_and_forbidden_inputs(self):
+        row = self.h.add_row(name="  A-asset  ", qty="", unit="cai", desc="  hello  ",
+                             price="10.50", currency="vnd")
+        fields = _map_row(self.h.db, row)
+        assert fields == {
+            "asset_name": "A-asset", "description": "hello", "quantity": Decimal("1.0000"),
+            "unit_id": self.h.unit.id, "raw_price": Decimal("10.50"),
+            "raw_price_currency_id": self.h.cur.id,
         }
-        assert p["created_count"] == 2
-        self.h.assert_manual_immutable()
+        assert not {"appraised_unit_price", "review_status", "validation_status"} & fields.keys()
+        self.assert_denial_preserved()
 
-    def test_reapply_409(self):
+    @pytest.mark.parametrize("changes", [
+        {"unit": "NOPE"}, {"unit": "OLD"}, {"currency": "XXX"}, {"currency": "₫"},
+        {"qty": "1.00001"}, {"qty": "NaN"}, {"price": "1.001"},
+    ])
+    def test_invalid_registered_mapping_rejected(self, changes):
+        row = self.h.add_row(**changes)
+        with pytest.raises(ValueError):
+            _map_row(self.h.db, row)
+        self.assert_denial_preserved()
+
+    def test_validate_rejects_historical_applied_batch(self):
         self.h.add_row()
-        url = f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply"
-        assert self.h.client().post(url, json={"confirm": True}).status_code == 200
-        r = self.h.client().post(url, json={"confirm": True})
-        assert r.status_code == 409
-        assert r.json()["detail"]["error_code"] == "apply_state_not_allowed"
-        assert (
-            self.h.db.query(ProjectAssetLine)
-            .filter_by(source_import_batch_id=self.h.batch.id)
-            .count()
-            == 1
-        )
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=SUCCESS_EVENT)
-            .count()
-            == 1
-        )
-
-    def test_mapping_invalid_failure_audit(self):
-        self.h.add_row(unit="NOPE")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
-        assert r.json()["detail"]["error_code"] == "apply_mapping_invalid"
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
-        fails = (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .all()
-        )
-        assert len(fails) == 1
-        assert fails[0].payload["contract_version"] == CONTRACT_VERSION
-        assert fails[0].payload["error_code"] == "apply_mapping_invalid"
-        assert set(fails[0].payload.keys()) == {
-            "contract_version",
-            "organization_id",
-            "project_id",
-            "batch_id",
-            "source_status",
-            "error_code",
-        }
-        assert (
-            self.h.db.query(ProjectAssetLine)
-            .filter(ProjectAssetLine.source_import_batch_id == self.h.batch.id)
-            .count()
-            == 0
-        )
-        self.h.assert_manual_immutable()
-
-    def test_currency_symbol_rejected(self):
-        self.h.add_row(currency="₫")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
-
-    def test_decimal_reject_scale_and_nan(self):
-        self.h.add_row(qty="1.00001")
-        r = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r.status_code == 400
-        self.h.db.query(ProjectAssetImportStagingRow).delete()
+        self.h.batch.status = ImportBatchStatus.APPLIED
         self.h.db.commit()
-        self.h.add_row(qty="NaN")
-        r2 = self.h.client().post(
-            f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply",
-            json={"confirm": True},
-        )
-        assert r2.status_code == 400
-
-    def test_outer_commit_failure_engine_audit(self, monkeypatch):
-        self.h.add_row()
-        orig = self.h.db.commit
-        n = {"i": 0}
-
-        def boom():
-            n["i"] += 1
-            if n["i"] == 1:
-                raise RuntimeError("outer fail")
-            return orig()
-
-        monkeypatch.setattr(self.h.db, "commit", boom)
-        with pytest.raises(HTTPException) as exc:
-            apply_project_asset_import_batch(
-                self.h.db,
-                org_id=self.h.org.id,
-                project_id=self.h.project.id,
-                batch_id=self.h.batch.id,
-                current_user=self.h.user,
-                confirm=True,
-            )
-        assert exc.value.status_code == 500
-        self.h.db.expire_all()
-        self.h.db.refresh(self.h.batch)
-        assert self.h.batch.status == ImportBatchStatus.READY_FOR_REVIEW
-        assert (
-            self.h.db.query(AuditEvent)
-            .filter_by(entity_id=self.h.batch.id, event_name=FAILURE_EVENT)
-            .count()
-            == 1
-        )
-        self.h.assert_manual_immutable()
-
-    def test_upload_validate_reject_applied(self):
-        self.h.add_row()
-        url = f"/api/v1/projects/{self.h.project.id}/asset-imports/{self.h.batch.id}/apply"
-        assert self.h.client().post(url, json={"confirm": True}).status_code == 200
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(HTTPException) as denied:
             validate_project_asset_import_batch(
-                self.h.db,
-                org_id=self.h.org.id,
-                project_id=self.h.project.id,
-                batch_id=self.h.batch.id,
-                current_user=self.h.user,
+                self.h.db, org_id=self.h.org.id, project_id=self.h.project.id,
+                batch_id=self.h.batch.id, current_user=self.h.user,
             )
-        assert exc.value.status_code == 409
+        assert denied.value.status_code == 409
+        assert self.h.batch.status == ImportBatchStatus.APPLIED
+        self.h.assert_manual_immutable()
+        assert self.h.db.query(AuditEvent).count() == 0
 
 
 def _pg_url():
@@ -520,10 +395,10 @@ def _pg_url():
 
 
 class TestPGApplyConcurrency:
-    def test_pg_apply_vs_apply_exact_once(self):
+    def test_pg_concurrent_naked_v1_requests_are_denied(self):
         pg = _pg_url()
         if not pg:
-            pytest.skip("SKIPPED LOCALLY - REQUIRES CI WITH POSTGRESQL")
+            pytest.fail("Guarded Apply concurrency certification requires PostgreSQL TEST_DATABASE_URL")
 
         engine = create_engine(pg)
         SessionLocal = sessionmaker(bind=engine)
@@ -637,11 +512,10 @@ class TestPGApplyConcurrency:
         t1.join(timeout=60)
         t2.join(timeout=60)
         assert not t1.is_alive() and not t2.is_alive()
-        # one success, one conflict or both serialized to one success + one 409
-        succ = [r for r in results]
-        assert sum(succ) == 1 or (len(succ) == 1 and any(
-            isinstance(e, HTTPException) and e.status_code == 409 for e in errors
-        ))
+        assert results == []
+        assert len(errors) == 2
+        assert all(isinstance(error, HTTPException) and error.status_code == 400
+                   and error.detail["error_code"] == "apply_contract_invalid" for error in errors)
         sess = SessionLocal()
         try:
             lines = (
@@ -649,13 +523,17 @@ class TestPGApplyConcurrency:
                 .filter_by(source_import_batch_id=ids["batch"])
                 .count()
             )
-            assert lines == 1
+            assert lines == 0
             assert (
                 sess.query(AuditEvent)
                 .filter_by(entity_id=ids["batch"], event_name=SUCCESS_EVENT)
                 .count()
-                == 1
+                == 0
             )
+            assert sess.query(AuditEvent).filter_by(
+                entity_id=ids["batch"], event_name=FAILURE_EVENT,
+            ).count() == 0
+            assert sess.get(ProjectAssetImportBatch, ids["batch"]).status == ImportBatchStatus.READY_FOR_REVIEW
         finally:
             sess.close()
             # cleanup

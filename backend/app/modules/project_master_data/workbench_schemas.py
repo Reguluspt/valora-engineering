@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List, Any, Dict
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictBool
 from app.modules.project_master_data.models import (
     WorkbenchSessionStatus,
     InlineEditDraftStatus,
@@ -274,7 +274,15 @@ class ProjectAssetImportStagingRowPaginationResponse(BaseModel):
 
 
 class ProjectAssetImportBatchApplyRequest(BaseModel):
-    confirm: Optional[bool] = None
+    model_config = {"extra": "forbid"}
+    confirm: Optional[StrictBool] = None
+    contract_version: Optional[str] = None
+    expected_case_version: Optional[str] = None
+
+
+class ProjectAssetImportBatchValidateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    expected_case_version: Optional[str] = None
 
 
 class ProjectAssetImportBatchApplyCreatedLine(BaseModel):

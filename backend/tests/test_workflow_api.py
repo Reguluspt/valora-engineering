@@ -15,7 +15,7 @@ from app.modules.project_master_data.models import (
     WorkflowTask, WorkflowTaskStatus, WorkflowTaskPriority,
     ApprovalGate, ApprovalGateStatus,
     ValidationRule, ValidationRuleCategory,
-    ValidationIssue, ValidationIssueSeverity, ValidationIssueStatus
+    ValidationIssue, ValidationIssueSeverity, ValidationIssueStatus, Project,
 )
 
 @pytest.fixture
@@ -414,10 +414,17 @@ def test_validation_endpoints(client: TestClient, db_session: Session, setup_rba
     db_session.add(rule)
     db_session.commit()
 
+    project = Project(
+        organization_id=setup_rbac_users["org_id"], code="ISSUE-01", name="Issue project",
+        created_by=uuid.UUID(setup_rbac_users["admin_id"]),
+    )
+    db_session.add(project)
+    db_session.commit()
+
     issue = ValidationIssue(
         validation_rule_id=rule.id,
         target_type="project",
-        target_id=uuid.uuid4(),
+        target_id=project.id,
         severity=ValidationIssueSeverity.BLOCKING,
         status=ValidationIssueStatus.OPEN,
         issue_message="Invalid category node"

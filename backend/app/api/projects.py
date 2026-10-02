@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 
 from app.db import get_db
+from app.db.session import get_case_state_db
 from app.core.rbac import get_current_user, require_permission
 from app.core.audit import log_audit_event
 from app.modules.project_master_data.models import (
@@ -86,6 +87,7 @@ from app.modules.project_master_data.workbench_schemas import (
     ProjectAssetImportBatchCreate,
     ProjectAssetImportBatchResponse,
     ProjectAssetImportBatchApplyRequest,
+    ProjectAssetImportBatchValidateRequest,
     ProjectAssetImportBatchApplyResponse,
     ProjectAssetImportStagingRowPaginationResponse
 )
@@ -428,7 +430,7 @@ def get_project(
 @router.get("/{project_id}/case-state", response_model=CaseStateResponse)
 def get_project_case_state(
     project_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_case_state_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
@@ -455,12 +457,14 @@ def get_project_case_state(
             "stage": projection.next_action.stage,
             "semantic_route_key": projection.next_action.semantic_route_key,
             "validation_issue_id": projection.next_action.validation_issue_id,
+            "context": projection.next_action.context,
         },
         "stages": [
             {
                 "stage": stage.stage,
                 "result": stage.result,
                 "provider_key": stage.provider_key,
+                "diagnostics": stage.diagnostics,
             }
             for stage in projection.stages
         ],
@@ -719,7 +723,7 @@ def update_project(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -753,8 +757,7 @@ def update_project(
         project.signer_profile_id = payload.signer_profile_id
     project.updated_by = current_user.id
 
-    db.commit()
-    db.refresh(project)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -766,6 +769,7 @@ def update_project(
         command_name="UpdateProject"
     )
     db.commit()
+    db.refresh(project)
 
     return project
 
@@ -780,13 +784,12 @@ def archive_project(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     project.status = ProjectWorkflowStatus.ARCHIVED
-    db.commit()
-    db.refresh(project)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -798,6 +801,7 @@ def archive_project(
         command_name="ArchiveProject"
     )
     db.commit()
+    db.refresh(project)
 
     return project
 
@@ -812,13 +816,12 @@ def cancel_project(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     project.status = ProjectWorkflowStatus.CANCELLED
-    db.commit()
-    db.refresh(project)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -830,6 +833,7 @@ def cancel_project(
         command_name="CancelProject"
     )
     db.commit()
+    db.refresh(project)
 
     return project
 
@@ -849,9 +853,21 @@ def create_project_asset_line(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if db.query(ProjectOfficialIntakeCommit.id).filter(
+        ProjectOfficialIntakeCommit.organization_id == org_id,
+        ProjectOfficialIntakeCommit.project_id == project_id,
+    ).first() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "asset_line_membership_closed",
+                "detail": "Không thể thêm dòng tài sản sau khi tiếp nhận hồ sơ chính thức.",
+            },
+        )
 
     # Check unit
     if payload.unit_id:
@@ -875,8 +891,7 @@ def create_project_asset_line(
         manufacturer_id=payload.manufacturer_id
     )
     db.add(line)
-    db.commit()
-    db.refresh(line)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -888,6 +903,7 @@ def create_project_asset_line(
         command_name="CreateProjectAssetLine"
     )
     db.commit()
+    db.refresh(line)
 
     return line
 
@@ -1457,6 +1473,7 @@ def materialize_project_asset_column_mapping(
 def validate_project_asset_import_batch_endpoint(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
+    payload: Optional[ProjectAssetImportBatchValidateRequest] = None,
     request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workbench:edit")),
@@ -1478,6 +1495,7 @@ def validate_project_asset_import_batch_endpoint(
         batch_id=batch_id,
         current_user=current_user,
         correlation_id=correlation_id,
+        expected_case_version=payload.expected_case_version if payload else None,
     )
 
 
@@ -1511,6 +1529,8 @@ def apply_project_asset_import_batch_endpoint(
         current_user=current_user,
         confirm=payload.confirm,
         correlation_id=correlation_id,
+        contract_version=payload.contract_version,
+        expected_case_version=payload.expected_case_version,
     )
     return ProjectAssetImportBatchApplyResponse(**result)
 
@@ -1743,14 +1763,14 @@ def update_project_asset_line(
     project = db.query(Project).filter(
         Project.organization_id == org_id,
         Project.id == project_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     line = db.query(ProjectAssetLine).filter(
         ProjectAssetLine.project_id == project_id,
         ProjectAssetLine.id == line_id
-    ).first()
+    ).with_for_update().populate_existing().first()
     if not line:
         raise HTTPException(status_code=404, detail="Asset line not found")
 
@@ -1804,8 +1824,7 @@ def update_project_asset_line(
     if payload.validation_status is not None:
         line.validation_status = payload.validation_status
 
-    db.commit()
-    db.refresh(line)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -1817,6 +1836,7 @@ def update_project_asset_line(
         command_name="UpdateProjectAssetLine"
     )
     db.commit()
+    db.refresh(line)
 
     return line
 

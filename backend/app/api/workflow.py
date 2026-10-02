@@ -12,7 +12,11 @@ from app.modules.project_master_data.models import (
     WorkflowTransition, WorkflowTask, WorkflowTaskStatus,
     ReviewDecision, ValidationRule, ValidationIssue, ValidationIssueStatus,
     ValidationIssueSeverity, ApprovalGate, UserActionLog,
-    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ReviewDecisionChoice, ReviewDecisionReversal
+    ChangeRequest, ChangeRequestStatus, ChangeRequestType, ReviewDecisionChoice, ReviewDecisionReversal,
+    Project, ProjectAssetLine,
+)
+from app.modules.project_master_data.application.official_intake_service import (
+    _PROJECT_TARGET_TYPES, _PROJECT_ASSET_LINE_TARGET_TYPES,
 )
 from app.modules.project_master_data.workflow_schemas import (
     WorkflowInstanceCreate, WorkflowInstanceSchema, WorkflowTransitionRequest,
@@ -344,6 +348,39 @@ def get_validation_issue(
     return issue
 
 
+def _lock_validation_issue_for_write(
+    db: Session, issue_id: uuid.UUID, actor: User,
+) -> ValidationIssue:
+    # Read only the immutable target identity before locking its owning Project.
+    target = db.query(ValidationIssue.target_type, ValidationIssue.target_id).filter(
+        ValidationIssue.id == issue_id,
+    ).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="Validation issue not found")
+    project_query = db.query(Project).filter(Project.organization_id == actor.organization_id)
+    if target.target_type in _PROJECT_TARGET_TYPES:
+        project_query = project_query.filter(Project.id == target.target_id)
+    elif target.target_type in _PROJECT_ASSET_LINE_TARGET_TYPES:
+        project_query = project_query.filter(Project.id.in_(
+            db.query(ProjectAssetLine.project_id).filter(ProjectAssetLine.id == target.target_id),
+        ))
+    else:
+        # Other workflow targets are outside Project Case State authority.
+        project_query = None
+    if project_query is not None:
+        project = project_query.with_for_update().populate_existing().first()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Validation issue not found")
+    issue = db.query(ValidationIssue).filter(
+        ValidationIssue.id == issue_id,
+        ValidationIssue.target_type == target.target_type,
+        ValidationIssue.target_id == target.target_id,
+    ).with_for_update().populate_existing().first()
+    if issue is None:
+        raise HTTPException(status_code=404, detail="Validation issue not found")
+    return issue
+
+
 @router.patch("/validation-issues/{issue_id}", response_model=ValidationIssueSchema)
 def update_validation_issue(
     issue_id: uuid.UUID,
@@ -351,9 +388,7 @@ def update_validation_issue(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workflow:instance:manage"))
 ):
-    issue = db.query(ValidationIssue).filter(ValidationIssue.id == issue_id).first()
-    if not issue:
-        raise HTTPException(status_code=404, detail="Validation issue not found")
+    issue = _lock_validation_issue_for_write(db, issue_id, current_user)
 
     if issue.row_version != update.expected_row_version:
         raise HTTPException(status_code=409, detail="Stale row version")
@@ -366,8 +401,7 @@ def update_validation_issue(
         issue.issue_message = update.issue_message
 
     issue.row_version += 1
-    db.commit()
-    db.refresh(issue)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -377,6 +411,7 @@ def update_validation_issue(
         actor_user_id=current_user.id
     )
     db.commit()
+    db.refresh(issue)
     return issue
 
 
@@ -387,9 +422,7 @@ def resolve_validation_issue(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("workflow:instance:manage"))
 ):
-    issue = db.query(ValidationIssue).filter(ValidationIssue.id == issue_id).first()
-    if not issue:
-        raise HTTPException(status_code=404, detail="Validation issue not found")
+    issue = _lock_validation_issue_for_write(db, issue_id, current_user)
 
     if issue.row_version != req.expected_row_version:
         raise HTTPException(status_code=409, detail="Stale row version")
@@ -399,8 +432,7 @@ def resolve_validation_issue(
     issue.resolved_at = datetime.now(timezone.utc)
     issue.resolution_notes = req.resolution_notes
     issue.row_version += 1
-    db.commit()
-    db.refresh(issue)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -411,6 +443,7 @@ def resolve_validation_issue(
     )
     log_action(db, current_user.id, "validation_issue_resolution", "validation_issue", issue.id, {})
     db.commit()
+    db.refresh(issue)
 
     return issue
 

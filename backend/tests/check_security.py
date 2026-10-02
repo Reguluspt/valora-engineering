@@ -222,7 +222,12 @@ def check_apply_path_blockers(directory):
             for lineno, name, detail in visitor.issues:
                 print(f"[BLOCKER FAIL] {name} found in apply_staging.py:{lineno} - {detail}")
                 issues += 1
-            if not visitor.has_staging_for_update:
+            command = next((node for node in tree.body if isinstance(node, ast.FunctionDef)
+                            and node.name == "apply_project_asset_import_batch"), None)
+            command_visitor = ApplyStagingSecurityVisitor()
+            if command is not None:
+                command_visitor.visit(command)
+            if command is None or not command_visitor.has_staging_for_update:
                 print(
                     "[BLOCKER FAIL] Apply staging query missing with_for_update() on ProjectAssetImportStagingRow"
                 )

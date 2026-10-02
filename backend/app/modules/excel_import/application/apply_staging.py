@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -20,13 +21,16 @@ from app.modules.project_master_data.models import (
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
     ProjectAssetLine,
+    ProjectAssetReviewSeal,
     ProjectWorkflowStatus,
     ReferenceStatus,
     Unit,
     User,
 )
 
-CONTRACT_VERSION = "s12-pr-004-v1"
+from app.modules.project_master_data.application.asset_review_authority import (
+    CONTRACT_VERSION, canonical_digest, membership_digest, resolve_authority, require_mutation_actor,
+)
 COMMAND_NAME = "ApplyProjectAssetImportBatch"
 SUCCESS_EVENT = "ProjectAssetImportBatchApplied"
 FAILURE_EVENT = "ProjectAssetImportBatchApplyFailed"
@@ -112,7 +116,7 @@ def _resolve_unit(db: Session, raw: str | None) -> uuid.UUID | None:
     if key is None:
         return None
     key_cf = key.casefold()
-    all_units = db.query(Unit).all()
+    all_units = db.query(Unit).order_by(Unit.id).populate_existing().with_for_update(read=True).all()
     for attr in ("code", "display_name", "symbol"):
         matches = [
             u
@@ -143,7 +147,7 @@ def _resolve_currency(db: Session, raw: str | None) -> uuid.UUID | None:
     if key is None:
         return None
     key_cf = key.casefold()
-    all_currencies = db.query(Currency).all()
+    all_currencies = db.query(Currency).order_by(Currency.id).populate_existing().with_for_update(read=True).all()
     for attr in ("code", "display_name"):
         matches = [
             c
@@ -223,6 +227,8 @@ def build_apply_fingerprint(
         "latest_upload_audit_id": str(up.id) if up else None,
         "latest_validation_success_audit_id": str(vs.id) if vs else None,
         "latest_apply_success_audit_id": str(ap.id) if ap else None,
+        "case_version": resolve_authority(db, org_id=project.organization_id,
+            project_id=project.id, locked=True).case_version,
     }
 
 
@@ -300,6 +306,7 @@ def _recover_apply_failure(
         project = (
             db.query(Project)
             .filter(Project.organization_id == org_id, Project.id == project_id)
+            .populate_existing()
             .with_for_update()
             .first()
         )
@@ -310,6 +317,7 @@ def _recover_apply_failure(
                 ProjectAssetImportBatch.project_id == project_id,
                 ProjectAssetImportBatch.id == batch_id,
             )
+            .populate_existing()
             .with_for_update()
             .first()
         )
@@ -327,6 +335,7 @@ def _recover_apply_failure(
                 ProjectAssetImportStagingRow.source_row_number,
                 ProjectAssetImportStagingRow.id,
             )
+            .with_for_update()
             .all()
         )
         current = build_apply_fingerprint(
@@ -358,16 +367,22 @@ def apply_project_asset_import_batch(
     batch_id: uuid.UUID,
     current_user: User,
     confirm: bool | None,
+    contract_version: str | None = None,
+    expected_case_version: str | None = None,
     correlation_id: str | None = None,
 ) -> dict:
     """Promote validated staging rows to official lines. Atomic all-or-nothing."""
     if confirm is not True:
         _raise(400, ERR_CONFIRM, MSG_CONFIRM)
+    if contract_version != CONTRACT_VERSION or not isinstance(expected_case_version, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_case_version):
+        _raise(400, "apply_contract_invalid", "Yêu cầu phiên bản không hợp lệ.")
+    current_user = require_mutation_actor(db, actor=current_user, org_id=org_id)
 
     # Lock order: Project → batch → staging
     project = (
         db.query(Project)
         .filter(Project.organization_id == org_id, Project.id == project_id)
+        .populate_existing()
         .with_for_update()
         .first()
     )
@@ -384,6 +399,7 @@ def apply_project_asset_import_batch(
             ProjectAssetImportBatch.project_id == project_id,
             ProjectAssetImportBatch.id == batch_id,
         )
+        .populate_existing()
         .with_for_update()
         .first()
     )
@@ -411,6 +427,18 @@ def apply_project_asset_import_batch(
 
     if not rows:
         _raise(409, ERR_ROWS, MSG_ROWS)
+
+    authority = resolve_authority(db, org_id=org_id, project_id=project_id, locked=True)
+    if authority.intake is None:
+        _raise(409, "apply_intake_required", "Phải tiếp nhận chính thức trước khi áp dụng.")
+    if authority.lines or authority.seal or any(
+        _status_value(i.severity) == "blocking" and _status_value(i.status) == "open" for i in authority.issues
+    ):
+        _raise(409, "apply_entry_conflict", "Không thể mở tập tài sản hiện tại.")
+    if not authority.lineage_current or not authority.batch or authority.batch.id != batch.id:
+        _raise(409, "apply_lineage_conflict", "Nguồn dữ liệu đã thay đổi.")
+    if authority.case_version != expected_case_version:
+        _raise(409, "apply_version_conflict", "Trạng thái hồ sơ đã thay đổi. Vui lòng tải lại.")
 
     # Counter agreement
     valid_count = sum(
@@ -454,11 +482,13 @@ def apply_project_asset_import_batch(
         db, project=project, batch=batch, rows=rows
     )
     batch_id_value = batch.id
+    actor_id_value = current_user.id
 
-    sp = db.begin_nested()
+    sp = None
     savepoint_committed = False
     error_code = ERR_ENGINE
     try:
+        sp = db.begin_nested()
         created_lines: list[dict] = []
         for row in rows:
             try:
@@ -491,6 +521,20 @@ def apply_project_asset_import_batch(
             )
 
         batch.status = ImportBatchStatus.APPLIED
+        correspondence = [{"staging_row_id": str(item["staging_row_id"]),
+            "source_row_number": item["source_row_number"], "line_id": str(item["line_id"])} for item in created_lines]
+        entry_sha = canonical_digest(authority.entry_manifest)
+        set_sha = membership_digest(correspondence)
+        seal = ProjectAssetReviewSeal(organization_id=org_id, project_id=project_id,
+            official_intake_commit_id=authority.intake.id, preliminary_result_artifact_id=authority.result.id,
+            import_batch_id=batch.id, source_artifact_id=authority.source.id,
+            structure_snapshot_id=authority.usage.structure_snapshot_id,
+            mapping_decision_id=authority.usage.confirmation_decision_id, staging_usage_id=authority.usage.id,
+            lineage_manifest=authority.entry_manifest, correspondence=correspondence,
+            entry_lineage_sha256=entry_sha, authoritative_set_sha256=set_sha,
+            membership_version=1, actor_user_id=current_user.id, contract_version=CONTRACT_VERSION)
+        db.add(seal)
+        require_mutation_actor(db, actor=current_user, org_id=org_id)
         log_audit_event(
             db=db,
             event_name=SUCCESS_EVENT,
@@ -509,6 +553,12 @@ def apply_project_asset_import_batch(
                 "target_status": ImportBatchStatus.APPLIED.value,
                 "total_rows": len(rows),
                 "created_count": len(created_lines),
+                "official_intake_commit_id": str(authority.intake.id),
+                "preliminary_result_artifact_id": str(authority.result.id),
+                "entry_lineage_sha256": entry_sha,
+                "authoritative_set_sha256": set_sha,
+                "membership_version": 1,
+                "expected_case_version": expected_case_version,
             },
         )
         db.flush()
@@ -527,9 +577,10 @@ def apply_project_asset_import_batch(
         return response
 
     except HTTPException:
+        db.rollback()
         raise
     except Exception:
-        if not savepoint_committed:
+        if sp is not None and not savepoint_committed:
             try:
                 sp.rollback()
             except Exception:
@@ -543,7 +594,7 @@ def apply_project_asset_import_batch(
             org_id=org_id,
             project_id=project_id,
             batch_id=batch_id,
-            actor_id=current_user.id,
+            actor_id=actor_id_value,
             pre_fingerprint=pre_fingerprint,
             source_status=source_status,
             error_code=error_code,
