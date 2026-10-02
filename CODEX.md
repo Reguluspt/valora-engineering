@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A4 certified; A5R D1 accepted, grant runtime pending)
+**Last reconciled:** 2026-10-02 (A5R certified; A5R2 bounded grant runtime active, A5 stopped)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -139,10 +139,12 @@ OS-G2 A4 / Issue #79 / PR #80 is MERGED/CERTIFIED at
 `416157e6330f861127455a66fd5df9c0972bc02a`, exact-main CI #545 SUCCESS. It authorizes only the
 backend validation/review/proof/receipt and Case State v3 slice. Frontend/UI, membership mutation,
 new RBAC and stages after ASSET_REVIEW remain UNAUTHORIZED. OS-G2 A5 / Issue #81 is ACTIVE but
-STOPPED pending certified Workbench session-open RBAC runtime. A5R / Issue #82 D1 was ACCEPTED by
-the Product Owner on 2026-10-02: the future data-only grant gives existing `workbench:open` to
-standard `owner` and `appraiser` only. Grant runtime is NOT YET IMPLEMENTED / NOT YET CERTIFIED.
-A5 browser E2E MUST NOT resume yet. ASSET_WORKBENCH+ remains UNAUTHORIZED.
+STOPPED until Issue #84 is merged and exact-main certified. A5R / Issue #82 / PR #83 is
+MERGED/CERTIFIED at `d20f121b0f62c539836fde35308edbfc6d928e5d`, exact-main CI #549 SUCCESS.
+A5R D1 was ACCEPTED by the Product Owner on 2026-10-02: the data-only grant gives existing
+`workbench:open` to standard `owner` and `appraiser` only. Issue #84 / A5R2 is the active bounded
+RBAC grant runtime task; its runtime is not yet merged/certified. A5 browser E2E MUST NOT resume yet.
+ASSET_WORKBENCH+ remains UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
