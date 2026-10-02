@@ -1,6 +1,6 @@
 # OS-G2 A5R — Workbench Session Open RBAC Authority Proposal
 
-**Status: PROPOSED / PRODUCT OWNER DECISION REQUIRED**
+**Status: ACCEPTED PRODUCT OWNER AUTHORITY — 2026-10-02**
 **Task:** Issue #82 — VALORA-TASK-OS-G2-A5R-WORKBENCH-SESSION-OPEN-RBAC-AUTHORITY
 **Date:** 2026-10-02
 **Risk:** HIGH — authorization policy / standard-role capability
@@ -40,10 +40,10 @@ The role seed [7519c3d1f364](../../backend/alembic/versions/7519c3d1f364_create_
 
 A read-only query of the already migrated synthetic A5 PostgreSQL database `issue81_acceptance` (Alembic head `a4b5c6d7e8f9`) corroborated:
 
-| Standard role | `workbench:edit` | `workbench:open` | `workbench:read` | `workbench:undo_redo` | Proposed change |
+| Standard role | `workbench:edit` | `workbench:open` | `workbench:read` | `workbench:undo_redo` | Accepted D1 outcome |
 | --- | --- | --- | --- | --- | --- |
-| owner | Present | Absent | Absent | Absent | Add open only, if accepted and separately implemented |
-| appraiser | Present | Absent | Absent | Absent | Add open only, if accepted and separately implemented |
+| owner | Present | Absent | Absent | Absent | Open grant accepted; migration/runtime pending |
+| appraiser | Present | Absent | Absent | Absent | Open grant accepted; migration/runtime pending |
 | admin | Absent | Absent | Absent | Absent | None |
 | viewer | Absent | Absent | Absent | Absent | None |
 | reviewer | Absent | Absent | Absent | Absent | None |
@@ -61,9 +61,13 @@ Read-only inspection of the preserved, uncommitted A5 `frontend/src/api/assetRev
 
 Undo/redo calls exist through explicit `handleUndo`/`handleRedo` → [useWorkbenchDraftSync](../../frontend/src/components/workbench/session/useWorkbenchDraftSync.ts) → undo/redo POST, which require `workbench:undo_redo`. They are not automatically invoked by session creation, heartbeat, row selection, validation, review or receipt recovery, and are not required for A5 Asset Review closure. Their availability is not promised by D1. Existing GET Workbench state APIs likewise remain denied without their distinct read permission. If a later required A5 path actually needs either permission, stop and report the exact call path rather than broadening D1.
 
-## 4. One preferred Product Owner decision
+## 4. Accepted Product Owner decision
 
-**D1 — Grant the existing permission `workbench:open` to standard `owner` and `appraiser` ONLY via a future data-only migration. Keep the endpoint and all other grants unchanged.**
+On 2026-10-02 the Product Owner accepted binding decision D1:
+
+> Grant the already-existing `workbench:open` permission to standard roles `owner` and `appraiser` ONLY, and to no additional standard roles. Implement the future grant through a bounded data-only migration. Do not weaken or rename the permission boundary.
+
+Keep unchanged: session POST still requires `workbench:open`; existing `workbench:edit`, `workbench:read` and `workbench:undo_redo` grants and semantics; viewer/reviewer/knowledge_curator behavior; admin behavior and independently pre-existing grants; tenant, Project, active-user/organization and owned-session checks; and A4 validation/review/receipt authority.
 
 This enables operators to establish the owned session prerequisite for their already accepted edit-gated commands. It also enables the existing open-gated endpoint generally for those roles; it is not a new A5-only permission. It grants no new validation/review authority and does not bypass any command eligibility check.
 
@@ -79,12 +83,10 @@ Rejected alternatives:
 
 ## 5. Decision, implementation and rollback gates
 
-If D1 is denied or pending, standard operator session creation remains 403 and A5 browser closure remains blocked. No administrator manual patch or fixture bypass is authorized to complete acceptance.
+Until the accepted grant is implemented through a separately authorized migration and certified on main, standard operator session creation remains 403 and A5 browser closure remains blocked. No administrator manual patch or fixture bypass is authorized to complete acceptance.
 
-Product Owner acceptance would freeze the bounded policy only. A separately authorized runtime task must implement and certify the future data-only migration, preserving unrelated grants and pre-existing accepted grants, with durable grant provenance and safe downgrade. This proposal creates no migration and changes no RBAC record, backend authentication, API, frontend, runtime or test behavior. No A5 worktree changes or browser E2E were performed; acceptance alone does not certify A5 or authorize ASSET_WORKBENCH+.
+Product Owner acceptance freezes the bounded policy only. The grant is NOT YET IMPLEMENTED / NOT YET CERTIFIED. A separately authorized runtime task must implement and certify the future data-only migration, preserving unrelated grants and pre-existing accepted grants, with durable grant provenance and safe downgrade. This proposal creates no migration and changes no RBAC record, backend authentication, API, frontend, runtime or test behavior. No A5 worktree changes or browser E2E were performed; acceptance alone does not certify A5 or authorize ASSET_WORKBENCH+.
 
 A future rollback should remove only the open grants introduced by that migration, retaining independently pre-existing accepted grants and all other permissions. Losing effective open denies subsequent session-create calls, including retrieval through that POST. It does **not** itself close existing active sessions or revoke edit: current heartbeat, A4 commands and receipt recovery still evaluate their own effective edit and active owned-session checks. Session revocation or altered authorization semantics require separate accepted authority; do not claim rollback automatically revokes active sessions.
 
-This HIGH-risk docs-only candidate requires a frozen HEAD, DeepSeek and Gemini read-only reviews of that same HEAD, zero unresolved material P0–P3 and exact-head CI SUCCESS. Gate Owner retains Draft integration control; no Ready transition or merge is authorized.
-
-PRODUCT OWNER DECISION REQUIRED: YES
+This HIGH-risk docs-only acceptance record requires a frozen HEAD, DeepSeek and Gemini read-only reviews of that same HEAD, zero unresolved material P0–P3 and exact-head CI SUCCESS. Gate Owner retains Draft integration control; no Ready transition or merge is authorized.

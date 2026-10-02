@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A3 certified; A4 backend implementation active)
+**Last reconciled:** 2026-10-02 (OS-G2 A4 certified; A5R D1 accepted, grant runtime pending)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -134,9 +134,15 @@ Apply v2, the atomic initial-set seal and shared Case State v2 / `asset_review_v
 OS-G2 A3 / Issue #77 authority was ACCEPTED by the Product Owner on 2026-10-02. ADR 0049 and
 `docs/implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md` are accepted authority.
 PR #78 is MERGED/CERTIFIED at `27bebb73e35c540c7cea870b1b2fd5a26a55b2c9`, exact-main CI #542
-SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority. OS-G2 A4 /
-Issue #79 authorizes only the backend validation/review/proof/receipt and Case State v3 slice.
-Frontend/UI, membership mutation, new RBAC and stages after ASSET_REVIEW remain UNAUTHORIZED.
+SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority.
+OS-G2 A4 / Issue #79 / PR #80 is MERGED/CERTIFIED at
+`416157e6330f861127455a66fd5df9c0972bc02a`, exact-main CI #545 SUCCESS. It authorizes only the
+backend validation/review/proof/receipt and Case State v3 slice. Frontend/UI, membership mutation,
+new RBAC and stages after ASSET_REVIEW remain UNAUTHORIZED. OS-G2 A5 / Issue #81 is ACTIVE but
+STOPPED pending certified Workbench session-open RBAC runtime. A5R / Issue #82 D1 was ACCEPTED by
+the Product Owner on 2026-10-02: the future data-only grant gives existing `workbench:open` to
+standard `owner` and `appraiser` only. Grant runtime is NOT YET IMPLEMENTED / NOT YET CERTIFIED.
+A5 browser E2E MUST NOT resume yet. ASSET_WORKBENCH+ remains UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
