@@ -41,7 +41,7 @@ export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[], offse
     supplier_quote_3: null,
     appraised_price: item.appraised_unit_price ?? null,
     currency: null,
-    validation_status: (item.validation_status as any) === "needs_review" ? "warning" : (item.validation_status as any),
+    validation_status: item.validation_status,
     review_status: (item.review_status as any),
     row_version: parseVersionToken(item.version_token),
   }));

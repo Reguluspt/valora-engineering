@@ -1,4 +1,4 @@
-import React, { useState, useMemo, UIEvent } from "react";
+import React, { useState, useMemo, useEffect, useRef, UIEvent } from "react";
 import { AssetLineGridRow, GridSortState, SortField } from "./AssetGridTypes";
 import { AssetGridToolbar } from "./AssetGridToolbar";
 import { StatusBadge } from "../common/StatusBadge";
@@ -11,23 +11,15 @@ import { getDraftStatusLabelVi, getDraftStatusBadge } from "./hooks/useWorkbench
 const VALIDATION_LABELS: Record<string, string> = {
   valid: "Hợp lệ",
   warning: "Cảnh báo",
-  error: "Lỗi",
-  blocking: "Chặn",
+  invalid: "Không hợp lệ",
   unvalidated: "Chưa kiểm tra",
-  needs_review: "Cần kiểm tra",
 };
 
 const REVIEW_LABELS: Record<string, string> = {
-  raw: "Thô",
-  parsed: "Đã phân tích",
-  identity_suggested: "Đề xuất định danh",
-  identity_approved: "Đã định danh",
-  taxonomy_approved: "Đã phân loại",
-  knowledge_matched: "Đã khớp dữ liệu",
-  price_reviewed: "Đã thẩm định giá",
-  approved: "Đã duyệt",
-  locked: "Đã khóa",
-  excluded: "Đã loại",
+  pending: "Chờ rà soát",
+  accepted: "Đã chấp nhận",
+  flagged: "Đã gắn cờ",
+  rejected: "Đã từ chối",
 };
 
 const UNKNOWN_LABEL = "Chưa xác định";
@@ -45,6 +37,7 @@ function reviewLabel(v: string | null | undefined): string {
 export { validationLabel, reviewLabel, VALIDATION_LABELS, REVIEW_LABELS, UNKNOWN_LABEL };
 
 interface AssetGridProps {
+  authoritativeActiveId?: string | null;
   rows: AssetLineGridRow[];
   onActiveRowChange?: (id: string | null) => void;
   drafts?: Record<string, InlineEditDraft>;
@@ -70,7 +63,7 @@ export function executeDraftCommit(
   return false;
 }
 
-export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {}, onCommitDraft }: AssetGridProps) {
+export function AssetGrid({ rows, authoritativeActiveId, onActiveRowChange, drafts = {}, onDraftChange, draftStates = {}, onCommitDraft }: AssetGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [validationFilter, setValidationFilter] = useState("All");
@@ -82,6 +75,13 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = 400; // Fixed view window height
   const rowHeight = 44; // Matches the dense Workbench row geometry.
+  const viewport = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (authoritativeActiveId) {
+      setActiveId(authoritativeActiveId);
+      setSearchQuery(""); setStatusFilter("All"); setValidationFilter("All");
+    }
+  }, [authoritativeActiveId]);
 
   // 1. Sort and Filter
   const filteredAndSortedRows = useMemo(() => {
@@ -117,6 +117,14 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
 
     return result;
   }, [rows, searchQuery, statusFilter, validationFilter, sortState]);
+  useEffect(() => {
+    if (!authoritativeActiveId) return;
+    const index = filteredAndSortedRows.findIndex(r => r.project_asset_line_id === authoritativeActiveId);
+    if (index < 0) return;
+    const top = index * rowHeight;
+    if (viewport.current) viewport.current.scrollTop = top;
+    setScrollTop(top);
+  }, [authoritativeActiveId, filteredAndSortedRows]);
 
   // 2. Select / Highlight Functions
   const handleRowClick = (id: string) => {
@@ -191,6 +199,7 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
       ) : (
         <div
           className="grid-scroll-viewport valora-table-shell"
+          ref={viewport}
           onScroll={handleScroll}
           style={{ height: `${containerHeight}px` }}
         >
@@ -365,12 +374,12 @@ export function AssetGrid({ rows, onActiveRowChange, drafts = {}, onDraftChange,
                       </td>
                       <td className="asset-grid-status-cell">
                         <StatusBadge
-                          status={row.validation_status === "valid" ? "approved" : row.validation_status}
+                          status={row.validation_status === "valid" ? "approved" : row.validation_status === "warning" ? "warning" : row.validation_status === "invalid" ? "error" : "review"}
                           label={validationLabel(row.validation_status)}
                         />
                       </td>
                       <td className="asset-grid-status-cell">
-                        <StatusBadge status={row.review_status === "approved" ? "approved" : "review"} label={reviewLabel(row.review_status)} />
+                        <StatusBadge status={row.review_status === "accepted" ? "approved" : row.review_status === "flagged" ? "warning" : row.review_status === "rejected" ? "error" : "review"} label={reviewLabel(row.review_status)} />
                       </td>
                     </tr>
                   );

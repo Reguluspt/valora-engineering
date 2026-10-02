@@ -445,3 +445,27 @@
   padding: var(--valora-space-sm) 0;
   border-bottom: 1px solid var(--valora-color-border-subtle);
 }
+.asset-review-region {
+  padding: var(--valora-space-sm) var(--valora-space-2xl);
+  border-bottom: 1px solid var(--valora-color-border-subtle);
+  background: var(--valora-color-surface-primary);
+}
+.asset-review-heading, .asset-review-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--valora-space-md);
+  flex-wrap: wrap;
+}
+.asset-review-region p, .asset-review-region ul { margin: var(--valora-space-sm) 0; }
+.asset-review-dialog {
+  max-width: 34rem;
+  width: calc(100% - var(--valora-space-2xl));
+  padding: var(--valora-space-xl);
+  border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-surface);
+  background: var(--valora-color-surface-primary);
+  color: var(--valora-color-text-primary);
+}
+.asset-review-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.asset-review-dialog label { display: grid; gap: var(--valora-space-sm); margin-bottom: var(--valora-space-md); }
+.asset-review-dialog textarea { min-height: 6rem; font: inherit; padding: var(--valora-space-sm); }

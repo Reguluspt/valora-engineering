@@ -1,5 +1,10 @@
 import type { CaseStage, CaseStageResult, CaseStateNextAction } from "../../api/caseState";
-import { projectPreliminaryAnalysisPath, projectPreliminaryCompletionPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
+import { projectWorkbenchPath, projectPreliminaryAnalysisPath, projectPreliminaryCompletionPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
+
+export function isAssetReviewSessionBridge(nextAction: CaseStateNextAction | null): boolean {
+  return nextAction?.kind === "UNAVAILABLE" && nextAction.stage === "ASSET_REVIEW" &&
+    nextAction.context?.reason_code === "session_required";
+}
 
 export const CASE_STAGE_LABELS: Record<CaseStage, string> = {
   PRELIMINARY_REQUEST: "Yêu cầu sơ bộ",
@@ -35,7 +40,12 @@ export function mappedNextActionPath(
   projectRef: string
 ): string | null {
   if (!nextAction) return null;
+  if (isAssetReviewSessionBridge(nextAction)) return projectWorkbenchPath(projectRef);
+  if (nextAction.kind === "BLOCKER" && nextAction.stage === "ASSET_REVIEW" &&
+      nextAction.semantic_route_key === "asset_review_line_blocked") return projectWorkbenchPath(projectRef);
   if (nextAction.kind !== "PENDING" || !nextAction.semantic_route_key) return null;
+  if (nextAction.stage === "ASSET_REVIEW" && ["asset_review_line_validate_required",
+      "asset_review_line_review_required"].includes(nextAction.semantic_route_key)) return projectWorkbenchPath(projectRef);
   if (nextAction.semantic_route_key === "preliminary_request_pending") {
     return projectPreliminaryIntakePath(projectRef);
   }
@@ -62,6 +72,10 @@ export function nextActionCopy(nextAction: CaseStateNextAction | null): {
     };
   }
   const stageLabel = nextAction.stage ? CASE_STAGE_LABELS[nextAction.stage] : null;
+  if (isAssetReviewSessionBridge(nextAction)) return {
+    eyebrow: "Hành động tiếp theo", title: "Mở Bàn làm việc tài sản",
+    description: "Mở không gian làm việc để xác minh phiên và tải lại trạng thái rà soát. Chưa thực hiện kiểm tra hay quyết định.",
+  };
   if (nextAction.kind === "BLOCKER") {
     return {
       eyebrow: "Cần xử lý trước",
