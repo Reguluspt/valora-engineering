@@ -18,6 +18,7 @@ from app.core.rbac import get_current_user
 from app.modules.project_master_data.application.asset_review_authority import resolve_authority
 from app.modules.project_master_data.application.asset_review_line_commands import (
     validate_project_asset_line, decide_project_asset_line_review, read_asset_review_receipt,
+    canonical_request_digest,
 )
 from app.modules.project_master_data.application.asset_review_provider import evaluate_asset_review_provider
 from app.modules.project_master_data.application.asset_line_validation_rules import evaluate_rules, exact_numeric
@@ -268,17 +269,33 @@ def test_denials_have_zero_writes(line_db, change, status):
     assert counts(db) == (0, 0, 0, 0, 0)
 
 
-def test_receipt_uuid_conflicts_across_actor_and_line(line_db):
+@pytest.mark.parametrize("review", [None, "flagged"])
+def test_receipt_uuid_conflicts_across_actor_project_and_line(line_db, review):
     db, entry = line_db
-    req = request_for(db, entry)
-    execute(db, entry, req)
+    from app.modules.project_master_data.models import Project, ProjectAssetLine, UserRole
+    from app.modules.project_master_data.asset_review_line_schemas import (
+        ValidateProjectAssetLineRequest, DecideProjectAssetLineReviewRequest,
+    )
+    req = request_for(db, entry, review=review, **({"reason_note": "Human hold"} if review else {}))
+    typed = (DecideProjectAssetLineReviewRequest if review else ValidateProjectAssetLineRequest).model_validate(req)
+    scope = dict(organization_id=entry["org"].id, actor_user_id=entry["user"].id,
+                 project_id=entry["project"].id, line_id=entry["line_id"], request=typed)
+    digest = canonical_request_digest(**scope)
+    for key in ("organization_id", "actor_user_id", "project_id", "line_id"):
+        assert canonical_request_digest(**{**scope, key: uuid.uuid4()}) != digest
+    original = execute(db, entry, req)
     db.commit()
+    receipt = db.query(AssetReviewCommandReceipt).filter_by(command_id=typed.command_id).one()
+    assert receipt.request_sha256 == digest
+    before = counts(db)
+    replay = execute(db, entry, req)
+    assert replay["replayed"] and replay["result"] == original["result"]
+    assert counts(db) == before
     other_line = next(item.id for item in snapshot(db, entry).lines if item.id != entry["line_id"])
     with pytest.raises(HTTPException) as denied:
         execute(db, entry, req, line_id=other_line)
     assert denied.value.status_code == 409
     other = User(organization_id=entry["org"].id, email=uuid.uuid4().hex + "@example.test", full_name="Other")
-    from app.modules.project_master_data.models import UserRole
     db.add(other)
     db.flush()
     db.add_all([UserRole(user_id=other.id, role_id=entry["role"].id),
@@ -287,7 +304,19 @@ def test_receipt_uuid_conflicts_across_actor_and_line(line_db):
     with pytest.raises(HTTPException) as denied:
         execute(db, entry, req, actor=other)
     assert denied.value.status_code == 409
-    assert counts(db) == (1, 0, 0, 1, 1)
+    assert denied.value.detail["error_code"] == "asset_review_command_reuse_conflict"
+    project = Project(organization_id=entry["org"].id, code=uuid.uuid4().hex,
+                      name="Other Project", created_by=entry["user"].id)
+    db.add(project)
+    db.flush()
+    line = ProjectAssetLine(project_id=project.id, asset_name="Other line")
+    db.add_all([line, WorkbenchSession(project_id=project.id, user_id=entry["user"].id)])
+    db.commit()
+    with pytest.raises(HTTPException) as denied:
+        execute(db, {**entry, "project": project, "line_id": line.id}, req)
+    assert denied.value.status_code == 409
+    assert denied.value.detail["error_code"] == "asset_review_command_reuse_conflict"
+    assert counts(db) == before
 
 
 def test_technical_audit_failure_rolls_back_all_effects(line_db, monkeypatch):
@@ -459,14 +488,18 @@ def test_review_http_closed_contract_and_unicode_reason(line_client, change):
     assert counts(db) == (0, 0, 0, 0, 0)
 
 
-def test_exact_replay_rechecks_permission_and_session(line_db):
+@pytest.mark.parametrize("change,status", [("permission", 403), ("session", 404)])
+def test_exact_replay_rechecks_permission_and_session(line_db, change, status):
     db, entry = line_db
     req = request_for(db, entry)
     execute(db, entry, req)
     db.commit()
-    entry["role"].permissions = []
+    if change == "permission":
+        entry["role"].permissions = []
+    else:
+        entry["session"].status = "closed"
     db.commit()
     with pytest.raises(HTTPException) as denied:
         execute(db, entry, req)
-    assert denied.value.status_code == 403
+    assert denied.value.status_code == status
     assert counts(db) == (1, 0, 0, 1, 1)

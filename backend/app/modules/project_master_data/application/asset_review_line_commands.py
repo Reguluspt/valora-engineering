@@ -28,6 +28,17 @@ def conflict(code):
     raise HTTPException(409, detail={"error_code": code})
 
 
+def canonical_request_digest(*, organization_id, actor_user_id, project_id, line_id, request):
+    """Bind authenticated command scope and the complete strict typed payload."""
+    return canonical_digest({
+        "organization_id": str(organization_id),
+        "actor_user_id": str(actor_user_id),
+        "project_id": str(project_id),
+        "line_id": str(line_id),
+        "request": request.model_dump(mode="json"),
+    })
+
+
 def require_line_access(db, *, actor, org_id, project_id, locked=False):
     if not isinstance(actor, User) or actor.organization_id != org_id:
         raise HTTPException(403, detail="Active human account required")
@@ -104,7 +115,8 @@ def _execute(db, *, actor, org_id, project_id, line_id, request):
     snapshot = resolve_authority(db, org_id=org_id, project_id=project_id, locked=True)
     line = _line(snapshot, line_id)
     persisted, session = require_line_access(db, actor=actor, org_id=org_id, project_id=project_id, locked=True)
-    request_digest = canonical_digest(request.model_dump(mode="json"))
+    request_digest = canonical_request_digest(organization_id=org_id, actor_user_id=persisted.id,
+        project_id=project_id, line_id=line_id, request=request)
     receipt = db.query(AssetReviewCommandReceipt).filter_by(organization_id=org_id,
                                                           command_id=request.command_id).first()
     if receipt:
