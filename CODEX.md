@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A0 certified; A1 authority gate active; runtime unauthorized)
+**Last reconciled:** 2026-10-02 (OS-G2 A0 certified; A1 authority accepted; runtime unauthorized)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -124,11 +124,12 @@ standard-role grants are unchanged. G1.1K / PR #68 is MERGED/CERTIFIED at
 CERTIFIED/CLOSED at this baseline. OS-G2 A0 accepted entry authority / PR #72 is MERGED/CERTIFIED
 at `a293395c53ab12aa27cac86d82046a6a9f59983b`, exact-main CI #533 SUCCESS. The accepted decision
 record is `docs/plan/VALORA_OS_G2_APPRAISAL_CORE_ENTRY_AUTHORITY_PROPOSAL.md`.
-OS-G2 A1 / Issue #73 is the active docs-only authority gate: proposed ADR 0048
-(`docs/adr/0048-post-intake-guarded-apply-and-asset-review-authority.md`) and candidate
-`docs/implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md` require Product Owner
-acceptance. OS-G2 runtime remains unimplemented/unauthorized; Case State retains the current
-downstream hold until accepted successor authority and separately authorized provider/runtime exist.
+OS-G2 A1 / Issue #73: the Product Owner accepted ADR 0048
+(`docs/adr/0048-post-intake-guarded-apply-and-asset-review-authority.md`) and
+`docs/implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md` on 2026-10-02 in the task chat.
+PR #74 authority integration remains under Gate Owner control; this is not a merged/certified claim.
+OS-G2 runtime remains unimplemented/unauthorized; Case State retains the current downstream hold
+until accepted successor authority and separately authorized provider/runtime exist.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

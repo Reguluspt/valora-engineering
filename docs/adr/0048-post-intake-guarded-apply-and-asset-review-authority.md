@@ -2,9 +2,32 @@
 
 ## Status and authority
 
-**PROPOSED / PRODUCT OWNER DECISION REQUIRED.** Task `VALORA-TASK-OS-G2-A1-ENTRY-GUARD-CASESTATE-AUTHORITY-RATCHET`, [Issue #73](https://github.com/Reguluspt/valora-engineering/issues/73). Baseline `main=a293395c53ab12aa27cac86d82046a6a9f59983b`, exact-main CI #533 SUCCESS; 2026-10-02. This ADR and the [candidate Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) require the same Product Owner decision. Neither authorizes runtime implementation.
+**ACCEPTED PRODUCT OWNER AUTHORITY — 2026-10-02.** Task `VALORA-TASK-OS-G2-A1-ENTRY-GUARD-CASESTATE-AUTHORITY-RATCHET`, [Issue #73](https://github.com/Reguluspt/valora-engineering/issues/73). Baseline `main=a293395c53ab12aa27cac86d82046a6a9f59983b`, exact-main CI #533 SUCCESS; 2026-10-02. The Product Owner accepted OS-G2 A1 in this task chat on 2026-10-02, accepting this ADR and the [Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) as successor authority. Runtime remains unimplemented and UNAUTHORIZED; acceptance does not authorize implementation, capability activation or merge.
 
-The [accepted A0 record](../plan/VALORA_OS_G2_APPRAISAL_CORE_ENTRY_AUTHORITY_PROPOSAL.md) is binding. [ADR 0029](0029-excel-staging-apply-command-and-lineage.md) and [staging contract §15](../design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md#15-s12-pr-004-excel-staging-apply-command--provenance-v1) remain frozen historical v1 authority. [ADR 0028](0028-official-mutation-command-and-atomic-audit-gate.md) remains binding for restricted Workbench edits. This is a proposed versioned successor, not an amendment to their historical bodies.
+The [accepted A0 record](../plan/VALORA_OS_G2_APPRAISAL_CORE_ENTRY_AUTHORITY_PROPOSAL.md) is binding. [ADR 0029](0029-excel-staging-apply-command-and-lineage.md) and [staging contract §15](../design/VALORA_EXCEL_IMPORT_STAGING_CONTRACT.md#15-s12-pr-004-excel-staging-apply-command--provenance-v1) remain frozen historical v1 authority. [ADR 0028](0028-official-mutation-command-and-atomic-audit-gate.md) remains binding for restricted Workbench edits. This is an accepted versioned successor, not an amendment to their historical bodies.
+
+## Product Owner acceptance record
+
+Source: explicit Product Owner decision in this task chat, 2026-10-02. Verbatim:
+
+> ACCEPT OS-G2 A1
+>
+> - guarded Apply v2 trên chính Apply command hiện hữu
+> - không còn naked v1 bypass sau khi v2 runtime activate
+> - Project-first serialization
+> - exact lineage + exact case_version
+> - initial authoritative set sealed atomically
+> - manual line creation đóng trước seal
+> - membership changes đóng cho tới contract riêng
+> - ASSET_REVIEW dùng wire enum hiện có:
+>   NOT_AVAILABLE / BLOCKED / STALE / INCOMPLETE / COMPLETE
+> - precedence:
+>   availability → BLOCKER → STALE → unfinished → COMPLETE
+> - current_stage chỉ mở tới ASSET_REVIEW
+> - case_version v2 cover full authoritative membership + line state
+> - runtime vẫn CHƯA được phép bắt đầu
+
+This records authority acceptance only. The controls below describe required successor behavior; they do not claim current runtime enforces it. PR #74 integration remains under Gate Owner control.
 
 ## Context verified at the baseline
 
@@ -12,13 +35,13 @@ The [accepted A0 record](../plan/VALORA_OS_G2_APPRAISAL_CORE_ENTRY_AUTHORITY_PRO
 
 The current [Case State provider](../../backend/app/modules/project_master_data/application/case_state_projection.py) stops at the four-stage Pre-case prefix. An Intake commit proves the official boundary, not Apply or Asset Review completion.
 
-## Proposed decision
+## Accepted decision
 
 ### D1. One mutation, versioned guard, no legacy bypass
 
 Keep `ApplyProjectAssetImportBatch` as the sole staging → `ProjectAssetLine` promotion command. Apply is synchronous, explicitly human-confirmed, a separate transaction strictly after Official Intake. Result generation and Intake never auto-Apply. No second promotion command, worker or direct SQL authority is introduced.
 
-Proposed successor identifier: `contract_version=s12-post-intake-guarded-apply-v2`. On the existing Apply route, the successor request is exactly `contract_version`, `confirm=true`, and `expected_case_version` (opaque 64-character lowercase SHA-256 token from the candidate Case State contract). Actor, tenant, Project and batch scope are server-derived. Missing/unknown version or a v1 body is rejected before mutation once the successor runtime is activated. Every callable adapter to Apply, including the legacy endpoint/internal entry, must use the same guard; keeping a callable naked v1 path is forbidden. Until separately authorized runtime implements that activation, v1 remains current runtime and this ADR is only proposed.
+Accepted successor identifier: `contract_version=s12-post-intake-guarded-apply-v2`. On the existing Apply route, the successor request is exactly `contract_version`, `confirm=true`, and `expected_case_version` (opaque 64-character lowercase SHA-256 token from the accepted Case State contract). Actor, tenant, Project and batch scope are server-derived. Missing/unknown version or a v1 body is rejected before mutation once the successor runtime is activated. Every callable adapter to Apply, including the legacy endpoint/internal entry, must use the same guard; keeping a callable naked v1 path is forbidden. Until separately authorized runtime implements that activation, v1 remains current runtime; this accepted ADR is not yet implemented.
 
 Active human actor/organization and effective `workbench:edit` are required; no new permission or role grant. No active Workbench session is required for Apply. Recheck authorization server-side independently of CAS. Preserve safe 404 for inaccessible/cross-tenant/wrong-Project targets, explicit confirmation and `Project.status=DRAFT`.
 
@@ -72,7 +95,7 @@ Any future accepted membership command must atomically update authoritative memb
 
 ### D6. Replay, denial, audits and unknown responses
 
-Preserve ADR 0029 state-based exact-once semantics: a successful Apply is not replayed as a new success receipt; every subsequent Apply on the applied batch returns 409 with zero writes/success audit. No new command-ID replay policy is proposed. Unique staging lineage and the atomic seal reinforce exact-once creation.
+Preserve ADR 0029 state-based exact-once semantics: a successful Apply is not replayed as a new success receipt; every subsequent Apply on the applied batch returns 409 with zero writes/success audit. No new command-ID replay policy is introduced. Unique staging lineage and the atomic seal reinforce exact-once creation.
 
 | Denial/failure | HTTP / safe class | Success / failure audit |
 | --- | --- | --- |
@@ -91,20 +114,20 @@ Preserve ADR 0029 state-based exact-once semantics: a successful Apply is not re
 
 Preserve batch/staging/counters/pre-existing lines exactly on every Apply rejection/failure; no `apply_failed` state. Failure recovery uses ADR 0029's full generation fingerprint extended with locked Intake/Result/current source/mapping/usage, membership/seal, relevant issues and CAS inputs. Raw/mapped values may be hashed/compared internally, never logged. An unknown outer-commit outcome must be reconciled before emitting failure audit; a committed seal/applied state suppresses failure recording.
 
-Keep command/event names `ApplyProjectAssetImportBatch`, `ProjectAssetImportBatchApplied`, `ProjectAssetImportBatchApplyFailed`. V2 audit payloads use the exact v2 contract identifier. Proposed success allowlist: v1 success keys plus `official_intake_commit_id`, `preliminary_result_artifact_id`, `entry_lineage_sha256`, `authoritative_set_sha256`, `membership_version`, `expected_case_version`. Proposed failure allowlist: v1 failure keys only, with the v2 identifier. No raw cells, proposed values, SQL, paths, stacks, secrets or bulk line-ID arrays. Audit failure rolls back all official effects.
+Keep command/event names `ApplyProjectAssetImportBatch`, `ProjectAssetImportBatchApplied`, `ProjectAssetImportBatchApplyFailed`. V2 audit payloads use the exact v2 contract identifier. Accepted success allowlist: v1 success keys plus `official_intake_commit_id`, `preliminary_result_artifact_id`, `entry_lineage_sha256`, `authoritative_set_sha256`, `membership_version`, `expected_case_version`. Accepted failure allowlist: v1 failure keys only, with the v2 identifier. No raw cells, proposed values, SQL, paths, stacks, secrets or bulk line-ID arrays. Audit failure rolls back all official effects.
 
 After timeout/unknown response, read fresh scoped batch, exact seal/membership and success evidence. Exact applied/sealed lineage is the committed outcome; proceed to review without another Apply. If still eligible/unapplied with no committed seal, refresh Case State, obtain new explicit confirmation and submit its current token. Ambiguous/divergent outcome gives no Apply route until separately accepted recovery. The receipt read never infers success from a failure response or reopens applied staging.
 
 ### D7. Case State boundary
 
-The companion contract proposes `ASSET_REVIEW` predicates, deterministic actions, version inputs and a five-stage current-stage bound using existing public wire enums. A0's COMPLETE condition is unchanged: full authoritative-set coverage, every line accepted and valid, no blocker or stale lineage. No appraised price or later-stage predicate is added.
+The accepted companion contract defines `ASSET_REVIEW` predicates, deterministic actions, version inputs and a five-stage current-stage bound using existing public wire enums. A0's COMPLETE condition is unchanged: full authoritative-set coverage, every line accepted and valid, no blocker or stale lineage. No appraised price or later-stage predicate is added.
 
-Until this successor authority is accepted **and** its provider/runtime is implemented and authorized, retain current runtime: downstream `NOT_AVAILABLE`, four-stage `current_stage` bound, and `NO_AUTHORIZED_DOWNSTREAM_ACTION` after the completed prefix absent an existing higher-priority blocker. Acceptance of these documents alone does not switch capability or permit mutation.
+Although successor authority is accepted, until its provider/runtime is implemented and separately authorized, retain current runtime: downstream `NOT_AVAILABLE`, four-stage `current_stage` bound, and `NO_AUTHORIZED_DOWNSTREAM_ACTION` after the completed prefix absent an existing higher-priority blocker. Acceptance of these documents alone does not switch capability or permit mutation.
 
 ## Rejected alternatives and required gates
 
 Reject naked v1 Apply, promotion before Intake, auto-Apply, a second mutation, partial staging promotion, client-supplied lineage/membership, automatic manual-line inclusion/exclusion, audit-only set reconstruction and completion inferred from a screen/workflow/one accepted line. A new batch correction shortcut conflicts with the closed post-Intake lineage boundary; further membership/correction authority is separate.
 
-**Product Owner acceptance is required for D1–D7 as one coherent successor**, especially the request/CAS identifier, lock participation, zero-audit guard denials, sealed membership lifecycle and companion state/action mapping. No accepted A0 point is reopened. Gate Owner must then assign a separate bounded runtime task.
+**Product Owner accepted D1–D7 and the companion contract as OS-G2 A1 authority on 2026-10-02.** No accepted A0 point is reopened. Runtime remains UNAUTHORIZED; a separate explicitly authorized bounded implementation task is required before work begins.
 
 Required future runtime evidence: PostgreSQL races in D4 both orders with exact audit/cardinality and zero skips; field/lineage/tenant/confirmation/permission/CAS mismatch matrix; rollback/audit/unknown-response faults; manual bypass closure; immutable applied staging; project-wide coverage/membership invalidation; deterministic snapshot hashing/actions and wire compatibility. Runtime tests are N/A for this docs-only task.
