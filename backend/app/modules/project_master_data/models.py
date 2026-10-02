@@ -1049,6 +1049,10 @@ class ProjectOfficialIntakeCommit(Base, UUIDMixin):
             "organization_id", "project_id", name="uq_official_intake_project"
         ),
         UniqueConstraint(
+            "organization_id", "project_id", "id", "preliminary_result_artifact_id",
+            name="uq_official_intake_seal_lineage",
+        ),
+        UniqueConstraint(
             "organization_id", "idempotency_key", name="uq_official_intake_idempotency"
         ),
         ForeignKeyConstraint(
@@ -1186,6 +1190,111 @@ class PreliminaryProjectLifecycleCommandReceipt(Base, UUIDMixin):
             name="chk_preliminary_lifecycle_versions",
         ),
         Index("idx_preliminary_lifecycle_project", "organization_id", "project_id"),
+    )
+
+
+class ProjectAssetReviewSeal(Base, UUIDMixin):
+    """Immutable initial authoritative membership created by guarded Apply."""
+
+    __tablename__ = "project_asset_review_seals"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    official_intake_commit_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    preliminary_result_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source_artifact_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    structure_snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    mapping_decision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    staging_usage_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    lineage_manifest: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    correspondence: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False
+    )
+    entry_lineage_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    authoritative_set_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    membership_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "project_id", name="uq_asset_review_seal_project"),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"],
+            ["projects.organization_id", "projects.id"],
+            name="fk_asset_review_seal_project", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "official_intake_commit_id",
+             "preliminary_result_artifact_id"],
+            ["project_official_intake_commits.organization_id",
+             "project_official_intake_commits.project_id",
+             "project_official_intake_commits.id",
+             "project_official_intake_commits.preliminary_result_artifact_id"],
+            name="fk_asset_review_seal_intake_result", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id"],
+            ["project_asset_import_batches.organization_id",
+             "project_asset_import_batches.project_id", "project_asset_import_batches.id"],
+            name="fk_asset_review_seal_batch", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id", "source_artifact_id"],
+            ["import_source_artifacts.organization_id", "import_source_artifacts.project_id",
+             "import_source_artifacts.import_batch_id", "import_source_artifacts.id"],
+            name="fk_asset_review_seal_source", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id", "source_artifact_id",
+             "structure_snapshot_id", "mapping_decision_id"],
+            ["column_mapping_decisions.organization_id", "column_mapping_decisions.project_id",
+             "column_mapping_decisions.import_batch_id", "column_mapping_decisions.source_artifact_id",
+             "column_mapping_decisions.structure_snapshot_id", "column_mapping_decisions.id"],
+            name="fk_asset_review_seal_mapping", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "import_batch_id", "source_artifact_id",
+             "structure_snapshot_id", "staging_usage_id"],
+            ["column_mapping_profile_usages.organization_id",
+             "column_mapping_profile_usages.project_id", "column_mapping_profile_usages.import_batch_id",
+             "column_mapping_profile_usages.source_artifact_id",
+             "column_mapping_profile_usages.structure_snapshot_id", "column_mapping_profile_usages.id"],
+            name="fk_asset_review_seal_usage", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "actor_user_id"], ["users.organization_id", "users.id"],
+            name="fk_asset_review_seal_actor", ondelete="RESTRICT",
+        ),
+        CheckConstraint("membership_version = 1", name="chk_asset_review_seal_membership"),
+        CheckConstraint(
+            "contract_version = 's12-post-intake-guarded-apply-v2'",
+            name="chk_asset_review_seal_contract",
+        ),
+        CheckConstraint(
+            "entry_lineage_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_asset_review_seal_entry_digest",
+        ),
+        CheckConstraint(
+            "authoritative_set_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_asset_review_seal_set_digest",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(lineage_manifest) = 'object'",
+            name="chk_asset_review_seal_manifest",
+        ).ddl_if(dialect="postgresql"),
+        CheckConstraint(
+            "CASE WHEN jsonb_typeof(correspondence) = 'array' "
+            "THEN jsonb_array_length(correspondence) > 0 ELSE false END",
+            name="chk_asset_review_seal_correspondence",
+        ).ddl_if(dialect="postgresql"),
     )
 
 

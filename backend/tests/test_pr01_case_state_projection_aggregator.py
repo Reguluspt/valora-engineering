@@ -30,6 +30,7 @@ from app.modules.excel_import.models import (
 )
 from app.modules.project_master_data.application.case_state_projection import (
     ProjectionError,
+    ProjectionIntegrityError,
     compute_case_version,
     get_case_state_projection,
 )
@@ -304,8 +305,8 @@ def test_case_version_determinism_and_sensitivity(test_db: Session) -> None:
     test_db.flush()
     p6 = get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
     assert p6.case_version != p5.case_version
-    # Resolved blocker is excluded, so p6 matches p3!
-    assert p6.case_version == p3.case_version
+    # The v2 authority token covers scoped issues after resolution as well.
+    assert p6.case_version != p3.case_version
 
     # Add a warning -> case_version must change
     _add_test_issue(
@@ -375,7 +376,7 @@ def test_blocker_precedence_outranks_preliminary_pending(test_db: Session) -> No
     assert proj.next_action.semantic_route_key is None
 
 
-def test_blocker_when_commit_exists_keeps_official_intake_complete(test_db: Session) -> None:
+def test_corrupt_intake_result_pointer_fails_closed_even_with_blocker(test_db: Session) -> None:
     seeded = _seed(test_db)
     org_id = seeded["org"].id
     project_id = seeded["project"].id
@@ -396,7 +397,7 @@ def test_blocker_when_commit_exists_keeps_official_intake_complete(test_db: Sess
     )
     test_db.add(commit)
 
-    blocker = _add_test_issue(
+    _add_test_issue(
         test_db,
         target_type="project",
         target_id=project_id,
@@ -404,17 +405,15 @@ def test_blocker_when_commit_exists_keeps_official_intake_complete(test_db: Sess
         status=ValidationIssueStatus.OPEN,
     )
 
-    proj = get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
-    # OFFICIAL_INTAKE remains COMPLETE when commit exists
-    assert proj.stages[3].stage == "OFFICIAL_INTAKE"
-    assert proj.stages[3].result == "COMPLETE"
-    # Blocker still takes next action precedence
-    assert proj.next_action.kind == "BLOCKER"
-    assert proj.next_action.stage == "OFFICIAL_INTAKE"
-    assert proj.next_action.validation_issue_id == str(blocker.id)
+    with pytest.raises(ProjectionIntegrityError, match="Intake Result is outside Project scope"):
+        get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
+    assert not test_db.new
+    assert not test_db.dirty
+    assert not test_db.deleted
+    assert test_db.query(AuditEvent).count() == 0
 
 
-def test_current_stage_never_jumps_past_incomplete(test_db: Session) -> None:
+def test_corrupt_intake_cannot_skip_incomplete_prefix(test_db: Session) -> None:
     seeded = _seed(test_db)
     org_id = seeded["org"].id
     project_id = seeded["project"].id
@@ -437,12 +436,12 @@ def test_current_stage_never_jumps_past_incomplete(test_db: Session) -> None:
     test_db.add(commit)
     test_db.flush()
 
-    proj = get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
-    # Even though OFFICIAL_INTAKE is COMPLETE, current_stage MUST remain PRELIMINARY_REQUEST
-    assert proj.current_stage == "PRELIMINARY_REQUEST"
-    assert proj.next_action.kind == "PENDING"
-    assert proj.next_action.stage == "PRELIMINARY_REQUEST"
-    assert proj.next_action.semantic_route_key == "preliminary_request_pending"
+    with pytest.raises(ProjectionIntegrityError, match="Intake Result is outside Project scope"):
+        get_case_state_projection(test_db, actor=actor, org_id=org_id, project_id=project_id)
+    assert not test_db.new
+    assert not test_db.dirty
+    assert not test_db.deleted
+    assert test_db.query(AuditEvent).count() == 0
 
 
 def test_all_four_complete_semantics(test_db: Session) -> None:
@@ -687,18 +686,21 @@ def test_all_four_complete_semantics(test_db: Session) -> None:
     assert proj.stages[2].result == "COMPLETE"
     assert proj.stages[3].result == "COMPLETE"
 
-    # current_stage is OFFICIAL_INTAKE
-    assert proj.current_stage == "OFFICIAL_INTAKE"
+    # The activated provider opens ASSET_REVIEW after the complete prefix.
+    assert proj.current_stage == "ASSET_REVIEW"
 
-    # next_action is NO_AUTHORIZED_DOWNSTREAM_ACTION
-    assert proj.next_action.kind == "NO_AUTHORIZED_DOWNSTREAM_ACTION"
-    assert proj.next_action.stage is None
-    assert proj.next_action.semantic_route_key is None
+    # The selected prefix lacks the v2 row authority; recovery is informational.
+    assert proj.next_action.kind == "UNAVAILABLE"
+    assert proj.next_action.stage == "ASSET_REVIEW"
+    assert proj.next_action.semantic_route_key == "asset_review_stale_recovery"
     assert proj.next_action.validation_issue_id is None
 
-    # All 12 downstream stages remain explicitly unavailable in PR-01.
+    # This synthetic prefix lacks a selected row set; Asset Review fails closed.
+    assert proj.stages[4].result == "STALE"
+    assert proj.stages[4].provider_key == "asset_review_v1"
+    # Later eleven stages remain unavailable.
     assert len(proj.stages) == 16
-    for downstream in proj.stages[4:]:
+    for downstream in proj.stages[5:]:
         assert downstream.result == "NOT_AVAILABLE"
         assert downstream.provider_key is None
 
@@ -731,7 +733,7 @@ def test_compute_case_version_golden_vector() -> None:
     token, sorted_facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
     assert sorted_facts == sorted(facts)
     expected_envelope = {
-        "contract": "global-case-state-v1",
+        "contract": "global-case-state-v2-asset-review-v1",
         "facts": sorted(facts),
         "organization_id": "11111111-1111-1111-1111-111111111111",
         "project_id": "22222222-2222-2222-2222-222222222222",

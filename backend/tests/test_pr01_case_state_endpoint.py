@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
+from app.db.session import get_case_state_db
 from app.main import app
 from app.modules.project_master_data.application.case_state_projection import ProjectionError
 from app.modules.project_master_data.models import (
@@ -54,10 +55,12 @@ def client(db_session: Session) -> TestClient:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_case_state_db] = override_get_db
     try:
         yield TestClient(app)
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_case_state_db, None)
 
 
 def _seed_project(

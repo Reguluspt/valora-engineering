@@ -783,6 +783,7 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
     source_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     structure_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     materialized_asset_row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    materialized_input_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
@@ -903,6 +904,11 @@ class ColumnMappingProfileUsage(Base, UUIDMixin):
         CheckConstraint(
             "materialized_asset_row_count >= 0",
             name="chk_mapping_usage_row_count",
+        ),
+        CheckConstraint(
+            "materialized_input_sha256 IS NULL OR "
+            "materialized_input_sha256 ~ '^[0-9a-f]{64}$'",
+            name="chk_mapping_usage_materialized_input",
         ),
         CheckConstraint(
             "expected_selection_revision IS NULL OR expected_selection_revision >= 0",

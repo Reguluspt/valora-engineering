@@ -1813,6 +1813,13 @@ def _read_spool(path: str, *, expected_digest: str) -> Iterator[dict[str, Any]]:
         raise ValueError("mapping spool digest mismatch")
 
 
+def _materialized_input_digest(db: Session, batch_id: uuid.UUID) -> str:
+    from app.modules.project_master_data.application.asset_review_authority import canonical_digest, materialized_inputs
+    rows = db.query(ProjectAssetImportStagingRow).filter(
+        ProjectAssetImportStagingRow.import_batch_id == batch_id).all()
+    return canonical_digest(materialized_inputs(rows))
+
+
 def _materialization_rows(
     *, path: str, frozen: FrozenMaterialization
 ) -> Iterator[dict[str, Any]]:
@@ -2184,6 +2191,7 @@ def materialize_confirmed_mapping_to_staging(
                 source_checksum_sha256=frozen.source.checksum_sha256,
                 structure_digest_sha256=frozen.structure.analysis_digest_sha256,
                 materialized_asset_row_count=row_count,
+                materialized_input_sha256=_materialized_input_digest(db, batch_id),
                 created_by_user_id=actor_id,
             )
             db.add(usage)

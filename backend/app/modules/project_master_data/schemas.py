@@ -1,8 +1,8 @@
 import math
 import uuid
 from datetime import datetime
-from typing import List, Literal, Optional
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from typing import Annotated, List, Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_serializer
 
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
@@ -287,10 +287,112 @@ CaseStage = Literal[
 ]
 
 
+class AssetReviewDiagnostic(BaseSchema):
+    stage: Literal["ASSET_REVIEW"]
+    reason_code: Literal[
+        "open_blocking_issue", "manual_line_conflict", "membership_conflict", "empty_selection",
+        "rows_not_ready", "counter_conflict", "review_flagged", "review_rejected",
+        "validation_invalid", "project_not_draft", "lineage_mismatch", "selection_mismatch",
+        "batch_state_conflict", "seal_mismatch", "provider_unwired", "official_intake_prerequisite",
+    ]
+    line_id: Optional[uuid.UUID] = None
+    batch_id: Optional[uuid.UUID] = None
+    validation_issue_id: Optional[uuid.UUID] = None
+
+
 class CaseStateStageResponse(BaseSchema):
     stage: CaseStage
     result: Literal["COMPLETE", "INCOMPLETE", "BLOCKED", "STALE", "NOT_AVAILABLE"]
     provider_key: Optional[str]
+    diagnostics: Optional[list[AssetReviewDiagnostic]] = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_stage(self, handler):
+        payload = handler(self)
+        if self.diagnostics is None:
+            payload.pop("diagnostics", None)
+        return payload
+
+
+class CaseStateActionContext(BaseSchema):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    project_id: uuid.UUID
+    case_version: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+
+
+class AssetReviewValidateContext(CaseStateActionContext):
+    kind: Literal["validate"]
+    reason_code: Literal["validation_required", "validation_retry"]
+    official_intake_commit_id: uuid.UUID
+    result_id: uuid.UUID
+    batch_id: uuid.UUID
+    staging_usage_id: uuid.UUID
+
+
+class AssetReviewApplyContext(CaseStateActionContext):
+    kind: Literal["apply"]
+    reason_code: Literal["apply_required"]
+    official_intake_commit_id: uuid.UUID
+    result_id: uuid.UUID
+    batch_id: uuid.UUID
+    staging_usage_id: uuid.UUID
+    contract_version: Literal["s12-post-intake-guarded-apply-v2"]
+    confirmation_required: Literal[True]
+
+
+class AssetReviewLineContext(CaseStateActionContext):
+    kind: Literal["line"]
+    reason_code: Literal[
+        "line_review_required", "review_flagged", "review_rejected", "validation_invalid",
+    ]
+    membership_version: int = Field(..., gt=0, strict=True)
+    line_id: uuid.UUID
+    line_row_version: int = Field(..., gt=0, strict=True)
+
+
+class AssetReviewIssueContext(CaseStateActionContext):
+    kind: Literal["issue"]
+    reason_code: Literal["open_blocking_issue"]
+    validation_issue_id: uuid.UUID
+    issue_row_version: int = Field(..., gt=0, strict=True)
+    target_kind: Literal["project", "project_asset_line"]
+    target_id: uuid.UUID
+
+
+class AssetReviewEntryContext(CaseStateActionContext):
+    kind: Literal["entry"]
+    reason_code: Literal[
+        "manual_line_conflict", "membership_conflict", "empty_selection",
+        "rows_not_ready", "counter_conflict", "project_not_draft",
+    ]
+    batch_id: Optional[uuid.UUID] = None
+    line_id: Optional[uuid.UUID] = None
+
+
+class AssetReviewStaleContext(CaseStateActionContext):
+    kind: Literal["stale"]
+    reason_code: Literal[
+        "lineage_mismatch", "selection_mismatch", "batch_state_conflict", "seal_mismatch",
+    ]
+    official_intake_commit_id: Optional[uuid.UUID] = None
+    result_id: Optional[uuid.UUID] = None
+    batch_id: Optional[uuid.UUID] = None
+    staging_usage_id: Optional[uuid.UUID] = None
+    reload_required: Literal[True]
+
+
+class AssetReviewPermissionContext(CaseStateActionContext):
+    kind: Literal["permission"]
+    reason_code: Literal["permission_required"]
+
+
+AssetReviewActionContext = Annotated[
+    AssetReviewValidateContext | AssetReviewApplyContext | AssetReviewLineContext
+    | AssetReviewIssueContext | AssetReviewEntryContext | AssetReviewStaleContext
+    | AssetReviewPermissionContext,
+    Field(discriminator="kind"),
+]
 
 
 class CaseStateNextActionResponse(BaseSchema):
@@ -303,6 +405,14 @@ class CaseStateNextActionResponse(BaseSchema):
     stage: Optional[CaseStage]
     semantic_route_key: Optional[str]
     validation_issue_id: Optional[uuid.UUID]
+    context: Optional[AssetReviewActionContext] = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_action(self, handler):
+        payload = handler(self)
+        if self.context is None:
+            payload.pop("context", None)
+        return payload
 
 
 class CaseStateIssueResponse(BaseSchema):

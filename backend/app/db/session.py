@@ -26,3 +26,13 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def get_case_state_db() -> Generator[Session, None, None]:
+    """Own the read snapshot before the first authority query; no mutation locks."""
+    bind = engine.execution_options(isolation_level="REPEATABLE READ") if engine.dialect.name == "postgresql" else engine
+    db = SessionLocal(bind=bind)
+    try:
+        yield db
+    finally:
+        db.close()

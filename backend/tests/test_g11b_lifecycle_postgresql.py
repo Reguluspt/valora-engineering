@@ -30,7 +30,7 @@ pytest_plugins = ("tests.test_g11a_foundation_postgresql",)
 
 PRIOR = "e4f5a6b7c8d9"
 CURRENT = "f5a6b7c8d9e0"
-RUNTIME_HEAD = "d1e2f3a4b5c6"
+RUNTIME_HEAD = "head"
 
 
 def _session_factory(url):
@@ -101,7 +101,7 @@ def test_receipt_migration_roundtrip_and_nonempty_downgrade_refusal(pg_database)
 
     # Seed through the current ORM (which includes the F0 nullable Usage CAS
     # column), then return to the historical G1.1B head for its refusal proof.
-    _must_alembic(pg_database, "upgrade", "d1e2f3a4b5c6")
+    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
     with Session(engine) as db:
         seeded = _seed_case(db)
         _bind(db, seeded, version=seeded["project"].row_version)

@@ -255,6 +255,8 @@ def execute_commit_asset_line_draft(
     project = (
         db.query(Project)
         .filter(Project.id == project_id, Project.organization_id == actor.organization_id)
+        .with_for_update()
+        .populate_existing()
         .first()
     )
     if not project:
@@ -295,6 +297,7 @@ def execute_commit_asset_line_draft(
         db.query(ProjectAssetLine)
         .filter(ProjectAssetLine.id == line_id, ProjectAssetLine.project_id == project_id)
         .with_for_update()
+        .populate_existing()
         .first()
     )
     if not line:

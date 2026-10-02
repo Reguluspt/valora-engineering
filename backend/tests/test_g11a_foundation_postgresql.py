@@ -39,7 +39,7 @@ from tests.test_pr01_preliminary_result_postgresql import _seed
 
 PRIOR = "c9d0e1f2a3b4"
 CURRENT = "e4f5a6b7c8d9"
-RUNTIME_HEAD = "d1e2f3a4b5c6"
+RUNTIME_HEAD = "head"
 MIGRATION = Path(__file__).parents[1] / "alembic/versions/e4f5a6b7c8d9_precase_identity_batch_foundation.py"
 
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+import re
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -13,7 +14,12 @@ from app.modules.project_master_data.models import (
     ImportRowValidationStatus,
     ProjectAssetImportBatch,
     ProjectAssetImportStagingRow,
+    ProjectWorkflowStatus,
+    ProjectOfficialIntakeCommit,
     User,
+)
+from app.modules.project_master_data.application.asset_review_authority import (
+    lock_project, resolve_authority, require_mutation_actor,
 )
 
 DISALLOWED_CLIENT_DETAIL = "Lô nhập liệu chưa ở trạng thái có thể kiểm tra."
@@ -50,7 +56,7 @@ def build_validation_fingerprint(db: Session, batch: ProjectAssetImportBatch) ->
             AuditEvent.entity_id == batch.id,
             AuditEvent.event_name == SUCCESS_EVENT,
         )
-        .order_by(AuditEvent.created_at.desc())
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
         .first()
     )
     return {
@@ -69,6 +75,8 @@ def build_validation_fingerprint(db: Session, batch: ProjectAssetImportBatch) ->
         "latest_validation_success_audit_id": (
             str(latest_success.id) if latest_success else None
         ),
+        "case_version": resolve_authority(db, org_id=batch.organization_id,
+            project_id=batch.project_id, locked=True).case_version,
     }
 
 
@@ -170,6 +178,7 @@ def _recover_validation_failure(
 ) -> None:
     try:
         db.expire_all()
+        lock_project(db, org_id=org_id, project_id=project_id)
         locked = (
             db.query(ProjectAssetImportBatch)
             .filter(
@@ -177,6 +186,7 @@ def _recover_validation_failure(
                 ProjectAssetImportBatch.project_id == project_id,
                 ProjectAssetImportBatch.id == batch_id,
             )
+            .populate_existing()
             .with_for_update()
             .first()
         )
@@ -208,9 +218,11 @@ def validate_project_asset_import_batch(
     project_id: uuid.UUID,
     batch_id: uuid.UUID,
     current_user: User,
+    expected_case_version: str | None = None,
     correlation_id: str | None = None,
 ) -> ProjectAssetImportBatch:
     """Validate all staging rows for a batch. Staging-only; never touches ProjectAssetLine."""
+    project = lock_project(db, org_id=org_id, project_id=project_id)
     batch = (
         db.query(ProjectAssetImportBatch)
         .filter(
@@ -218,6 +230,7 @@ def validate_project_asset_import_batch(
             ProjectAssetImportBatch.project_id == project_id,
             ProjectAssetImportBatch.id == batch_id,
         )
+        .populate_existing()
         .with_for_update()
         .first()
     )
@@ -233,12 +246,29 @@ def validate_project_asset_import_batch(
     if not _is_allowed_source(batch.status):
         raise HTTPException(status_code=409, detail=DISALLOWED_CLIENT_DETAIL)
 
+    intake_exists = db.query(ProjectOfficialIntakeCommit.id).filter(
+        ProjectOfficialIntakeCommit.organization_id == org_id,
+        ProjectOfficialIntakeCommit.project_id == project_id).first()
+    if intake_exists:
+        current_user = require_mutation_actor(db, actor=current_user, org_id=org_id)
+        if project.status != ProjectWorkflowStatus.DRAFT:
+            raise HTTPException(409, detail={"error_code": "validation_project_not_draft"})
+        authority = resolve_authority(db, org_id=org_id, project_id=project_id, locked=True)
+        if (not authority.lineage_current or not authority.batch or authority.batch.id != batch.id
+                or authority.seal or authority.lines):
+            raise HTTPException(409, detail={"error_code": "validation_lineage_conflict"})
+        if (not isinstance(expected_case_version, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_case_version)
+                or authority.case_version != expected_case_version):
+            raise HTTPException(409, detail={"error_code": "validation_version_conflict"})
+
     source_status = _status_value(batch.status)
+    actor_id_value = current_user.id
     pre_fingerprint = build_validation_fingerprint(db, batch)
 
-    sp = db.begin_nested()
+    sp = None
     savepoint_committed = False
     try:
+        sp = db.begin_nested()
         rows = (
             db.query(ProjectAssetImportStagingRow)
             .filter(
@@ -246,7 +276,8 @@ def validate_project_asset_import_batch(
                 ProjectAssetImportStagingRow.organization_id == org_id,
                 ProjectAssetImportStagingRow.project_id == project_id,
             )
-            .order_by(ProjectAssetImportStagingRow.id)
+            .order_by(ProjectAssetImportStagingRow.source_row_number, ProjectAssetImportStagingRow.id)
+            .with_for_update()
             .all()
         )
         valid_rows, invalid_rows, warning_rows = _apply_validation_to_rows(rows)
@@ -273,9 +304,10 @@ def validate_project_asset_import_batch(
         return batch
 
     except HTTPException:
+        db.rollback()
         raise
     except Exception:
-        if not savepoint_committed:
+        if sp is not None and not savepoint_committed:
             try:
                 sp.rollback()
             except Exception:
@@ -290,7 +322,7 @@ def validate_project_asset_import_batch(
             org_id=org_id,
             project_id=project_id,
             batch_id=batch_id,
-            actor_id=current_user.id,
+            actor_id=actor_id_value,
             pre_fingerprint=pre_fingerprint,
             source_status=source_status,
             correlation_id=correlation_id,

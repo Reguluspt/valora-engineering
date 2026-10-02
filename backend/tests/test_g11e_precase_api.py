@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
+from app.db.session import get_case_state_db
 from app.main import app
 from app.modules.excel_import.infrastructure.object_storage import set_object_storage_override
 from app.modules.excel_import.models import ColumnMappingDecision, ProjectColumnMappingAuthority
@@ -40,10 +41,12 @@ def api_db():
     Base.metadata.create_all(engine)
     db = Session(engine)
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_case_state_db] = lambda: db
     try:
         yield TestClient(app), db
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_case_state_db, None)
         set_object_storage_override(None)
         db.close()
         Base.metadata.drop_all(engine)
