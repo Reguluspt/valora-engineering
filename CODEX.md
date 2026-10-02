@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-01 (G1.1K / OS-G1 certified; OS-G2 on hold)
+**Last reconciled:** 2026-10-02 (OS-G2 A0 certified; A1 authority gate active; runtime unauthorized)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -121,8 +121,14 @@ alignment is MERGED/CERTIFIED through PR #67 and exact-main CI #525 at
 `workbench:edit` permission to standard `owner` and `appraiser` roles; endpoint checks and other
 standard-role grants are unchanged. G1.1K / PR #68 is MERGED/CERTIFIED at
 `d283c690b9f014833fa5c98e1125939351966b81` with exact-main CI #527 SUCCESS. OS-G1 is
-CERTIFIED/CLOSED at this baseline. OS-G2 is NOT STARTED; it stays on HOLD through this task's
-integration and exact-main CI, then still requires its own Product Owner authorization.
+CERTIFIED/CLOSED at this baseline. OS-G2 A0 accepted entry authority / PR #72 is MERGED/CERTIFIED
+at `a293395c53ab12aa27cac86d82046a6a9f59983b`, exact-main CI #533 SUCCESS. The accepted decision
+record is `docs/plan/VALORA_OS_G2_APPRAISAL_CORE_ENTRY_AUTHORITY_PROPOSAL.md`.
+OS-G2 A1 / Issue #73 is the active docs-only authority gate: proposed ADR 0048
+(`docs/adr/0048-post-intake-guarded-apply-and-asset-review-authority.md`) and candidate
+`docs/implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md` require Product Owner
+acceptance. OS-G2 runtime remains unimplemented/unauthorized; Case State retains the current
+downstream hold until accepted successor authority and separately authorized provider/runtime exist.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
