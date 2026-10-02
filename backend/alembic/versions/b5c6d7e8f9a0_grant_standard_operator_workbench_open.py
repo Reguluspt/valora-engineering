@@ -39,6 +39,11 @@ _AUDIT = sa.table(
 
 def _update_grants(*, add: bool) -> None:
     connection = op.get_bind()
+    # One timestamp binds the atomic upgrade pair; older cycles cannot fill a missing latest audit.
+    grant_at = connection.execute(
+        sa.select(sa.func.now()) if add else
+        sa.select(sa.func.max(_AUDIT.c.created_at)).where(_AUDIT.c.event_name == _GRANT_EVENT)
+    ).scalar_one()
     for code in _TARGET_ROLES:
         role = connection.execute(
             sa.select(_ROLES.c.id, _ROLES.c.permissions)
@@ -59,25 +64,25 @@ def _update_grants(*, add: bool) -> None:
             changed = [_PERMISSION] if _PERMISSION not in current else []
             updated = current + changed
         else:
-            # Retain prior upgrade-cycle audits; only an unambiguous latest record is authority.
+            # Check bindings after selecting the latest pair, so malformed records cannot be skipped.
             records = connection.execute(
-                sa.select(_AUDIT.c.created_at, _AUDIT.c.payload)
+                sa.select(_AUDIT.c.entity_type, _AUDIT.c.command_name, _AUDIT.c.payload)
                 .where(
                     _AUDIT.c.event_name == _GRANT_EVENT,
-                    _AUDIT.c.entity_type == "Role",
                     _AUDIT.c.entity_id == role_id,
-                    _AUDIT.c.command_name == revision,
+                    _AUDIT.c.created_at == grant_at,
                 )
-                .order_by(_AUDIT.c.created_at.desc())
                 .limit(2)
             ).all()
             record = records[0].payload if records else None
             if (
                 not isinstance(record, dict)
+                or len(records) != 1
+                or records[0].entity_type != "Role"
+                or records[0].command_name != revision
                 or record.get("role_code") != code
                 or record.get("added_permissions") not in ([], [_PERMISSION])
                 or _PERMISSION not in current
-                or (len(records) == 2 and records[0].created_at == records[1].created_at)
             ):
                 raise ValueError(f"Invalid A5R2 grant provenance for standard role {code}")
             changed = record["added_permissions"]
@@ -92,6 +97,7 @@ def _update_grants(*, add: bool) -> None:
                 id=uuid.uuid4(), event_name=_GRANT_EVENT, entity_type="Role",
                 entity_id=role_id, command_name=revision,
                 payload={"role_code": code, "added_permissions": changed},
+                created_at=grant_at,
             ))
 
 

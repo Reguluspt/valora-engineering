@@ -273,6 +273,37 @@ def test_repeated_round_trip_retains_history_and_uses_latest_provenance():
             assert _roles(engine) == before
 
 
+@pytest.mark.parametrize("fault", ("missing", "wrong_revision", "wrong_entity", "wrong_role_id"))
+def test_latest_cycle_fault_cannot_reuse_historical_grant_provenance(fault):
+    with _isolated_database() as (database_url, engine):
+        _alembic(database_url, "upgrade", REVISION)
+        _alembic(database_url, "downgrade", PREDECESSOR)
+        roles = _roles(engine)
+        # This grant predates the next upgrade and must not be removed using the old cycle's audit.
+        with engine.begin() as connection:
+            _set_permissions(connection, roles["appraiser"][0], roles["appraiser"][1] + [PERMISSION])
+        _alembic(database_url, "upgrade", REVISION)
+        with engine.begin() as connection:
+            where = ("event_name = :event AND entity_id = :role_id AND created_at = "
+                     "(SELECT max(created_at) FROM audit_events WHERE event_name = :event)")
+            params = {"event": EVENT, "role_id": roles["appraiser"][0]}
+            if fault == "missing":
+                connection.execute(text(f"DELETE FROM audit_events WHERE {where}"), params)
+            else:
+                field, value = {"wrong_revision": ("command_name", "other-revision"),
+                                "wrong_entity": ("entity_type", "User"),
+                                "wrong_role_id": ("entity_id", uuid.uuid4())}[fault]
+                connection.execute(text(f"UPDATE audit_events SET {field} = :value WHERE {where}"),
+                                   {**params, "value": value})
+        before = _roles(engine)
+        before_audit = _audit(engine)
+        with pytest.raises(AssertionError, match="Invalid A5R2 grant provenance"):
+            _alembic(database_url, "downgrade", PREDECESSOR)
+        _assert_head(engine, REVISION)
+        assert _roles(engine) == before
+        assert _audit(engine) == before_audit
+
+
 @pytest.mark.parametrize("fault", ("missing", "non_list", "non_string", "duplicate"))
 def test_upgrade_failure_rolls_back_owner_and_provenance(fault):
     with _isolated_database() as (database_url, engine):
