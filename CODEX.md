@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (OS-G2 A1 certified; A2 backend runtime authorized)
+**Last reconciled:** 2026-10-02 (OS-G2 A2 certified; A3 authority gate active)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -128,9 +128,13 @@ OS-G2 A1 / Issue #73: the Product Owner accepted ADR 0048
 (`docs/adr/0048-post-intake-guarded-apply-and-asset-review-authority.md`) and
 `docs/implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md` on 2026-10-02 in the task chat.
 PR #74 is MERGED/CERTIFIED at `f8d708c06ab00f3315c712647ef198b50549ed6c`, exact-main CI #536 SUCCESS.
-OS-G2 A2 / Issue #75 authorizes only guarded Apply v2, its atomic initial-set seal and the shared
-Case State v2 / `asset_review_v1` backend slice. Frontend and stages after ASSET_REVIEW remain
-unauthorized; integration remains under Gate Owner control.
+OS-G2 A2 / Issue #75 / PR #76 is MERGED/CERTIFIED at
+`b3085242d083e03f1663aa79ea3241bd48592c84`, exact-main CI #538 SUCCESS. It implements only guarded
+Apply v2, the atomic initial-set seal and shared Case State v2 / `asset_review_v1` backend slice.
+OS-G2 A3 / Issue #77 is the active authority gate: proposed ADR 0049 and
+`docs/implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md` require Product Owner
+decision. A3 runtime, frontend and stages after ASSET_REVIEW remain unauthorized; integration
+remains under Gate Owner control.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
