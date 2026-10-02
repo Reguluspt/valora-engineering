@@ -697,7 +697,7 @@ def test_all_four_complete_semantics(test_db: Session) -> None:
 
     # This synthetic prefix lacks a selected row set; Asset Review fails closed.
     assert proj.stages[4].result == "STALE"
-    assert proj.stages[4].provider_key == "asset_review_v1"
+    assert proj.stages[4].provider_key == "asset_review_line_decision_v1"
     # Later eleven stages remain unavailable.
     assert len(proj.stages) == 16
     for downstream in proj.stages[5:]:
@@ -733,7 +733,7 @@ def test_compute_case_version_golden_vector() -> None:
     token, sorted_facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
     assert sorted_facts == sorted(facts)
     expected_envelope = {
-        "contract": "global-case-state-v2-asset-review-v1",
+        "contract": "global-case-state-v3-asset-review-line-decision-v1",
         "facts": sorted(facts),
         "organization_id": "11111111-1111-1111-1111-111111111111",
         "project_id": "22222222-2222-2222-2222-222222222222",

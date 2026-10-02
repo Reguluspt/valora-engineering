@@ -217,7 +217,7 @@ def test_apply_atomic_fault_and_unknown_outcome(entry_db, monkeypatch, fault):
 
 def test_read_projection_token_matches_cas_and_full_set(entry_db, monkeypatch):
     from app.modules.project_master_data.application.case_state_projection import get_case_state_projection
-    from app.modules.project_master_data.models import ProjectAssetLine, AssetLineReviewStatus, AssetLineValidationStatus
+    from app.modules.project_master_data.models import ProjectAssetLine, AssetLineReviewStatus, AssetLineValidationStatus, WorkbenchSession
     db, entry = entry_db
     token = _ready(db, entry)
     bind = db.get_bind().execution_options(isolation_level="REPEATABLE READ")
@@ -235,9 +235,11 @@ def test_read_projection_token_matches_cas_and_full_set(entry_db, monkeypatch):
     assert projection.current_stage == "ASSET_REVIEW"
     assert projection.next_action.semantic_route_key == "asset_import_apply_confirm"
     _apply(db, entry, projection.case_version)
+    db.add(WorkbenchSession(project_id=entry["project"].id, user_id=entry["user"].id))
+    db.commit()
     after = read()
     assert after.stages[4].result == "INCOMPLETE"
-    assert after.next_action.semantic_route_key == "asset_review_line_pending"
+    assert after.next_action.semantic_route_key == "asset_review_line_validate_required"
     for line in db.query(ProjectAssetLine).all():
         line.review_status = AssetLineReviewStatus.ACCEPTED
         line.validation_status = AssetLineValidationStatus.VALID
@@ -245,8 +247,8 @@ def test_read_projection_token_matches_cas_and_full_set(entry_db, monkeypatch):
     db.commit()
     complete = read()
     assert complete.case_version != after.case_version
-    assert complete.current_stage == "ASSET_REVIEW" and complete.stages[4].result == "COMPLETE"
-    assert complete.next_action.kind == "NO_AUTHORIZED_DOWNSTREAM_ACTION"
+    assert complete.current_stage == "ASSET_REVIEW" and complete.stages[4].result == "INCOMPLETE"
+    assert complete.next_action.semantic_route_key == "asset_review_line_validate_required"
     assert all(stage.result == "NOT_AVAILABLE" for stage in complete.stages[5:])
     db.add(ProjectAssetLine(project_id=entry["project"].id, asset_name="illegal phantom"))
     db.commit()

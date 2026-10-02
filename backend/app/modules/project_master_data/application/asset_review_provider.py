@@ -11,7 +11,7 @@ from app.modules.project_master_data.application.asset_review_authority import (
 )
 
 
-PROVIDER_KEY = "asset_review_v1"
+PROVIDER_KEY = "asset_review_line_decision_v1"
 STAGE = "ASSET_REVIEW"
 STALE_ORDER = ("lineage_mismatch", "selection_mismatch", "batch_state_conflict", "seal_mismatch")
 
@@ -81,23 +81,33 @@ def _membership(snapshot) -> tuple[bool | None, list]:
 
 
 def _line_context(snapshot, line, reason):
+    state = getattr(snapshot, "line_proofs", {}).get(line.id, {})
+    gen, decision = state.get("generation"), state.get("decision")
+    validating = reason in ("line_validation_required", "line_validation_warning", "validation_invalid")
     return _context(snapshot, "line", reason, membership_version=snapshot.seal.membership_version,
-                    line_id=str(line.id), line_row_version=line.row_version)
+                    line_id=str(line.id), line_row_version=line.row_version,
+                    contract_version="asset-line-validation-v1" if validating else "asset-line-human-review-v1",
+                    confirmation_required=True, validation_generation_id=str(gen.id) if gen else None,
+                    prior_decision_id=str(decision.id) if decision else None,
+                    finding_codes=[f["code"] for f in gen.findings] if gen and state.get("validation_current") else [])
 
 
-def _negative_reason(line):
-    review = _value(line.review_status)
+def _negative_reason(snapshot, line):
+    state = getattr(snapshot, "line_proofs", {}).get(line.id, {})
+    review = state.get("negative_hold") or _value(line.review_status)
     if review in ("flagged", "rejected"):
         return "review_" + review
-    return "validation_invalid" if _value(line.validation_status) == "invalid" else None
+    return "validation_invalid" if (state.get("validation_current")
+        and state["generation"].outcome == "invalid") else None
 
 
-def _finished(line):
-    return _value(line.review_status) == "accepted" and _value(line.validation_status) == "valid"
+def _finished(snapshot, line):
+    return bool(getattr(snapshot, "line_proofs", {}).get(line.id, {}).get("positive_current"))
 
 
 def evaluate_asset_review_provider(
     snapshot: AuthoritySnapshot, *, effective_permissions: set[str], available: bool = True,
+    has_active_session: bool = False,
 ) -> AssetReviewProviderResult:
     """Select one deterministic action while retaining blocker and stale diagnostics."""
     if not available or snapshot.intake is None:
@@ -174,12 +184,12 @@ def evaluate_asset_review_provider(
             entry_block("counter_conflict")
 
     for line in ordered_lines:
-        reason = _negative_reason(line)
+        reason = _negative_reason(snapshot, line)
         if reason:
             actions.append(_action("BLOCKER", "asset_review_line_blocked",
                                    _line_context(snapshot, line, reason)))
             blockers.append({"stage": STAGE, "reason_code": reason, "line_id": str(line.id)})
-    unfinished_lines = [line for line in ordered_lines if not _finished(line)]
+    unfinished_lines = [line for line in ordered_lines if not _finished(snapshot, line)]
     unfinished_entry = (snapshot.lineage_current and batch_status in (
         "parsed", "validation_failed", "ready_for_review",
     ))
@@ -209,8 +219,15 @@ def evaluate_asset_review_provider(
                          else "validation_required", **fields))
         result = "INCOMPLETE"
     elif snapshot.seal_current and unfinished_lines:
-        result, action = "INCOMPLETE", _action("PENDING", "asset_review_line_pending",
-            _line_context(snapshot, unfinished_lines[0], "line_review_required"))
+        line = unfinished_lines[0]
+        state = getattr(snapshot, "line_proofs", {}).get(line.id, {})
+        current = state.get("validation_current")
+        reviewing = current and state["generation"].outcome == "valid"
+        reason = ("line_human_review_required" if reviewing else "line_validation_warning"
+                  if current and state["generation"].outcome == "warning" else "line_validation_required")
+        result, action = "INCOMPLETE", _action("PENDING",
+            "asset_review_line_review_required" if reviewing else "asset_review_line_validate_required",
+            _line_context(snapshot, line, reason))
     elif snapshot.seal_current and membership_valid and ordered_lines:
         result, action = "COMPLETE", _action("NO_AUTHORIZED_DOWNSTREAM_ACTION", stage=None)
     else:
@@ -221,7 +238,11 @@ def evaluate_asset_review_provider(
 
     if action["semantic_route_key"] in {
         "asset_import_validate_pending", "asset_import_apply_confirm",
-        "asset_review_line_pending", "asset_review_line_blocked",
+        "asset_review_line_validate_required", "asset_review_line_review_required", "asset_review_line_blocked",
     } and "workbench:edit" not in effective_permissions:
         action = _action("UNAVAILABLE", context=_context(snapshot, "permission", "permission_required"))
+    elif action["semantic_route_key"] in {
+        "asset_review_line_validate_required", "asset_review_line_review_required", "asset_review_line_blocked",
+    } and not has_active_session:
+        action = _action("UNAVAILABLE", context=_context(snapshot, "permission", "session_required"))
     return AssetReviewProviderResult(result, blockers, stale, action)

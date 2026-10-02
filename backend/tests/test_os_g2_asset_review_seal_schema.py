@@ -153,10 +153,12 @@ def test_seal_rejects_duplicate_and_cross_scope_lineage(seal_connection):
     assert connection.execute(sa.select(sa.func.count()).select_from(seal)).scalar_one() == 1
 
 
-def test_migration_is_sole_head_and_round_trips_without_backfill(seal_connection):
+def test_migration_remains_in_single_chain_and_round_trips_without_backfill(seal_connection):
     config = Config(str(BACKEND / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND / "alembic"))
-    assert ScriptDirectory.from_config(config).get_heads() == [REVISION]
+    script = ScriptDirectory.from_config(config)
+    assert len(script.get_heads()) == 1
+    assert REVISION in {item.revision for item in script.walk_revisions()}
     spec = importlib.util.spec_from_file_location(
         "seal_migration", BACKEND / "alembic" / "versions" / f"{REVISION}_asset_review_seal.py",
     )

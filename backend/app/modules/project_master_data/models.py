@@ -1226,6 +1226,7 @@ class ProjectAssetReviewSeal(Base, UUIDMixin):
 
     __table_args__ = (
         UniqueConstraint("organization_id", "project_id", name="uq_asset_review_seal_project"),
+        UniqueConstraint("organization_id", "project_id", "id", name="uq_ar_seal_scope"),
         ForeignKeyConstraint(
             ["organization_id", "project_id"],
             ["projects.organization_id", "projects.id"],
@@ -3302,6 +3303,7 @@ class WorkbenchSession(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
     project: Mapped["Project"] = relationship("Project")
 
     __table_args__ = (
+        UniqueConstraint("project_id", "user_id", "id", name="uq_ar_session_scope"),
         Index(
             "uq_active_session_per_user_project",
             "user_id",
@@ -4479,6 +4481,13 @@ class NccSelectionCurrentHead(Base):
         ),
         CheckConstraint("selection_revision > 0", name="chk_ncc_head_selection_revision"),
     )
+
+from app.modules.project_master_data.asset_review_line_models import (  # noqa: E402
+    AssetReviewCommandReceipt as AssetReviewCommandReceipt,
+    AssetLineValidationGeneration as AssetLineValidationGeneration,
+    AssetLineHumanDecision as AssetLineHumanDecision,
+    AssetLineDecisionReversal as AssetLineDecisionReversal,
+)
 
 
 

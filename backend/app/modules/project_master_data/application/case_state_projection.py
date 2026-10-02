@@ -102,14 +102,14 @@ class StageCapability:
     version: str = "pr01-prefix-v1"
 
 
-CAPABILITY_REGISTRY_VERSION = "global-case-state-v2-asset-review-v1"
+CAPABILITY_REGISTRY_VERSION = "global-case-state-v3-asset-review-line-decision-v1"
 
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_ANALYSIS", available=True, provider_key="preliminary_analysis_v2", version="pr01-prefix-v2"),
     StageCapability("PRELIMINARY_READY", available=True, provider_key="preliminary_ready_v2", version="pr01-prefix-v2"),
     StageCapability("OFFICIAL_INTAKE", available=True, provider_key="official_intake_commit_v1"),
-    StageCapability("ASSET_REVIEW", available=True, provider_key="asset_review_v1", version="asset_review_v1"),
+    StageCapability("ASSET_REVIEW", available=True, provider_key="asset_review_line_decision_v1", version="asset_review_line_decision_v1"),
     *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[5:]),
 )
 
@@ -448,7 +448,7 @@ def determine_current_stage(
         return "PRELIMINARY_ANALYSIS"
     if leading_complete == 2:
         return "PRELIMINARY_READY"
-    if leading_complete == 4 and len(stage_results) > 4 and stage_results[4].provider_key == "asset_review_v1":
+    if leading_complete == 4 and len(stage_results) > 4 and stage_results[4].provider_key == "asset_review_line_decision_v1":
         return "ASSET_REVIEW"
     return "OFFICIAL_INTAKE"
 
@@ -589,9 +589,13 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
     )
 
     from app.modules.project_master_data.application.asset_review_provider import evaluate_asset_review_provider
+    from app.modules.project_master_data.models import WorkbenchSession
+    has_session = db.query(WorkbenchSession.id).filter_by(project_id=project_id,
+        user_id=persisted_actor.id, status="active").first() is not None
     asset = evaluate_asset_review_provider(authority,
-        effective_permissions=derive_effective_permissions(persisted_actor, db))
-    stage_projections.insert(4, StageProjection("ASSET_REVIEW", asset.result, "asset_review_v1",
+        effective_permissions=derive_effective_permissions(persisted_actor, db),
+        has_active_session=has_session)
+    stage_projections.insert(4, StageProjection("ASSET_REVIEW", asset.result, "asset_review_line_decision_v1",
         diagnostics=asset.blockers + asset.stale))
     case_version, sorted_facts = authority.case_version, authority.facts
     current_stage = determine_current_stage(stage_projections)

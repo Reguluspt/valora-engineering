@@ -344,11 +344,17 @@ class AssetReviewApplyContext(CaseStateActionContext):
 class AssetReviewLineContext(CaseStateActionContext):
     kind: Literal["line"]
     reason_code: Literal[
-        "line_review_required", "review_flagged", "review_rejected", "validation_invalid",
+        "line_validation_required", "line_validation_warning", "line_human_review_required",
+        "review_flagged", "review_rejected", "validation_invalid",
     ]
     membership_version: int = Field(..., gt=0, strict=True)
     line_id: uuid.UUID
     line_row_version: int = Field(..., gt=0, strict=True)
+    contract_version: Literal["asset-line-validation-v1", "asset-line-human-review-v1"]
+    confirmation_required: Literal[True]
+    validation_generation_id: Optional[uuid.UUID] = None
+    prior_decision_id: Optional[uuid.UUID] = None
+    finding_codes: list[str] = Field(default_factory=list)
 
 
 class AssetReviewIssueContext(CaseStateActionContext):
@@ -384,7 +390,7 @@ class AssetReviewStaleContext(CaseStateActionContext):
 
 class AssetReviewPermissionContext(CaseStateActionContext):
     kind: Literal["permission"]
-    reason_code: Literal["permission_required"]
+    reason_code: Literal["permission_required", "session_required"]
 
 
 AssetReviewActionContext = Annotated[
