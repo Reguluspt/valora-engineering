@@ -48,12 +48,14 @@ python -m unittest discover -s infra/server/tests -v
 git diff --check
 ```
 
-Template validation renders normalized Compose using synthetic image references and nonexistent external paths; it pulls/starts nothing. Tests reject floating images, mismatched revisions, extra AI services, data-port exposure, non-private networks, host networking, inline secrets, missing mounted secrets, HTTP/wildcard origins and omitted schema inputs. CI repeats these and performs isolated TLS proxy and real dependency proof with disposable generated fixtures. The TLS proof uses the real Nginx envsubst entrypoint; the pinned existing MinIO proof verifies file-mounted credentials and rejection of vendor defaults. Those fixtures do not select the final certificate source or certify production install. The standalone proof commands below additionally require the existing backend dependencies `cryptography` and `boto3`; CI installs them and limits published proof ports to loopback.
+Template validation renders normalized Compose using synthetic image references and nonexistent external paths; it pulls/starts nothing. Tests reject floating images, mismatched revisions, extra AI services, data-port exposure, non-private networks, host networking, inline secrets, missing mounted secrets, HTTP/wildcard origins and omitted schema inputs. CI repeats these and performs isolated TLS proxy and real dependency proof with disposable generated fixtures. The TLS proof uses the real Nginx envsubst entrypoint; CI retains its existing RustFS S3 fixture. The separate pinned historical MinIO proof verifies file-mounted credentials and rejection of vendor defaults using a locally cached exact image. Those fixtures do not select the final certificate source or certify production install. The standalone proof commands below additionally require the existing backend dependencies `cryptography` and `boto3`; published proof ports are limited to loopback.
 
 ```text
 python infra/server/tests/proof_tls.py
 python infra/server/tests/proof_minio.py
 ```
+
+**Historical vendor fixture availability:** Docker Hub denied both the existing MinIO tag and digest during SRV-0 CI; the matching Quay tag was unavailable. The [upstream MinIO repository](https://github.com/minio/minio) documents source-only distribution. `proof_minio.py` therefore requires the cached exact historical image and is isolated local evidence, not a fresh-runner CI dependency or a supported production image recommendation. Its local PASS must never be reported as a successful registry pull. A later release gate must supply approved, obtainable, supported vendor artifacts and repeat interface/security conformance; no source-build pipeline, replacement storage product or registry credentials are selected here. PostgreSQL/local immutable-blob authority and the existing S3 port remain unchanged.
 
 For a later authorized release packet only, fill manifest fields (artifact hashes can be obtained with `validate.hashes()`; schema with `validate.schema_head()`), then validate and write inputs:
 

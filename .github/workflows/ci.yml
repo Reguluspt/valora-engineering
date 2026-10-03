@@ -163,7 +163,6 @@ jobs:
             sleep 1
           done
           docker exec valora-srv0-redis redis-cli ping | grep -q PONG
-          python ../infra/server/tests/proof_minio.py
           PYTHONPATH=. python ../infra/server/tests/proof_dependencies.py
       - name: Run backend tests
         env:
