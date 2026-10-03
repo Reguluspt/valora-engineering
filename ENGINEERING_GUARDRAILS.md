@@ -2,6 +2,14 @@
 
 `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` is the current product/development ordering. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture and AI-readable-by-design requirements, but does not authorize runtime AI. Sub-domain plans (storage, M365, template/Office, AI) may not reorder the North-star roadmap unless a new Product Owner decision explicitly amends it.
 
+## Deployment/client v1 guardrail — Issue #89
+
+[ADR 0050](docs/adr/0050-linux-server-windows-native-client.md) records the accepted Linux single-node Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed allowlisted native bridge + MSIX architecture. Linux domain/API owns auth/session, tenant/RBAC, commands/validation, Case State/Next Action, audit/CAS, PostgreSQL, immutable documents, worker/jobs and providers; neither native shell nor web frontend is business authority. Preserve ADR 0026 cookies/CSRF/origin checks and ADR 0043/0045 storage/revision invariants. Certificate validation and exact trusted-origin enforcement are required; no injected authentication/provider secrets, broad host objects or arbitrary process/file/PowerShell bridge.
+
+No backend/database/worker in Windows client, React-to-WinUI rewrite or Docker Desktop local-stack production direction. Server v1 deploys no local inference runtime, Ollama/vLLM/model weights/LLM service or GPU dependency; core workflow requires no AI. Future provider-backed AI remains OS-G7 gated. Encrypted backup/restore and immutable blob authority are preserved without claiming production recovery targets achieved.
+
+Windows Client architecture/foundation requires explicit owner tasks; architecture/skeleton may occur before Software Completion only when explicitly assigned. Formal Windows Preview/UAT remains after Software Completion. Linux Deployment Pilot is a separate explicitly authorized operations gate. Architecture is selected before Preview; neither UAT nor this docs-only decision grants cloud staging, deployment or later product gates.
+
 ## Current document authority guardrail
 
 Word Save, provider notification, revalidation and Change Candidate creation are non-authoritative.
@@ -50,7 +58,7 @@ Operational Frontend — merged to `main` by squash PR #32 at `51eab864800518619
 G1.0 current-result integrity gate is merged by PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). ADR 0046 is the accepted G1.1 design for optional Pre-case Customer, explicit current batch and immutable versioned analysis/results. It does not authorize runtime changes; G1.1 runtime and OS-G2 remain not started. Preserve tenant/Project lineage, explicit human binding, immutable history and G1.0's fail-closed Official Intake gate in later slices.
 The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
 Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
-Windows Preview — `VALORA-WIN-PREVIEW-001` is the local UAT gate after Software Completion and before cloud staging. Preview packaging must not broaden or substitute for incomplete product scope.
+Windows Preview — `VALORA-WIN-PREVIEW-001` is formal Windows Client UAT after Software Completion under ADR 0050. Linux Server Deployment Pilot is a separate gate; cloud staging needs a separate owner decision. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
 not use it as the source for new navigation or Global Case State.
 ```

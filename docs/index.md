@@ -20,6 +20,13 @@ Navigation index; this file does not replace design authority or acceptance evid
   delegated mechanical-worker, independent-review and commit-ownership rules.
 - [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md) — historical PR-labelled acceptance evidence plus current candidate reconciliation; **not** current roadmap sequencing.
 
+## Linux Server / Windows Client v1
+
+- [ADR 0050](adr/0050-linux-server-windows-native-client.md) — accepted Product Owner deployment/client decision; Linux Server business authority, HTTPS LAN, WinUI 3/WebView2, server-hosted React/Fluent 2 light, typed native bridge, MSIX and no local LLM/GPU dependency.
+- [Windows Client v1 plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) — WIN-0 through WIN-6; planned, runtime requires explicit tasks.
+- [Linux Server v1 plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) — private Compose/TLS, persistence, readiness, encrypted backup/restore and operations; no deployment authorization.
+- [Windows Preview brief](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) — formal UAT after Software Completion; Linux Deployment Pilot separate.
+
 ## Document storage, OneDrive Exchange and document-change direction
 
 - [OAuth diagnostics and C2 implementation plan](plan/pr07-oauth-c2-implementation.md) — G1 and the first bounded G2 attempt are historical; G4 remains closed.

@@ -189,6 +189,14 @@ authorized unless the Product Owner explicitly opens that gate.
 Agents must `git fetch origin` and verify live `origin/main` and the assigned task branch HEAD. Listed
 SHAs are **evidence**, not evergreen truth.
 
+### Deployment/client v1 authority — Issue #89 (2026-10-03)
+
+The Product Owner accepts [ADR 0050](docs/adr/0050-linux-server-windows-native-client.md): single-node Linux Server / Docker Engine + Compose, HTTPS LAN, WinUI 3 + WebView2 Evergreen, server-hosted React / Fluent 2 light, small typed allowlisted native bridge and MSIX; Windows 11 x64 first, admin-configured URL and no automatic LAN discovery. Native shell and web frontend are not business authority. Server owns auth/session, tenant/RBAC, domain commands/validation, Case State/Next Action, audit/CAS, PostgreSQL, immutable documents, worker/jobs and providers. No backend/database/worker in MSIX, React rewrite or Docker Desktop local-stack production direction.
+
+Server v1: local inference runtime NOT DEPLOYED; model weights/GPU NOT REQUIRED; core workflow AI dependency NONE; future provider-backed AI remains OS-G7 gated. Preserve ADR 0026 session/CSRF and ADR 0043/0045 immutable storage/human revision authority. No broad host objects, arbitrary process/file/PowerShell bridge, injected auth/provider secrets or certificate bypass.
+
+[Windows Client plan](docs/plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Linux Server plan](docs/plan/VALORA_LINUX_SERVER_V1_PLAN.md) are planned, not runtime authorization. Architecture/skeleton before Software Completion needs an explicit Product Owner task. Formal [Windows Preview/UAT](docs/implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) stays after Software Completion; Linux Deployment Pilot is separate. Architecture selection no longer follows Preview. Issue #89 is docs-only, does not open ASSET_WORKBENCH+ or reorder OS-G0→OS-G7, and permits Draft PR only. Repository-wide reconciliation is Issue #90 after ADR certification on main; historical evidence stays unchanged.
+
 ### Permanent S12 Apply v1 (frozen)
 
 ```text

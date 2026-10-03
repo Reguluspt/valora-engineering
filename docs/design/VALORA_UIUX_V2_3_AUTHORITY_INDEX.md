@@ -4,6 +4,10 @@
 **Consolidation:** 21/09/2026 — `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`.
 **Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture only; it does not override this UI/UX authority or authorize provider AI by itself.
 
+## Deployment/client architecture scope — 2026-10-03
+
+[ADR 0050](../adr/0050-linux-server-windows-native-client.md) records Issue #89's accepted Linux Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX decision. Native shell/web frontend are not business authority; current UX/semantic contracts remain unchanged and React is not rewritten to WinUI. Server v1 has no local LLM/GPU dependency; OS-G7 remains gated. Architecture/skeleton needs an explicit owner task; formal Windows Preview/UAT stays after Software Completion and Linux Deployment Pilot is separate. See the [Windows plan](../plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Preview brief](../implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md).
+
 ## 0. Visual authority
 
 Current product visual language is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Approved visual baselines/mockups are authority. Astryx is historical/low-level reference only; retained Astryx primitives must be fully remapped and must not introduce dark/cyan/glassmorphic language.
