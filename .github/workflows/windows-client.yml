@@ -1,0 +1,55 @@
+name: Windows Client Foundation
+
+on:
+  pull_request:
+    paths:
+      - 'clients/windows/**'
+      - '.github/workflows/windows-client.yml'
+  push:
+    branches:
+      - main
+      - codex/win-0-windows-client-foundation
+    paths:
+      - 'clients/windows/**'
+      - '.github/workflows/windows-client.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: clients/windows
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: clients/windows/global.json
+      - name: Restore, build, test and package unsigned engineering evidence
+        run: ./build.ps1
+      - name: Upload engineering artifact and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: valora-win0-win-x64-unsigned-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            clients/windows/artifacts/valora-win0-win-x64-unsigned.zip
+            clients/windows/artifacts/SHA256SUMS
+            clients/windows/artifacts/manifest.json
+            clients/windows/**/packages.lock.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Windows test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: valora-win0-tests-${{ github.event.pull_request.head.sha || github.sha }}
+          path: clients/windows/artifacts/test-results/*.trx
+          if-no-files-found: warn
+          retention-days: 14
