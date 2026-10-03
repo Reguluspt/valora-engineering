@@ -28,6 +28,7 @@ def main():
             "email": fixture["operator_email"], "password": (evidence / "synthetic-password.txt").read_text()})
         login.raise_for_status()
         client.headers["X-CSRF-Token"] = client.cookies.get("XSRF-TOKEN")
+        client.headers["Origin"] = "http://localhost:5173"
         base = f"/api/v1/projects/{project}"
         def call(method, path, **kwargs):
             response = client.request(method, path, **kwargs)
@@ -38,9 +39,11 @@ def main():
         state = call("GET", base + "/case-state")
         line_id = state["next_action"].get("context", {}).get("line_id") if state["next_action"].get("context") else None
         line = next((item for item in lines if item["id"] == line_id), lines[0])
-        if mode == "edit-quantity":
+        if mode in ("edit-quantity", "invalid-quantity", "correct-quantity"):
             call("PATCH", base + f'/asset-lines/{line["id"]}', json={
-                "quantity": float(line["quantity"]) + 1, "row_version": int(line["version_token"])})
+                "quantity": 0 if mode == "invalid-quantity" else 3 if mode == "correct-quantity"
+                else float(line["quantity"]) + 1,
+                "row_version": int(line["version_token"])})
         elif mode in ("warning", "correct-description"):
             call("POST", "/api/v1/workbench/sessions", json={"project_id": project})
             call("PATCH", base + f'/asset-lines/{line["id"]}/draft', json={

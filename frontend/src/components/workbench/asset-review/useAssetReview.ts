@@ -147,7 +147,7 @@ export function useAssetReview({ projectId, sessionId, sessionBlocked, rows, gri
     if (decision !== "validate") Object.assign(payload, { target_review_status: decision,
       reason_note: trimmed || null, supersedes_decision_id: context.prior_decision_id || null });
     const attempt = { commandId: payload.command_id, lineId, contract: payload.contract_version };
-    busyRef.current = true; setBusy(true); setNotice("");
+    busyRef.current = true; setBusy(true); setNotice(""); setResult(null);
     try {
       retain(attempt);
     } catch {

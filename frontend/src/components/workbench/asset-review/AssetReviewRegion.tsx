@@ -17,7 +17,10 @@ export function AssetReviewRegion({ review }: { review: ReturnType<typeof useAss
   const [reason, setReason] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
-  const close = () => { setConfirmation(null); setReason(""); trigger.current?.focus(); };
+  const close = () => { setConfirmation(null); setReason(""); };
+  useEffect(() => {
+    if (!confirmation) trigger.current?.focus();
+  }, [confirmation]);
   useEffect(() => {
     if (confirmation && dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
   }, [confirmation]);
