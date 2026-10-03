@@ -61,7 +61,7 @@ Suggested grouping pattern:
 
 ## 5. Adoption & Migration Plan
 - **S10-PR-004**: Creates the dictionary foundation only — completed.
-- **S10-PR-005**: Handles full non-IT error message registry — completed (see [VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md](file:///E:/Project%20Valora/valora-engineering-phase-sprint-0-starter/docs/design/VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md)).
+- **S10-PR-005**: Handles full non-IT error message registry — completed (see [VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md](VALORA_NON_IT_ERROR_MESSAGE_REGISTRY.md)).
 - **S10-PR-006**: Applied labels progressively to App Shell layouts, navigation menus, and status blocks. First active progressive adoption area.
 - **Current:** Apply labels across Fluent 2 light product surfaces and Workbench remediation.
 

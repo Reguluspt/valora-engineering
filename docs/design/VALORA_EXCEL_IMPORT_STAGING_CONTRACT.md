@@ -3,6 +3,8 @@
 - **Status**: Authoritative API & Domain Contract
 - **Sprint Target**: S12-PR-001
 
+**Current scope / successor navigation — 2026-10-03 (DOC-R6, INDEX_ONLY):** The original body below, including §15 / `s12-pr-004-v1`, remains frozen historical foundation. Current post-Intake promotion uses implemented guarded Apply v2 (`s12-post-intake-guarded-apply-v2`) under [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) and the [Asset Review Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md); no naked v1 bypass is available after v2 activation. Excel upload / validation remains staging-only and never directly mutates official ProjectAssetLine rows. This pointer changes no staging/v1 behavior and opens no correction batch, membership mutation or later stage.
+
 ---
 
 ## 1. Purpose
