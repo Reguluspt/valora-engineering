@@ -49,6 +49,9 @@ Thumbs.db
 tmp/
 temp/
 local-artifacts/
+.openviking/config.local.json
+.openviking/media/
+.openviking/downloads/
 
 # Local trial databases
 backend/*.db
