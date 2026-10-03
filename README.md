@@ -1,7 +1,7 @@
 # Valora Engineering
 
 **Phase:** Engineering — VALORA UI/UX v2.3 implementation alignment
-**Accepted code baseline (not evergreen):** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS)
+**Historical OS-G0 milestone (2026-09-27; not current baseline):** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS)
 **Current roadmap:** `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`<br>
 **AI architecture detail:** `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` — OS-G7 documentation authority only; runtime AI remains gated
 **Canonical UI/UX authority:** `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` + `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`
@@ -11,9 +11,9 @@
 **PR-00 alignment gate:** **CLOSED**
 **PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
 **PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
-**Current execution direction:** **OS-G0 is merged-main complete; OS-G1 Pre-case Product Closure is the next roadmap phase but remains unopened until an explicit Product Owner task**
+**Current execution direction:** **OS-G0 complete; OS-G1 CERTIFIED/CLOSED; OS-G2 PARTIAL / certified through ASSET_REVIEW. Full OS-G2 remains incomplete; ASSET_WORKBENCH and later stages are unavailable/not authorized.**
 
-Agents must `git fetch origin` and verify live `origin/main`.
+Agents must run `valora-live-authority-bootstrap`: `git fetch origin`, verify live `origin/main` and CODEX, inspect the assigned task and require successful CI on the exact claimed SHA. README milestone SHAs do not certify the current baseline or authorize the next stage.
 
 ## Product goal
 
@@ -29,30 +29,31 @@ Valora is a **valuation / asset-identity workbench** for non-IT business users. 
 | **S12-R-001 … S12-R-008** | **Merged to `main`** |
 | **S12-PR-003** Validation Engine | **Merged** (PR #8) |
 | **S12-PR-004** Apply Command & Provenance | **Merged** (PR #10); engineering gate **closed** |
-| S12 parser capability | `.xlsx` fixed-alias staging + validate + Apply v1 remains frozen |
+| S12 parser / Apply versions | Historical `.xlsx` fixed-alias parser and Apply v1 contract remain frozen evidence; current post-Intake promotion uses guarded Apply v2 under ADR 0048 |
 | **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
 | **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
-| Adaptive Intake / Column Mapping Memory | Implemented historical foundation; current product work follows Unified Roadmap `OS-G0 → OS-G7` |
+| Adaptive Intake / Column Mapping Memory | Bounded G1.1H Intake & Mapping UX certified by PR #63; G1.1K / PR #68 certified/closed the Pre-case journey. Human-confirmed mapping/current selection and recovery are implemented; future provider AI matching is not implied |
 | Asset Identity Memory / dossiers / AI matching | Identity-decision/feedback and dossier extraction/alignment foundations are implemented; provider-backed AI matching and the full OS-G7 assistant runtime are not implemented |
 | **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
 | Bounded-AI task/decision/policy architecture | ADR 0033–0034 accepted; `TaskJob`/worker durable execution foundation exists, but `AITaskRun`/`AIContextManifest`/`DecisionEpisode`/`ExecutionPolicy` runtime and provider gateway are not implemented |
 | UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
 | UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
-| UI/UX v2.3 downstream product stages | **Partially implemented on merged main via squash PR #32**: OS-G0 / F2-PR-001…008 are merged at `51eab864…` with exact-head CI #485 green; Local G6 + OneDrive Exchange G8 remain accepted/offline-complete foundations. Canonical stages 5–16, OS-G1+ product closure and Release/Publishing remain incomplete. |
+| UI/UX v2.3 product closure | OS-G0 complete (historical PR #32 / CI #485); OS-G1 CERTIFIED/CLOSED (G1.1K / PR #68 / CI #527); ASSET_REVIEW CERTIFIED/CLOSED (A5 / PR #86 / CI #555). Full OS-G2 and stages 6–16 remain incomplete/unavailable; no ASSET_WORKBENCH+ authorization. Local G6 + OneDrive Exchange G8 remain accepted/offline-complete foundations; Release/Publishing and full product completion remain open |
 | Windows Preview | **Deferred until Software Completion** |
 | Production-ready | **No** |
 
 ### Live task gate
 
 ```text
-Accepted code baseline: origin/main `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS).
+Live baseline: perform valora-live-authority-bootstrap; fetch origin/main, verify live HEAD/CODEX, assigned task and CI SUCCESS on that exact SHA.
+Historical OS-G0 milestone (2026-09-27): `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS), not current main truth.
 Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
 VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
 PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
 PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
 PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
 Operational frontend entry — MERGED TO MAIN by squash PR #32 at `51eab864…`; exact-head CI #485 SUCCESS.
-The merged baseline contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and the remaining canonical stages are still incomplete.
+The historical PR32 milestone contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. Subsequently OS-G1 closed through G1.1K / PR68 / CI527 and ASSET_REVIEW closed through A5 / PR86 / CI555. Current provider coverage reaches the first five stages; case completion remains fact-derived. Full OS-G2 is incomplete; ASSET_WORKBENCH+ stays NOT_AVAILABLE / UNAUTHORIZED. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and remaining stages are incomplete.
 Software Completion — REQUIRED before Windows Preview.
 Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
 Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
@@ -87,9 +88,10 @@ Future/continuing ownership follows current implementation state: mapping/identi
 ### Non-negotiable invariants
 
 - Tenant isolation: `organization_id` + project/session scope; **fail closed**.
-- **ADR 0028** restricted Workbench fields require draft-commit + atomic audit.
+- [ADR 0028](docs/adr/0028-official-mutation-command-and-atomic-audit-gate.md) value edits use `CommitProjectAssetLineDraft`: draft → explicit human confirmation → command, exact draft/line versions and atomic audit. Direct PATCH of all four restricted fields remains blocked.
+- [ADR 0049](docs/adr/0049-asset-line-human-review-and-validation-authority.md) supplies dedicated `ValidateProjectAssetLine` (human-confirmed request, server-derived verdict) and `DecideProjectAssetLineReview` (explicit human decision). New mutations retain tenant/RBAC, owned session, DRAFT, exact row/Case State CAS, current seal/lineage and atomic audit; no generic draft statuses or user-selected validation verdict.
 - Excel **upload and validate** write **only** import batch + staging — **never** mutate official `ProjectAssetLine`.
-- **Apply** (S12-PR-004 / ADR 0029 / `s12-pr-004-v1`) is the human-confirmed DRAFT-only promotion path.
+- Current guarded Apply v2 uses the existing `ApplyProjectAssetImportBatch`, `s12-post-intake-guarded-apply-v2`, under [ADR 0048](docs/adr/0048-post-intake-guarded-apply-and-asset-review-authority.md): explicit human confirmation, DRAFT, post-Official-Intake exact lineage/CAS and atomic initial-set seal/audit; no naked v1 bypass. [ADR 0029](docs/adr/0029-excel-staging-apply-command-and-lineage.md) / `s12-pr-004-v1` remain frozen historical/foundation authority, not an alternate current entry path.
 - Upload lock order: **Project → batch → staging** (aligned with Apply).
 - AI is advisory only; no auto-approve / auto-apply / auto knowledge activation.
 - AI/rules/providers produce typed proposals only; no direct persistence mutation.
@@ -143,8 +145,7 @@ Local backend runs without PostgreSQL will **skip** PG-gated tests. That is not 
 
 ## What this repository is not yet
 
-- Current product-facing Adaptive Intake / mapping-confirmation UX completion (the historical workbook adapter and structure-discovery foundations already exist)
-- Current product-facing Column Mapping / Asset Identity review-loop completion beyond the implemented historical foundations
+- Broader Asset Identity review/automation beyond the implemented human-confirmed foundations; the bounded G1.1H/K Intake & Mapping / Pre-case journey is already certified
 - Productized paired Excel–Word/PDF dossier flow beyond the existing extraction/alignment foundations
 - End-to-end provider-backed AI column/identity matching
 - Full AI task/context/attempt/decision runtime; future AI must reuse the existing reliable `TaskJob`/worker background-job infrastructure

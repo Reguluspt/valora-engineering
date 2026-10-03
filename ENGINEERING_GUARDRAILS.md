@@ -32,7 +32,7 @@ authoritative for accepted document revisions.
 # ENGINEERING_GUARDRAILS.md — Valora Engineering Guardrails
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-09-27 (OS-G1.1 Pre-case lifecycle authority)
+**Last reconciled:** 2026-10-03 (certified Pre-case / ASSET_REVIEW scope and scoped mutation-command reconciliation)
 **Applies to:** All engineering work after Design Book v1.2-final
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -45,8 +45,9 @@ Valora is in the **Engineering Phase**.
 ```text
 VALORA UI/UX v2.3 implementation alignment
 
-Accepted code baseline: `origin/main`
-`51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS).
+Accepted code baseline: fetch live `origin/main`, verify its HEAD/CODEX and exact-head CI for the assigned task.
+Historical OS-G0 milestone (2026-09-27): `51eab8648005186197d2fbb37a19bde4332aeaa5`
+(squash PR #32; exact-head CI #485 SUCCESS), not the current main SHA.
 Canonical authority: `docs/design/VALORA_UIUX_HANDOFF_v2.3.md` plus
 `docs/design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md` and the directly relevant addendum.
 
@@ -54,9 +55,9 @@ PR-00 through PR-04 — MERGED by PR #29 at `2775cb9a96a8067be3e558a84c96bb69566
 PR-05 — MERGED by PR #30 at `42a87fca1a90f5b94724a4ca0d7a83fa5dec1699`; OneDrive Personal only. OneDrive for Business and SharePoint remain deferred.
 PR-06 — MERGED by PR #31 at `27d1cc630f97cb9b56fbfbb4c5bc04d4be305cc6`; read-only return/revalidation acceptance passed.
 The authoritative per-layer status is `docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md`. Do not infer frontend, browser or E2E completion from merge status or backend acceptance.
-Operational Frontend — merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`, with exact-head CI #485 SUCCESS. F2-PR-001…008 and the OS-G0 Fluent 2 engineering closeout are therefore merged-main evidence. This still is not North-star product-completion evidence; OS-G1+ capabilities, Release/Publishing and full exact-SHA E2E remain separately gated.
-G1.0 current-result integrity gate is merged by PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). ADR 0046 is the accepted G1.1 design for optional Pre-case Customer, explicit current batch and immutable versioned analysis/results. It does not authorize runtime changes; G1.1 runtime and OS-G2 remain not started. Preserve tenant/Project lineage, explicit human binding, immutable history and G1.0's fail-closed Official Intake gate in later slices.
-The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 5–16 remain incomplete.
+Historical Operational Frontend / OS-G0 milestone — squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`, exact-head CI #485 SUCCESS. F2-PR-001…008 and OS-G0 are complete. Subsequent OS-G1 / ASSET_REVIEW closure below does not certify full OS-G2, Release/Publishing or full North-star exact-SHA E2E.
+Historical G1.0 milestone: PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). OS-G1 was subsequently CERTIFIED/CLOSED by G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81` (CI #527 SUCCESS), implementing the accepted ADR 0046/0047 Pre-case lifecycle and mapping journey. OS-G2 is PARTIAL: its certified scope reaches ASSET_REVIEW through A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (CI #555 SUCCESS). Full OS-G2 remains INCOMPLETE; ASSET_WORKBENCH+ is NOT AUTHORIZED / unavailable. Preserve tenant/Project lineage, explicit human binding, immutable history and fail-closed Official Intake. Accepted ADRs alone do not authorize a new runtime slice.
+The original PR-07 direct OneDrive replacement execution is historical/blocked. Protected-value and Old/V/W conflict semantics remain reusable. New Working-copy change runtime must follow ADR 0045 and a task-specific implementation contract before coding. Release/Publishing and canonical stages 6–16 remain incomplete/unavailable; certified ASSET_REVIEW closure does not open them.
 Software Completion — the full authorized North-star under the Unified Roadmap (Pre-case, Appraisal Core, Document Runtime, Release/Publishing, traceability/state/fidelity and exact-SHA E2E) must pass before Windows Preview. Historical PR-08–PR-13 labels are acceptance evidence, not current sequencing authority.
 Windows Preview — `VALORA-WIN-PREVIEW-001` is formal Windows Client UAT after Software Completion under ADR 0050. Linux Server Deployment Pilot is a separate gate; cloud staging needs a separate owner decision. Preview packaging must not broaden or substitute for incomplete product scope.
 Existing QC/approval/standalone-validation implementation is legacy debt: prevent expansion and do
@@ -231,7 +232,7 @@ audit logs are append-only
 
 ### ADR 0028 restricted Workbench-gated fields
 
-These fields must **not** be mutated via direct PATCH. They require the draft-commit command path:
+All four fields remain **blocked from direct PATCH**. ADR 0028 retains value-draft authority; accepted ADR 0049 supplies the scoped dedicated validation/review successor:
 
 ```text
 description
@@ -239,6 +240,14 @@ appraised_unit_price
 review_status
 validation_status
 ```
+
+| Purpose | Authoritative command | Boundary |
+| --- | --- | --- |
+| `description`, `appraised_unit_price` value edits | `CommitProjectAssetLineDraft` | Draft → explicit human confirmation → command; exact draft/line versions and atomic audit. |
+| Official-line validation | `ValidateProjectAssetLine` | Human requests/confirms; the server selects the immutable rule set and derives the verdict. No user-selected validation status. |
+| Human line review | `DecideProjectAssetLineReview` | Explicit human accepted/flagged/rejected decision; it neither assigns validation authority nor edits values. |
+
+Status fields are not added to generic draft JSON/handlers. New validation/review mutations retain active human/organization, tenant/RBAC, an active owned Workbench session, DRAFT, exact row and shared Case State tokens, current Intake/seal/membership/lineage and atomic audit under ADR 0049. Its proof-currentness, negative-hold, confirmed-validation reset, append-only reversal and receipt-replay rules remain unchanged. No AI/system/worker auto-validation or auto-review authority is granted.
 
 For those fields, do not introduce mutation paths that bypass:
 

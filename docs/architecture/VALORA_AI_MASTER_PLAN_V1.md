@@ -35,9 +35,9 @@ Authoritative VALORA Domain
 
 AI có thể truy xuất, phân tích, giải thích, so sánh, phát hiện, soạn thảo và đề xuất. AI không được âm thầm biến suy luận của chính nó thành sự thật thẩm định có thẩm quyền.
 
-## 2. Kết quả kiểm tra exact-head
+## 2. Dated integration snapshot — 2026-09-23 / exact-head CI #454
 
-OS-G0 đã tiến triển qua F2-PR-001, F2-PR-002 và F2-PR-003 trên integration branch. PR #38 đã thay Astryx production shell bằng semantic React/HTML + Fluent 2 light primitives và bổ sung các primitive trạng thái dùng chung như `MessageBar` và `StateSurface`.
+Đây là kết quả tại integration HEAD `d725bbc6f60f2a21ec11a555d9565d2ab01470ae`, CI #454 SUCCESS, ngày 2026-09-23; không phải trạng thái main hiện hành. OS-G0 đã tiến triển qua F2-PR-001, F2-PR-002 và F2-PR-003 trên integration branch. PR #38 đã thay Astryx production shell bằng semantic React/HTML + Fluent 2 light primitives và bổ sung các primitive trạng thái dùng chung như `MessageBar` và `StateSurface`.
 
 Nền tảng có thể tái sử dụng cho AI đã tồn tại:
 - tenant/RBAC/security boundaries;
@@ -57,6 +57,12 @@ Nền tảng có thể tái sử dụng cho AI đã tồn tại:
 Chưa có runtime implementation của `AITaskRun`, `AITaskAttempt`, `AIContextManifest`, `DecisionEpisode`, `ExecutionPolicy`, Provider Gateway/Task Registry và Valora Assistant.
 
 **Quyết định tái sử dụng:** AI phải dùng chung durable `TaskJob`/worker. Không tạo AI-specific queue thứ hai.
+
+### Subsequently certified product checkpoint — 2026-10-03
+
+OS-G0 đã hoàn tất; OS-G1 được CERTIFIED/CLOSED qua G1.1K / PR #68 (CI #527 SUCCESS). OS-G2 mới hoàn tất phạm vi ASSET_REVIEW qua A5 / PR #86 tại `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (CI #555 SUCCESS); full OS-G2 vẫn INCOMPLETE. Case State có provider cho năm canonical stages đầu đến ASSET_REVIEW; completion của từng hồ sơ vẫn được tính từ authoritative facts. ASSET_WORKBENCH và các stage sau vẫn NOT_AVAILABLE / UNAUTHORIZED. Trước mỗi task phải live bootstrap HEAD/CODEX/task và exact-head CI; các SHA/CI trên chỉ là milestone đã được chứng nhận.
+
+Checkpoint nghiệp vụ không kích hoạt AI. OS-G7/provider-backed runtime vẫn gated; AI không giữ thẩm quyền phê duyệt/quyết định rà soát dữ kiện chính thức hoặc tự mutation official state. Theo [ADR 0050](../adr/0050-linux-server-windows-native-client.md), server v1 không triển khai local LLM, không cần model weights/GPU và core workflow không phụ thuộc AI. Tài liệu này không cấp quyền runtime/provider, WIN/SRV implementation hay deployment.
 
 ## 3. Authority và tài liệu nền
 
@@ -127,7 +133,7 @@ authoritative version tokens
 
 ## 6. Case State là orchestration truth
 
-Assistant không tự suy diễn lifecycle state từ hội thoại. Nó đọc Global Case State và authoritative projections. Hiện exact-head mới có provider cho bốn stage đầu; stages 5–16 phải được đóng theo roadmap trước khi AI reasoning end-to-end trên toàn hồ sơ.
+Assistant không tự suy diễn lifecycle state từ hội thoại. Nó đọc Global Case State và authoritative projections. Historical integration snapshot ngày 2026-09-23 / CI #454 chỉ có provider cho bốn stage đầu. Sau đó phạm vi certified đã mở đến ASSET_REVIEW (năm stage đầu); stages 6–16 vẫn unavailable/gated và phải được đóng theo Unified Roadmap trước khi AI reasoning end-to-end trên toàn hồ sơ. `current_stage` vẫn bị chặn ở ASSET_REVIEW; hoàn tất stage này không mở ASSET_WORKBENCH+ hoặc provider AI. Toàn bộ OS-G7 activation/evaluation/human-command gates bên dưới giữ nguyên.
 
 ## 7. Valuation Knowledge Layer
 

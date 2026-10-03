@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (A5R2 certified; A5 product closure resumed)
+**Last reconciled:** 2026-10-03 (A5 / ASSET_REVIEW certified/closed; DOC-R1+DOC-R2 current-authority reconciliation)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -53,8 +53,12 @@ Last verified merged-main OS-G0 closeout (2026-09-27): `origin/main` is
 CI #485 SUCCESS. The pre-squash integration source head was
 `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`. These SHAs and the CI result are dated evidence only.
 
-PR-00 through PR-04 — MERGED by PR #29. PR-01 remains only the four-stage prefix foundation;
-canonical stages 5-16 are still unavailable until their domain facts/providers are implemented.
+PR-00 through PR-04 — MERGED by PR #29. Historical PR-01 supplied the four-stage prefix foundation.
+Subsequently OS-G1 and OS-G2 A5 / ASSET_REVIEW product closure were CERTIFIED/CLOSED. Implemented
+Case State provider coverage reaches the first five canonical stages through ASSET_REVIEW; each
+case still derives completion from its current authoritative facts. ASSET_WORKBENCH and stages
+6-16 remain NOT_AVAILABLE / UNAUTHORIZED until separately accepted authority and runtime.
+Full OS-G2 remains INCOMPLETE; no later-stage task is opened by this reconciliation.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
 
@@ -141,8 +145,12 @@ MERGED/CERTIFIED at `d20f121b0f62c539836fde35308edbfc6d928e5d`, exact-main CI #5
 A5R D1 was ACCEPTED by the Product Owner on 2026-10-02. A5R2 / Issue #84 is CLOSED/CERTIFIED:
 PR #85 squash merged at `7c52a41a84b21b63182429d5c5740e76783ea4e6`, exact-main CI #552 SUCCESS.
 Alembic head `b5c6d7e8f9a0` grants existing `workbench:open` to standard `owner` and `appraiser` only.
-OS-G2 A5 / Issue #81 resumes the authorized ASSET_REVIEW product-closure UX/E2E slice in the
-existing Workbench. Membership mutation, further RBAC and ASSET_WORKBENCH+ remain UNAUTHORIZED.
+OS-G2 A5 / Issue #81 / PR #86 is CERTIFIED/CLOSED. Historical closure checkpoint (2026-10-03):
+PR #86 squash merged at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9`, exact-main CI #555 SUCCESS
+(run 37094036324); Issue #81 is CLOSED. It certifies ASSET_REVIEW product closure in the existing
+Workbench, not full OS-G2. Current implemented/certified scope reaches ASSET_REVIEW; the stage cap
+remains ASSET_REVIEW with NO_AUTHORIZED_DOWNSTREAM_ACTION after completion, absent a higher-priority
+authorized blocker. Membership mutation, further RBAC and ASSET_WORKBENCH+ remain UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
@@ -223,9 +231,15 @@ AITaskRun/DecisionEpisode are provenance around authoritative domain decisions, 
 Workflow patterns derive from domain commands and committed outcomes, never UI clickstream.
 Temporary selections, autosave, failed/stale runs and unreviewed output are not positive feedback.
 Long-running production AI/extraction tasks must reuse the existing durable `TaskJob`/`TaskJobAttempt`/worker execution boundary, including lease/retry/dead-letter/stale-generation protection; do not create a second AI queue.
-ADR 0028 restricted Workbench fields (description, appraised_unit_price,
-  review_status, validation_status) require draft-commit command path + authorization
-  + human confirmation + version safety + atomic audit. Direct PATCH of those fields is blocked.
+ADR 0028 value edits (description, appraised_unit_price) use CommitProjectAssetLineDraft:
+  draft → explicit human confirmation → authoritative command, exact draft/line versions and atomic audit.
+ADR 0049 scoped status-command successor: ValidateProjectAssetLine requires explicit human confirmation
+  and computes the validation verdict server-side; DecideProjectAssetLineReview records an explicit
+  human review decision. Status fields are not generic draft entries or user-selected validation outcomes.
+New status-command mutations retain active human/tenant/RBAC, owned Workbench session, DRAFT,
+  exact row/Case State CAS, current seal/membership/lineage and atomic required audit.
+ADR 0049 proof-currentness, negative holds, confirmed-validation reset and append-only reversal/replay
+  rules remain binding. Direct PATCH of all four restricted fields remains blocked.
 Non-restricted ProjectAssetLine fields may use direct PATCH under project:update and are
   outside the R004 Human Commit Gate / atomic-command guarantee.
 Excel upload/validate still never mutate official ProjectAssetLine rows.
