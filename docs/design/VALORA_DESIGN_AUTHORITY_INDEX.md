@@ -28,6 +28,10 @@ authority tier of its own.
 
 When two sources conflict, the newer explicit decision governs only the scope it names. Security, tenant isolation, immutable evidence, append-only decisions and human approval remain cumulative unless an accepted ADR explicitly supersedes them.
 
+## 1.1 Deployment/client v1 scoped decision
+
+[ADR 0050](../adr/0050-linux-server-windows-native-client.md) records the Product Owner decision in Issue #89: Linux Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX, no local LLM/model-weight/GPU dependency. It supersedes Docker Desktop production direction and architecture selection after Preview only; server business/auth/tenant/document authority and v2.3 UX remain unchanged. Formal [Windows Preview/UAT](../implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) remains after Software Completion; explicit architecture/skeleton tasks and Linux Deployment Pilot are separate. Repository-wide status reconciliation belongs to Issue #90.
+
 ## 2. Version relationship
 
 | Authority | Continues to govern | Superseded or extended by later authority |

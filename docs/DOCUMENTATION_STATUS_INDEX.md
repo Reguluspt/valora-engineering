@@ -76,6 +76,13 @@ Current visual authority is **Microsoft Fluent 2 light, desktop-first, Vietnames
 
 Sub-domain plans may not reorder this sequence without a new Product Owner decision.
 
+## 2.0 Deployment/client v1 disposition — Issue #89 (2026-10-03)
+
+- [ADR 0050](adr/0050-linux-server-windows-native-client.md) — accepted Product Owner deployment/client decision; repository certification pending. Linux single-node Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX. Server retains business/auth/tenant/document/job authority; no local LLM/model-weight/GPU dependency, core workflow AI dependency NONE; provider-backed AI stays OS-G7 gated.
+- [Windows Client plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Linux Server plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) — PLANNED / NOT AUTHORIZED FOR RUNTIME OR DEPLOYMENT.
+- [Windows Preview brief](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) — reconciled; formal UAT after Software Completion, architecture/skeleton only through explicit owner task, Linux Deployment Pilot separate. Docker Desktop local-stack production direction and architecture selection after Preview are superseded.
+- Existing dated inventories and status snapshots below are evidence of their recorded reconciliation, not current main certification. Issue #89 does not execute Issue #90's full-tree inventory/status cleanup or rewrite historical evidence.
+
 ## 2.1 Current visual-system disposition
 
 - Microsoft Fluent 2 light is current product visual authority.
@@ -275,3 +282,18 @@ When a current decision changes:
 4. amend current living contracts that would otherwise mislead implementation;
 5. preserve historical audit/sprint evidence unchanged;
 6. rerun a stale-marker documentation sweep.
+
+## 14. Conflicts encountered and deferred to Issue #90
+
+This is a bounded encounter log, not the repository-wide review. [Issue #90](https://github.com/Reguluspt/valora-engineering/issues/90) starts only after the architecture ADR is accepted/certified on main. Preserve historical exact-SHA claims and use live CODEX/task/CI for implementation. Six conflict groups were encountered during Issue #89's named reads:
+
+| Group | Files / concept needing later reconciliation | Disposition |
+|---|---|---|
+| 1 | CODEX live-task prose still says A5 resumes; Issue #89 baseline says A5/ASSET_REVIEW certified/closed | Defer product-status reconciliation; no later stage authorized |
+| 2 | ENGINEERING_GUARDRAILS, Unified Roadmap, this index and PROJECT_HANDOFF retain OS-G1/G1.1/OS-G2 not-started/current-baseline prose from earlier reconciliations | Defer status cleanup; dated SHA/CI evidence remains dated, not current certification |
+| 3 | README incomplete Adaptive Intake/mapping UX claims predate G1.1K closure | Defer feature-status reconciliation |
+| 4 | DOCUMENTATION_STATUS_INDEX inventory/count and docs/index active OS-G0 remediation wording reflect 2026-09-24 state | Defer full-tree recount/lifecycle classification |
+| 5 | DESIGN_AUTHORITY_INDEX ADR 0046/0047 rows still describe partial/pending G1.1/F0 and blocked G1.1H | Defer domain-status reconciliation; preserve accepted semantic contracts |
+| 6 | AI Master Plan opening OS-G0 integration/current four-prefix-provider snapshot predates later product slices | Defer stale repository-state prose; OS-G7/provider gates unchanged |
+
+Historical audits/handoffs/sprint/research/exact-SHA evidence were not modified. This log grants no runtime, deployment or repository-wide cleanup authority.

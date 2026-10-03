@@ -104,6 +104,12 @@ Read order: explicit current Product Owner decision (named scope only) → `CODE
 
 Historical roadmap only: S13 Adaptive Intake → S14 Asset Identity Memory → S15 dossiers → S16 AI suggestions → S17 reports → S18 pilot. **Do not execute this sequence as the current roadmap.** Current ordering is OS-G0 → OS-G7 in `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`.
 
+## Deployment/client v1 direction
+
+[ADR 0050](docs/adr/0050-linux-server-windows-native-client.md) records the Product Owner decision: Linux single-node Server with Docker Engine + Compose, HTTPS over LAN and a Windows 11 x64-first WinUI 3/WebView2 Evergreen client hosting server-served React / Microsoft Fluent 2 light. MSIX carries the shell and small typed native bridge; PostgreSQL, domain enforcement, immutable blobs and worker stay on the server. No client backend/database, React rewrite or Docker Desktop production stack.
+
+Server v1 deploys no local LLM/model weights and needs no GPU; core workflow needs no AI provider. Future provider AI remains OS-G7 gated. [Windows Client](docs/plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Linux Server](docs/plan/VALORA_LINUX_SERVER_V1_PLAN.md) plans do not authorize implementation/deployment. Formal Windows Preview/UAT stays after Software Completion; explicitly assigned architecture/skeleton work and Linux Deployment Pilot are distinct gates. Local setup below is developer tooling, not production deployment.
+
 ## Local setup
 
 ```bash

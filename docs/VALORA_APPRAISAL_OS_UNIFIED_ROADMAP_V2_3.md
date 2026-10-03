@@ -436,6 +436,14 @@ AI never compensates for missing domain facts or missing authoritative commands.
 
 **Cross-cutting prerequisite effective now:** every OS-G1→OS-G6 vertical slice must expose durable facts, Case State/Next Action, blocker/warning/stale semantics, evidence/lineage references and authoritative version tokens so later AI does not reverse-engineer UI state.
 
+## 11.1 Deployment/client v1 integration — Issue #89
+
+[ADR 0050](adr/0050-linux-server-windows-native-client.md) records the accepted architecture before formal Preview: Linux single-node Server / Docker Engine + Compose, HTTPS LAN, WinUI 3 + WebView2 Evergreen, server-hosted React/Fluent 2 light, typed allowlisted native bridge and MSIX. Server retains all business/auth/tenant/document/worker authority; Windows and React are presentation/OS integration surfaces. No local LLM/model weights/GPU or AI dependency for core workflow; provider-backed AI stays OS-G7 gated.
+
+This does not reorder OS-G0→OS-G7 or open ASSET_WORKBENCH+. The [Windows Client plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) defines WIN-0 solution/CI → WIN-1 shell → WIN-2 auth/reconnect → WIN-3 bridge → WIN-4 integration → WIN-5 MSIX → WIN-6 formal UAT. Only explicit Product Owner architecture/skeleton tasks may start before Software Completion; plans alone never authorize runtime. WIN-6 / [Windows Preview](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) remains after OS-G0 through OS-G6 Software Completion on an exact accepted SHA and cannot fill missing product runtime.
+
+The [Linux Server plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) separately covers TLS/private networks, secrets, persistent data, migrations/readiness, encrypted backup/restore and operations. Linux Deployment Pilot is a separate explicit owner gate; Windows UAT does not certify server operations or automatically grant cloud staging/production. Existing dated status snapshots above are not live-state certification; broader product-status reconciliation is deferred to Issue #90.
+
 ## 12. Mapping from the Template/Fill technical proposal
 
 | Technical workstream | Unified placement |

@@ -16,6 +16,12 @@
 > OS-G1 authority work is active; G1.1 runtime and OS-G2 are not started. Each runtime slice
 > requires an explicit Product Owner task.
 
+### 2026-10-03 deployment/client authority supplement — Issue #89
+
+[ADR 0050](adr/0050-linux-server-windows-native-client.md) records the accepted Linux Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX decision. Server retains auth/session, tenant/RBAC, domain/audit/CAS, PostgreSQL, immutable document and worker/provider authority. Windows shell and web frontend have no business authority. Server v1 has no local inference/model-weight/GPU dependency and core workflow requires no AI; future provider AI remains OS-G7 gated.
+
+Use the [Windows Client plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md), [Linux Server plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) and [reconciled Preview brief](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md). Architecture/skeleton before Software Completion needs an explicit owner task; formal Windows Preview/UAT remains after Software Completion, and Linux Deployment Pilot is separate. Architecture selection after Preview and Windows/Docker Desktop production direction are superseded. Issue #89 changes docs only; this supplement does not rewrite dated implementation snapshots or authorize runtime/cloud deployment. Other stale current-status claims are recorded for Issue #90 in the documentation status index.
+
 ### Historical 2026-09-23 task gate (superseded above)
 
 ```text
