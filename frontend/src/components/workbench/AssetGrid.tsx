@@ -122,8 +122,14 @@ export function AssetGrid({ rows, authoritativeActiveId, onActiveRowChange, draf
     const index = filteredAndSortedRows.findIndex(r => r.project_asset_line_id === authoritativeActiveId);
     if (index < 0) return;
     const top = index * rowHeight;
-    if (viewport.current) viewport.current.scrollTop = top;
-    setScrollTop(top);
+    const currentTop = viewport.current?.scrollTop ?? scrollTop;
+    const height = viewport.current?.clientHeight || containerHeight;
+    const nextTop = top < currentTop ? top : top + rowHeight > currentTop + height
+      ? top + rowHeight - height : currentTop;
+    if (nextTop !== currentTop) {
+      if (viewport.current) viewport.current.scrollTop = nextTop;
+      setScrollTop(nextTop);
+    }
   }, [authoritativeActiveId, filteredAndSortedRows]);
 
   // 2. Select / Highlight Functions

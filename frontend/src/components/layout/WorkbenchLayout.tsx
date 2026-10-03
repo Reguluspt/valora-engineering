@@ -109,6 +109,7 @@ function WorkbenchLayoutInner({
     retry: retryGrid
   } = useProjectAssetLines(projectId);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
+  const [reviewTargetId, setReviewTargetId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -125,7 +126,10 @@ function WorkbenchLayoutInner({
   const assetReview = useAssetReview({ projectId, sessionId: session?.id,
     sessionBlocked: Boolean(loading || error || rbacError || conflictError),
     rows, gridLoading, gridError: Boolean(gridFriendlyError), hasMore, loadingMore, loadMore,
-    refreshGrid: retryGrid, selectLine: setActiveRowId, actorScope });
+    refreshGrid: retryGrid, selectLine: id => {
+      setActiveRowId(id);
+      setReviewTargetId(id);
+    }, actorScope });
 
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState(false);
@@ -146,6 +150,7 @@ function WorkbenchLayoutInner({
 
   const handleActiveRowChange = (id: string | null) => {
     setActiveRowId(id);
+    setReviewTargetId(null);
     if (id) {
       setDrawerOpen(true);
       syncSelection("ProjectAssetLine", [id]);
@@ -307,7 +312,7 @@ function WorkbenchLayoutInner({
               <>
                 <AssetGrid
                   rows={rows}
-                  authoritativeActiveId={activeRowId}
+                  authoritativeActiveId={reviewTargetId}
                   onActiveRowChange={handleActiveRowChange}
                   drafts={drafts}
                   onDraftChange={handleDraftChange}
