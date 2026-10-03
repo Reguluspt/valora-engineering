@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — PR-01 Case State Provider Implementation Contract
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** C2 multiplicity/one-row selection, the four-slot envelope, fixtures and the September 27 future-G1.1 note below record historical PR-01 v1. [ADR 0046](../adr/0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) / [0047](../adr/0047-authoritative-column-mapping-selection-and-recovery.md) successors now implement explicit current batch/mapping pointers and highest-valid-lineage immutable Analysis/Result versions; valid historical rows alone are not ambiguity, while actual corrupt/duplicate current claims still fail closed. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) / [0049](../adr/0049-asset-line-human-review-and-validation-authority.md) A2/A4/A5 extend certified provider scope through ASSET_REVIEW with the v3 line-decision token. Full OS-G2 remains PARTIAL / INCOMPLETE. Case completion is fact-derived, `current_stage` is capped at ASSET_REVIEW, and ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED. Completion supplies NO_AUTHORIZED_DOWNSTREAM_ACTION unless a higher-priority authorized blocker applies; membership mutation and broader RBAC remain closed.
+
+**Historical PR-01 v1 implementation record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** PROVIDER SLICE TECHNICALLY ACCEPTED — subsequently wired by VALORA-PR01-IMPL-004
 **Task:** PR-01 — Case State Projection Foundation (Slice 3: Providers & Aggregator)
 **Date:** 2026-09-04

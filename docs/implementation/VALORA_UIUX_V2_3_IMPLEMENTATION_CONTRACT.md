@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — Lightweight Implementation Contract — Historical PR-00 Ratchet
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The legacy inventory below records PR-00 at its own checkpoint. F2-PR-001 removed the global `/workbench/queue` Review Queue and `/workbench/validation` standalone Validation Dashboard production routes; F2-PR-005 remediated Workbench asset context/drawer IA. OS-G0 / PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS) certified that closeout. The retired routes must not return. Backend legacy debt and all still-enforced semantic/security ratchets remain binding; no backend cleanup or domain reinterpretation is authorized.
+
+**Historical PR-00 inventory and implementation record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Task:** PR-00 — Authority Alignment Guard
 
 **Status:** HISTORICAL PR-00 RATCHET — STILL ENFORCED WHERE NOT SUPERSEDED

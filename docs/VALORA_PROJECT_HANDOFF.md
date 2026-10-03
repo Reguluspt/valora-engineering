@@ -1,5 +1,13 @@
 # Valora Project Handoff — Implementation Baseline Supplement
 
+### Current onboarding disposition — 2026-10-03 (DOC-R4)
+
+This handoff is a historical/supplementary record. Use [CODEX](../CODEX.md), the [current Unified Roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) and [authority navigation](design/VALORA_DESIGN_AUTHORITY_INDEX.md), then run live authority bootstrap for the assigned task. Static SHAs and the September 27 unstarted statement below retain their dated historical meaning. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (exact-main CI #555 SUCCESS; run 37094036324) CERTIFIED/CLOSED the bounded ASSET_REVIEW product UX/E2E; Issue #81 is CLOSED. Full OS-G2 remains PARTIAL / INCOMPLETE. Case completion is fact-derived, `current_stage` is capped at ASSET_REVIEW, and ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED. Completion supplies NO_AUTHORIZED_DOWNSTREAM_ACTION unless a higher-priority authorized blocker applies; membership mutation and broader RBAC remain closed.
+
+Current mutation guidance: [ADR 0028](adr/0028-official-mutation-command-and-atomic-audit-gate.md) value edits use `CommitProjectAssetLineDraft` (draft → explicit human confirmation → command). [ADR 0049](adr/0049-asset-line-human-review-and-validation-authority.md) separates human-confirmed, server-derived `ValidateProjectAssetLine` from explicit human `DecideProjectAssetLineReview`. Direct PATCH of all four restricted fields stays blocked; tenant/RBAC/session/DRAFT/version/CAS/atomic audit and proof/replay rules remain binding. This navigation does not rewrite the historical `commit_asset_line_draft` wording below or authorize future runtime.
+
+**Preserved historical handoff and earlier supplements follow.**
+
 **Status:** Historical implementation context; UI/UX sequencing is governed by v2.3 authority
 **Reconciled:** 2026-09-27 — PR #32 merged by squash; OS-G0 complete on main. ADR 0045 remains current document-change direction; AI architecture detail is `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`
 **Accepted merged code baseline:** `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS); **historical integration source head:** `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`

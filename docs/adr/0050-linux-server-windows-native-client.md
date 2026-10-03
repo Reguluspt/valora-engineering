@@ -1,5 +1,11 @@
 # ADR 0050 — Linux Server + Windows Native Client v1
 
+**Current certification status — 2026-10-03:** ACCEPTED + REPOSITORY CERTIFIED via PR #91, merge `e2e03f3a91e21e366af72e35beeeab73ed18cfdb`, exact-main [CI #559 / run 37111129209 SUCCESS](https://github.com/Reguluspt/valora-engineering/actions/runs/37111129209). Issue #89 is CLOSED/CERTIFIED.
+
+This certifies architecture documentation only: Linux Server + WinUI 3/WebView2 + server-hosted React/Fluent 2 light and typed allowlisted native bridge. Server v1 has no local LLM, model weights or GPU dependency; core workflow is independent of AI provider availability. D1–D10 and all implementation/deployment/Software Completion gates below remain unchanged.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** ACCEPTED PRODUCT OWNER ARCHITECTURE DECISION — Issue #89; repository certification pending
 **Date:** 2026-10-03
 **Task:** `VALORA-TASK-ARCH-WINDOWS-CLIENT-SERVER-001`

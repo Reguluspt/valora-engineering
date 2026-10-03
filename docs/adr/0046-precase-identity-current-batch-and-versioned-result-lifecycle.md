@@ -1,5 +1,9 @@
 # ADR 0046 — Pre-case Identity, Current Import Batch, and Versioned Preliminary Result Lifecycle
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** ACCEPTED; implemented in the certified bounded Pre-case scope (optional Customer snapshots, explicit current batch, immutable versioned Analysis/Result and first Official Intake). OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. The original D1–D3, migration proposal and September 27 v1/future-target descriptions remain intact. This status does not claim every future extension or terminal-disposition command is implemented; each new slice still requires separate authority.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** Accepted design authority (Product Owner decisions D1–D3); G1.1 runtime not started
 **Date:** 2026-09-27
 **Scope:** OS-G1 Pre-case through the first Official Intake commit

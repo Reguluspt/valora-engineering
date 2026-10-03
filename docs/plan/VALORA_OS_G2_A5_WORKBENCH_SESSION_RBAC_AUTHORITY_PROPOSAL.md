@@ -1,5 +1,9 @@
 # OS-G2 A5R — Workbench Session Open RBAC Authority Proposal
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The original proposal/grant-pending statement and baseline graph are historical. A5R2 / PR #85 at `7c52a41a84b21b63182429d5c5740e76783ea4e6` (exact-main CI #552 SUCCESS) CERTIFIED the data-only existing `workbench:open` grant to standard `owner` and `appraiser` only, migration `b5c6d7e8f9a0`. A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (exact-main CI #555 SUCCESS; run 37094036324) CERTIFIED/CLOSED the bounded ASSET_REVIEW product UX/E2E; Issue #81 is CLOSED. No new permission, broader role grant, membership mutation or ASSET_WORKBENCH+ authority is created. The accepted D1 policy, provenance and downgrade requirements are unchanged.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status: ACCEPTED PRODUCT OWNER AUTHORITY — 2026-10-02**
 **Task:** Issue #82 — VALORA-TASK-OS-G2-A5R-WORKBENCH-SESSION-OPEN-RBAC-AUTHORITY
 **Date:** 2026-10-02

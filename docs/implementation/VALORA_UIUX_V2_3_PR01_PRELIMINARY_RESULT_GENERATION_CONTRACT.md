@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — PR-01 PreliminaryResultArtifact Generation Contract
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The original v1 schema, envelopes/fixtures, uniqueness and September 27 future-successor statements below remain historical evidence. [ADR 0046](../adr/0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) was subsequently implemented through G1.1D: immutable versioned Result generation before Intake and highest valid Result matching the selected current Analysis, retaining nullable historical Customer snapshot lineage. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. No old v1 behavior is silently rewritten; accepted current command/version/idempotency/atomic-audit rules govern the certified successor, and no new runtime is opened.
+
+**Historical PR-01 v1 implementation record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** IMPLEMENTED HISTORICAL SLICE — generation fact later consumed by accepted Case State providers
 **Scope:** Atomic generation of one immutable `PreliminaryResultArtifact` per project from a v2 `PreliminaryAnalysisSnapshot`. Includes authorization, lineage verification, deterministic XLSX transformation, object storage, idempotency and audit. Does not include HTTP endpoints, projection providers, case-state/current_stage publication, frontend or deployment.
 **Authority:** ADR 0038 D1–D10, ADR 0037/OFFICIAL_INTAKE commit pattern, Case State Projection Contract §5.

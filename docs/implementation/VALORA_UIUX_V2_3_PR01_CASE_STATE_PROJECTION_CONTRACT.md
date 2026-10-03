@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — PR-01 Case State Projection Contract
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The original provider gate table is PR-01 historical foundation evidence; its ASSET_REVIEW UNMAPPED row is not current availability. [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) / [0049](../adr/0049-asset-line-human-review-and-validation-authority.md) and the [Case State](VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) / [Line Decision](VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md) successors were implemented by A2/A4 and product-certified by A5 / PR #86 / CI #555. Provider coverage reaches the first five stages; original v1 tables/enums/fixtures are retained as dated evidence. Full OS-G2 remains PARTIAL / INCOMPLETE. Case completion is fact-derived, `current_stage` is capped at ASSET_REVIEW, and ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED. Completion supplies NO_AUTHORIZED_DOWNSTREAM_ACTION unless a higher-priority authorized blocker applies; membership mutation and broader RBAC remain closed.
+
+**Historical PR-01 v1 foundation record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** OWNER CLOSEOUT COMPLETE LOCALLY — bounded provider slice and read endpoint
 **Task:** PR-01 — Case State Projection Foundation
 **Date:** 2026-09-01

@@ -1,5 +1,8 @@
 # Valora OpenViking Operating Profile v1
 
+**Lifecycle/status:** CURRENT DEVELOPER TOOLING / OPERATING PROCESS — 2026-10-03.
+**Authority role:** Developer task preparation/execution support only; not product, domain, runtime or deployment authority. Live CODEX, permanent guardrails, accepted scoped authority and the assigned task govern. No product/runtime dependency or new permission is created. OpenViking remains optional NON-AUTHORITATIVE developer tooling; it never certifies current repository/task state.
+
 OpenViking is NOT part of Valora product runtime. It supports Codex Desktop development as optional memory, retrieval and development skill storage. It is never a backend, frontend, production-service, customer-data, Case State, Workbench or product-knowledge dependency.
 
 ## Authority and invariants

@@ -1,5 +1,8 @@
 # VALORA Compact Task Contract
 
+**Lifecycle/status:** CURRENT DEVELOPER TOOLING / OPERATING PROCESS — 2026-10-03.
+**Authority role:** Developer task preparation/execution support only; not product, domain, runtime or deployment authority. Live CODEX, permanent guardrails, accepted scoped authority and the assigned task govern. No product/runtime dependency or new permission is created.
+
 ## TASK ID
 `<ID>`
 

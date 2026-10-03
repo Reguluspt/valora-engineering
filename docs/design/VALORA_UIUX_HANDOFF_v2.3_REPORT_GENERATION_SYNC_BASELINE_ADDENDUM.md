@@ -135,7 +135,7 @@ Baseline này **không thay thế**:
 
 - `Managed Regions — Báo cáo thẩm định giá — Iteration 1`;
 - `Đồng bộ dữ liệu & Quản lý phiên bản tài liệu — Iteration 1`;
-- `Phát hành bộ tài liệu — Iteration 1`.
+- Historical reference only: [Phát hành bộ tài liệu — Iteration 1](VALORA_UIUX_HANDOFF_v2.3_DOCUMENT_PUBLISH_BASELINE_ADDENDUM.md#0-supersession--2026-09-21), whose publish board is superseded. Current simplified Publishing navigation is [Release Preparation](VALORA_UIUX_HANDOFF_v2.3_RELEASE_PREPARATION_BASELINE_ADDENDUM.md) → [Exception Review](VALORA_UIUX_HANDOFF_v2.3_RELEASE_EXCEPTION_REVIEW_BASELINE_ADDENDUM.md) → [Release Confirmation](VALORA_UIUX_HANDOFF_v2.3_RELEASE_CONFIRMATION_BASELINE_ADDENDUM.md) → [Post-Publish Success](VALORA_UIUX_HANDOFF_v2.3_POST_PUBLISH_SUCCESS_BASELINE_ADDENDUM.md). Explicit commit binds exact accepted revisions to immutable ReleaseManifest; no old board or standalone lock step is restored.
 
 Nó khóa child flow trước và trong quá trình sinh revision, sau đó nối vào các authority trên. Không tạo lifecycle song song.
 

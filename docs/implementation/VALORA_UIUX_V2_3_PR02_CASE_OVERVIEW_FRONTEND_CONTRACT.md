@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — PR-02 Case Overview Frontend Contract
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The September 21 active-dark/Astryx warning below describes then-current visual debt. F2-PR-004 remediated Case Overview / Project List to Fluent 2 light, and OS-G0 / PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS) certified the merged closeout. Functional Case State semantics remain binding; the original historical browser-tool limitation is preserved and does not certify a later SHA. Astryx/dark styling is not current product visual authority.
+
+**Historical PR-02 visual amendment and acceptance record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** MERGED FUNCTIONAL FOUNDATION — CURRENT FLUENT 2 LIGHT VISUAL CONFORMANCE REQUIRED
 **Task:** `VALORA-PR02-IMPL-001` — Case State Frontend Hub Wiring
 **Date:** 2026-09-05

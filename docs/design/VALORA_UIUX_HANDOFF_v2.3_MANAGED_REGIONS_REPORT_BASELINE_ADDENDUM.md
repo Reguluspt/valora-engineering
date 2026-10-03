@@ -71,8 +71,10 @@ Comparison panel đặt cạnh nhau:
 ```text
 Dữ liệu từ VALORA (Data Snapshot)
 ↔
-Dữ liệu đang có trong Word (Document Revision)
+Dữ liệu đang có trong Word (Working observation W)
 ```
+
+`W` là quan sát nội dung Word Working hiện tại, không phải accepted `DocumentRevision`. Theo [Working Change Observation §§2–3](VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md#2-canonical-meaning-của-document-revision), revision được chấp nhận là immutable và app-owned; chỉ explicit human-confirmed revision command mới tạo revision mới. Word Save/revalidation/candidate không tự tạo revision.
 
 Các giá trị khác nhau phải được nhấn mạnh trực quan. UI giải thích bằng ngôn ngữ đơn giản rằng dữ liệu khác biệt sẽ được cập nhật vào Word khi người dùng đồng bộ.
 

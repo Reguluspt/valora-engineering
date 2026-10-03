@@ -1,5 +1,9 @@
 # ADR 0037 — Durable Official Intake Commit
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** Accepted foundation; the historical local PR-01a closeout below remains intact. The [ADR 0046](0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) Official Intake successor was implemented/exposed through G1.1E and certified with the bounded Pre-case journey. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. Explicit ACTIVE same-tenant Customer binding, one immutable current Result on the same Project, atomic audit and true replay remain binding; historical NULL Customer snapshots are retained. The September 27 future-design note below is historical, not a current implementation gap.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** Accepted — PR-01a authority closeout complete locally
 **Date:** 2026-09-01
 **Context:** VALORA UI/UX v2.3 PR-01 official-intake design slice
