@@ -17,3 +17,7 @@ Local credentials are placeholders for developer machines only. Copy
 Sprint 0 does not define production Kubernetes/Terraform.
 
 Those can be added after baseline engineering decisions.
+
+## Linux Server foundation
+
+Issue #101's [SRV-0 release foundation](server/README.md) provides separate Compose, TLS/private-network, release-manifest and validation contracts under ADR 0050. It is not a production deployment or pilot authorization; use neither this development stack nor its credentials as production configuration.

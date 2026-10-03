@@ -1,0 +1,13 @@
+.git
+**/.git
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/secrets
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+private-*
+local-artifacts
