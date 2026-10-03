@@ -1,0 +1,37 @@
+# ADR 0050: only HTTPS ingress; certificate provisioning remains an operator gate.
+server {
+    listen 443 ssl default_server;
+    ssl_reject_handshake on;
+    server_name _;
+    return 421;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${VALORA_HOSTNAME};
+    ssl_certificate /run/secrets/tls_certificate;
+    ssl_certificate_key /run/secrets/tls_private_key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    access_log off;
+    error_log /dev/stderr crit;
+    client_max_body_size 0;
+
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location = /health { return 404; }
+    location = /docs { return 404; }
+    location = /redoc { return 404; }
+    location = /openapi.json { return 404; }
+
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
