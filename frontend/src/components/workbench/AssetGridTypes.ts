@@ -40,8 +40,8 @@ export interface AssetLineGridRow {
   supplier_quote_3: number | null;
   appraised_price: number | null;
   currency: Currency | null;
-  validation_status: "valid" | "warning" | "error" | "blocking";
-  review_status: "raw" | "parsed" | "identity_suggested" | "identity_approved" | "taxonomy_approved" | "knowledge_matched" | "price_reviewed" | "approved" | "locked" | "excluded";
+  validation_status: string;
+  review_status: string;
   row_version: number | null;
 }
 

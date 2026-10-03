@@ -96,6 +96,7 @@ export function AuthenticatedApp() {
       return (
         <WorkbenchLayout
           projectRef={projectRoute.projectRef}
+          actorScope={account ? `${account.organization_id}:${account.id}` : undefined}
           onNavigateOverview={() => handleNavigate(projectOverviewPath(projectRoute.projectRef))}
         />
       );

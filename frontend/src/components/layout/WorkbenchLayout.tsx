@@ -8,6 +8,8 @@ import { useProjectAssetLines } from "../workbench/hooks/useProjectAssetLines";
 import { useAssetLineContext } from "../workbench/hooks/useAssetLineContext";
 import { useWorkbenchDraftState } from "../workbench/hooks/useWorkbenchDraftState";
 import { commitAssetLineDraft } from "../../api/projects";
+import { useAssetReview } from "../workbench/asset-review/useAssetReview";
+import { AssetReviewRegion } from "../workbench/asset-review/AssetReviewRegion";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -28,9 +30,10 @@ interface WorkbenchLayoutProps {
   projectRef: string | null;
   onNavigateOverview?: () => void;
   children?: React.ReactNode;
+  actorScope?: string;
 }
 
-export function WorkbenchLayout({ projectRef, onNavigateOverview, children }: WorkbenchLayoutProps) {
+export function WorkbenchLayout({ projectRef, onNavigateOverview, children, actorScope }: WorkbenchLayoutProps) {
   const { projectId, displayName, state, error: resolveError, retry: retryResolve } = useResolvedProject(projectRef);
 
   if (state === "idle" && !projectRef) {
@@ -76,6 +79,7 @@ export function WorkbenchLayout({ projectRef, onNavigateOverview, children }: Wo
       displayName={displayName || "Hồ sơ"}
       onNavigateOverview={onNavigateOverview}
       children={children}
+      actorScope={actorScope}
     />
   );
 }
@@ -84,12 +88,14 @@ function WorkbenchLayoutInner({
   projectId,
   displayName,
   onNavigateOverview,
-  children
+  children,
+  actorScope
 }: {
   projectId: string;
   displayName: string;
   onNavigateOverview?: () => void;
   children?: React.ReactNode;
+  actorScope?: string;
 }) {
   const {
     rows,
@@ -97,11 +103,13 @@ function WorkbenchLayoutInner({
     friendlyError: gridFriendlyError,
     loadMore,
     hasMore,
+    loadingMore,
     loadedCount,
     totalCount,
     retry: retryGrid
   } = useProjectAssetLines(projectId);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
+  const [reviewTargetId, setReviewTargetId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -114,6 +122,14 @@ function WorkbenchLayoutInner({
     lastHeartbeat,
     retry
   } = useWorkbenchSession(projectId);
+
+  const assetReview = useAssetReview({ projectId, sessionId: session?.id,
+    sessionBlocked: Boolean(loading || error || rbacError || conflictError),
+    rows, gridLoading, gridError: Boolean(gridFriendlyError), hasMore, loadingMore, loadMore,
+    refreshGrid: retryGrid, selectLine: id => {
+      setActiveRowId(id);
+      setReviewTargetId(id);
+    }, actorScope });
 
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState(false);
@@ -134,6 +150,7 @@ function WorkbenchLayoutInner({
 
   const handleActiveRowChange = (id: string | null) => {
     setActiveRowId(id);
+    setReviewTargetId(null);
     if (id) {
       setDrawerOpen(true);
       syncSelection("ProjectAssetLine", [id]);
@@ -167,7 +184,7 @@ function WorkbenchLayoutInner({
         confirm: true,
         version_token: versionToken
       });
-      retryGrid();
+      void assetReview.refresh();
       reloadDrafts();
     } catch (err: any) {
       alert("Không thể áp dụng nháp\n" + (err.message || ""));
@@ -273,6 +290,8 @@ function WorkbenchLayoutInner({
         </span>
       </div>
 
+      <AssetReviewRegion review={assetReview} />
+
       <div className="workbench-body">
         <div className="workbench-grid-pane">
           {children || (
@@ -293,6 +312,7 @@ function WorkbenchLayoutInner({
               <>
                 <AssetGrid
                   rows={rows}
+                  authoritativeActiveId={reviewTargetId}
                   onActiveRowChange={handleActiveRowChange}
                   drafts={drafts}
                   onDraftChange={handleDraftChange}
