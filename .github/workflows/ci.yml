@@ -7,6 +7,7 @@ on:
       - main
       - "s12-*"
       - "s13-*"
+      - "codex/win-0-windows-client-foundation"
 
 jobs:
   committed-whitespace:
