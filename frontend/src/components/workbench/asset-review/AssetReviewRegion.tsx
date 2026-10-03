@@ -16,13 +16,17 @@ export function AssetReviewRegion({ review }: { review: ReturnType<typeof useAss
     caseVersion: string; lineId: string } | null>(null);
   const [reason, setReason] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const close = () => { setConfirmation(null); setReason(""); };
   useEffect(() => {
     if (!confirmation) trigger.current?.focus();
   }, [confirmation]);
   useEffect(() => {
-    if (confirmation && dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
+    if (confirmation && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+      titleRef.current?.focus();
+    }
   }, [confirmation]);
   useEffect(() => {
     if (confirmation && (confirmation.caseVersion !== review.projection?.case_version ||
@@ -77,13 +81,15 @@ export function AssetReviewRegion({ review }: { review: ReturnType<typeof useAss
       {review.busy && <span role="status">Đang ghi nhận / kiểm tra kết quả…</span>}
     </div>
     {confirmation && <dialog ref={dialogRef} className="asset-review-dialog" aria-labelledby="asset-review-confirm-title"
+      aria-describedby="asset-review-confirm-details"
       onCancel={event => { event.preventDefault(); close(); }}>
-      <h2 id="asset-review-confirm-title">Xác nhận {LABELS[confirmation.decision].toLowerCase()}</h2>
-      <p>Dòng {review.row?.line_no}: {review.row?.raw_name}</p>
-      <p>{confirmation.decision === "validate" ? "Hệ thống kiểm tra dữ liệu chính thức và ghi một kết quả kiểm tra mới. Kết quả không tự chấp nhận tài sản."
+      <h2 id="asset-review-confirm-title" ref={titleRef} tabIndex={-1}>
+        Xác nhận {LABELS[confirmation.decision].toLowerCase()} · Dòng {review.row?.line_no}: {review.row?.raw_name}
+      </h2>
+      <p id="asset-review-confirm-details">{confirmation.decision === "validate" ? "Hệ thống kiểm tra dữ liệu chính thức và ghi một kết quả kiểm tra mới. Kết quả không tự chấp nhận tài sản."
         : "Quyết định này được ghi nhận vào dữ liệu chính thức và lịch sử rà soát."}</p>
       {confirmation.decision !== "validate" && <label>Lý do {required ? "(bắt buộc)" : "(không bắt buộc)"}
-        <textarea autoFocus value={reason} onChange={e => setReason(e.target.value)} />
+        <textarea value={reason} onChange={e => setReason(e.target.value)} />
         <small>{reasonLength}/2000 ký tự</small>
       </label>}
       <div className="asset-review-actions">
