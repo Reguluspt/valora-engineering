@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-09-27
+**Last reconciled:** 2026-10-03 (DOC-R1+DOC-R2 current-state reconciliation)
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (dated evidence, 2026-09-27):** PR #32 closed OS-G0 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS); G1.0 closed by merged PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. ADR 0046 is accepted G1.1 design authority; G1.1 runtime and OS-G2 remain not started. Verify live main before implementation.
@@ -72,12 +72,13 @@ Conflict resolution / role split:
 
 ### Merged main
 
-`origin/main` accepted merged baseline is currently
-`51eab8648005186197d2fbb37a19bde4332aeaa5`, with exact-head CI #485 SUCCESS.
+Run `valora-live-authority-bootstrap`: fetch `origin/main`, verify its live HEAD/CODEX, the assigned task and successful CI on the exact claimed SHA. Dated milestones below are not evergreen current-main certification.
 
-### Merged OS-G0 / PR #32 baseline
+Current certified product disposition (2026-10-03): OS-G0 COMPLETE; OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81` (CI #527 SUCCESS); OS-G2 PARTIAL / certified through ASSET_REVIEW by A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (CI #555 SUCCESS). Full OS-G2 remains INCOMPLETE. ASSET_WORKBENCH and later stages remain NOT_AVAILABLE / not opened; no runtime authorization is granted by this reconciliation.
 
-PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the merged-main OS-G0 result was `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main. G1.0 is also merged by PR #51; ADR 0046 governs the active G1.1 authority work. G1.1 runtime still requires an explicit Product Owner implementation task.
+### Historical OS-G0 / PR #32 milestone (2026-09-27)
+
+Dated snapshot (2026-09-27), superseded for current execution state by the certified disposition above: PR #32 is merged/closed by squash. Its source integration head was `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; the merged-main OS-G0 result was `51eab8648005186197d2fbb37a19bde4332aeaa5`. F2-PR-001 through F2-PR-008 are closed on main. G1.0 is also merged by PR #51; ADR 0046 governs the active G1.1 authority work. G1.1 runtime still requires an explicit Product Owner implementation task.
 
 Contains:
 - Operational Frontend merged through PR #32;
@@ -258,7 +259,7 @@ A model/table/API alone is not product completion.
 
 ### OS-G0 — Authority, visual-system & branch reconciliation
 
-**Current disposition (2026-09-27):** F2-PR-001…008 and the Fluent 2 engineering closeout are merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is closed. G1.0 is merged by PR #51 with exact-main CI #491 SUCCESS. ADR 0046 accepts the G1.1 design target; G1.1 runtime remains not started and requires an explicit Product Owner implementation task.
+**Historical milestone (2026-09-27):** F2-PR-001…008 and the Fluent 2 engineering closeout are merged to `main` by squash PR #32 at `51eab8648005186197d2fbb37a19bde4332aeaa5`; exact-head CI #485 SUCCESS. OS-G0 is closed. G1.0 is merged by PR #51 with exact-main CI #491 SUCCESS. ADR 0046 accepts the G1.1 design target; G1.1 runtime remains not started and requires an explicit Product Owner implementation task.
 
 Execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`.
 Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md`.
@@ -278,10 +279,7 @@ Code inventory: `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTO
 
 ### OS-G1 — Pre-case Product Closure
 
-G1.0's exact-current-result integrity gate is merged. ADR 0046 governs the next identity,
-current-batch and versioned-result lifecycle design. It preserves the same Project through
-Official Intake, permits an unbound Pre-case, and requires explicit Customer binding before
-the first commit. G1.1 runtime is not started; the ADR alone does not implement this journey.
+**Current disposition:** COMPLETE / CERTIFIED/CLOSED through G1.1K / PR #68 (CI #527 SUCCESS). G1.0 was the earlier exact-current-result milestone; subsequent bounded implementation certified the ADR 0046/0047 identity, current-batch, mapping and versioned-analysis/result journey. It preserves the same Project through Official Intake, permits an unbound Pre-case and requires explicit real Customer binding before the first commit. ADR acceptance alone never authorizes a new runtime task.
 
 ```text
 Trang chủ
@@ -295,11 +293,13 @@ Trang chủ
 → Tổng quan hồ sơ
 ```
 
-Close facts → APIs → UI → Case State → Next Action → lineage → browser acceptance.
+Certified closure covers facts → APIs → UI → Case State → Next Action → lineage → browser acceptance for this bounded Pre-case journey.
 
 ### OS-G2 — Appraisal Core
 
-Close vertically:
+**Current disposition:** PARTIAL. ASSET_REVIEW product closure is CERTIFIED/CLOSED through A5 / PR #86 (CI #555 SUCCESS); full OS-G2 remains INCOMPLETE. Provider coverage reaches the first five canonical stages, with `current_stage` capped at ASSET_REVIEW and no authorized downstream action after completion. ASSET_WORKBENCH and later runtime remain not opened / UNAUTHORIZED / NOT_AVAILABLE pending separate accepted authority and implementation tasks.
+
+Retained vertical order below is roadmap direction, not authorization to start the next stage:
 
 ```text
 ASSET_REVIEW
