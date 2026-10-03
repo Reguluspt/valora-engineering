@@ -83,7 +83,7 @@ export function AssetReviewRegion({ review }: { review: ReturnType<typeof useAss
       <p>{confirmation.decision === "validate" ? "Hệ thống kiểm tra dữ liệu chính thức và ghi một kết quả kiểm tra mới. Kết quả không tự chấp nhận tài sản."
         : "Quyết định này được ghi nhận vào dữ liệu chính thức và lịch sử rà soát."}</p>
       {confirmation.decision !== "validate" && <label>Lý do {required ? "(bắt buộc)" : "(không bắt buộc)"}
-        <textarea autoFocus value={reason} onChange={e => setReason(e.target.value)} aria-label="Lý do quyết định" />
+        <textarea autoFocus value={reason} onChange={e => setReason(e.target.value)} />
         <small>{reasonLength}/2000 ký tự</small>
       </label>}
       <div className="asset-review-actions">
