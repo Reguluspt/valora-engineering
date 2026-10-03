@@ -1,5 +1,11 @@
 # ADR 0036 — Computed Global Case State Projection
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** Accepted architecture; approved provider coverage is implemented/certified for the first five stages through ASSET_REVIEW. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (exact-main CI #555 SUCCESS; run 37094036324) CERTIFIED/CLOSED the bounded ASSET_REVIEW product UX/E2E; Issue #81 is CLOSED.
+
+[ADR 0046](0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) / [0047](0047-authoritative-column-mapping-selection-and-recovery.md) refine current Pre-case facts; [ADR 0048](0048-post-intake-guarded-apply-and-asset-review-authority.md) / [0049](0049-asset-line-human-review-and-validation-authority.md) govern the implemented Asset Review successor. Later predicates/providers retain their fail-closed gates; compute-on-read and snapshot consistency are unchanged. Full OS-G2 remains PARTIAL / INCOMPLETE. Case completion is fact-derived, `current_stage` is capped at ASSET_REVIEW, and ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED. Completion supplies NO_AUTHORIZED_DOWNSTREAM_ACTION unless a higher-priority authorized blocker applies; membership mutation and broader RBAC remain closed.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** Accepted for architecture; fact-mapping gate remains open
 **Date:** 2026-09-01
 **Context:** VALORA UI/UX v2.3 PR-01 — Case State Projection Foundation

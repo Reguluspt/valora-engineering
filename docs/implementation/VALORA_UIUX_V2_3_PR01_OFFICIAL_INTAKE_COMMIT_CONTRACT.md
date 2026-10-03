@@ -1,5 +1,9 @@
 # VALORA UI/UX v2.3 — PR-01 Official Intake Commit Contract
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** The original v1 schema, envelopes/fixtures, uniqueness and September 27 future-successor statements below remain historical evidence. [ADR 0046](../adr/0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) was subsequently implemented through G1.1E: Official Intake HTTP/command exposure on the same Project with explicit real ACTIVE Customer binding and the exact current Result; NULL historical Result Customer snapshots remain valid. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. No old v1 behavior is silently rewritten; accepted current command/version/idempotency/atomic-audit rules govern the certified successor, and no new runtime is opened.
+
+**Historical PR-01 v1 implementation record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** AUTHORITY ACCEPTED AND RUNTIME FOUNDATION IMPLEMENTED LOCALLY — HTTP not authorized
 **Task:** PR-01a — Durable Official Intake Fact/Command
 **Date:** 2026-09-01

@@ -1,5 +1,9 @@
 # ADR 0047 — Authoritative Column Mapping Selection and Recovery
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** ACCEPTED; F0 / PR #62 at `1f85e3d547c188d23424ec2e9cc7aa53cf92efc7` (CI #514 SUCCESS) certified mapping selection persistence, CAS-protected commands and recovery GET. G1.1H / PR #63 at `ccf857a95365251f305132178aa0010182b3df0e` (CI #516 SUCCESS) certified bounded Intake & Mapping UX. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. The original F0-pending/H-blocked statements below are historical; selection/CAS/legacy-recovery and D1–D7 remain unchanged. No AI mapping confirmation is authorized.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** Accepted by Product Owner on 2026-09-29; runtime implementation in F0 candidate pending merge
 **Date:** 2026-09-29
 **Task:** `VALORA-TASK-OS-G1-1H-PRECASE-MAPPING-AUTHORITY-ADR`

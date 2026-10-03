@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-09-29 (ADR 0047 accepted; F0 mapping authority runtime candidate pending merge)
+**Reconciled:** 2026-10-03 (DOC-R3 scoped successor/certified implementation disposition)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 **Documentation lifecycle:** `docs/DOCUMENTATION_STATUS_INDEX.md`.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
@@ -40,7 +40,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | Design Book v1.2-final | Core domain architecture, canonical assets, evidence/knowledge, workflow and document boundaries | Extended, not replaced, by v1.3/v1.4 |
 | Design Book v1.3 | Historical MVP/domain/provider/AI foundation | **Astryx visual-system authority is superseded by UI/UX Handoff v2.3 Microsoft Fluent 2 light**; roadmap sequencing is superseded by the Unified Roadmap v2.3 |
 | Design Book v1.4 | Adaptive workbook intake, Column Mapping Memory, Asset Identity Memory, historical dossier bootstrap, row alignment and feedback | Does **not** silently change S12 Apply v1 |
-| Excel staging contract §15 / ADR 0029 | S12 Apply command and `s12-pr-004-v1` semantics (implemented/merged) | A future Apply change requires a new version and ADR |
+| Excel staging contract §15 / ADR 0029 | Frozen historical S12 Apply command and `s12-pr-004-v1` foundation (implemented/merged) | [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) / A2 implemented guarded Apply v2 on the same command; no naked v1 bypass after activation |
 | ADR 0014 | Historical deterministic candidate-generation rationale | Automated batch approval wording is superseded by **ADR 0031** |
 | ADR 0030 | Column Mapping Memory and Adaptive Workbook Intake | Historical implementation foundation; current product placement is under `OS-G1` Pre-case/intake slices where required, not an S13 sequencing gate |
 | ADR 0031 | Asset Identity Memory and human-confirmed feedback | Historical implementation foundation; current product placement is under `OS-G2` Asset Review/Workbench where required, not an S14 sequencing gate |
@@ -51,8 +51,10 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0037 | Durable Official Intake commit | Accepted foundation; the durable official-intake fact and command feed the implemented PR-01 provider |
 | ADR 0038 | Current-source preliminary prefix predicates and immutable analysis/result facts | ADR 0046 defines explicit batch selection and highest-valid-version currentness for G1.1; G1.1C/D now implement highest-valid-version analysis/result selection |
 | ADR 0045 | Working-copy change observation and human-confirmed document revision | Automatic notification/delta/revalidation may create Change Candidates and recommendations; authoritative business mutation and Revision N+1 require explicit human-confirmed commit. Supersedes ADR 0044 only for immediate DOCX Working re-import promotion semantics. |
-| ADR 0046 | Optional Pre-case Customer, explicit current batch, immutable versioned analysis/result lifecycle | Accepted design only; ratchets ADR 0030/0037/0038 in named scope; G1.1A–G1.1G merged, remaining lifecycle runtime gated |
-| ADR 0047 | Explicit, versioned current Column Mapping selection and recovery for Pre-case | Accepted by Product Owner on 2026-09-29. F0 runtime implementation and public recovery GET are in a candidate PR pending merge and exact-main CI; G1.1H UI remains blocked. |
+| ADR 0046 | Optional Pre-case Customer, explicit current batch, immutable versioned analysis/result lifecycle | Accepted scoped successor to ADR 0030/0037/0038; bounded lifecycle implemented and OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 / CI #527. Unimplemented extensions still need separate tasks |
+| ADR 0047 | Explicit, versioned current Column Mapping selection and recovery for Pre-case | Accepted 2026-09-29; F0 / PR #62 / CI #514 and G1.1H / PR #63 / CI #516 MERGED/CERTIFIED; bounded journey closed with G1.1K / PR #68 / CI #527 |
+| [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) | Post-Intake guarded Apply v2, sealed initial set and Asset Review Case State | A2 / PR #76 / CI #538 implemented; [Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) retains full-set/fail-closed predicates; later membership/stages remain gated |
+| [ADR 0049](../adr/0049-asset-line-human-review-and-validation-authority.md) | Dedicated server validation and explicit human line review, separate from ADR 0028 value drafts | A4 / PR #80 / CI #545 implemented; [Line Decision Contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md) governs proof/negative-hold/CAS/audit/replay. A5 / PR #86 / CI #555 CERTIFIED/CLOSED ASSET_REVIEW only; ASSET_WORKBENCH+ stays UNAUTHORIZED / NOT_AVAILABLE |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -84,7 +86,8 @@ Agents must `git fetch origin` and verify live `origin/main`. Do **not** treat h
 ## 4. Active roadmap
 
 ```text
-Accepted merged baseline: origin/main `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32); exact-head CI #485 SUCCESS
+Live baseline: run valora-live-authority-bootstrap; fetch origin/main, verify live HEAD/CODEX, assigned task and exact-head CI SUCCESS.
+Historical OS-G0 milestone (2026-09-27): `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32); exact-head CI #485 SUCCESS, not current main certification.
 Completed integration source: `feat/operational-frontend-m365` / `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2`; historical branch evidence, not active authority
 G6 Local immutable storage: ACCEPTED
 G8 OneDrive Personal Exchange offline implementation: COMPLETE at f896f15…
@@ -92,8 +95,8 @@ ADR 0045 / Working Change Observation design authority: ACCEPTED
 
 Current product direction:
 Authority cleanup
-→ complete Pre-case product journey
-→ close ASSET_REVIEW → APPRAISAL_RESULT as vertical OS slices
+→ Pre-case product journey CERTIFIED/CLOSED (OS-G1 / G1.1K)
+→ OS-G2 PARTIAL: ASSET_REVIEW CERTIFIED/CLOSED; later vertical slices through APPRAISAL_RESULT remain gated
 → Document Workspace with automatic observation/revalidation + Change Candidate + Human Commit
 → Release/Publishing
 → traceability/state/fidelity/E2E
@@ -160,8 +163,10 @@ Current v2.3 disposition:
 3. PR #32 — MERGED/CLOSED on main; operational frontend + accepted Local G6 + completed G8 offline Exchange are part of the merged OS-G0 baseline.
 4. ADR 0045 — accepted target semantics for automatic Working observation, Change Candidate and
    explicit human-confirmed Revision N+1.
-5. Canonical stages 5-16 remain incomplete at OS/product level; Case State provider still only owns
-   the four prefix stages.
+5. Provider coverage reaches the first five stages through ASSET_REVIEW; each case is fact-derived,
+   current_stage remains capped at ASSET_REVIEW, and full OS-G2 remains INCOMPLETE. Stages 6-16 /
+   ASSET_WORKBENCH+ remain NOT_AVAILABLE / UNAUTHORIZED; completion opens no downstream action
+   unless a higher-priority authorized blocker applies.
 6. PR-07 direct OneDrive replacement execution is historical/blocked; new document-change runtime
    requires the ADR-0045 implementation contract.
 7. Historical PR-08 through PR-13 capability gaps remain open, but they must be closed in the current Unified Roadmap order `OS-G0 → OS-G7`, not by restoring the old PR sequence.

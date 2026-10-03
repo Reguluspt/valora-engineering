@@ -28,9 +28,7 @@ authority and independent provider-concurrency proof.
 Mockup `Xử lý xung đột khi đồng bộ — Iteration 1` được nâng thành Baseline / Design Authority. Đây là nhánh có điều kiện giữa `Xem trước kết quả` và `Xác nhận & Đồng bộ`; nếu không có conflict thì bỏ qua hoàn toàn.
 
 ## 2. Conflict definition
-Conflict tồn tại khi cùng một Managed Region:
-- dữ liệu VALORA mới khác giá trị ở snapshot/lần đồng bộ trước; và
-- nội dung hiện tại trong Word cũng đã được user chỉnh kể từ lần đồng bộ trước.
+Theo [Working Change Observation §7.5](VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md#75-true-three-way-conflict), true conflict của cùng Managed Region yêu cầu đồng thời `V != Old` AND `W != Old` AND `V != W`, theo semantic comparison hiện hành. `Old` là accepted revision/sync baseline, `V` là dữ liệu VALORA hiện tại và `W` là Working observation hiện tại. Nếu cả hai thay đổi nhưng V/W hội tụ về cùng giá trị semantic, có thể non-conflict; vẫn giữ lineage/audit. Đây là pointer tới accepted three-way semantics, không tạo merge policy hoặc authoritative write tự động.
 
 Không bên nào tự động thắng.
 

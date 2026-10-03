@@ -1,5 +1,8 @@
 # VALORA Lean Agent Protocol v1
 
+**Lifecycle/status:** CURRENT DEVELOPER TOOLING / OPERATING PROCESS — 2026-10-03.
+**Authority role:** Developer task preparation/execution support only; not product, domain, runtime or deployment authority. Live CODEX, permanent guardrails, accepted scoped authority and the assigned task govern. No product/runtime dependency or new permission is created.
+
 This is an implementation operating protocol, not product or domain authority. [CODEX](../../CODEX.md) and [Engineering Guardrails](../../ENGINEERING_GUARDRAILS.md) retain their permanent rules.
 
 ## Responsibility split

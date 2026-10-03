@@ -57,7 +57,7 @@ STT
 
 Quy tắc:
 
-- `XLSX` / `DOCX` có icon file tương ứng và hiển thị trực tiếp.
+- Historical TM01 sample vocabulary: `XLSX` / `DOCX` showed their file icons. Current supplier quotation template authority is Word `.docx` only under [TM04 addendum §A](../VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md#a-quyết-định-04-được-cập-nhật) and [Template Management §C](../VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md#c-quy-tắc-định-dạng). The historical Excel TM03 examples remain history; they grant no current supplier-template authority.
 - `Phiên bản` hiển thị compact như `v1.0`, `v2.1`.
 - Trạng thái dùng badge semantic: `Đang sử dụng`, `Bản nháp`, `Ngừng sử dụng`.
 - Mỗi dòng có CTA `Xem chi tiết` và overflow menu cho thao tác phụ.
@@ -93,4 +93,4 @@ Panel phải là vùng hỗ trợ; không được làm bảng chính bị thu h
 
 Khi có mâu thuẫn visual giữa mockup/iteration TM01 cũ và baseline này, **TM01 Iteration 1 + §11 của `VALORA_UIUX_HANDOFF_v2.3.md` là nguồn quyết định**.
 
-TM03 và TM04 vẫn chưa có baseline authority cho tới khi người dùng duyệt rõ.
+The former “TM03 và TM04 vẫn chưa có baseline authority” statement was superseded by the approved [TM04 addendum §§A–D](../VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md): TM01, TM03 Word-only Upload & Mapping and [TM04 Word Preview/Test fill baseline](VALORA_TM04_BASELINE_v2.3.md) are approved. This is visual/design authority, not runtime-completion evidence.

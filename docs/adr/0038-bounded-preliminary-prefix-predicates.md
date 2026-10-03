@@ -1,5 +1,9 @@
 # ADR 0038 — Bounded Preliminary Prefix Predicates
 
+**Current implementation disposition — 2026-10-03 (DOC-R3/R4):** Accepted predicates; the original runtime-unimplemented status and exit checklist below are historical. The four-prefix facts/providers are implemented, with [ADR 0046](0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) current-batch and highest-valid-lineage Analysis/Result selection implemented through G1.1C/D. OS-G1 is CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81`, exact-main CI #527 SUCCESS. Full OS-G2 remains PARTIAL / INCOMPLETE. Case completion is fact-derived, `current_stage` is capped at ASSET_REVIEW, and ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED. Completion supplies NO_AUTHORIZED_DOWNSTREAM_ACTION unless a higher-priority authorized blocker applies; membership mutation and broader RBAC remain closed. Original source, blocker, checksum and completeness predicates are not rewritten.
+
+**Historical acceptance metadata and original record (preserved):** The original dated statements below record their own checkpoint. Later implementation is described above; accepted semantics remain binding except where an accepted scoped successor expressly refines them. This reconciliation grants no new runtime, provider, RBAC, later-stage or deployment authority.
+
 **Status:** Accepted for design authority — source facts, providers and runtime remain unimplemented
 
 **Date:** 2026-09-03
