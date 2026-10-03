@@ -1,9 +1,9 @@
 # VALORA Documentation Status Index
 
 **Status:** CURRENT DOCUMENTATION GOVERNANCE
-**Date:** 2026-09-27
+**Date:** 2026-10-03 (DOC-R6 current disposition; dated evidence retained)
 **Scope:** Classification and reading rules for repository documentation.
-**Inventory reconciliation:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
+**Historical inventory reconciliation — 2026-09-24:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
 ## 1. Why this index exists
 
@@ -55,9 +55,9 @@ Current document-change authority:
 - ADR 0045 — Working Change Observation / DocumentChangeCandidate / Human Commit
 - `VALORA_UIUX_HANDOFF_v2.3_WORKING_CHANGE_OBSERVATION_REVIEW_CONTRACT_ADDENDUM.md`
 
-Current Pre-case lifecycle design authority: ADR 0046 — optional Customer, explicit current
-preliminary batch and immutable versioned analysis/result selection. It ratchets ADR 0030,
-0037 and 0038 in that scope; G1.1 runtime remains separately gated.
+Current bounded Pre-case journey: **OS-G1 CERTIFIED/CLOSED** through G1.1K / PR #68 / CI #527. [ADR 0046](adr/0046-precase-identity-current-batch-and-versioned-result-lifecycle.md) governs optional Customer, explicit current batch and immutable versioned analysis/result selection; [ADR 0047](adr/0047-authoritative-column-mapping-selection-and-recovery.md) is its implemented/certified bounded mapping-selection successor. Retained ADR 0030/0037/0038 foundations do not override these scoped successors.
+
+Current Appraisal Core: **OS-G2 PARTIAL THROUGH ASSET_REVIEW**, certified through A5 / PR #86 / CI #555. [ADR 0048](adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) governs implemented guarded Apply v2 / Asset Review Case State; [ADR 0049](adr/0049-asset-line-human-review-and-validation-authority.md) governs implemented human-triggered server validation and explicit human review, separate from value drafts. Use the [Case State contract](implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) and [Line Decision contract](implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md). Full OS-G2 remains INCOMPLETE; current_stage is capped at ASSET_REVIEW and ASSET_WORKBENCH+ remains NOT AUTHORIZED / NOT_AVAILABLE. New runtime still requires its own explicit task; this index grants none.
 
 Current roadmap ordering:
 
@@ -78,7 +78,7 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 
 ## 2.0 Deployment/client v1 disposition — Issue #89 (2026-10-03)
 
-- [ADR 0050](adr/0050-linux-server-windows-native-client.md) — accepted Product Owner deployment/client decision; repository certification pending. Linux single-node Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX. Server retains business/auth/tenant/document/job authority; no local LLM/model-weight/GPU dependency, core workflow AI dependency NONE; provider-backed AI stays OS-G7 gated.
+- [ADR 0050](adr/0050-linux-server-windows-native-client.md) — accepted Product Owner deployment/client decision; **REPOSITORY CERTIFIED** via PR #91, merge `e2e03f3a91e21e366af72e35beeeab73ed18cfdb`, exact-main [CI #559 / run 37111129209 SUCCESS](https://github.com/Reguluspt/valora-engineering/actions/runs/37111129209), Issue #89 CLOSED/CERTIFIED. Architecture documentation only; runtime and deployment remain separately gated. Linux single-node Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX. Server retains business/auth/tenant/document/job authority; no local LLM/model-weight/GPU dependency, core workflow AI dependency NONE; provider-backed AI stays OS-G7 gated.
 - [Windows Client plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Linux Server plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) — PLANNED / NOT AUTHORIZED FOR RUNTIME OR DEPLOYMENT.
 - [Windows Preview brief](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) — reconciled; formal UAT after Software Completion, architecture/skeleton only through explicit owner task, Linux Deployment Pilot separate. Docker Desktop local-stack production direction and architecture selection after Preview are superseded.
 - Existing dated inventories and status snapshots below are evidence of their recorded reconciliation, not current main certification. Issue #89 does not execute Issue #90's full-tree inventory/status cleanup or rewrite historical evidence.
@@ -92,7 +92,7 @@ Sub-domain plans may not reorder this sequence without a new Product Owner decis
 - Historical browser/PR acceptance remains functional evidence but does not prove current visual conformance.
 - Current UI acceptance must include screenshot/visual-regression checks for authority-defined golden screens.
 - Completed OS-G0 execution contract: `docs/implementation/VALORA-FLUENT2-REMEDIATION-001.md`; its code inventory is `docs/audits/2026-09-22__FRONTEND_ASTRYX_TO_FLUENT2_CODE_INVENTORY.md` and must be read as a historical code snapshot with its current disposition.
-- Final documentation reconciliation record: `docs/audits/2026-09-24__AI_MASTER_PLAN_UNIFIED_ROADMAP_DOCUMENTATION_RECONCILIATION.md`.
+- Historical 2026-09-24 documentation reconciliation record: `docs/audits/2026-09-24__AI_MASTER_PLAN_UNIFIED_ROADMAP_DOCUMENTATION_RECONCILIATION.md`; current DOC-R6 evidence is linked in §2.3.
 
 ### 2.2 2026-09-24 inventory by lifecycle/category
 
@@ -117,6 +117,12 @@ Exact-tree inventory used for this reconciliation:
 
 Lifecycle rule: current/living authority and active engineering documents receive substantive review; audits, old handoffs, sprint plans, research and superseded remediation are preserved as historical evidence and marker-scanned for misleading current-authority wording. Presence in the tree does not promote historical evidence to current authority.
 
+### 2.3 Current final closeout census — DOC-R6 / 2026-10-03
+
+At baseline main `9e743212f3b2b2ff4297d95795ae84bf3e79053a` / exact-main CI #565 SUCCESS, the DOC-R0 scope recount is **562 artifacts (428 text + 134 supporting binaries)**. This DOC-R6 candidate contains **563 (429 text + 134 binaries)**: **+1**, the single new [final closeout audit](audits/2026-10-03__DOCUMENTATION_AUTHORITY_RECONCILIATION_CLOSEOUT.md). Counts use the four explicit root governance files (`CODEX.md`, `ENGINEERING_GUARDRAILS.md`, `README.md`, `PR_RULES.md`) plus every tracked `docs/**` artifact; each path is counted once. Private/local untracked evidence is excluded.
+
+The [DOC-R0 inventory](audits/2026-10-03__DOCUMENTATION_AUTHORITY_RECONCILIATION_INVENTORY.md) / [per-path JSON ledger](audits/2026-10-03__DOCUMENTATION_AUTHORITY_RECONCILIATION_INVENTORY.json) retain their **559 baseline / 562 including three outputs** census. The September 24 **379 / 380** census above used its dated tree/supporting-artifact selection. These are separate provenance records, not interchangeable totals. The [certified conflict matrix](audits/2026-10-03__DOCUMENTATION_AUTHORITY_CONFLICT_MATRIX.md) remains unchanged; final dispositions, historical links and the DOC-R0 → DOC-R1+R2 → DOC-R3+R4 → DOC-R6 chain are centralized in the new audit. Candidate readiness is not owner merge or exact-main certification.
+
 ## 3. Current engineering / evidence documents
 
 Use for current implementation truth, always checking the live Git/PR SHA:
@@ -131,7 +137,7 @@ Use for current implementation truth, always checking the live Git/PR SHA:
 - active plans explicitly marked current
 - exact-head CI / manifests / closeout evidence
 
-Current candidate facts as of this reconciliation:
+**Dated snapshot — 2026-09-27 reconciliation (preserved):** The following facts describe that checkpoint; current dispositions are in §§2–2.3 and live CODEX, not inferred from these historical states.
 
 - merged `main`: `51eab8648005186197d2fbb37a19bde4332aeaa5`, exact-head CI #485 SUCCESS;
 - PR #32: MERGED/CLOSED by squash; source integration head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only;
@@ -283,7 +289,9 @@ When a current decision changes:
 5. preserve historical audit/sprint evidence unchanged;
 6. rerun a stale-marker documentation sweep.
 
-## 14. Conflicts encountered and deferred to Issue #90
+## 14. Historical Issue #89 encounter log — deferred at that checkpoint
+
+**Current disposition — DOC-R6 / 2026-10-03:** The full 64-finding matrix is now dispositioned by certified Issue #94 (DOC-R1+R2), certified Issue #96 (DOC-R3+R4), and this Issue #98 candidate (DOC-R6); DOC-R5 was intentionally omitted. See the [final closeout audit](audits/2026-10-03__DOCUMENTATION_AUTHORITY_RECONCILIATION_CLOSEOUT.md) for every owned finding, census and preserved historical-link disposition. Issue #90 remains owner-controlled pending final certification; the old log below is retained as evidence of Issue #89's checkpoint.
 
 This is a bounded encounter log, not the repository-wide review. [Issue #90](https://github.com/Reguluspt/valora-engineering/issues/90) starts only after the architecture ADR is accepted/certified on main. Preserve historical exact-SHA claims and use live CODEX/task/CI for implementation. Six conflict groups were encountered during Issue #89's named reads:
 

@@ -91,6 +91,6 @@ Panel phải là vùng hỗ trợ; không được làm bảng chính bị thu h
 
 ## 7. Quan hệ với Handoff
 
-Khi có mâu thuẫn visual giữa mockup/iteration TM01 cũ và baseline này, **TM01 Iteration 1 + §11 của `VALORA_UIUX_HANDOFF_v2.3.md` là nguồn quyết định**.
+Khi có mâu thuẫn visual giữa mockup/iteration TM01 cũ và baseline này, **TM01 Iteration 1** là baseline đã duyệt trong scope TM01; đọc cùng [TM04 addendum §§A–D](../VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md) và [Template Management addendum §§A–G](../VALORA_UIUX_HANDOFF_v2.3_TEMPLATE_MANAGEMENT_BASELINE_ADDENDUM.md) cho authority chuyên biệt và lifecycle/entry chung. Các addendum chỉ supersede trong scope đã chốt; không tạo visual rule mới.
 
 The former “TM03 và TM04 vẫn chưa có baseline authority” statement was superseded by the approved [TM04 addendum §§A–D](../VALORA_UIUX_HANDOFF_v2.3_TM04_BASELINE_ADDENDUM.md): TM01, TM03 Word-only Upload & Mapping and [TM04 Word Preview/Test fill baseline](VALORA_TM04_BASELINE_v2.3.md) are approved. This is visual/design authority, not runtime-completion evidence.

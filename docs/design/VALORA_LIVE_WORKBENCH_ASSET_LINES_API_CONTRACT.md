@@ -81,7 +81,7 @@ This document establishes the backend-to-frontend schema and route structure for
 ```
 
 ## 7. Frontend Client Integration
-- TypeScript declarations and the fetch helper function reside in [assetLines.ts](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/api/assetLines.ts).
+- TypeScript declarations and the fetch helper function reside in [assetLines.ts](../../frontend/src/api/assetLines.ts).
 
 ## 8. Progressive Adoption Plan
 - **S11-PR-001**: API Contract and Backend Endpoint (this PR).
@@ -110,7 +110,7 @@ To resolve route slugs (e.g. `hd-98-gia-lai`) safely to project UUIDs, a resolut
 
 ## 10. S11-PR-003: Context Drawer Data Adapter
 To bind selected real asset rows to the right context panel, a frontend data adapter hook is provided:
-- **Location**: [useAssetLineContext.ts](file:///e:/Project%20Valora/valora-engineering-phase-sprint-0-starter/frontend/src/components/workbench/hooks/useAssetLineContext.ts).
+- **Location**: [useAssetLineContext.ts](../../frontend/src/components/workbench/hooks/useAssetLineContext.ts).
 - **Behavior**:
   - Dynamically extracts properties (`normalized_name`, `canonical_asset`, `asset_variant`, `supplier_quote_1`, `appraised_price`, `currency.code`, `review_status`) from the active selected grid row.
   - Translates empty fallback states into clean Vietnamese using the error and i18n dictionary.
