@@ -341,6 +341,15 @@ No production secrets in repository content or fixtures.
 
 ## 10. Project AI Execution Policy
 
+OpenViking is NON-AUTHORITATIVE developer tooling for Codex, never a Valora product/runtime
+dependency. Live repository/CODEX/accepted scoped authority always wins. Default mode is
+`VALORA_LEAN_MCP`: manual MCP recall only after live authority bootstrap; automatic recall/capture
+and memory injection remain off. Follow the [OpenViking profile](docs/plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md)
+for supported hook controls, budgets, privacy, fallback and the six canonical local skills.
+EVERY Dev/Codex handoff must begin with a populated `CODEX MODEL` block naming the exact model,
+reasoning, selection reason and escalation, including resumed tasks and tiny corrections;
+without it the prompt is INVALID. See [Dev handoff skill](.agents/skills/valora-dev-handoff/SKILL.md).
+
 The [Lean Agent Protocol](docs/plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) defines the operating
 tiers; the [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) is the
 task handoff. Sections 3–9 and the permanent ENGINEERING_GUARDRAILS.md invariants remain binding.

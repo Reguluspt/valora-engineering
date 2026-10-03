@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "recall": { "enabled": false },
+  "capture": { "enabled": false },
+  "bypass": { "session_patterns": ["**"] }
+}
