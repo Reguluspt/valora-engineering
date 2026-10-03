@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-02 (A5R certified; A5R2 bounded grant runtime active, A5 stopped)
+**Last reconciled:** 2026-10-02 (A5R2 certified; A5 product closure resumed)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -136,15 +136,13 @@ OS-G2 A3 / Issue #77 authority was ACCEPTED by the Product Owner on 2026-10-02. 
 PR #78 is MERGED/CERTIFIED at `27bebb73e35c540c7cea870b1b2fd5a26a55b2c9`, exact-main CI #542
 SUCCESS; ADR 0049 and the Line Decision Contract are certified accepted authority.
 OS-G2 A4 / Issue #79 / PR #80 is MERGED/CERTIFIED at
-`416157e6330f861127455a66fd5df9c0972bc02a`, exact-main CI #545 SUCCESS. It authorizes only the
-backend validation/review/proof/receipt and Case State v3 slice. Frontend/UI, membership mutation,
-new RBAC and stages after ASSET_REVIEW remain UNAUTHORIZED. OS-G2 A5 / Issue #81 is ACTIVE but
-STOPPED until Issue #84 is merged and exact-main certified. A5R / Issue #82 / PR #83 is
+`416157e6330f861127455a66fd5df9c0972bc02a`, exact-main CI #545 SUCCESS. A5R / Issue #82 / PR #83 is
 MERGED/CERTIFIED at `d20f121b0f62c539836fde35308edbfc6d928e5d`, exact-main CI #549 SUCCESS.
-A5R D1 was ACCEPTED by the Product Owner on 2026-10-02: the data-only grant gives existing
-`workbench:open` to standard `owner` and `appraiser` only. Issue #84 / A5R2 is the active bounded
-RBAC grant runtime task; its runtime is not yet merged/certified. A5 browser E2E MUST NOT resume yet.
-ASSET_WORKBENCH+ remains UNAUTHORIZED.
+A5R D1 was ACCEPTED by the Product Owner on 2026-10-02. A5R2 / Issue #84 is CLOSED/CERTIFIED:
+PR #85 squash merged at `7c52a41a84b21b63182429d5c5740e76783ea4e6`, exact-main CI #552 SUCCESS.
+Alembic head `b5c6d7e8f9a0` grants existing `workbench:open` to standard `owner` and `appraiser` only.
+OS-G2 A5 / Issue #81 resumes the authorized ASSET_REVIEW product-closure UX/E2E slice in the
+existing Workbench. Membership mutation, further RBAC and ASSET_WORKBENCH+ remain UNAUTHORIZED.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;

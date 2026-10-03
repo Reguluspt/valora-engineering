@@ -5,23 +5,20 @@ describe("AssetGrid status labels", () => {
   it("validationLabel returns Vietnamese for every supported value", () => {
     expect(validationLabel("valid")).toBe("Hợp lệ");
     expect(validationLabel("warning")).toBe("Cảnh báo");
-    expect(validationLabel("error")).toBe("Lỗi");
-    expect(validationLabel("blocking")).toBe("Chặn");
+    expect(validationLabel("invalid")).toBe("Không hợp lệ");
     expect(validationLabel("unvalidated")).toBe("Chưa kiểm tra");
-    expect(validationLabel("needs_review")).toBe("Cần kiểm tra");
+    expect(validationLabel("needs_review")).toBe("Chưa xác định");
+    expect(validationLabel("error")).toBe("Chưa xác định");
+    expect(validationLabel("blocking")).toBe("Chưa xác định");
   });
 
   it("reviewLabel returns Vietnamese for every supported value", () => {
-    expect(reviewLabel("raw")).toBe("Thô");
-    expect(reviewLabel("parsed")).toBe("Đã phân tích");
-    expect(reviewLabel("identity_suggested")).toBe("Đề xuất định danh");
-    expect(reviewLabel("identity_approved")).toBe("Đã định danh");
-    expect(reviewLabel("taxonomy_approved")).toBe("Đã phân loại");
-    expect(reviewLabel("knowledge_matched")).toBe("Đã khớp dữ liệu");
-    expect(reviewLabel("price_reviewed")).toBe("Đã thẩm định giá");
-    expect(reviewLabel("approved")).toBe("Đã duyệt");
-    expect(reviewLabel("locked")).toBe("Đã khóa");
-    expect(reviewLabel("excluded")).toBe("Đã loại");
+    expect(reviewLabel("pending")).toBe("Chờ rà soát");
+    expect(reviewLabel("accepted")).toBe("Đã chấp nhận");
+    expect(reviewLabel("flagged")).toBe("Đã gắn cờ");
+    expect(reviewLabel("rejected")).toBe("Đã từ chối");
+    for (const value of ["raw", "parsed", "approved", "locked", "excluded", "identity_approved"])
+      expect(reviewLabel(value)).toBe("Chưa xác định");
   });
 
   it("unknown/null/undefined all return Chưa xác định", () => {

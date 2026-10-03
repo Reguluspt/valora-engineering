@@ -34,9 +34,10 @@ export function AssetGridToolbar({
         onChange={(e) => onStatusFilterChange(e.target.value)}
       >
         <option value="All">Tất cả trạng thái rà soát</option>
-        <option value="raw">Thô</option>
-        <option value="parsed">Đã phân tích</option>
-        <option value="approved">Đã duyệt</option>
+        <option value="pending">Chờ rà soát</option>
+        <option value="accepted">Đã chấp nhận</option>
+        <option value="flagged">Đã gắn cờ</option>
+        <option value="rejected">Đã từ chối</option>
       </select>
       <select
         className="valora-select"
@@ -47,8 +48,8 @@ export function AssetGridToolbar({
         <option value="All">Tất cả trạng thái kiểm tra dữ liệu</option>
         <option value="valid">Hợp lệ</option>
         <option value="warning">Cảnh báo</option>
-        <option value="error">Lỗi</option>
-        <option value="blocking">Chặn</option>
+        <option value="unvalidated">Chưa kiểm tra</option>
+        <option value="invalid">Không hợp lệ</option>
       </select>
       {selectedCount > 0 && (
         <span className="valora-status valora-status--info" role="status">

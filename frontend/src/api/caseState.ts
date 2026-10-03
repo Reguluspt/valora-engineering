@@ -22,6 +22,22 @@ export interface CaseStateNextAction {
   stage: CaseStage | null;
   semantic_route_key: string | null;
   validation_issue_id: string | null;
+  context?: AssetReviewActionContext | null;
+}
+
+export interface AssetReviewActionContext {
+  kind: string;
+  project_id: string;
+  case_version: string;
+  reason_code: string;
+  line_id?: string;
+  line_row_version?: number;
+  membership_version?: number;
+  contract_version?: string;
+  confirmation_required?: boolean;
+  validation_generation_id?: string | null;
+  prior_decision_id?: string | null;
+  finding_codes?: string[];
 }
 
 export interface CaseStateIssue {

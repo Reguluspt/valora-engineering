@@ -49,6 +49,20 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it("routes both Asset Review keys and only the exact session-required navigation bridge", () => {
+    const action = { kind: "PENDING" as const, stage: "ASSET_REVIEW" as const,
+      semantic_route_key: "asset_review_line_validate_required", validation_issue_id: null };
+    expect(mappedNextActionPath(action, "p")).toBe("/workbench/projects/p");
+    expect(mappedNextActionPath({ ...action, semantic_route_key: "asset_review_line_review_required" }, "p"))
+      .toBe("/workbench/projects/p");
+    const context = { kind: "permission", project_id: "p", case_version: "a".repeat(64), reason_code: "session_required" };
+    expect(mappedNextActionPath({ ...action, kind: "UNAVAILABLE", semantic_route_key: null, context }, "p"))
+      .toBe("/workbench/projects/p");
+    expect(mappedNextActionPath({ ...action, kind: "UNAVAILABLE", context: { ...context, reason_code: "permission_required" } }, "p"))
+      .toBeNull();
+    expect(mappedNextActionPath({ ...action, kind: "NO_AUTHORIZED_DOWNSTREAM_ACTION", stage: null, semantic_route_key: null }, "p"))
+      .toBeNull();
+  });
   it("maps only the two new server route keys to the shared completion surface", () => {
     const pending = (key: string) => ({
       kind: "PENDING" as const, stage: "PRELIMINARY_READY" as const,

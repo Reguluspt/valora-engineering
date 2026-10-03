@@ -7,6 +7,7 @@ import {
   CASE_STAGE_LABELS,
   mappedNextActionPath,
   nextActionCopy,
+  isAssetReviewSessionBridge,
 } from "./caseOverviewPresentation";
 import { useCaseState } from "./useCaseState";
 import "./caseOverview.css";
@@ -233,7 +234,7 @@ export function CaseOverviewContent({
                 onClick={() => onNavigate(actionPath)}
                 type="button"
               >
-                Tiếp tục xử lý
+                {isAssetReviewSessionBridge(projection.next_action) ? "Mở Bàn làm việc tài sản" : "Tiếp tục xử lý"}
               </button>
             )}
             {!actionPath && (
