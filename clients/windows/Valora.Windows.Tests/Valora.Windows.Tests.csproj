@@ -16,6 +16,9 @@
     <Compile Include="../Valora.Windows.App/ShellLifecycle.cs" Link="App/ShellLifecycle.cs" />
     <Compile Include="../Valora.Windows.App/BrowserProfile.cs" Link="App/BrowserProfile.cs" />
     <Compile Include="../Valora.Windows.App/TrustedWebViewBoundary.cs" Link="App/TrustedWebViewBoundary.cs" />
+    <Compile Include="../Valora.Windows.App/WebViewNativeBridge.cs" Link="App/WebViewNativeBridge.cs" />
+    <Compile Include="../Valora.Windows.App/ExternalUrlPolicy.cs" Link="App/ExternalUrlPolicy.cs" />
+    <Compile Include="../Valora.Windows.App/WindowsNativePlatform.cs" Link="App/WindowsNativePlatform.cs" />
   </ItemGroup>
   <Target Name="ExcludeUnusedWebViewWpfReference" BeforeTargets="ResolveAssemblyReferences">
     <ItemGroup>

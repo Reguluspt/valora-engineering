@@ -48,7 +48,7 @@ try {
         }
     })
     [ordered]@{
-        task = 'VALORA-TASK-WIN-2-SERVER-SESSION-PROFILE-LIFECYCLE'
+        task = 'VALORA-TASK-WIN-3-TYPED-NATIVE-BRIDGE'
         sourceCommit = $commit
         dotnetSdk = $expectedSdk
         target = 'Windows 11 x64'

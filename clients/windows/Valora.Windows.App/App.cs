@@ -14,7 +14,7 @@ public sealed partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        window = new MainWindow(new FoundationCapabilityCatalog());
+        window = new MainWindow();
         window.Activate();
     }
 }
