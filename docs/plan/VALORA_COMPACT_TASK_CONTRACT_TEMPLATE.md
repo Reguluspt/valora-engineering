@@ -23,6 +23,11 @@ Supporting template for the [current Agent Operating Protocol v2](VALORA_AGENT_O
 ## TASK-SPECIFIC REFERENCES
 `<Exact document sections, code paths and tests needed for this task>`
 
+## FRONTEND ARCHITECTURE APPLICABILITY
+`N/A | APPLIES` — `<scope-based reason>`
+
+Set APPLIES when scope touches `frontend/**`, React presentation, tokens/theme/shared UI, feature components, screens/pages or a React/native or browser-side native bridge adapter. Named authority MUST include [Frontend Architecture Rule](../architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md); ACCEPTANCE selects applicable checks from its frontend PR checklist, not every item mechanically. TESTS remain task/risk based. Unrelated backend, worker, DB/migration, server-deployment and unrelated docs-only work is N/A.
+
 ## ALLOWED SCOPE
 `<Files or bounded subsystem; expected behavior>`
 

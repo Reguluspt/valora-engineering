@@ -109,6 +109,12 @@ Historical reference only where not superseded:
   sprint / audit / remediation / research evidence
 ```
 
+### Frontend presentation architecture — Product Owner decision 2026-10-04
+
+The [Frontend Architecture Rule](docs/architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) governs implementation of approved UI/UX through **Design tokens → Fluent primitives → Valora shared components → Feature components → Screens**. Tokens and shared presentation own visual architecture; features must not create a competing visual system. Server/domain owns business truth; the Windows shell owns only bounded OS/native capabilities. React remains the primary UI in WebView2, and ordinary UI redesign must not create WinUI/native coupling.
+
+Migration is an incremental ratchet: new frontend code MUST follow the rule; materially modified existing code moves the touched area toward it where practical; untouched legacy must not be rewritten merely for architectural purity. Promote reusable patterns only after genuine evidence of reuse and avoid premature abstraction. This does not authorize a frontend-wide refactor or any runtime/product gate.
+
 ## 3. Module Boundaries
 
 ```text

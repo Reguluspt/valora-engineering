@@ -5,6 +5,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 ## Authority and implementation status
 
 - [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) + [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md) — current product semantics, workflow, IA, interaction and Microsoft Fluent 2 light visual authority.
+- [Frontend Architecture Rule](architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) — Product Owner-approved 2026-10-04 implementation layering, dependency direction, reusable presentation, incremental migration and scoped frontend PR checklist; implements current UI/UX authority without replacing product semantics or authorizing runtime work.
 - [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current development sequencing / architecture integration; it does not silently override UI/UX semantics.
 - [VALORA AI Master Plan v1.0](architecture/VALORA_AI_MASTER_PLAN_V1.md) — current OS-G7 / AI-readiness architecture detail and AI-readable-by-design prerequisite; documentation authority only, not runtime authorization.
 - [AI-PR-000…012 implementation contracts](implementation/VALORA-AI-PR-000_MASTER_PLAN_AUTHORITY_RECONCILIATION_CONTRACT.md) — future AI delivery sequence; runtime contracts remain gated until explicitly authorized.
