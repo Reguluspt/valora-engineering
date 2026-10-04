@@ -8,6 +8,12 @@
 
 [ADR 0050](../adr/0050-linux-server-windows-native-client.md) records Issue #89's accepted Linux Server + HTTPS LAN + WinUI 3/WebView2 + server-hosted React/Fluent 2 light + typed native bridge + MSIX decision. Native shell/web frontend are not business authority; current UX/semantic contracts remain unchanged and React is not rewritten to WinUI. Server v1 has no local LLM/GPU dependency; OS-G7 remains gated. Architecture/skeleton needs an explicit owner task; formal Windows Preview/UAT stays after Software Completion and Linux Deployment Pilot is separate. See the [Windows plan](../plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) and [Preview brief](../implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md).
 
+## Frontend implementation architecture — 2026-10-04
+
+The Product Owner-approved [Frontend Architecture Rule](../architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) governs how approved UI/UX is implemented: presentation layering, dependency direction, reusable components, incremental migration and applicable frontend PR acceptance checks. The UI/UX master and current addenda continue to govern product semantics, workflow UX, interaction, visual baseline and Microsoft Fluent 2 light product language.
+
+**Product/UI authority → Frontend implementation architecture → rendered presentation.** The implementation rule does not replace UI/UX authority; existing product/semantic authority wins if visual/example wording conflicts. Server/domain remains business authority, and the Windows native shell retains only bounded OS/native capabilities under ADR 0050.
+
 ## 0. Visual authority
 
 Current product visual language is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Approved visual baselines/mockups are authority. Astryx is historical/low-level reference only; retained Astryx primitives must be fully remapped and must not introduce dark/cyan/glassmorphic language.

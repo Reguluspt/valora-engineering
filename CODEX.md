@@ -419,6 +419,8 @@ acceptance, tests and stop conditions. Keep a compact TASK_STATE with verified S
 blocker and next action when pausing. On resume, fetch and revalidate HEAD and CI; stale state is
 not authority.
 
+For a task touching `frontend/**`, React presentation, design tokens, theme, shared UI components, feature components, screens/pages, a React/native adapter or a browser-side native bridge adapter, the contract MUST name and Codex MUST read the [Frontend Architecture Rule](docs/architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md). This is task-scoped authority; unrelated backend, worker, DB/migration, server-deployment and unrelated docs-only tasks do not require it. Preserve Reference-first V2 context and select only applicable frontend PR checklist checks.
+
 ### 10.3 Proportional verification
 
 - T0: focused edit-loop checks.

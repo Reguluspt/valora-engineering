@@ -11,6 +11,7 @@
 | --- | --- |
 | [CODEX](../../CODEX.md) | Live task gates, authority precedence and hard agent rules; read relevant sections. |
 | [Engineering Guardrails](../../ENGINEERING_GUARDRAILS.md) | Permanent invariants governing the assigned boundary. |
+| [Frontend Architecture Rule](../architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) | Task-scoped implementation authority: read when changing `frontend/**`, React/frontend presentation, tokens/theme/shared UI, feature/screen composition or a React/native or browser-side native bridge adapter. Unrelated backend/worker/DB/migration/server-deployment/docs tasks do not require it. |
 | [OpenViking profile](VALORA_OPENVIKING_OPERATING_PROFILE_V1.md) | Specialized MCP use, hook controls, privacy, debugging and persistence; full read only when needed for those actions. |
 | [Compact Task Contract](VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) | Reference-first task delta and evidence requirements. |
 | [Session bootstrap skill](../../.agents/skills/valora-session-bootstrap/SKILL.md) | Compact startup, delegating live checks to the [live-authority skill](../../.agents/skills/valora-live-authority-bootstrap/SKILL.md). |
@@ -34,6 +35,8 @@ fetch/reverify live repo
 Rebaseline on a fresh session and after a merge, exact-main CI result, Product Gate close, ADR acceptance or material blocker/scope change. Verify any separately claimed execution baseline's exact CI too. Live state wins over a prompt, prior chat or memory. A mismatch, missing prerequisite or authority conflict stops dependent work; output readiness NO and the next permitted action rather than silently replacing the baseline.
 
 The compact readiness record contains `PROJECT AUTHORITY READY: YES/NO`, live main, CODEX blob, exact-main CI, current gate, active task/Issue/PR, branch/worktree, conflicts and next authorized action. Collapse prior gates to their certified checkpoints; do not replay historical task chains.
+
+When allowed scope contains frontend implementation, Gate Owner MUST name the [Frontend Architecture Rule](../architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) in the compact contract and mark its applicability APPLIES. Select applicable frontend PR checklist checks; keep test scope task/risk based. This also covers React/native and browser-side native bridge adapters. Permanent architecture remains a repository reference, not copied policy or a new process entrypoint.
 
 ## Codex session startup
 

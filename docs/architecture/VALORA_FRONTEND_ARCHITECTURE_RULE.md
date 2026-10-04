@@ -1,10 +1,15 @@
 # VALORA Frontend Architecture Rule
 
-**Status:** APPROVED BY PRODUCT OWNER  
-**Decision date:** 2026-10-04  
-**Project:** Valora  
-**Scope:** Frontend architecture / React + Fluent 2 presentation layer  
-**Applies to:** New frontend implementation and incremental remediation of existing frontend code  
+**Status:** APPROVED BY PRODUCT OWNER
+
+**Decision date:** 2026-10-04
+
+**Project:** Valora
+
+**Scope:** Frontend architecture / React + Fluent 2 presentation layer
+
+**Applies to:** New frontend implementation and incremental remediation of existing frontend code
+
 **Architecture context:** Linux Server + React/Fluent 2 + WinUI 3/WebView2 Windows Client
 
 ---
