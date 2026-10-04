@@ -2,20 +2,19 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Valora.Windows.Bridge;
 using Microsoft.Web.WebView2.Core;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Valora.Windows.App;
 
 internal sealed class MainWindow : Window
 {
-    private ShellSession session = new();
+    private readonly ShellLifecycle lifecycle;
+    private readonly ILifecycleEvents lifecycleEvents;
     private readonly Grid layout = new() { RequestedTheme = ElementTheme.Light };
     private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
     private readonly Button retry = new() { Content = "Thử lại" };
     private readonly ProgressRing progress = new() { Width = 24, Height = 24 };
     private WebView2? webView;
-    private bool starting;
+    private ShellSession? viewSession;
 
     internal MainWindow(INativeCapabilityCatalog capabilities)
     {
@@ -23,6 +22,10 @@ internal sealed class MainWindow : Window
         {
             throw new InvalidOperationException("WIN-1 must not expose native capabilities.");
         }
+
+        lifecycleEvents = new WindowsLifecycleEvents();
+        lifecycle = new ShellLifecycle(ServerConfiguration.Read, lifecycleEvents.NetworkAvailable);
+        lifecycleEvents.Changed += LifecycleChanged;
 
         Title = "Valora";
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -42,65 +45,80 @@ internal sealed class MainWindow : Window
         retry.Click += async (_, _) => await StartAsync();
         Closed += (_, _) =>
         {
-            session.Close();
+            lifecycle.Close();
+            lifecycleEvents.Changed -= LifecycleChanged;
+            lifecycleEvents.Dispose();
             CloseWebView();
         };
         RenderState();
     }
 
-    private async Task StartAsync()
+    private void LifecycleChanged(LifecycleSignal signal)
     {
-        if (starting || session.State == ShellState.Closed) { return; }
-        starting = true;
+        var expected = lifecycle.Signal(signal);
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.High, async () =>
+        {
+            if (!lifecycle.IsCurrent(expected)) { return; }
+            CloseWebView();
+            RenderState();
+            if (expected.State == ShellState.Revalidating) { await StartAsync(expected); }
+        });
+    }
+
+    private async Task StartAsync(ShellSession? expected = null)
+    {
+        expected ??= lifecycle.Session;
+        if (expected.State is ShellState.Initializing or ShellState.Loading) { return; }
+        var owned = lifecycle.Begin(expected);
+        if (owned is null) { return; }
         try
         {
-            session.Close();
             CloseWebView();
-            session = new ShellSession();
-            if (!session.Begin(ServerConfiguration.Read())) { RenderState(); return; }
             RenderState();
+            var origin = owned.Origin;
+            if (origin is null || !owned.CanNavigate || !lifecycle.IsCurrent(owned)) { return; }
 
-            // Per-Windows-user, per-origin browser data; no native auth/identity authority.
-            var originKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(session.Origin!.Value)));
-            var profile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Valora", "WindowsClient", "WebView2", originKey);
+            var profile = BrowserProfile.PathFor(origin,
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
             var options = new CoreWebView2EnvironmentOptions
             {
                 ReleaseChannels = CoreWebView2ReleaseChannels.Stable
             };
             var environment = await CoreWebView2Environment.CreateWithOptionsAsync(null, profile, options);
-            if (session.State == ShellState.Closed) { return; }
+            if (!lifecycle.IsCurrent(owned) || !owned.CanNavigate) { return; }
             if (!Version.TryParse(environment.BrowserVersionString.Split(' ')[0], out var runtime) || runtime.Major < 154)
             {
                 throw new InvalidOperationException("Serviced Evergreen Runtime 154 or newer is required.");
             }
             var current = new WebView2 { Visibility = Visibility.Collapsed };
             webView = current;
+            viewSession = owned;
             Grid.SetRow(current, 1);
             layout.Children.Add(current);
             await current.EnsureCoreWebView2Async(environment);
-            if (session.State == ShellState.Closed || webView != current) { return; }
-            new TrustedWebViewBoundary(current.CoreWebView2, session, () =>
+            if (!lifecycle.IsCurrent(owned) || !owned.CanNavigate || webView != current) { return; }
+            new TrustedWebViewBoundary(current.CoreWebView2, owned, () =>
             {
-                if (webView == current) { RenderState(); }
+                if (lifecycle.IsCurrent(owned) && webView == current) { RenderState(); }
             });
-            current.CoreWebView2.Navigate(session.Origin!.Value + "/");
+            // New control + Navigate(root) starts a GET, never Reload/history/form replay.
+            current.CoreWebView2.Navigate(origin.Value + "/");
         }
         catch (Exception error) when (error is System.Runtime.InteropServices.COMException or
             InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException)
         {
-            session.Fail(ShellState.InitializationFailure);
-            RenderState();
+            owned.Fail(ShellState.InitializationFailure);
+            if (lifecycle.IsCurrent(owned)) { RenderState(); }
         }
         finally
         {
-            starting = false;
-            if (session.State != ShellState.Closed) { RenderState(); }
+            if (lifecycle.IsCurrent(owned)) { RenderState(); }
         }
     }
 
     private void RenderState()
     {
+        var session = lifecycle.Session;
         if (session.State == ShellState.Closed) { return; }
         status.Text = session.State switch
         {
@@ -113,23 +131,26 @@ internal sealed class MainWindow : Window
             ShellState.NetworkFailure => "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
             ShellState.CertificateFailure => "Chứng chỉ máy chủ không hợp lệ. Liên hệ quản trị viên rồi thử lại.",
             ShellState.InitializationFailure => "Không khởi tạo được WebView2. Kiểm tra WebView2 Runtime rồi thử lại.",
+            ShellState.Suspended => "Đã tạm dừng kết nối. Valora sẽ kết nối lại khi máy hoạt động.",
+            ShellState.NetworkUnavailable => "Mất kết nối mạng. Valora sẽ kết nối lại khi có mạng.",
+            ShellState.Revalidating => "Đang kết nối lại Valora…",
             _ => "Không tải được Valora. Thử lại hoặc liên hệ quản trị viên."
         };
-        var busy = session.State is ShellState.Initializing or ShellState.Loading;
+        var busy = session.State is ShellState.Initializing or ShellState.Loading or ShellState.Revalidating;
         progress.IsActive = busy;
         progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
-        retry.IsEnabled = !starting && !busy;
+        retry.IsEnabled = !busy && session.State is not (ShellState.Suspended or ShellState.NetworkUnavailable);
         retry.Visibility = session.State == ShellState.Loaded ? Visibility.Collapsed : Visibility.Visible;
         if (webView is not null)
         {
-            webView.Visibility = session.State == ShellState.Loaded ? Visibility.Visible : Visibility.Collapsed;
-            if (!session.CanNavigate)
+            webView.Visibility = viewSession == session && session.State == ShellState.Loaded ? Visibility.Visible : Visibility.Collapsed;
+            if (viewSession != session || !session.CanNavigate)
             {
                 // Defer control destruction out of the WebView callback; hide/revoke immediately.
                 var failedView = webView;
                 DispatcherQueue.TryEnqueue(() =>
                 {
-                    if (webView == failedView && !session.CanNavigate) { CloseWebView(); }
+                    if (webView == failedView && (viewSession != lifecycle.Session || !lifecycle.Session.CanNavigate)) { CloseWebView(); }
                 });
             }
         }
@@ -140,6 +161,7 @@ internal sealed class MainWindow : Window
         if (webView is null) { return; }
         var previous = webView;
         webView = null;
+        viewSession = null;
         layout.Children.Remove(previous);
         previous.Close();
     }

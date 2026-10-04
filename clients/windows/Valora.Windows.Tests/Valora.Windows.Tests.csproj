@@ -13,6 +13,8 @@
     <Compile Include="../Valora.Windows.App/TrustedOrigin.cs" Link="App/TrustedOrigin.cs" />
     <Compile Include="../Valora.Windows.App/ServerConfiguration.cs" Link="App/ServerConfiguration.cs" />
     <Compile Include="../Valora.Windows.App/ShellSession.cs" Link="App/ShellSession.cs" />
+    <Compile Include="../Valora.Windows.App/ShellLifecycle.cs" Link="App/ShellLifecycle.cs" />
+    <Compile Include="../Valora.Windows.App/BrowserProfile.cs" Link="App/BrowserProfile.cs" />
     <Compile Include="../Valora.Windows.App/TrustedWebViewBoundary.cs" Link="App/TrustedWebViewBoundary.cs" />
   </ItemGroup>
   <Target Name="ExcludeUnusedWebViewWpfReference" BeforeTargets="ResolveAssemblyReferences">
