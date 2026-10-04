@@ -19,7 +19,7 @@ SECRET_VARIABLES = {"POSTGRES_PASSWORD", "APP_SECRET_KEY", "S3_ACCESS_KEY_ID", "
 S3_CONTRACT = {
     "protocol": "s3v4", "role": "source-artifact-support-only",
     "endpoint_url": "http://source-artifacts:9000", "bucket": "valora-source-artifacts", "region": "us-east-1",
-    "credential_files": {"access_key": "/run/secrets/s3_access_key", "secret_key": "/run/secrets/s3_secret_key"},
+    "credential_files": {"access_key_file": "/run/secrets/s3_access_key", "secret_key_file": "/run/secrets/s3_secret_key"},
     "data_path": "/var/lib/valora/source-artifacts", "runtime_selection": "deferred",
 }
 
@@ -161,7 +161,7 @@ def check_compose(config):
     if any(slot.get(key) for key in ("command", "entrypoint", "environment")):
         raise ValueError("S3 runtime startup belongs to the later approved image, not this foundation")
     credentials = {item["source"]: item["target"] for item in slot.get("secrets", [])}
-    if credentials != {"s3_access_key": S3_CONTRACT["credential_files"]["access_key"], "s3_secret_key": S3_CONTRACT["credential_files"]["secret_key"]}:
+    if credentials != {"s3_access_key": S3_CONTRACT["credential_files"]["access_key_file"], "s3_secret_key": S3_CONTRACT["credential_files"]["secret_key_file"]}:
         raise ValueError("S3 credential-file boundary changed")
     volumes = slot.get("volumes", [])
     if len(volumes) != 1 or volumes[0].get("type") != "volume" or volumes[0].get("source") != "source_artifacts" or volumes[0].get("target") != S3_CONTRACT["data_path"]:

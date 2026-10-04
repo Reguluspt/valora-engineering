@@ -1,6 +1,8 @@
 """Adversarial release and startup boundary checks; no live credentials or providers."""
 import copy
+from contextlib import redirect_stdout
 import importlib.util
+import io
 import os
 from pathlib import Path
 import tempfile
@@ -18,6 +20,14 @@ def module(name):
 
 
 class FoundationTests(unittest.TestCase):
+    def test_s3_file_contract_passes_existing_secret_guard(self):
+        spec = importlib.util.spec_from_file_location("security_guard", ROOT.parents[1] / "backend/tests/check_security.py")
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        with redirect_stdout(io.StringIO()):
+            issues = guard.check_secret_placeholders(str(ROOT))
+        self.assertEqual(issues, 0, "foundation file paths must pass the unchanged secret guard")
+
     def test_only_backend_and_worker_have_outbound_transport(self):
         validator = module("validate")
         config = validator.render_proof()

@@ -11,7 +11,7 @@
     "endpoint_url": "http://source-artifacts:9000",
     "bucket": "valora-source-artifacts",
     "region": "us-east-1",
-    "credential_files": {"access_key": "/run/secrets/s3_access_key", "secret_key": "/run/secrets/s3_secret_key"},
+    "credential_files": {"access_key_file": "/run/secrets/s3_access_key", "secret_key_file": "/run/secrets/s3_secret_key"},
     "data_path": "/var/lib/valora/source-artifacts",
     "runtime_selection": "deferred"
   },
