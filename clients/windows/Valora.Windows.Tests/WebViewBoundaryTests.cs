@@ -108,7 +108,7 @@ public sealed class WebViewBoundaryTests
         Assert.False(webView.CoreWebView2.Settings.AreHostObjectsAllowed);
     });
 
-    private static Task OnWebView(Func<WebView2, Task> test)
+    internal static Task OnWebView(Func<WebView2, Task> test)
     {
         var result = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>

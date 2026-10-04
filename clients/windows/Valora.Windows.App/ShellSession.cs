@@ -4,68 +4,86 @@ internal enum ShellState
 {
     NoConfiguration, InvalidConfiguration, Initializing, Loading, Loaded,
     NavigationBlocked, NetworkFailure, CertificateFailure, NavigationFailure,
-    InitializationFailure, Closed
+    InitializationFailure, Suspended, NetworkUnavailable, Revalidating, Closed
 }
 
 internal sealed class ShellSession
 {
     private ulong? navigationId;
-    internal TrustedOrigin? Origin { get; private set; }
-    internal ShellState State { get; private set; } = ShellState.NoConfiguration;
-    internal bool CanNavigate => Origin is not null &&
-        State is ShellState.Initializing or ShellState.Loading or ShellState.Loaded;
+    private readonly object gate = new();
+    private TrustedOrigin? origin;
+    private ShellState state = ShellState.NoConfiguration;
+    internal TrustedOrigin? Origin { get { lock (gate) { return origin; } } }
+    internal ShellState State { get { lock (gate) { return state; } } }
+    internal bool CanNavigate { get { lock (gate) { return origin is not null &&
+        state is ShellState.Initializing or ShellState.Loading or ShellState.Loaded; } } }
 
     internal bool Begin(string? configuration)
     {
-        if (State == ShellState.Closed) { return false; }
-        Origin = null;
-        navigationId = null;
-        if (configuration is null)
+        lock (gate)
         {
-            State = ShellState.NoConfiguration;
-            return false;
+            if (state == ShellState.Closed) { return false; }
+            origin = null;
+            navigationId = null;
+            if (configuration is null)
+            {
+                state = ShellState.NoConfiguration;
+                return false;
+            }
+            if (!TrustedOrigin.TryParse(configuration, out var parsed))
+            {
+                state = ShellState.InvalidConfiguration;
+                return false;
+            }
+            origin = parsed;
+            state = ShellState.Initializing;
+            return true;
         }
-        if (!TrustedOrigin.TryParse(configuration, out var origin))
-        {
-            State = ShellState.InvalidConfiguration;
-            return false;
-        }
-        Origin = origin;
-        State = ShellState.Initializing;
-        return true;
     }
 
     internal bool NavigationStarting(string? destination, ulong id)
     {
-        if (!CanNavigate) { return false; }
-        if (!Origin!.Allows(destination))
+        lock (gate)
         {
-            Fail(ShellState.NavigationBlocked);
-            return false;
+            if (!CanNavigate) { return false; }
+            if (!origin!.Allows(destination))
+            {
+                Fail(ShellState.NavigationBlocked);
+                return false;
+            }
+            navigationId = id;
+            state = ShellState.Loading;
+            return true;
         }
-        navigationId = id;
-        State = ShellState.Loading;
-        return true;
     }
 
     internal void NavigationCompleted(ulong id, ShellState result)
     {
-        if (CanNavigate && navigationId == id) { State = result; }
+        lock (gate)
+        {
+            if (CanNavigate && navigationId == id) { state = result; }
+        }
     }
 
     internal void Fail(ShellState failure)
     {
-        if (State != ShellState.Closed)
+        lock (gate)
         {
-            State = failure;
-            navigationId = null;
+            if (state != ShellState.Closed)
+            {
+                state = failure;
+                navigationId = null;
+            }
         }
     }
 
     internal void Close()
     {
-        Origin = null;
-        navigationId = null;
-        State = ShellState.Closed;
+        lock (gate)
+        {
+            origin = null;
+            navigationId = null;
+            state = ShellState.Closed;
+        }
     }
 }

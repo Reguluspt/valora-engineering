@@ -48,7 +48,7 @@ try {
         }
     })
     [ordered]@{
-        task = 'VALORA-TASK-WIN-1-WEBVIEW-TRUSTED-NAVIGATION'
+        task = 'VALORA-TASK-WIN-2-SERVER-SESSION-PROFILE-LIFECYCLE'
         sourceCommit = $commit
         dotnetSdk = $expectedSdk
         target = 'Windows 11 x64'
