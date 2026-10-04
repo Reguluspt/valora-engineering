@@ -1,0 +1,9 @@
+.git
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/secrets
+node_modules
+dist
+local-artifacts

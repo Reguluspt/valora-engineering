@@ -10,6 +10,24 @@ on:
       - "codex/win-0-windows-client-foundation"
 
 jobs:
+  server-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate SRV-0 release and private Compose shape
+        run: |
+          python infra/server/validate.py --template
+          python -m unittest discover -s infra/server/tests -v
+      - name: Verify isolated HTTPS proxy trust and auth-header preservation
+        run: |
+          pip install cryptography ruff==0.6.0
+          ruff check infra/server
+          python infra/server/tests/proof_tls.py
+          python infra/server/tests/proof_networks.py
+
   committed-whitespace:
     runs-on: ubuntu-latest
     steps:
@@ -127,6 +145,27 @@ jobs:
             exit 1
           fi
           echo "Migration graph verified: single head exists."
+      - name: Verify SRV-0 required dependency readiness without AI/providers
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: valora
+          POSTGRES_USER: valora
+          POSTGRES_PASSWORD: valora_local_password
+          REDIS_URL: redis://localhost:6379/0
+          S3_ENDPOINT_URL: http://localhost:9000
+          S3_ACCESS_KEY_ID: valora
+          S3_SECRET_ACCESS_KEY: valora_local_password
+          S3_BUCKET: valora-local
+          S3_REGION: us-east-1
+        run: |
+          docker run -d --name valora-srv0-redis -p 127.0.0.1:6379:6379 redis:7
+          for i in $(seq 1 30); do
+            if docker exec valora-srv0-redis redis-cli ping | grep -q PONG; then break; fi
+            sleep 1
+          done
+          docker exec valora-srv0-redis redis-cli ping | grep -q PONG
+          PYTHONPATH=. python ../infra/server/tests/proof_dependencies.py
       - name: Run backend tests
         env:
           CI: "true"

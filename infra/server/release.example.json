@@ -1,0 +1,27 @@
+{
+  "manifest_version": 1,
+  "release_id": null,
+  "server_revision": null,
+  "web_revision": null,
+  "schema_head": null,
+  "foundation_sha256": {"compose.yml": null, "nginx.conf.template": null, "frontend.conf": null, "runtime.py": null},
+  "source_artifact_contract": {
+    "protocol": "s3v4",
+    "role": "source-artifact-support-only",
+    "endpoint_url": "http://source-artifacts:9000",
+    "bucket": "valora-source-artifacts",
+    "region": "us-east-1",
+    "credential_files": {"access_key_file": "/run/secrets/s3_access_key", "secret_key_file": "/run/secrets/s3_secret_key"},
+    "data_path": "/var/lib/valora/source-artifacts",
+    "runtime_selection": "deferred"
+  },
+  "images": {
+    "ingress": {"reference": null},
+    "backend": {"reference": null, "revision": null, "dockerfile": "backend/Dockerfile", "context": "backend"},
+    "worker": {"reference": null, "revision": null, "dockerfile": "worker/Dockerfile", "context": "."},
+    "frontend": {"reference": null, "revision": null, "dockerfile": "frontend/Dockerfile", "context": "frontend"},
+    "postgres": {"reference": null},
+    "redis": {"reference": null},
+    "source-artifacts": {"reference": null}
+  }
+}

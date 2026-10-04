@@ -28,6 +28,7 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [ADR 0050](adr/0050-linux-server-windows-native-client.md) — accepted Product Owner deployment/client decision; Linux Server business authority, HTTPS LAN, WinUI 3/WebView2, server-hosted React/Fluent 2 light, typed native bridge, MSIX and no local LLM/GPU dependency.
 - [Windows Client v1 plan](plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) — WIN-0 through WIN-6; planned, runtime requires explicit tasks.
 - [Linux Server v1 plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) — private Compose/TLS, persistence, readiness, encrypted backup/restore and operations; no deployment authorization.
+- [SRV-0 Linux Server foundation](../infra/server/README.md) — Issue #101 release/image manifest, separate Compose/TLS/private-network contracts and deterministic proof; deployment and operational choices remain gated.
 - [Windows Preview brief](implementation/VALORA_WINDOWS_PREVIEW_TASK_BRIEF.md) — formal UAT after Software Completion; Linux Deployment Pilot separate.
 
 ## Document storage, OneDrive Exchange and document-change direction
