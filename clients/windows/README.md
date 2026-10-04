@@ -1,17 +1,34 @@
-# WIN-0 Windows client foundation
+# Windows client: trusted navigation
 
-Scope: [Issue #100](https://github.com/Reguluspt/valora-engineering/issues/100), based on main `fb0c5449b13b91934356975564959129abdfe97c`, CODEX blob `31dd96a11148f42a28ae0adbaa825cd0c944435d` and exact-main CI #567. [ADR 0050](../../docs/adr/0050-linux-server-windows-native-client.md) and the [Windows plan](../../docs/plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md) govern the foundation. This is engineering evidence, not Preview/UAT or production distribution.
+WIN-1 is the bounded Windows shell slice in [Issue #106](https://github.com/Reguluspt/valora-engineering/issues/106), governed by [ADR 0050](../../docs/adr/0050-linux-server-windows-native-client.md) and the [Windows plan](../../docs/plan/VALORA_WINDOWS_CLIENT_V1_PLAN.md). WIN-0 foundation remains certified. This is unsigned engineering evidence; Preview/UAT and production distribution require later gates.
 
-## Layout and boundaries
+## Administrator configuration
 
-- `Valora.Windows.sln`: Debug/Release x64 only.
-- `Valora.Windows.App`: WinUI 3 application/window lifecycle and an unconfigured WebView2 control. Minimal App XAML supplies the generated entry point, type metadata and resource index; window controls are programmatic. No Source, CoreWebView2 initialization, script injection, message handling or host objects.
-- `Valora.Windows.Bridge`: `INativeCapabilityCatalog` plus an immutable empty foundation catalog. No dispatch, IO, credentials or business semantics; no WIN-3 protocol is frozen here.
-- `Valora.Windows.Tests`: Windows x64 tests enforce the empty native capability surface and bridge dependency separation. They do not certify navigation, authentication or a product journey.
-- `build.ps1`: locked restore, solution build, Windows tests, self-contained unpackaged publish, unsigned-app check, file hashes and deterministic ZIP entry order/timestamps.
-- [Windows CI](../../.github/workflows/windows-client.yml): fresh Windows runner, same script, exact PR head checkout, artifact and TRX upload. Existing repository CI gains this task branch's push trigger so the frozen HEAD can pass all existing jobs before Draft PR creation.
+An administrator provisions one `REG_SZ` value `ServerOrigin` at `HKLM\SOFTWARE\Valora\WindowsClient` in the 64-bit registry view. Keep standard machine-key permissions: administrators/SYSTEM write, ordinary users read only. The app runs as the current user, opens this key read-only, and never writes configuration or accepts a web/user URL override. Configuration provisioning and permission enrollment are outside this shell task.
 
-Linux owns authentication/session, tenant/RBAC, domain validation/commands, Case State, audit/CAS, documents and jobs. React remains server-hosted. No backend, database, worker, object store, React build, AI/ML package, local inference runtime or model weights are included. No provider activation, signing material, LAN discovery or ASSET_WORKBENCH+ authorization is added. An administrator-configured HTTPS URL, protected configuration, trust/navigation/certificate UX belong to WIN-1; this foundation accepts no URL. MSIX identity/install/update/signing belong to WIN-5.
+The value is one absolute HTTPS origin, such as `https://<server-host>:8443`, optionally followed by `/`. Host case and default port 443 canonicalize deterministically; scheme, host and effective port define exact trust. Paths, query/fragment, userinfo, whitespace/control characters, backslashes, percent-encoded or Unicode hosts, trailing-dot hosts, noncanonical IPv4, ambiguous ports and non-HTTPS schemes are rejected. ASCII IDNA names and canonical IPv4/IPv6 are supported. No hostname/IP is hard-coded. Do not put credentials or tokens in this value.
+
+No configuration shows a Vietnamese administrator instruction without creating a WebView. Invalid/inaccessible configuration fails closed. Retry rereads and revalidates the machine setting and creates a fresh session/control. Browser data is isolated under the current Windows user's LocalAppData with a SHA-256 directory derived from the canonical origin. That profile is browser-managed; it does not establish server authentication. WIN-2 owns session/account cleanup and reconnect semantics.
+
+## Navigation and lifecycle
+
+`MainWindow` deliberately initializes installed stable Evergreen WebView2 with a per-origin profile; no fixed browser runtime is bundled. WIN-1 supports serviced Windows 11 x64 and Evergreen Runtime 154 or newer with the pinned SDK below. Missing runtime/API or initialization failure leaves native Retry available. Security handlers/settings are installed before the first application navigation.
+
+Only exact-origin HTTPS top-level navigation is allowed. Every redirect is rechecked. Popups/new windows, external URI schemes, downloads and all child frames (including same-origin, blank and srcdoc frames) are denied in WIN-1. Blocking a frame revokes the entire session and stops navigation; the shell hides the control immediately and closes it outside the browser callback. This conservative frame policy avoids granting trust through nested or opaque frames. No external-opening native capability exists.
+
+Platform certificate validation remains enabled. Observable certificate errors explicitly cancel; there is no proceed/ignore handler, trust-store change or HTTP fallback. Native states cover initialization, loading, loaded, network/certificate/navigation failure, blocked navigation and Retry. Stale navigation completion cannot overwrite a later navigation or a revoked session; window closure prevents late initialization from reopening it. Only loaded trusted content is displayed. Messages are Vietnamese-first and never echo raw configuration, URLs, exceptions or secrets.
+
+`FoundationCapabilityCatalog` remains immutable and empty. Web messages and host objects are disabled; no script injection, native dispatch, file/process/PowerShell, Office, notifications or deep-link handler is exposed. Browser permission requests and HTTP basic-auth prompts are denied. React/Fluent 2 remains server-hosted. Linux retains auth/session, tenant/RBAC, domain commands/validation, Case State, audit/CAS, documents, jobs and providers; ADR 0026 cookies/origin/CSRF behavior is unchanged.
+
+## Layout and verification
+
+- `Valora.Windows.App`: native WinUI lifecycle, read-only machine configuration, origin/session policy and WebView2 event boundary.
+- `Valora.Windows.Bridge`: unchanged empty capability catalog; no WIN-3 protocol.
+- `Valora.Windows.Tests`: production policy/boundary source compiled into tests, plus a hidden STA WinForms WebView2 host for actual browser-event tests. WinUI-specific lifecycle is compiled by the application build.
+- `build.ps1`: locked restore, Release x64 build/tests/publish, unsigned executable/XAML resource checks, published native no-config/Retry/closure smoke, file hashes and deterministic ZIP order/timestamps. The native smoke requires an unconfigured machine and preserves existing registry configuration by failing if it exists.
+- [Windows workflow](../../.github/workflows/windows-client.yml): exact PR head, identical build script and artifact/TRX upload; main/path-filtered PR and manual dispatch triggers.
+
+Browser tests intercept controlled document fixtures to exercise redirects/popups/frames/external schemes without certificates or script injection by the native host. A separate real network smoke uses `https://example.com`; expired, wrong-host and self-signed negatives use the public badssl endpoints. These need network access, an installed Evergreen runtime and an interactive Windows desktop. They do not install certificates or bypass TLS. Public fixture availability is an external test dependency; failure remains failure, never a skipped PASS. They certify shell/browser trust behavior, not a deployed Valora LAN instance or a product journey.
 
 ## Pinned compatible toolchain
 
@@ -50,18 +67,10 @@ dotnet publish Valora.Windows.App/Valora.Windows.App.csproj --no-build --no-rest
 
 For Debug, restore with the same platform and build with `-c Debug`. Lockfile updates are deliberate dependency changes; normal builds never use `--force-evaluate`. Projects and artifacts are isolated from the server/frontend dependency graph.
 
-## Engineering artifact and reproducibility
+## Engineering artifact and gates
 
-`artifacts/valora-win0-win-x64-unsigned.zip` contains the App, Bridge and required .NET/Windows App SDK native runtime files. Extract all files together on a serviced Windows 11 x64 machine. `Valora.Windows.App.exe` is unsigned; vendor runtime binaries may retain Microsoft signatures. The shell shows a Vietnamese foundation label and blank WebView2 area; it cannot connect to Valora. Evergreen WebView2 is required for later initialization, which this task does not perform.
+`artifacts/valora-win-x64-unsigned.zip` contains the unpackaged self-contained App, Bridge and required .NET/Windows App SDK files. Extract all files together on serviced Windows 11 x64 with Evergreen WebView2 installed. `Valora.Windows.App.exe` is unsigned; vendor binaries may retain Microsoft signatures. No MSIX, signing secret, enrollment, installer or update/distribution policy is added.
 
-`manifest.json` binds the Git source commit, exact SDK, target and SHA-256 of every application file. `SHA256SUMS` identifies the ZIP; TRX records test results. CI uploads these plus lockfiles, with 14-day retention. There is no signing certificate, signing secret, MSIX installer or distribution/update promise.
+`manifest.json` records the task, Git source commit, exact SDK, target and SHA-256 of every application file. `SHA256SUMS` identifies the ZIP; TRX records tests. CI uploads these and committed lockfiles with 14-day retention. Managed output uses deterministic compilation and normalized source paths; archive entries have fixed ordering/timestamps. Byte repeatability requires identical app bytes and compression tooling; runner servicing and Evergreen remain external variables.
 
-Managed compilation uses deterministic output and a normalized source path. Archive ordering and timestamps are fixed. To verify repeatability, run the script twice at the same clean HEAD with the pinned SDK and compare `SHA256SUMS` and manifest file hashes. ZIP bytes are guaranteed only for identical published bytes and compression tooling; Windows runner image servicing and Evergreen updates remain external variables. Fresh-checkout restore/build/test is the required reproducible engineering procedure, not a production release certification.
-
-## Execution and candidate gates
-
-1. Verify certified baseline and all named authority before creating the task worktree.
-2. Create App/Bridge/Tests, lock stable dependencies and test the native capability boundary.
-3. Run focused Windows restore/build/test/publish and inspect artifact contents/signature; verify a fresh source checkout and repeat hashes.
-4. Review every changed path against Issue #100; fetch again before candidate freeze and stop for Gate Owner on baseline drift.
-5. Commit one candidate, verify clean worktree and `git diff --check`, obtain read-only independent review on that HEAD, and require exact-head Windows and repository CI. Create only a Draft PR; Ready/merge remains Gate Owner work. A changed HEAD invalidates review/CI.
+The WIN-1 entry requires fresh Windows workflow SUCCESS on the exact live main baseline. Before freezing, fetch main, stop on drift, inspect the complete bounded diff, run focused checks and `git diff --check`, and commit a clean candidate. DeepSeek and Gemini independently review the same frozen HEAD. Then create a Draft PR and require repository and Windows CI SUCCESS on that exact SHA. Any HEAD change renews required evidence. Ready/merge belongs to the Gate Owner.

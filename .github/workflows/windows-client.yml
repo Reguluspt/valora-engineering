@@ -1,4 +1,4 @@
-name: Windows Client Foundation
+name: Windows Client
 
 on:
   pull_request:
@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - main
-      - codex/win-0-windows-client-foundation
     paths:
       - 'clients/windows/**'
       - '.github/workflows/windows-client.yml'
@@ -37,9 +36,9 @@ jobs:
       - name: Upload engineering artifact and provenance
         uses: actions/upload-artifact@v4
         with:
-          name: valora-win0-win-x64-unsigned-${{ github.event.pull_request.head.sha || github.sha }}
+          name: valora-win-x64-unsigned-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
-            clients/windows/artifacts/valora-win0-win-x64-unsigned.zip
+            clients/windows/artifacts/valora-win-x64-unsigned.zip
             clients/windows/artifacts/SHA256SUMS
             clients/windows/artifacts/manifest.json
             clients/windows/**/packages.lock.json
@@ -49,7 +48,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: valora-win0-tests-${{ github.event.pull_request.head.sha || github.sha }}
+          name: valora-windows-tests-${{ github.event.pull_request.head.sha || github.sha }}
           path: clients/windows/artifacts/test-results/*.trx
           if-no-files-found: warn
           retention-days: 14
