@@ -1,6 +1,6 @@
 # Valora OpenViking Operating Profile v1
 
-**Lifecycle/status:** CURRENT DEVELOPER TOOLING / OPERATING PROCESS — 2026-10-03.
+**Lifecycle/status:** CURRENT SPECIALIZED OPENVIKING PROFILE — 2026-10-04; supporting the single general [Agent Operating Protocol v2](VALORA_AGENT_OPERATING_PROTOCOL_V2.md).
 **Authority role:** Developer task preparation/execution support only; not product, domain, runtime or deployment authority. Live CODEX, permanent guardrails, accepted scoped authority and the assigned task govern. No product/runtime dependency or new permission is created. OpenViking remains optional NON-AUTHORITATIVE developer tooling; it never certifies current repository/task state.
 
 OpenViking is NOT part of Valora product runtime. It supports Codex Desktop development as optional memory, retrieval and development skill storage. It is never a backend, frontend, production-service, customer-data, Case State, Workbench or product-knowledge dependency.
@@ -15,10 +15,10 @@ Live GitHub/repository, relevant CODEX, accepted scoped ADR and current task aut
 | OV-2 | Verify main SHA, PR HEAD/state, CI, Issue state, migration head, changed files and worktree state live. Memory cannot certify them. |
 | OV-3 | Complete live authority bootstrap before recall. Ignore pre-bootstrap injected memory as authority. |
 | OV-4 | Find/search → small context → targeted read; no default bulk loading. |
-| OV-5 | Aggregate returned recalled context per bounded task: ≤600 tokens by default; ≤1000 for high-context resume/debug. Justify a larger budget explicitly before retrieval. |
+| OV-5 | Aggregate returned recalled context per bounded task: ≤300 tokens normally; ≤600 for resume/debug; ≤1000 exceptionally with explicit justification before retrieval. |
 | OV-6 | Persist durable certified lessons only; never volatile task state. |
 | OV-7 | Never persist secrets, real customer/client data, PII, production payloads or real appraisal values. |
-| OV-8 | Failure/outage → continue the [Lean Protocol](VALORA_LEAN_AGENT_PROTOCOL_V1.md); memory is never a prerequisite. |
+| OV-8 | Failure/outage → continue the [Agent Operating Protocol v2](VALORA_AGENT_OPERATING_PROTOCOL_V2.md); memory is never a prerequisite. |
 
 ## VALORA_LEAN_MCP
 
@@ -32,6 +32,8 @@ Live GitHub/repository, relevant CODEX, accepted scoped ADR and current task aut
 | Full automatic memory plugin behavior | OFF |
 
 Keep native local skill discovery available. Loading a relevant local skill is distinct from semantic memory recall or transcript capture. Do not enable global automatic recall/capture for this profile.
+
+Every Dev/Codex handoff carries the compact [policy block](#mcp-usage-block); actual MCP recall remains OPTIONAL. The full profile need not be read when MCP is not being used, debugged or persisted. Carrying compact policy alone requires no retrieval. Dated installed-integration observations below remain historical evidence, not claims that this task changed or certified an active environment.
 
 ## Installed integration discovery
 
@@ -64,13 +66,15 @@ Validation against installed `0.10.5`: all five lifecycle hooks exited without c
 
 For Desktop, either disable this plugin's lifecycle hooks through the supported hook controls while retaining its MCP, or fully exit Desktop and start its actual executable through this launcher using `-Executable <installed Desktop executable>`. A pre-existing Desktop process may retain old environment settings. Verify a fresh session has no automatic memory injection and hooks are disabled before claiming compliance. The launcher default starts Codex CLI, not Desktop; this PR does not claim to reconfigure an already-running Desktop chat. Do not edit plugin cache or global preferences as a substitute.
 
-If manual MCP is unavailable, times out, or errors, record the unavailable call once and continue Lean with current repository files and local skills. Do not retry indefinitely, reconstruct state from memory, install a product dependency or wait for server recovery. Disable the optional plugin/MCP connection through Codex controls if repeated connection attempts interfere with work. Normal Git/CODEX/task verification remains available offline from OpenViking.
+If manual MCP is unavailable, times out, or errors, record the unavailable call once and continue [Agent Operating Protocol v2](VALORA_AGENT_OPERATING_PROTOCOL_V2.md) with current repository files and local skills. Do not retry indefinitely, reconstruct state from memory, install a product dependency or wait for server recovery. Disable the optional plugin/MCP connection through Codex controls if repeated connection attempts interfere with work. Normal Git/CODEX/task verification remains available offline from OpenViking.
 
 ## Recall decisions and budget control
 
 Do not recall by default for tiny mechanical corrections, acceptance reconciliation, whitespace/CI fixes, straightforward CODEX edits, an exact-pattern migration or an obvious one-file fix. Prefer recall for dirty-worktree resume, recurring RBAC/migration/provenance failures, concurrency/debug history, similar reviewer findings or multi-session debugging. Consider recall before reading more than five historical docs or reconstructing history.
 
 After live bootstrap, state the retrieval question. Request one or a few ranked abstracts via `find`/`search`; inspect relevance, then read only the needed record. Restrict to the project or exact URI where supported. Count ALL returned memory text, envelopes and abstracts, not merely the summary quoted in the answer, against the task budget. Use the actual model tokenizer when available; otherwise label the estimate and reserve headroom. Stop further retrieval at the limit. A full read without a response cap can overshoot: prefer compact records, inspect abstracts first, and record any overrun and justification rather than pretending the excess was free. Do not confuse the auto-hook budget knobs with a manual MCP response limit.
+
+Stop at the first sufficient search/read. The exceptional ceiling is ≤1000 with justification before retrieval, not an open-ended budget override.
 
 ## Persistence and privacy
 
@@ -92,12 +96,13 @@ Verification rule: Re-read current live implementation/authority before use.
 Invalidation: Ignore when current repo/CODEX/ADR contradicts this memory.
 ```
 
-## Six-skill catalog
+## Local skill catalog
 
 Canonical sources are committed native Codex skills; they neither depend on nor register themselves into OpenViking.
 
 | Skill | Source | Purpose |
 | --- | --- | --- |
+| valora-session-bootstrap | [SKILL.md](../../.agents/skills/valora-session-bootstrap/SKILL.md) | Compact session startup under V2; delegates live-state checks to live-authority bootstrap |
 | valora-live-authority-bootstrap | [SKILL.md](../../.agents/skills/valora-live-authority-bootstrap/SKILL.md) | Live fetch, authority, exact CI/task and readiness |
 | valora-dev-handoff | [SKILL.md](../../.agents/skills/valora-dev-handoff/SKILL.md) | Mandatory CODEX MODEL block on every Dev prompt |
 | valora-worktree-resume | [SKILL.md](../../.agents/skills/valora-worktree-resume/SKILL.md) | Read-only inspection, live verification and reviewed checkpoint |
@@ -107,7 +112,7 @@ Canonical sources are committed native Codex skills; they neither depend on nor 
 
 Every Dev/Codex handoff, including tiny continuation, reviewer/evidence/CI corrections and acceptance reconciliation, must BEGIN with `CODEX MODEL`, exact `Model`, `Reasoning`, `Selection reason` and `Escalation`. Missing routing is INVALID; vague agent labels do not substitute. The handoff skill defines the full block and routing guidance.
 
-Optional future external registration requires the actual `add_skill` tool or `ov skills add` to become available. Validate canonical frontmatter, check each target for collision, register the exact reviewed SKILL.md content, then list/find/read all six and compare retrieved content against Git. Confirm before replacing existing user/shared skills. Keep Git sources usable without the server; do not store volatile evidence as memory. This optional procedure is not a v1 prerequisite.
+Optional future external registration requires the actual `add_skill` tool or `ov skills add` to become available. Validate canonical frontmatter, check each target for collision, register the exact reviewed SKILL.md content, then list/find/read each registered skill and compare retrieved content against Git. Confirm before replacing existing user/shared skills. Keep Git sources usable without the server; do not store volatile evidence as memory. This optional procedure is not a profile prerequisite.
 
 ## MCP usage block
 
@@ -116,13 +121,13 @@ OPENVIKING PROFILE
 Mode: VALORA_LEAN_MCP
 Authority: OpenViking is NON-AUTHORITATIVE.
 Live repository/CODEX/task authority always wins.
-Usage: After live bootstrap, use OpenViking only when prior project experience can materially reduce repository reading.
+Usage: Bootstrap live repo first; actual recall OPTIONAL, only when useful.
 Prefer: find/search → small context → targeted read.
-Default recall: <=600 tokens total returned context per bounded task.
-High-context resume/debug: <=1000 tokens unless explicitly justified.
+Recall total returned context per bounded task: normal <=300; resume/debug <=600; exceptional <=1000 with justification BEFORE retrieval. Stop at first sufficient result.
+Automatic recall/capture/injection: OFF.
 Do not reconstruct live state from memory, bulk-load memory, store secrets/client data or persist volatile task state.
 Persist: durable certified lessons only.
-Fallback: If OpenViking is unavailable, continue with Lean Protocol.
+Fallback: If OpenViking is unavailable, continue Agent Operating Protocol V2.
 ```
 
 ## Measurement and future automatic memory

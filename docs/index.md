@@ -21,6 +21,9 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
 - [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
   delegated mechanical-worker, independent-review and commit-ownership rules.
+- [Agent Operating Protocol v2](plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md) — single current general operating-process entrypoint for fresh Gate Owner/Architect and Dev/Codex sessions; Reference-first, Local-first, startup, verification/review and exact-SHA integration.
+- [Compact Task Contract](plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md), [session bootstrap skill](../.agents/skills/valora-session-bootstrap/SKILL.md) and [OpenViking profile](plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md) — supporting template/procedures and specialized optional MCP policy.
+- [Lean Agent Protocol v1](plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) — SUPERSEDED / HISTORICAL; preserved body, current successor is V2.
 - [PR-00 through PR-13 per-layer acceptance matrix](implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md) — historical PR-labelled acceptance evidence plus current candidate reconciliation; **not** current roadmap sequencing.
 
 ## Linux Server / Windows Client v1
