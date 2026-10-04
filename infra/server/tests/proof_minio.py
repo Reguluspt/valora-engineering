@@ -1,4 +1,4 @@
-"""Disposable loopback-only proof of the existing MinIO file-secret interface."""
+"""Historical 2026-10-03 dev compatibility only; never SRV-0 slot or vendor certification."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -50,7 +50,7 @@ def main():
                 assert error.response["ResponseMetadata"]["HTTPStatusCode"] == 403
             else:
                 raise AssertionError("default MinIO credentials were accepted")
-            print("SRV-0 MinIO file-secret proof: PASS (pinned existing vendor interface, fixture credentials work, default credentials rejected)")
+            print("Historical MinIO compatibility: PASS (dated dev fixture only; no production runtime/slot certification)")
         finally:
             subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False)
 

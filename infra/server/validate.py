@@ -12,10 +12,16 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
-SERVICES = {"ingress", "frontend", "backend", "worker", "postgres", "redis", "minio"}
+SERVICES = {"ingress", "frontend", "backend", "worker", "postgres", "redis", "source-artifacts"}
 APP_IMAGES = {"backend", "worker", "frontend"}
 ARTIFACTS = ("compose.yml", "nginx.conf.template", "frontend.conf", "runtime.py")
-SECRET_VARIABLES = {"POSTGRES_PASSWORD", "APP_SECRET_KEY", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "MINIO_ROOT_USER", "MINIO_ROOT_PASSWORD"}
+SECRET_VARIABLES = {"POSTGRES_PASSWORD", "APP_SECRET_KEY", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"}
+S3_CONTRACT = {
+    "protocol": "s3v4", "role": "source-artifact-support-only",
+    "endpoint_url": "http://source-artifacts:9000", "bucket": "valora-source-artifacts", "region": "us-east-1",
+    "credential_files": {"access_key": "/run/secrets/s3_access_key", "secret_key": "/run/secrets/s3_secret_key"},
+    "data_path": "/var/lib/valora/source-artifacts", "runtime_selection": "deferred",
+}
 
 
 def schema_head():
@@ -51,6 +57,8 @@ def check_manifest(manifest):
         raise ValueError("SRV-0 packages server and web from the same revision")
     if manifest.get("schema_head") != schema_head() or manifest.get("foundation_sha256") != hashes():
         raise ValueError("release schema/foundation artifacts do not match this checkout")
+    if manifest.get("source_artifact_contract") != S3_CONTRACT:
+        raise ValueError("vendor-neutral S3-compatible source-artifact contract required")
     images = manifest.get("images", {})
     if set(images) != SERVICES:
         raise ValueError("only the approved service/image set is allowed")
@@ -87,7 +95,7 @@ def render(manifest, inputs):
         if candidate == REPO or REPO in candidate.parents:
             raise ValueError("runtime data/secrets must be outside the checkout")
     values = {**inputs, "VALORA_SCHEMA_HEAD": manifest["schema_head"]}
-    values.update({f"VALORA_{name.upper()}_IMAGE": image["reference"] for name, image in manifest["images"].items()})
+    values.update({f"VALORA_{name.upper().replace('-', '_')}_IMAGE": image["reference"] for name, image in manifest["images"].items()})
     with tempfile.TemporaryDirectory() as directory:
         env_path = Path(directory) / "release.env"
         env_path.write_text("".join(f"{key}={value}\n" for key, value in sorted(values.items())), encoding="utf-8")
@@ -113,11 +121,15 @@ def render_proof():
 
 def check_compose(config):
     services, networks = config.get("services", {}), config.get("networks", {})
-    if set(services) != SERVICES or set(networks) != {"edge", "app", "data"}:
+    if set(services) != SERVICES or set(networks) != {"edge", "app", "data", "egress"}:
         raise ValueError("unexpected services or networks")
     if any(not networks[name].get("internal") or networks[name].get("external") for name in ("app", "data")):
         raise ValueError("application and data networks must be private")
-    topology = {"ingress": {"edge", "app"}, "frontend": {"app"}, "backend": {"app", "data"}, "worker": {"data"}, "postgres": {"data"}, "redis": {"data"}, "minio": {"data"}}
+    if any(networks[name].get("internal") or networks[name].get("external") for name in ("edge", "egress")):
+        raise ValueError("dedicated outbound-capable bridges required")
+    if any(network.get("driver", "bridge") != "bridge" or network.get("driver_opts") for network in networks.values()):
+        raise ValueError("only isolated Compose-managed bridge networks allowed")
+    topology = {"ingress": {"edge", "app"}, "frontend": {"app"}, "backend": {"app", "data", "egress"}, "worker": {"data", "egress"}, "postgres": {"data"}, "redis": {"data"}, "source-artifacts": {"data"}}
     for name, service in services.items():
         if set(service.get("networks", {})) != topology[name]:
             raise ValueError("service network boundary changed")
@@ -129,7 +141,7 @@ def check_compose(config):
         if name != "ingress" and ports:
             raise ValueError("only ingress may publish a port")
         if name == "ingress":
-            if len(ports) != 1 or ports[0].get("target") != 443 or str(ports[0].get("published")) != "443":
+            if len(ports) != 1 or ports[0].get("target") != 443 or str(ports[0].get("published")) != "443" or ports[0].get("protocol", "tcp") != "tcp":
                 raise ValueError("only HTTPS 443 may be exposed")
             address = ipaddress.ip_address(ports[0].get("host_ip", "0.0.0.0"))
             if address.is_unspecified or not address.is_private:
@@ -142,6 +154,18 @@ def check_compose(config):
             raise ValueError("production immutable-blob authority required")
         if not service.get("healthcheck") or not service.get("secrets"):
             raise ValueError("readiness/secrets contract required")
+        for variable, field in (("S3_ENDPOINT_URL", "endpoint_url"), ("S3_BUCKET", "bucket"), ("S3_REGION", "region")):
+            if service["environment"].get(variable) != S3_CONTRACT[field]:
+                raise ValueError("S3 application interface changed")
+    slot = services["source-artifacts"]
+    if any(slot.get(key) for key in ("command", "entrypoint", "environment")):
+        raise ValueError("S3 runtime startup belongs to the later approved image, not this foundation")
+    credentials = {item["source"]: item["target"] for item in slot.get("secrets", [])}
+    if credentials != {"s3_access_key": S3_CONTRACT["credential_files"]["access_key"], "s3_secret_key": S3_CONTRACT["credential_files"]["secret_key"]}:
+        raise ValueError("S3 credential-file boundary changed")
+    volumes = slot.get("volumes", [])
+    if len(volumes) != 1 or volumes[0].get("type") != "volume" or volumes[0].get("source") != "source_artifacts" or volumes[0].get("target") != S3_CONTRACT["data_path"]:
+        raise ValueError("source-artifact persistence boundary changed")
 
 
 def main():

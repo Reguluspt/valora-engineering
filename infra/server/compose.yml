@@ -16,7 +16,7 @@ x-app: &app
     POSTGRES_DB: valora
     POSTGRES_USER: valora
     REDIS_URL: redis://redis:6379/0
-    S3_ENDPOINT_URL: http://minio:9000
+    S3_ENDPOINT_URL: http://source-artifacts:9000
     S3_BUCKET: valora-source-artifacts
     S3_REGION: us-east-1
     DOCUMENT_BLOB_PROVIDER: local
@@ -34,7 +34,7 @@ x-app: &app
       target: /var/lib/valora/document-blobs
       bind:
         create_host_path: false
-  networks: [data]
+  networks: [data, egress]
   logging: &logging
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
@@ -74,11 +74,11 @@ services:
     <<: *app
     image: ${VALORA_BACKEND_IMAGE:?digest required}
     command: [python, /opt/server/runtime.py, backend]
-    networks: [app, data]
+    networks: [app, data, egress]
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
-      minio: {condition: service_started}
+      source-artifacts: {condition: service_started}
     healthcheck:
       test: [CMD, python, /opt/server/runtime.py, ready, backend]
       interval: 30s
@@ -130,15 +130,12 @@ services:
     security_opt: [no-new-privileges:true]
     logging: *logging
 
-  minio:
-    image: ${VALORA_MINIO_IMAGE:?digest required}
+  # Generic slot only: a later approved image must implement the manifest's S3 contract.
+  source-artifacts:
+    image: ${VALORA_SOURCE_ARTIFACTS_IMAGE:?approved S3-compatible image digest required}
     restart: unless-stopped
-    command: [server, /data, --console-address, ":9001"]
-    environment:
-      MINIO_ROOT_USER_FILE: /run/secrets/s3_access_key
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/s3_secret_key
     secrets: [s3_access_key, s3_secret_key]
-    volumes: [source_artifacts:/data]
+    volumes: [source_artifacts:/var/lib/valora/source-artifacts]
     networks: [data]
     security_opt: [no-new-privileges:true]
     logging: *logging
@@ -147,6 +144,7 @@ networks:
   edge: {}
   app: {internal: true}
   data: {internal: true}
+  egress: {driver: bridge}
 
 volumes:
   postgres_data: {}

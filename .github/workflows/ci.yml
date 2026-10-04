@@ -26,6 +26,7 @@ jobs:
           pip install cryptography ruff==0.6.0
           ruff check infra/server
           python infra/server/tests/proof_tls.py
+          python infra/server/tests/proof_networks.py
 
   committed-whitespace:
     runs-on: ubuntu-latest
