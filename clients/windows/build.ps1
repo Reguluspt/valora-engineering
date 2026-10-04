@@ -2,7 +2,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-if (-not $IsWindows) { throw 'WIN-0 builds require Windows and PowerShell 7.' }
+if (-not $IsWindows) { throw 'Windows client builds require Windows and PowerShell 7.' }
 
 function Invoke-Dotnet {
     param([string[]] $Arguments)
@@ -30,9 +30,15 @@ try {
 
     $exe = Join-Path $appOutput 'Valora.Windows.App.exe'
     if (-not (Test-Path -LiteralPath $exe)) { throw 'Missing app executable.' }
+    foreach ($resource in @('Valora.Windows.App.pri', 'App.xbf')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $appOutput $resource))) {
+            throw "Missing application XAML resource: $resource"
+        }
+    }
     if ((Get-AuthenticodeSignature -LiteralPath $exe).Status -ne 'NotSigned') {
         throw 'Engineering app must be unsigned.'
     }
+    & (Join-Path $PSScriptRoot 'Valora.Windows.Tests/native-shell-smoke.ps1') -Executable $exe
     $commit = & git rev-parse HEAD
     if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source commit.' }
     $files = @(Get-ChildItem -LiteralPath $appOutput -Recurse -File | Sort-Object FullName | ForEach-Object {
@@ -42,7 +48,7 @@ try {
         }
     })
     [ordered]@{
-        task = 'VALORA-TASK-WIN-0-WINDOWS-CLIENT-FOUNDATION'
+        task = 'VALORA-TASK-WIN-1-WEBVIEW-TRUSTED-NAVIGATION'
         sourceCommit = $commit
         dotnetSdk = $expectedSdk
         target = 'Windows 11 x64'
@@ -51,7 +57,7 @@ try {
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$resolvedRoot/manifest.json" -Encoding utf8NoBOM
 
     # Stable entry order and timestamps make the archive reproducible for identical app bytes.
-    $zipPath = Join-Path $resolvedRoot 'valora-win0-win-x64-unsigned.zip'
+    $zipPath = Join-Path $resolvedRoot 'valora-win-x64-unsigned.zip'
     $zip = [IO.Compression.ZipFile]::Open($zipPath, [IO.Compression.ZipArchiveMode]::Create)
     try {
         foreach ($file in $files) {
