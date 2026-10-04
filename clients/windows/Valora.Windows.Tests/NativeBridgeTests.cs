@@ -149,8 +149,6 @@ public sealed class NativeBridgeTests
             Assert.True(handles.Add(result.GetProperty("handle").GetString()!));
         }
         Error(await bridge.DispatchAsync(Request("pickDocumentFile")), NativeError.BUSY);
-        Error(await bridge.DispatchAsync(Request("openInExcel", new { handle = new string('a', 48) })), NativeError.BUSY);
-        Error(await bridge.DispatchAsync(Request("openInWord", new { handle = new string('a', 48) })), NativeError.BUSY);
         var first = handles.First();
         ((TestNativeFile)platform.Selection).Info = new("edge.docx", ".docx", BridgeGeneration.FileLimit + 1);
         Error(await bridge.DispatchAsync(Request("openInWord", new { handle = first })), NativeError.SIZE_LIMIT);
@@ -171,6 +169,8 @@ public sealed class NativeBridgeTests
         var first = bridge.DispatchAsync(Request("pickExcelFile", id: id));
         Error(await bridge.DispatchAsync(Request("pickExcelFile", id: id)), NativeError.BAD_MESSAGE);
         Error(await bridge.DispatchAsync(Request("pickDocumentFile")), NativeError.BUSY);
+        Error(await bridge.DispatchAsync(Request("openInExcel", new { handle = new string('a', 48) })), NativeError.BUSY);
+        Error(await bridge.DispatchAsync(Request("openInWord", new { handle = new string('a', 48) })), NativeError.BUSY);
         platform.DelayedPicker.SetResult(null);
         await first;
         Error(await bridge.DispatchAsync(Request("pickExcelFile", id: id)), NativeError.BAD_MESSAGE);
