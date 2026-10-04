@@ -42,7 +42,9 @@ public sealed class NativeBridgeSession(INativePlatform platform)
                 return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.BRIDGE_REVOKED));
             }
             if (current is null || !current.Active) { return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.NOT_TRUSTED)); }
-            var interactive = request.Capability is "pickExcelFile" or "pickDocumentFile" or "saveDownloadedArtifact" or "openExternalUrl";
+            // Fixed association launches also use TreatAsUntrusted and can show an OS confirmation.
+            var interactive = request.Capability is "pickExcelFile" or "pickDocumentFile" or "openInExcel" or "openInWord" or
+                "saveDownloadedArtifact" or "openExternalUrl";
             try
             {
                 if (request.Capability != "hello" && !current.Negotiated) { throw new NativeBridgeException(NativeError.BAD_PROTOCOL); }

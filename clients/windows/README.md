@@ -36,7 +36,7 @@ Protocol is `valora.native/1`; transport is WebView2 web messages, never a host 
 {"protocol":"valora.native/1","type":"request","requestId":"<canonical lower-case UUID>","capability":"hello","payload":{}}
 ```
 
-Its response uses the frozen success envelope with `result: {protocol, capabilities}`. It exposes only enabled capability names; no authentication, identity or business state. Capability requests require successful negotiation in the current bridge generation. Envelopes/payloads are strict objects with no extra or duplicate fields. Messages are bounded to 64 KiB UTF-8; at most eight requests and one picker/save/external confirmation operation are in flight. Request IDs cannot replay in a generation; a 4096-ID memory ceiling returns BUSY until generation renewal, without evicting IDs that could repeat an OS action.
+Its response uses the frozen success envelope with `result: {protocol, capabilities}`. It exposes only enabled capability names; no authentication, identity or business state. Capability requests require successful negotiation in the current bridge generation. Envelopes/payloads are strict objects with no extra or duplicate fields. Messages are bounded to 64 KiB UTF-8; at most eight requests and one picker/save/Office/external confirmation operation are in flight. Office association launches use `TreatAsUntrusted`, so they share that interaction lock until OS completion. Request IDs cannot replay in a generation; a 4096-ID memory ceiling returns BUSY until generation renewal, without evicting IDs that could repeat an OS action.
 
 | Capability | Production WIN-3 state / payload and result |
 | --- | --- |

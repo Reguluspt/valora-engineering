@@ -17,6 +17,7 @@ internal sealed class TestNativePlatform : INativePlatform
     internal INativeFile? Selection;
     internal TaskCompletionSource<INativeFile?>? DelayedPicker;
     internal TaskCompletionSource<bool>? DelayedOpen;
+    internal TaskCompletionSource<bool>? DelayedNotification;
     internal Exception? Failure;
     internal int Picks, Opens, Saves, Notifications, External;
     internal bool? SaveResult = true;
@@ -32,7 +33,7 @@ internal sealed class TestNativePlatform : INativePlatform
         return DelayedOpen?.Task ?? Task.FromResult(true);
     });
     public Task<bool?> SaveAsync(INativeFile file, string name, BridgeGeneration generation) => generation.Start(() => { Saves++; return Task.FromResult(SaveResult); });
-    public Task<bool> NotifyAsync(string title, string body, BridgeGeneration generation) => generation.Start(() => { Notifications++; return Task.FromResult(true); });
+    public Task<bool> NotifyAsync(string title, string body, BridgeGeneration generation) => generation.Start(() => { Notifications++; return DelayedNotification?.Task ?? Task.FromResult(true); });
     public Task<bool> OpenExternalAsync(string url, BridgeGeneration generation) => generation.Start(() => { External++; return Task.FromResult(true); });
 }
 
@@ -148,6 +149,8 @@ public sealed class NativeBridgeTests
             Assert.True(handles.Add(result.GetProperty("handle").GetString()!));
         }
         Error(await bridge.DispatchAsync(Request("pickDocumentFile")), NativeError.BUSY);
+        Error(await bridge.DispatchAsync(Request("openInExcel", new { handle = new string('a', 48) })), NativeError.BUSY);
+        Error(await bridge.DispatchAsync(Request("openInWord", new { handle = new string('a', 48) })), NativeError.BUSY);
         var first = handles.First();
         ((TestNativeFile)platform.Selection).Info = new("edge.docx", ".docx", BridgeGeneration.FileLimit + 1);
         Error(await bridge.DispatchAsync(Request("openInWord", new { handle = first })), NativeError.SIZE_LIMIT);
@@ -172,24 +175,61 @@ public sealed class NativeBridgeTests
         await first;
         Error(await bridge.DispatchAsync(Request("pickExcelFile", id: id)), NativeError.BAD_MESSAGE);
         Assert.Equal(1, platform.Picks);
+        Assert.Equal(0, platform.Opens);
+    }
+
+    [Theory]
+    [InlineData("openInExcel", "book.xlsx")]
+    [InlineData("openInWord", "document.docx")]
+    public async Task OfficeAssociationConfirmationSharesThePickerSaveAndExternalInteractionLock(string capability, string name)
+    {
+        var platform = new TestNativePlatform { DelayedOpen = new(TaskCreationOptions.RunContinuationsAsynchronously), Selection = new TestNativeFile(name) };
+        var bridge = await Ready(platform);
+        var generation = bridge.CurrentGeneration!;
+        var file = (TestNativeFile)platform.Selection;
+        var handle = generation.Register(file, file.Info);
+        var artifact = generation.Register(file, file.Info, true);
+        var first = bridge.DispatchAsync(Request(capability, new { handle }));
+        Assert.False(first.IsCompleted);
+        foreach (var (next, payload) in new (string, object)[]
+        {
+            ("pickExcelFile", new { }), ("pickDocumentFile", new { }),
+            ("openInExcel", new { handle }), ("openInWord", new { handle }),
+            ("saveDownloadedArtifact", new { artifactHandle = artifact, suggestedFilename = name }),
+            ("openExternalUrl", new { url = "https://example.com" })
+        }) { Error(await bridge.DispatchAsync(Request(next, payload)), NativeError.BUSY); }
+        Assert.Equal(1, platform.Opens);
+        Assert.Equal(0, platform.Picks + platform.Saves + platform.External);
+        platform.DelayedOpen.SetResult(true);
+        Assert.True(Parse(await first).GetProperty("ok").GetBoolean());
+        var picker = capability == "openInWord" ? "pickDocumentFile" : "pickExcelFile";
+        Assert.True(Parse(await bridge.DispatchAsync(Request(picker))).GetProperty("ok").GetBoolean());
     }
 
     [Fact]
     public async Task EightPendingCallsRevokeImmediatelyAndOldCompletionCannotActOrClearNewInteraction()
     {
-        var platform = new TestNativePlatform { DelayedOpen = new(TaskCreationOptions.RunContinuationsAsynchronously), Selection = new TestNativeFile() };
+        var platform = new TestNativePlatform { DelayedNotification = new(TaskCreationOptions.RunContinuationsAsynchronously), Selection = new TestNativeFile() };
         var bridge = await Ready(platform);
         var handle = Parse(await bridge.DispatchAsync(Request("pickExcelFile"))).GetProperty("result").GetProperty("handle").GetString()!;
-        var pending = Enumerable.Range(0, 8).Select(_ => bridge.DispatchAsync(Request("openInExcel", new { handle }))).ToArray();
+        var pending = Enumerable.Range(0, 8).Select(_ => bridge.DispatchAsync(Request("showNotification", new { title = "Valora", body = "Notice" }))).ToArray();
         Assert.All(pending, task => Assert.False(task.IsCompleted));
         Error(await bridge.DispatchAsync(Request()), NativeError.BUSY);
         bridge.Revoke();
         foreach (var task in pending) { Error(await task.WaitAsync(TimeSpan.FromSeconds(1)), NativeError.BRIDGE_REVOKED); }
-        platform.DelayedOpen.SetResult(true);
         bridge.Enable();
         await bridge.DispatchAsync(Request());
+        platform.DelayedPicker = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var nextPicker = bridge.DispatchAsync(Request("pickExcelFile"));
+        platform.DelayedNotification.SetResult(true);
+        await Task.Delay(20);
+        Error(await bridge.DispatchAsync(Request("pickDocumentFile")), NativeError.BUSY);
+        Assert.False(nextPicker.IsCompleted);
+        platform.DelayedPicker.SetResult(null);
+        await nextPicker;
         Error(await bridge.DispatchAsync(Request("openInExcel", new { handle })), NativeError.HANDLE_INVALID);
-        Assert.Equal(8, platform.Opens);
+        Assert.Equal(8, platform.Notifications);
+        Assert.Equal(0, platform.Opens);
     }
 
     [Fact]
