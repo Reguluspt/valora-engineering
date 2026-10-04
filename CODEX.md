@@ -10,6 +10,8 @@
 This is authority precedence when a source is relevant, not a required reading list for every task.
 The Gate Owner/Architect resolves project-wide authority and supplies a compact task contract;
 Codex reads the contract and only the authority sections needed for its bounded implementation.
+Verify the live CODEX blob each session. A full CODEX/history read is an exception for explicit
+governance/reconciliation scope or a concrete unresolved authority conflict, not the default checklist.
 
 ```text
 1. Explicit current Product Owner decision — wins only in the scope it names
@@ -365,14 +367,21 @@ OpenViking is NON-AUTHORITATIVE developer tooling for Codex, never a Valora prod
 dependency. Live repository/CODEX/accepted scoped authority always wins. Default mode is
 `VALORA_LEAN_MCP`: manual MCP recall only after live authority bootstrap; automatic recall/capture
 and memory injection remain off. Follow the [OpenViking profile](docs/plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md)
-for supported hook controls, budgets, privacy, fallback and the six canonical local skills.
+when MCP use/debug/persistence requires its specialized hook controls, privacy or fallback details.
+EVERY Dev/Codex handoff includes the compact OpenViking policy; actual recall remains optional.
+Recall ceilings per bounded task are ≤300 returned tokens normally, ≤600 for resume/debug and
+≤1000 exceptionally with justification before retrieval. Carrying compact policy alone does not
+require a full-profile read.
 EVERY Dev/Codex handoff must begin with a populated `CODEX MODEL` block naming the exact model,
 reasoning, selection reason and escalation, including resumed tasks and tiny corrections;
 without it the prompt is INVALID. See [Dev handoff skill](.agents/skills/valora-dev-handoff/SKILL.md).
 
-The [Lean Agent Protocol](docs/plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) defines the operating
-tiers; the [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) is the
-task handoff. Sections 3–9 and the permanent ENGINEERING_GUARDRAILS.md invariants remain binding.
+The [Agent Operating Protocol v2](docs/plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md) is the single
+current general process entrypoint for Gate Owner/Architect and Dev/Codex sessions; Lean v1 is
+historical/superseded. Use the [session bootstrap skill](.agents/skills/valora-session-bootstrap/SKILL.md)
+and [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) for reference-first
+task deltas and local-first bounded work packages. Sections 3–9 and the permanent
+ENGINEERING_GUARDRAILS.md invariants remain binding.
 A task contract may narrow scope or require stronger gates, never weaken domain, security, tenant,
 audit, idempotency, human-approval or exact-SHA requirements.
 

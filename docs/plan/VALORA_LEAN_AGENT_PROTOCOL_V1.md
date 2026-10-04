@@ -1,6 +1,6 @@
 # VALORA Lean Agent Protocol v1
 
-**Lifecycle/status:** CURRENT DEVELOPER TOOLING / OPERATING PROCESS — 2026-10-03.
+**Lifecycle/status:** SUPERSEDED / HISTORICAL — superseded 2026-10-04 by [Agent Operating Protocol v2](VALORA_AGENT_OPERATING_PROTOCOL_V2.md), the single current general operating-process entrypoint for Gate Owner/Architect and Dev/Codex sessions. The original v1 body below is retained as historical content, including its former budgets/closeout targets; use V2 for current procedure.
 **Authority role:** Developer task preparation/execution support only; not product, domain, runtime or deployment authority. Live CODEX, permanent guardrails, accepted scoped authority and the assigned task govern. No product/runtime dependency or new permission is created.
 
 This is an implementation operating protocol, not product or domain authority. [CODEX](../../CODEX.md) and [Engineering Guardrails](../../ENGINEERING_GUARDRAILS.md) retain their permanent rules.

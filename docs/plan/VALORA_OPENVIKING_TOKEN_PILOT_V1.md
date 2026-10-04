@@ -36,7 +36,7 @@ Keep task evidence in the approved task artifact location; never persist this vo
 | Material findings P0–P3 | Independent review counts by severity and affected scope; record advisory findings separately |
 | Rework rounds | Each material correction cycle after candidate/review, under the same definition for A/B |
 | OpenViking calls | Count successful and failed calls, including health/find/read, and annotate purpose |
-| Recall budget/overrun | 600 default or 1000 high-context; justification, measured returned total |
+| Recall budget/overrun | Current profile: ≤300 normal, ≤600 resume/debug, ≤1000 exceptional justified before retrieval; measured total returned context |
 | Missing telemetry/confounders | N/A reasons, scope/model/cache/context/gate differences |
 | Certification | Review verdict and exact CI evidence when completed |
 
