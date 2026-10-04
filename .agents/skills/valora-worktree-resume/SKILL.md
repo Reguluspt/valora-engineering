@@ -13,4 +13,4 @@ Review the exact diff and form an explicit file allowlist. Stage only those revi
 
 Never use `reset --hard`, `git clean`, or delete/recreate a worktree unless separately explicitly authorized. Never modify another task's worktree. A stale handoff cannot authorize destructive recovery.
 
-Follow the [profile](../../../docs/plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md) and current CODEX; OpenViking outage falls back to Lean.
+Follow the [profile](../../../docs/plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md) and current CODEX; OpenViking outage falls back to [Agent Operating Protocol v2](../../../docs/plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md).

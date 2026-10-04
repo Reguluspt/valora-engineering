@@ -66,7 +66,7 @@ Validation against installed `0.10.5`: all five lifecycle hooks exited without c
 
 For Desktop, either disable this plugin's lifecycle hooks through the supported hook controls while retaining its MCP, or fully exit Desktop and start its actual executable through this launcher using `-Executable <installed Desktop executable>`. A pre-existing Desktop process may retain old environment settings. Verify a fresh session has no automatic memory injection and hooks are disabled before claiming compliance. The launcher default starts Codex CLI, not Desktop; this PR does not claim to reconfigure an already-running Desktop chat. Do not edit plugin cache or global preferences as a substitute.
 
-If manual MCP is unavailable, times out, or errors, record the unavailable call once and continue Lean with current repository files and local skills. Do not retry indefinitely, reconstruct state from memory, install a product dependency or wait for server recovery. Disable the optional plugin/MCP connection through Codex controls if repeated connection attempts interfere with work. Normal Git/CODEX/task verification remains available offline from OpenViking.
+If manual MCP is unavailable, times out, or errors, record the unavailable call once and continue [Agent Operating Protocol v2](VALORA_AGENT_OPERATING_PROTOCOL_V2.md) with current repository files and local skills. Do not retry indefinitely, reconstruct state from memory, install a product dependency or wait for server recovery. Disable the optional plugin/MCP connection through Codex controls if repeated connection attempts interfere with work. Normal Git/CODEX/task verification remains available offline from OpenViking.
 
 ## Recall decisions and budget control
 
