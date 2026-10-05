@@ -16,6 +16,7 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
         NativeFileInfo? Info, JsonElement Metadata);
     private readonly Dictionary<string, Ticket> tickets = new(StringComparer.Ordinal);
     private readonly HashSet<Stream> responses = new();
+    private readonly List<WeakReference<Stream>> retainedResponses = new();
     private int inFlight;
 
     public static void ValidateMetadata(JsonElement value)
@@ -56,6 +57,7 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
 
     private string Add(Ticket ticket) => owner.Start(() =>
     {
+        retainedResponses.RemoveAll(reference => !reference.TryGetTarget(out _));
         foreach (var key in tickets.Where(pair => pair.Value.Expires <= time.GetUtcNow()).Select(pair => pair.Key).ToArray())
         {
             tickets.Remove(key);
@@ -136,6 +138,7 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
     {
         var stream = new GenerationResponseStream(owner, bytes, value => owner.Cleanup(() => responses.Remove(value)));
         responses.Add(stream);
+        retainedResponses.Add(new WeakReference<Stream>(stream));
         return new NativeResourceResponse(status, mime, stream);
     });
 
@@ -144,7 +147,9 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
     internal void Clear()
     {
         tickets.Clear();
-        foreach (var response in responses.ToArray()) { response.Dispose(); }
+        foreach (var reference in retainedResponses)
+            if (reference.TryGetTarget(out var response)) response.Dispose();
+        retainedResponses.Clear();
         responses.Clear();
     }
 
@@ -153,18 +158,18 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
     {
         private readonly MemoryStream content = new(bytes, false);
         public override bool CanRead => content.CanRead;
-        public override bool CanSeek => false;
+        public override bool CanSeek => content.CanSeek;
         public override bool CanWrite => false;
         public override long Length => generation.Start(() => content.Length);
-        public override long Position { get => generation.Start(() => content.Position); set => throw new NotSupportedException(); }
+        public override long Position { get => generation.Start(() => content.Position); set => generation.Start(() => content.Position = value); }
         public override void Flush() { }
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => generation.Start(() => content.Seek(offset, origin));
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override int Read(byte[] buffer, int offset, int count) => generation.Start(() =>
         {
             var read = content.Read(buffer, offset, count);
-            if (content.Position == content.Length) { Array.Clear(bytes); released(this); }
+            if (content.Position == content.Length) released(this);
             return read;
         });
         public override int Read(Span<byte> buffer)
@@ -187,7 +192,7 @@ public sealed class NativeTransfers(BridgeGeneration owner, TimeProvider time)
         public override int ReadByte() => generation.Start(() =>
         {
             var read = content.ReadByte();
-            if (content.Position == content.Length) { Array.Clear(bytes); released(this); }
+            if (content.Position == content.Length) released(this);
             return read;
         });
         protected override void Dispose(bool disposing)

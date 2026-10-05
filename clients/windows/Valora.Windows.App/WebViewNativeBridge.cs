@@ -1,5 +1,10 @@
 using Microsoft.Web.WebView2.Core;
 using Valora.Windows.Bridge;
+#if VALORA_WINUI
+using NativeResponseStream = Windows.Storage.Streams.IRandomAccessStream;
+#else
+using NativeResponseStream = System.IO.Stream;
+#endif
 
 namespace Valora.Windows.App;
 
@@ -94,7 +99,7 @@ internal sealed class WebViewNativeBridge : IDisposable
         if (!Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var uri) ||
             !uri.AbsolutePath.StartsWith(NativeTransfers.Prefix, StringComparison.Ordinal)) { return; }
         // Seed a synthetic rejection before any deferral: this namespace never falls through to network.
-        args.Response = core.Environment.CreateWebResourceResponse(new MemoryStream(), 404, "Not Found",
+        args.Response = core.Environment.CreateWebResourceResponse(ResponseStream(new MemoryStream()), 404, "Not Found",
             "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n");
         using var deferral = args.GetDeferral();
         try
@@ -108,7 +113,7 @@ internal sealed class WebViewNativeBridge : IDisposable
                 request.Headers.GetHeader("Origin") != session.Origin!.Value)) { return; }
             var mime = request.Headers.Contains("Content-Type") ? request.Headers.GetHeader("Content-Type") : "";
             var response = await generation.Transfers.HandleAsync(request.Method, uri.AbsolutePath, mime,
-                request.Method == "POST" ? request.Content : null);
+                request.Method == "POST" ? RequestStream(args) : null);
             if (!Trusted || !bridge.Enabled || !ReferenceEquals(generation, bridge.CurrentGeneration))
             {
                 response.Content.Dispose();
@@ -116,7 +121,7 @@ internal sealed class WebViewNativeBridge : IDisposable
             }
             generation.Start(() =>
             {
-                args.Response = core.Environment.CreateWebResourceResponse(response.Content, response.Status,
+                args.Response = core.Environment.CreateWebResourceResponse(ResponseStream(response.Content), response.Status,
                     response.Status < 400 ? "OK" : "Rejected",
                     $"Content-Type: {response.ContentType}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n");
                 return true;
@@ -124,6 +129,25 @@ internal sealed class WebViewNativeBridge : IDisposable
         }
         catch { Revoke(); }
         finally { deferral.Complete(); }
+    }
+
+    // WinUI uses the WinRT projection; the linked WinForms test host uses the .NET projection.
+    private static NativeResponseStream ResponseStream(Stream value)
+    {
+#if VALORA_WINUI
+        return value.AsRandomAccessStream();
+#else
+        return value;
+#endif
+    }
+
+    private static Stream? RequestStream(CoreWebView2WebResourceRequestedEventArgs args)
+    {
+#if VALORA_WINUI
+        return args.Request.Content?.AsStreamForRead();
+#else
+        return args.Request.Content;
+#endif
     }
 
     private void QueueEvent(string message, BridgeGeneration generation) => enqueue(() =>
