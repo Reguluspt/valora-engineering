@@ -21,7 +21,7 @@ public sealed class NativeAuthBoundaryTests
     [InlineData(@"access[_-]?token|refresh[_-]?token|XSRF|X-CSRF|csrf[_-]?token|password|PasswordVault|CredentialManager")]
     [InlineData(@"organization[_-]?(id|slug)|user[_-]?id|AccountContext|RBAC|\bBearer\b")]
     [InlineData(@"/api/v1/auth|HttpClient|WebRequest|HttpWebRequest")]
-    [InlineData(@"ExecuteScript|AddScriptToExecute|WebMessageReceived|AddHostObject")]
+    [InlineData(@"ExecuteScript|AddScriptToExecute|AddHostObject")]
     [InlineData(@"\.Reload\s*\(|\.GoBack\s*\(|\.GoForward\s*\(|NavigateWithWebResourceRequest|CreateWebResourceRequest")]
     public void ProductionWindowsSourceHasNoNativeAuthenticationOrReplayPrimitive(string pattern)
     {

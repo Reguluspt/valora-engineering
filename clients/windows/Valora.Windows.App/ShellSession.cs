@@ -13,6 +13,7 @@ internal sealed class ShellSession
     private readonly object gate = new();
     private TrustedOrigin? origin;
     private ShellState state = ShellState.NoConfiguration;
+    internal event Action? Revoked;
     internal TrustedOrigin? Origin { get { lock (gate) { return origin; } } }
     internal ShellState State { get { lock (gate) { return state; } } }
     internal bool CanNavigate { get { lock (gate) { return origin is not null &&
@@ -23,6 +24,7 @@ internal sealed class ShellSession
         lock (gate)
         {
             if (state == ShellState.Closed) { return false; }
+            Revoked?.Invoke();
             origin = null;
             navigationId = null;
             if (configuration is null)
@@ -45,6 +47,7 @@ internal sealed class ShellSession
     {
         lock (gate)
         {
+            Revoked?.Invoke();
             if (!CanNavigate) { return false; }
             if (!origin!.Allows(destination))
             {
@@ -71,6 +74,7 @@ internal sealed class ShellSession
         {
             if (state != ShellState.Closed)
             {
+                Revoked?.Invoke();
                 state = failure;
                 navigationId = null;
             }
@@ -81,6 +85,7 @@ internal sealed class ShellSession
     {
         lock (gate)
         {
+            Revoked?.Invoke();
             origin = null;
             navigationId = null;
             state = ShellState.Closed;

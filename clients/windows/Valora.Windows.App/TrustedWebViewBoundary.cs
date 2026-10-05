@@ -1,10 +1,12 @@
 using Microsoft.Web.WebView2.Core;
+using Valora.Windows.Bridge;
 
 namespace Valora.Windows.App;
 
 internal sealed class TrustedWebViewBoundary
 {
-    internal TrustedWebViewBoundary(CoreWebView2 core, ShellSession session, Action changed)
+    internal TrustedWebViewBoundary(CoreWebView2 core, ShellSession session, Action changed,
+        WebViewNativeBridge? native = null)
     {
         core.Settings.IsWebMessageEnabled = false;
         core.Settings.AreHostObjectsAllowed = false;
@@ -22,6 +24,7 @@ internal sealed class TrustedWebViewBoundary
 
         core.NavigationStarting += (_, args) =>
         {
+            core.Settings.IsWebMessageEnabled = false;
             args.Cancel = !session.NavigationStarting(args.Uri, args.NavigationId);
             changed();
         };
@@ -29,6 +32,7 @@ internal sealed class TrustedWebViewBoundary
         {
             session.NavigationCompleted(args.NavigationId,
                 args.IsSuccess ? ShellState.Loaded : ClassifyFailure(args.WebErrorStatus));
+            if (session.State == ShellState.Loaded) { native?.Enable(); }
             changed();
         };
         core.NewWindowRequested += (_, args) =>

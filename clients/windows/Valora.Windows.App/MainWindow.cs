@@ -2,6 +2,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Valora.Windows.Bridge;
 using Microsoft.Web.WebView2.Core;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
 
 namespace Valora.Windows.App;
 
@@ -15,14 +17,11 @@ internal sealed class MainWindow : Window
     private readonly ProgressRing progress = new() { Width = 24, Height = 24 };
     private WebView2? webView;
     private ShellSession? viewSession;
+    private NativeBridgeSession? bridge;
+    private WebViewNativeBridge? native;
 
-    internal MainWindow(INativeCapabilityCatalog capabilities)
+    internal MainWindow()
     {
-        if (capabilities.EnabledCapabilities.Count != 0)
-        {
-            throw new InvalidOperationException("WIN-1 must not expose native capabilities.");
-        }
-
         lifecycleEvents = new WindowsLifecycleEvents();
         lifecycle = new ShellLifecycle(ServerConfiguration.Read, lifecycleEvents.NetworkAvailable);
         lifecycleEvents.Changed += LifecycleChanged;
@@ -31,6 +30,28 @@ internal sealed class MainWindow : Window
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition());
         var bar = new Grid { ColumnSpacing = 16, Margin = new Thickness(24) };
+        bar.AllowDrop = true;
+        bar.DragOver += (_, args) =>
+        {
+            args.Handled = true;
+            args.AcceptedOperation = bridge?.Enabled == true && args.DataView.Contains(StandardDataFormats.StorageItems)
+                ? DataPackageOperation.Copy : DataPackageOperation.None;
+        };
+        bar.Drop += async (_, args) =>
+        {
+            args.Handled = true;
+            var expectedBridge = bridge;
+            var expectedGeneration = expectedBridge?.CurrentGeneration;
+            if (expectedBridge?.Enabled != true || expectedGeneration is null || !args.DataView.Contains(StandardDataFormats.StorageItems)) { return; }
+            try
+            {
+                var items = await args.DataView.GetStorageItemsAsync();
+                if (items.Count != 1 || items[0] is not StorageFile file) { return; }
+                await expectedBridge.MediateDropAsync(new INativeFile[] { new WindowsNativeFile(file) }, expectedGeneration);
+            }
+            catch (Exception error) when (error is NativeBridgeException or OperationCanceledException or
+                System.Runtime.InteropServices.COMException or UnauthorizedAccessException or IOException) { }
+        };
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         bar.ColumnDefinitions.Add(new ColumnDefinition());
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -97,10 +118,14 @@ internal sealed class MainWindow : Window
             layout.Children.Add(current);
             await current.EnsureCoreWebView2Async(environment);
             if (!lifecycle.IsCurrent(owned) || !owned.CanNavigate || webView != current) { return; }
+            bridge = new NativeBridgeSession(new WindowsNativePlatform(WinRT.Interop.WindowNative.GetWindowHandle(this)));
+            native = new WebViewNativeBridge(current.CoreWebView2, owned, bridge,
+                () => lifecycle.IsCurrent(owned) && webView == current,
+                action => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.High, () => action()));
             new TrustedWebViewBoundary(current.CoreWebView2, owned, () =>
             {
                 if (lifecycle.IsCurrent(owned) && webView == current) { RenderState(); }
-            });
+            }, native);
             // New control + Navigate(root) starts a GET, never Reload/history/form replay.
             current.CoreWebView2.Navigate(origin.Value + "/");
         }
@@ -160,6 +185,10 @@ internal sealed class MainWindow : Window
     {
         if (webView is null) { return; }
         var previous = webView;
+        native?.Dispose();
+        native = null;
+        bridge?.Revoke();
+        bridge = null;
         webView = null;
         viewSession = null;
         layout.Children.Remove(previous);
