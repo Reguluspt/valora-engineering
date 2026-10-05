@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.client_compatibility import router as client_compatibility_router
 from app.api.master_data import router as master_data_router
 from app.api.projects import router as projects_router
 from app.api.taxonomy import router as taxonomy_router
@@ -51,6 +52,7 @@ app.add_middleware(
 app.add_middleware(OAuthCallbackAccessLogRedactionMiddleware)
 
 app.include_router(health_router)
+app.include_router(client_compatibility_router)
 app.include_router(master_data_router)
 app.include_router(projects_router)
 app.include_router(taxonomy_router)

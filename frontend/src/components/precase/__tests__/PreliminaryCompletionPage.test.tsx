@@ -1,6 +1,9 @@
 import React from "react";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const native = vi.hoisted(() => ({ availability: { state: "browser-only" }, statusText: "Trình duyệt",
+  pickExcelFile: vi.fn(), saveArtifact: vi.fn() }));
+vi.mock("../../../native/useNativeIntegration", () => ({ useNativeIntegration: () => native }));
 
 const api = vi.hoisted(() => ({
   fetchCaseState: vi.fn(), getProject: vi.fn(), getPreliminaryResult: vi.fn(),
@@ -56,6 +59,8 @@ describe("PreliminaryCompletionPage", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    native.availability = { state: "browser-only" };
+    native.statusText = "Trình duyệt";
     serverState = state();
     project = { id: "project-1", row_version: 7, customer_id: null, code: "HS-01", name: "Máy cắt" };
     stored = new Map();
@@ -97,6 +102,31 @@ describe("PreliminaryCompletionPage", () => {
     return root.root.findAllByType("button").find((node) => node.children.includes(label));
   }
 
+  it.each([true, false, "failure"])("uses exact Result metadata and reports Windows save outcome %s without fallback", async outcome => {
+    native.availability = { state: "native-compatible" };
+    serverState.preliminary.current_preliminary_result_artifact_id = result.id as any;
+    serverState.preliminary.current_preliminary_result_version = result.version as any;
+    native.saveArtifact.mockImplementation(async (_metadata, download) => {
+      await download();
+      if (outcome === "failure") throw new Error("native failure");
+      return outcome;
+    });
+    api.downloadPreliminaryResult.mockResolvedValue(new Blob(["result"], { type: result.content_type }));
+    const root = await mount();
+    expect(button(root, "Tải tệp Excel (trình duyệt)")).toBeDefined();
+    await act(async () => button(root, "Lưu bằng Windows")!.props.onClick());
+    expect(native.saveArtifact.mock.calls[0][0]).toEqual({
+      resultId: result.id, resultVersion: result.version, contentType: result.content_type,
+      extension: ".xlsx", sizeBytes: result.file_size_bytes, sha256: result.content_checksum_sha256,
+    });
+    expect(api.downloadPreliminaryResult).toHaveBeenCalledExactlyOnceWith("project-1", result.id);
+    expect(api.generatePreliminaryResult).not.toHaveBeenCalled();
+    expect(api.commitOfficialIntake).not.toHaveBeenCalled();
+    const rendered = JSON.stringify(root.toJSON());
+    expect(rendered).toContain(outcome === true ? "Đã lưu tệp bằng Windows." : outcome === false ? "Đã hủy lưu tệp." : "Chưa thể lưu tệp bằng Windows.");
+    root.unmount();
+  });
+
   it("requires the selected Analysis and explicit confirmation before generation", async () => {
     const root = await mount();
     expect(button(root, "Tạo kết quả sơ bộ")).toBeDefined();
@@ -113,7 +143,7 @@ describe("PreliminaryCompletionPage", () => {
     });
     expect(api.getPreliminaryResult).toHaveBeenCalledWith("project-1", "result-2");
     expect(button(root, "Tạo kết quả sơ bộ")).toBeUndefined();
-    expect(button(root, "Tải tệp Excel")).toBeDefined();
+    expect(button(root, "Tải tệp Excel (trình duyệt)")).toBeDefined();
   });
 
   it("recovers an unknown uncommitted Result response with the same command identity", async () => {
@@ -211,7 +241,7 @@ describe("PreliminaryCompletionPage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("Kết quả sơ bộ & tiếp nhận");
     expect(button(root, "Chuyển sang thẩm định chính thức")).toBeUndefined();
     expect(button(root, "Gắn khách hàng đã chọn")).toBeUndefined();
-    expect(button(root, "Tải tệp Excel")).toBeDefined();
+    expect(button(root, "Tải tệp Excel (trình duyệt)")).toBeDefined();
   });
 
   it("retries unknown uncommitted Intake with the exact same payload", async () => {
@@ -262,7 +292,7 @@ describe("PreliminaryCompletionPage", () => {
     expect(rendered).toContain("Đã tiếp nhận chính thức");
     expect(rendered).toContain("Customer đã gắn với hồ sơ");
     expect(rendered).toContain("Đã gắn · chưa xem được");
-    expect(button(root, "Tải tệp Excel")).toBeDefined();
+    expect(button(root, "Tải tệp Excel (trình duyệt)")).toBeDefined();
     expect(button(root, "Chuyển sang thẩm định chính thức")).toBeUndefined();
   });
 
@@ -314,7 +344,7 @@ describe("PreliminaryCompletionPage", () => {
     const rendered = JSON.stringify(root.toJSON());
     expect(rendered).toContain("Đã tiếp nhận chính thức");
     expect(rendered).toContain("chưa đọc được chi tiết hiện hành");
-    expect(button(root, "Tải tệp Excel")).toBeDefined();
+    expect(button(root, "Tải tệp Excel (trình duyệt)")).toBeDefined();
     expect(button(root, "Chuyển sang thẩm định chính thức")).toBeUndefined();
   });
 });

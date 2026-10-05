@@ -78,7 +78,7 @@ public sealed class NativeBridgeTests
     [InlineData("{", NativeError.BAD_MESSAGE)]
     [InlineData("[]", NativeError.BAD_MESSAGE)]
     [InlineData("null", NativeError.BAD_MESSAGE)]
-    [InlineData("{\"protocol\":\"valora.native/2\",\"type\":\"request\",\"requestId\":\"00000000-0000-0000-0000-000000000000\",\"capability\":\"hello\",\"payload\":{}}", NativeError.BAD_PROTOCOL)]
+    [InlineData("{\"protocol\":\"valora.native/99\",\"type\":\"request\",\"requestId\":\"00000000-0000-0000-0000-000000000000\",\"capability\":\"hello\",\"payload\":{}}", NativeError.BAD_PROTOCOL)]
     [InlineData("{\"protocol\":\"valora.native/1\",\"type\":\"event\",\"requestId\":\"00000000-0000-0000-0000-000000000000\",\"capability\":\"hello\",\"payload\":{}}", NativeError.BAD_MESSAGE)]
     public async Task MalformedEnvelopesAreRejected(string json, NativeError code)
     {

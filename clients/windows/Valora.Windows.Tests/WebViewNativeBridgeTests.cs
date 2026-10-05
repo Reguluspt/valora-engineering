@@ -41,15 +41,99 @@ public sealed class WebViewNativeBridgeTests
             new TrustedWebViewBoundary(core, session, () => { if (session.State == ShellState.Loaded) loaded.TrySetResult(); }, native);
             Assert.False(core.Settings.IsWebMessageEnabled); Assert.False(bridge.Enabled);
             core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.Document, CoreWebView2WebResourceRequestSourceKinds.All);
-            core.WebResourceRequested += (_, args) => args.Response = core.Environment.CreateWebResourceResponse(
-                new MemoryStream(Encoding.UTF8.GetBytes(args.Request.Uri.EndsWith("/next") ? "next document" : html)),
-                200, "OK", "Content-Type: text/html\r\n");
+            core.WebResourceRequested += (_, args) =>
+            {
+                if (new Uri(args.Request.Uri).AbsolutePath.StartsWith(NativeTransfers.Prefix, StringComparison.Ordinal)) return;
+                args.Response = core.Environment.CreateWebResourceResponse(
+                    new MemoryStream(Encoding.UTF8.GetBytes(args.Request.Uri.EndsWith("/next") ? "next document" : html)),
+                    200, "OK", "Content-Type: text/html\r\n");
+            };
             core.Navigate("https://valora.test/");
             await loaded.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.True(bridge.Enabled); Assert.True(core.Settings.IsWebMessageEnabled);
             await test(view, session, bridge, native);
         }, testName);
     }
+
+    [Fact]
+    public Task RealFetchTransfersAndCapturesWithoutNetworkOrAuthentication() => FixtureTest(async (view, _, bridge, native) =>
+    {
+        var core = view.CoreWebView2;
+        Assert.True(NativeBridgeTests.Parse(await bridge.DispatchAsync(NativeTransferTests.Request())).GetProperty("ok").GetBoolean());
+        var owner = bridge.CurrentGeneration!;
+        var picked = NativeBridgeTests.Parse(await bridge.DispatchAsync(NativeTransferTests.Request("pickExcelFile"))).GetProperty("result");
+        var prepared = NativeBridgeTests.Parse(await bridge.DispatchAsync(NativeTransferTests.Request("prepareSelectedFileTransfer",
+            new { handle = picked.GetProperty("handle").GetString() }))).GetProperty("result").GetProperty("url").GetString()!;
+        var capture = owner.Transfers.PrepareCapture(NativeTransferTests.Metadata([0, 255, 1, 99]));
+        var requests = new List<string>();
+        core.WebResourceRequested += (_, args) =>
+        {
+            if (new Uri(args.Request.Uri).AbsolutePath.StartsWith(NativeTransfers.Prefix, StringComparison.Ordinal))
+            {
+                requests.Add(args.Request.Uri);
+                Assert.False(args.Request.Headers.Contains("Cookie"));
+                Assert.False(args.Request.Headers.Contains("Authorization"));
+                Assert.False(args.Request.Headers.Contains("X-CSRF-Token"));
+            }
+        };
+        var script = $$"""
+            (async()=>{
+              const opts={credentials:'omit',mode:'same-origin',redirect:'error',cache:'no-store',referrer:location.href,referrerPolicy:'same-origin'};
+              const selected=await fetch({{JsonSerializer.Serialize(prepared)}},{...opts,method:'GET'});
+              const bytes=Array.from(new Uint8Array(await selected.arrayBuffer()));
+              const replay=await fetch({{JsonSerializer.Serialize(prepared)}},{...opts,method:'GET'});
+              const captured=await fetch({{JsonSerializer.Serialize(capture)}},{...opts,method:'POST',
+                headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},body:new Uint8Array(bytes)});
+              return {selected:selected.status,bytes,replay:replay.status,replaySize:(await replay.arrayBuffer()).byteLength,
+                captured:captured.status,artifact:await captured.json(),cache:selected.headers.get('Cache-Control')};
+            })()
+            """;
+        // ExecuteScriptAsync does not await JavaScript promises; the result is returned through a fixture message.
+        var ack = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        core.WebMessageReceived += (_, args) =>
+        {
+            var value = NativeBridgeTests.Parse(args.WebMessageAsJson);
+            if (value.TryGetProperty("transferAck", out var result)) ack.TrySetResult(result);
+            if (value.TryGetProperty("transferError", out var error)) ack.TrySetException(new Exception(error.GetString()));
+        };
+        await core.ExecuteScriptAsync(script + ".then(value=>chrome.webview.postMessage({transferAck:value})).catch(error=>chrome.webview.postMessage({transferError:String(error)}));");
+        var actual = await ack.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        Assert.Equal(200, actual.GetProperty("selected").GetInt32());
+        Assert.Equal(new[] { 0, 255, 1, 99 }, actual.GetProperty("bytes").EnumerateArray().Select(v => v.GetInt32()));
+        Assert.Equal(404, actual.GetProperty("replay").GetInt32());
+        Assert.Equal(0, actual.GetProperty("replaySize").GetInt32());
+        Assert.Equal(201, actual.GetProperty("captured").GetInt32());
+        Assert.Equal("no-store", actual.GetProperty("cache").GetString());
+        Assert.Equal(3, requests.Count);
+        var handle = actual.GetProperty("artifact").GetProperty("artifactHandle").GetString()!;
+        Assert.IsType<CapturedNativeArtifact>(owner.Resolve(handle, false, true));
+        Assert.True(native.AllowsResource(core, "https://valora.test" + prepared, core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        bridge.Revoke();
+        Assert.Throws<NativeBridgeException>(() => owner.Resolve(handle, false, true));
+    }, new TestNativePlatform
+    {
+        EnabledCapabilities = NativeProtocol.V2Capabilities,
+        Selection = new ReadableTestFile([0, 255, 1, 99])
+    });
+
+    [Fact]
+    public Task ResourceBoundaryRejectsForeignOriginWorkerStaleControlAndClosedSession() => FixtureTest((view, session, bridge, native) =>
+    {
+        var core = view.CoreWebView2;
+        var url = "https://valora.test" + NativeTransfers.Prefix + "selected/" + new string('a', 48);
+        Assert.True(native.AllowsResource(core, url, core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        Assert.False(native.AllowsResource(new object(), url, core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        foreach (var origin in new[] { "http://valora.test", "https://foreign.test", "https://valora.test:8443" })
+            Assert.False(native.AllowsResource(core, origin + NativeTransfers.Prefix, core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        Assert.False(native.AllowsResource(core, url, "https://valora.test/old", CoreWebView2WebResourceRequestSourceKinds.Document));
+        Assert.False(native.AllowsResource(core, url + "?extra=1", core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        Assert.False(native.AllowsResource(core, url, core.Source, CoreWebView2WebResourceRequestSourceKinds.ServiceWorker));
+        Assert.False(native.AllowsResource(core, url, core.Source, CoreWebView2WebResourceRequestSourceKinds.SharedWorker));
+        session.Close();
+        Assert.False(bridge.Enabled);
+        Assert.False(native.AllowsResource(core, url, core.Source, CoreWebView2WebResourceRequestSourceKinds.Document));
+        return Task.CompletedTask;
+    }, new TestNativePlatform());
 
     [Fact]
     public Task RealTrustedDocumentNegotiatesAndReceivesNormalPickerCancellation() => FixtureTest(async (view, _, bridge, _) =>

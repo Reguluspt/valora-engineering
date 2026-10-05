@@ -1,10 +1,14 @@
 export const nativeProtocol = "valora.native/1" as const;
+export const nativeProtocolV2 = "valora.native/2" as const;
+export const nativeProductFileLimit = 10 * 1024 * 1024;
+export const nativeResourcePrefix = "/api/v1/.valora-native/v2/";
 export const nativeMessageLimit = 64 * 1024;
 export const nativePendingLimit = 8;
 const fileLimit = 64 * 1024 * 1024;
 const requestTimeout = 120_000;
-const capabilityNames = ["pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord",
+const v1CapabilityNames = ["pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord",
   "saveDownloadedArtifact", "dragDrop", "showNotification", "deepLink", "openExternalUrl"] as const;
+const capabilityNames = [...v1CapabilityNames, "prepareSelectedFileTransfer", "prepareArtifactCapture"] as const;
 const errorNames = ["BAD_PROTOCOL", "BAD_MESSAGE", "NOT_TRUSTED", "CAPABILITY_UNAVAILABLE", "INVALID_ARGUMENT",
   "CANCELLED", "HANDLE_INVALID", "TYPE_NOT_ALLOWED", "SIZE_LIMIT", "BUSY", "OS_UNAVAILABLE", "BRIDGE_REVOKED", "FAILED"] as const;
 export type NativeCapability = typeof capabilityNames[number];
@@ -13,25 +17,32 @@ export type NativeState = "unavailable" | "connecting" | "ready" | "revoked" | "
 export type FileHandle = { handle: string; name: string; extension: ".xls" | ".xlsx" | ".docx"; sizeBytes: number };
 export type NativeEvent = { event: "filesDropped"; payload: FileHandle } | { event: "deepLink"; payload: { route: string } };
 type Payloads = {
+  prepareSelectedFileTransfer: { handle: string };
+  prepareArtifactCapture: ArtifactCaptureMetadata;
   pickExcelFile: Record<string, never>; pickDocumentFile: Record<string, never>;
   openInExcel: { handle: string }; openInWord: { handle: string };
   saveDownloadedArtifact: { artifactHandle: string; suggestedFilename: string };
   showNotification: { title: string; body: string }; openExternalUrl: { url: string };
 };
 type Results = {
+  prepareSelectedFileTransfer: { url: string };
+  prepareArtifactCapture: { url: string };
   pickExcelFile: { selected: false } | ({ selected: true } & FileHandle);
   pickDocumentFile: { selected: false } | ({ selected: true } & FileHandle);
   openInExcel: { opened: true }; openInWord: { opened: true };
   saveDownloadedArtifact: { saved: boolean }; showNotification: { shown: true }; openExternalUrl: { opened: true };
 };
 export type NativeRequestCapability = keyof Payloads;
+export type ArtifactCaptureMetadata = {
+  resultId: string; resultVersion: number; contentType: string; extension: ".xlsx"; sizeBytes: number; sha256: string;
+};
 export interface WebViewTransport {
   postMessage(message: unknown): void;
   addEventListener(type: "message", listener: (event: { data: unknown }) => void): void;
   removeEventListener(type: "message", listener: (event: { data: unknown }) => void): void;
 }
 export type NativeHost = { chrome?: { webview?: WebViewTransport } };
-export type NativeAvailability = { state: "unavailable" | "ready"; capabilities: readonly NativeCapability[] };
+export type NativeAvailability = { state: "unavailable" | "ready"; capabilities: readonly NativeCapability[]; clientCompatibility?: number };
 
 export class NativeBridgeError extends Error {
   constructor(public readonly code: NativeErrorCode) { super(`Native operation: ${code}`); this.name = "NativeBridgeError"; }
@@ -78,7 +89,16 @@ function payload(capability: string, value: unknown): void {
   switch (capability) {
     case "hello": case "pickExcelFile": case "pickDocumentFile": shape(value, []); break;
     case "openInExcel": case "openInWord":
+    case "prepareSelectedFileTransfer":
       if (!handle(shape(value, ["handle"]).handle)) throw new NativeBridgeError("HANDLE_INVALID"); break;
+    case "prepareArtifactCapture": {
+      const record = shape(value, ["resultId", "resultVersion", "contentType", "extension", "sizeBytes", "sha256"]);
+      if (!uuid(record.resultId) || !Number.isSafeInteger(record.resultVersion) || (record.resultVersion as number) < 1 ||
+        record.contentType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || record.extension !== ".xlsx" ||
+        !Number.isSafeInteger(record.sizeBytes) || (record.sizeBytes as number) < 1 || (record.sizeBytes as number) > nativeProductFileLimit ||
+        typeof record.sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(record.sha256)) throw new NativeBridgeError("INVALID_ARGUMENT");
+      break;
+    }
     case "saveDownloadedArtifact": {
       const record = shape(value, ["artifactHandle", "suggestedFilename"]);
       if (!handle(record.artifactHandle)) throw new NativeBridgeError("HANDLE_INVALID");
@@ -93,12 +113,21 @@ function payload(capability: string, value: unknown): void {
     default: throw new NativeBridgeError("CAPABILITY_UNAVAILABLE");
   }
 }
-function result(capability: string, value: unknown): unknown {
+function result(capability: string, value: unknown, protocol: string): unknown {
   if (capability === "hello") {
-    const record = shape(value, ["protocol", "capabilities"]);
-    if (record.protocol !== nativeProtocol || !Array.isArray(record.capabilities) || record.capabilities.length > capabilityNames.length ||
-      record.capabilities.some(c => !capabilityNames.includes(c)) || new Set(record.capabilities).size !== record.capabilities.length) throw new NativeBridgeError("BAD_PROTOCOL");
-    return { protocol: nativeProtocol, capabilities: Object.freeze([...record.capabilities]) };
+    const record = shape(value, protocol === nativeProtocolV2 ? ["protocol", "capabilities", "clientCompatibility"] : ["protocol", "capabilities"]);
+    const allowed: readonly string[] = protocol === nativeProtocolV2 ? capabilityNames : v1CapabilityNames;
+    if (record.protocol !== protocol || (protocol === nativeProtocolV2 && record.clientCompatibility !== 1) ||
+      !Array.isArray(record.capabilities) || record.capabilities.length > allowed.length ||
+      record.capabilities.some(c => !allowed.includes(c)) || new Set(record.capabilities).size !== record.capabilities.length) throw new NativeBridgeError("BAD_PROTOCOL");
+    return { protocol, capabilities: Object.freeze([...record.capabilities]) };
+  }
+  if (capability === "prepareSelectedFileTransfer" || capability === "prepareArtifactCapture") {
+    const record = shape(value, ["url"]);
+    const kind = capability === "prepareSelectedFileTransfer" ? "selected" : "capture";
+    if (typeof record.url !== "string" || record.url !== nativeResourcePrefix + kind + "/" + record.url.slice(-48) ||
+      !/^[a-f0-9]{48}$/u.test(record.url.slice(-48))) throw new NativeBridgeError("BAD_MESSAGE");
+    return { url: record.url };
   }
   if (capability === "pickExcelFile" || capability === "pickDocumentFile") {
     if (object(value).selected === false) { shape(value, ["selected"]); return { selected: false }; }
@@ -118,13 +147,15 @@ export class NativeBridge {
   private transport?: WebViewTransport;
   private pending = new Map<string, Pending>();
   private listeners = new Set<(event: NativeEvent) => void>();
+  private stateListeners = new Set<(state: NativeState) => void>();
   private currentState: NativeState = "unavailable";
   private enabled: readonly NativeCapability[] = Object.freeze([]);
   readonly ready: Promise<NativeAvailability>;
   get state(): NativeState { return this.currentState; }
   get capabilities(): readonly NativeCapability[] { return this.enabled; }
+  get clientCompatibility(): number | undefined { return this.protocol === nativeProtocolV2 && this.currentState === "ready" ? 1 : undefined; }
 
-  constructor(host: NativeHost = globalThis as NativeHost) {
+  constructor(host: NativeHost = globalThis as NativeHost, readonly protocol: typeof nativeProtocol | typeof nativeProtocolV2 = nativeProtocol) {
     const candidate = host.chrome?.webview;
     if (!candidate || typeof candidate.postMessage !== "function" || typeof candidate.addEventListener !== "function" || typeof candidate.removeEventListener !== "function") {
       this.ready = Promise.resolve({ state: "unavailable", capabilities: this.enabled });
@@ -137,6 +168,7 @@ export class NativeBridge {
       if (this.currentState !== "connecting") throw new NativeBridgeError("BRIDGE_REVOKED");
       this.enabled = (value as { capabilities: readonly NativeCapability[] }).capabilities;
       this.currentState = "ready";
+      this.notifyState();
       return { state: "ready", capabilities: this.enabled } as const;
     }).catch(error => {
       this.invalidate(error instanceof NativeBridgeError ? error.code : "FAILED");
@@ -155,12 +187,17 @@ export class NativeBridge {
   }
 
   onEvent(listener: (event: NativeEvent) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  onState(listener: (state: NativeState) => void): () => void { this.stateListeners.add(listener); return () => this.stateListeners.delete(listener); }
+  private notifyState(): void { for (const listener of this.stateListeners) listener(this.currentState); }
 
   private send(capability: string, value: unknown): Promise<unknown> {
+    if (this.protocol === nativeProtocol && (capability === "prepareSelectedFileTransfer" || capability === "prepareArtifactCapture")) {
+      return Promise.reject(new NativeBridgeError("BAD_PROTOCOL"));
+    }
     try { payload(capability, value); } catch (error) { return Promise.reject(error); }
     if (this.pending.size >= nativePendingLimit) return Promise.reject(new NativeBridgeError("BUSY"));
     const requestId = crypto.randomUUID();
-    const message = { protocol: nativeProtocol, type: "request", requestId, capability, payload: value };
+    const message = { protocol: this.protocol, type: "request", requestId, capability, payload: value };
     if (new TextEncoder().encode(JSON.stringify(message)).byteLength > nativeMessageLimit) return Promise.reject(new NativeBridgeError("SIZE_LIMIT"));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.invalidate("FAILED"), requestTimeout);
@@ -176,7 +213,7 @@ export class NativeBridge {
       const serialized = typeof event.data === "string" ? event.data : JSON.stringify(event.data);
       if (typeof serialized !== "string" || new TextEncoder().encode(serialized).byteLength > nativeMessageLimit) throw new NativeBridgeError("SIZE_LIMIT");
       const message = object(typeof event.data === "string" ? JSON.parse(serialized) : event.data);
-      if (message.protocol !== nativeProtocol) throw new NativeBridgeError("BAD_PROTOCOL");
+      if (message.protocol !== this.protocol) throw new NativeBridgeError("BAD_PROTOCOL");
       if (message.type === "event") {
         shape(message, ["protocol", "type", "event", "payload"]);
         if (message.event === "bridgeRevoked") {
@@ -200,7 +237,7 @@ export class NativeBridge {
       if (!pending) throw new NativeBridgeError("BAD_MESSAGE");
       if (message.ok) {
         shape(message, ["protocol", "type", "requestId", "ok", "result"]);
-        const value = result(pending.capability, message.result);
+        const value = result(pending.capability, message.result, this.protocol);
         this.pending.delete(message.requestId); clearTimeout(pending.timer); pending.resolve(value);
       } else {
         shape(message, ["protocol", "type", "requestId", "ok", "error"]);
@@ -216,11 +253,12 @@ export class NativeBridge {
   private invalidate(code: NativeErrorCode): void {
     this.currentState = "revoked";
     this.enabled = Object.freeze([]);
+    this.notifyState();
     this.transport?.removeEventListener("message", this.receive);
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new NativeBridgeError(code)); }
     this.pending.clear();
     this.listeners.clear();
   }
 
-  dispose(): void { this.invalidate("BRIDGE_REVOKED"); this.currentState = "disposed"; }
+  dispose(): void { this.invalidate("BRIDGE_REVOKED"); this.currentState = "disposed"; this.notifyState(); this.stateListeners.clear(); }
 }
