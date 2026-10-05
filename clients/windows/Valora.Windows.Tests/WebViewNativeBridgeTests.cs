@@ -2,12 +2,14 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using System.Text;
 using System.Text.Json;
+using System.Runtime.CompilerServices;
 using Valora.Windows.App;
 using Valora.Windows.Bridge;
 using Xunit;
 
 namespace Valora.Windows.Tests;
 
+[Collection(nameof(WebViewCollection))]
 public sealed class WebViewNativeBridgeTests
 {
     private const string HelloId = "1be17b37-6f4d-4335-8a74-83c56d40f0e4";
@@ -25,7 +27,8 @@ public sealed class WebViewNativeBridgeTests
         """;
 
     private static async Task FixtureTest(Func<WebView2, ShellSession, NativeBridgeSession, WebViewNativeBridge, Task> test,
-        TestNativePlatform platform, string html = "", Func<bool>? isCurrent = null, Action<Action>? enqueue = null)
+        TestNativePlatform platform, string html = "", Func<bool>? isCurrent = null, Action<Action>? enqueue = null,
+        [CallerMemberName] string testName = "")
     {
         await WebViewBoundaryTests.OnWebView(async view =>
         {
@@ -45,7 +48,7 @@ public sealed class WebViewNativeBridgeTests
             await loaded.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.True(bridge.Enabled); Assert.True(core.Settings.IsWebMessageEnabled);
             await test(view, session, bridge, native);
-        });
+        }, testName);
     }
 
     [Fact]
