@@ -2,7 +2,7 @@ import math
 import uuid
 from datetime import datetime
 from typing import Annotated, List, Literal, Optional
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_serializer, model_validator
 
 # Config to allow ORM serialization
 class BaseSchema(BaseModel):
@@ -393,10 +393,38 @@ class AssetReviewPermissionContext(CaseStateActionContext):
     reason_code: Literal["permission_required", "session_required"]
 
 
+class AssetWorkbenchPreparationContext(CaseStateActionContext):
+    kind: Literal["asset_workbench_preparation"]
+    reason_code: Literal["description_required", "confirmation_required", "reconfirmation_required"]
+    project_row_version: int = Field(gt=0, strict=True)
+    seal_id: uuid.UUID
+    authoritative_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    membership_version: int = Field(gt=0, strict=True)
+    contract_version: Literal["asset-workbench-confirmation-v1"]
+    confirmation_required: Literal[True]
+    prior_confirmation_id: uuid.UUID | None
+    line_id: uuid.UUID | None = None
+    line_row_version: int | None = Field(default=None, gt=0, strict=True)
+
+    @model_validator(mode="after")
+    def deficient_line_only(self):
+        if self.reason_code != "description_required" and (self.line_id is not None or self.line_row_version is not None):
+            raise ValueError("Line context is only allowed for deficient descriptions")
+        if (self.line_id is None) != (self.line_row_version is None):
+            raise ValueError("Line identity and version must be paired")
+        return self
+
+
+class AssetWorkbenchDiagnosticContext(CaseStateActionContext):
+    kind: Literal["asset_workbench_diagnostic"]
+    reason_code: Literal["reconfirmation_required", "confirmation_integrity_conflict"]
+    reload_required: Literal[True]
+
+
 AssetReviewActionContext = Annotated[
     AssetReviewValidateContext | AssetReviewApplyContext | AssetReviewLineContext
     | AssetReviewIssueContext | AssetReviewEntryContext | AssetReviewStaleContext
-    | AssetReviewPermissionContext,
+    | AssetReviewPermissionContext | AssetWorkbenchPreparationContext | AssetWorkbenchDiagnosticContext,
     Field(discriminator="kind"),
 ]
 

@@ -249,7 +249,8 @@ def test_read_projection_token_matches_cas_and_full_set(entry_db, monkeypatch):
     assert complete.case_version != after.case_version
     assert complete.current_stage == "ASSET_REVIEW" and complete.stages[4].result == "INCOMPLETE"
     assert complete.next_action.semantic_route_key == "asset_review_line_validate_required"
-    assert all(stage.result == "NOT_AVAILABLE" for stage in complete.stages[5:])
+    assert complete.stages[5].result == "INCOMPLETE"
+    assert all(stage.result == "NOT_AVAILABLE" for stage in complete.stages[6:])
     db.add(ProjectAssetLine(project_id=entry["project"].id, asset_name="illegal phantom"))
     db.commit()
     divergent = read()

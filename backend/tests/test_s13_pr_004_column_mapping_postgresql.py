@@ -475,6 +475,9 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "project_asset_workbench_withdrawals",
+        "project_asset_workbench_confirmations",
+        "asset_workbench_command_receipts",
         "asset_line_decision_reversals",
         "asset_line_human_decisions",
         "asset_line_validation_generations",
@@ -527,11 +530,14 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
             connection.execute(text(f'SET LOCAL search_path TO "{schema}"'))
             Base.metadata.create_all(connection)
+            operations = Operations(MigrationContext.configure(connection))
+            operations.drop_constraint(
+                "fk_aw_confirmation_reversal", "project_asset_workbench_confirmations", type_="foreignkey"
+            )
             for table_name in later_tables:
                 table = Base.metadata.tables.get(table_name)
                 if table is not None:
                     table.drop(connection, checkfirst=True)
-            operations = Operations(MigrationContext.configure(connection))
             # This historical migration owns the Customer unique target; the
             # later G1.1A Project FK is outside its schema slice.
             operations.drop_constraint(

@@ -20,7 +20,7 @@ from app.modules.project_master_data.models import (
 )
 
 CONTRACT_VERSION = "s12-post-intake-guarded-apply-v2"
-CASE_CONTRACT = "global-case-state-v3-asset-review-line-decision-v1"
+CASE_CONTRACT = "global-case-state-v4-asset-workbench-confirmation-v1"
 REGISTERED_INPUTS = ("proposed_asset_name", "proposed_description", "proposed_quantity",
                      "proposed_unit", "proposed_raw_price", "proposed_currency")
 
@@ -76,6 +76,7 @@ class AuthoritySnapshot:
     facts: list[str]
     line_proofs: dict = field(default_factory=dict)
     references: dict = field(default_factory=dict)
+    workbench: Any = None
 
 
 def lock_project(db, *, org_id, project_id):
@@ -307,7 +308,11 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
             "line_decision_authority": proof_facts,
         }
         facts = sorted([p.fact_token for p in prefix] + ["asset_review_authority_v1:" + canonical_digest(added)])
-        case_version, facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
-        return AuthoritySnapshot(project, prefix, batch, source, analysis, result, intake, slot,
+        snapshot = AuthoritySnapshot(project, prefix, batch, source, analysis, result, intake, slot,
             usage, rows, lines, issues, seal, lineage_current, seal_current,
-            sorted(set(stale)), manifest, case_version, facts, line_proofs, references)
+            sorted(set(stale)), manifest, "", facts, line_proofs, references)
+        from app.modules.project_master_data.application.asset_workbench_authority import resolve_workbench_authority
+        snapshot.workbench = resolve_workbench_authority(db, snapshot)
+        facts.append("asset_workbench_authority_v1:" + canonical_digest(snapshot.workbench.facts))
+        snapshot.case_version, snapshot.facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
+        return snapshot

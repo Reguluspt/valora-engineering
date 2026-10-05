@@ -4489,6 +4489,12 @@ from app.modules.project_master_data.asset_review_line_models import (  # noqa: 
     AssetLineDecisionReversal as AssetLineDecisionReversal,
 )
 
+from app.modules.project_master_data.asset_workbench_models import (  # noqa: E402
+    AssetWorkbenchCommandReceipt as AssetWorkbenchCommandReceipt,
+    ProjectAssetWorkbenchConfirmation as ProjectAssetWorkbenchConfirmation,
+    ProjectAssetWorkbenchWithdrawal as ProjectAssetWorkbenchWithdrawal,
+)
+
 
 
 

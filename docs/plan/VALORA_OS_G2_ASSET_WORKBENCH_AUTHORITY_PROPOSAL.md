@@ -1,12 +1,12 @@
 # OS-G2 A6 — Asset Workbench stage authority proposal
 
-**Status: PROPOSAL ONLY / NOT ACCEPTED. Product Owner decision required.**
+**Status: A6 CERTIFIED/CLOSED; Product Owner D1–D8 ACCEPTED. A7 backend implementation candidate, pending runtime certification.**
 **Task:** `VALORA-TASK-OS-G2-A6-ASSET-WORKBENCH-AUTHORITY-PROPOSAL`, [Issue #120](https://github.com/Reguluspt/valora-engineering/issues/120). **Date:** 2026-10-05.
 **Verified baseline:** `main=ddd5dae64c8ee9bdcb956e7a7e62160663d5ceaa`; CODEX blob `f45dcad7d53b86ac21bd0a13daf85ba92654e5d4`; [repository CI #592](https://github.com/Reguluspt/valora-engineering/actions/runs/37287810249) and [Windows Client #17](https://github.com/Reguluspt/valora-engineering/actions/runs/37287810270) SUCCESS on that exact SHA. WIN-4A / #118 is CLOSED.
 
 **Recommendation:** define ASSET_WORKBENCH as human-confirmed preparation of the fixed, sealed asset set for subsequent price-evidence work. Require an official nonblank description for every member and one immutable project-wide human readiness confirmation bound to current official inputs and current ASSET_REVIEW proofs. Appraised unit price is optional working data, excluded as a presence/completeness requirement and never a final appraisal decision.
 
-Nothing in this document activates a provider, route, command, schema, permission or stage. Live `current_stage` remains capped at ASSET_REVIEW; its COMPLETE outcome retains `NO_AUTHORIZED_DOWNSTREAM_ACTION` unless a higher-priority authorized blocker applies. ASSET_WORKBENCH+ remains NOT_AVAILABLE / UNAUTHORIZED; full OS-G2 and full WIN-4 remain PARTIAL. Product Owner acceptance would freeze only D1–D8 below; implementation requires a later explicit task. Review/CI PASS and merging a proposal do not themselves accept authority.
+**Current disposition (2026-10-05):** A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED; Product Owner D1–D8 are ACCEPTED. The separately authorized A7 / Issue #122 implements an uncertified backend/domain/provider candidate: ConfirmProjectAssetWorkbench, WithdrawProjectAssetWorkbenchConfirmation, `asset_workbench_confirmation_v1` and shared `global-case-state-v4-asset-workbench-confirmation-v1`. Candidate coverage/current-stage cap reaches ASSET_WORKBENCH; COMPLETE retains `NO_AUTHORIZED_DOWNSTREAM_ACTION`. Certified main remains capped at ASSET_REVIEW until Gate Owner expected-head integration, exact-main CI and A7 certification. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED; A8 product UX/E2E is unimplemented; full OS-G2 and full WIN-4 remain PARTIAL. The proposal-era wording below is preserved as A6 historical evidence; this current disposition supersedes its pending-acceptance and absent-successor claims only within accepted D1–D8 and authorized A7 backend scope. Review/CI PASS and merging a proposal do not themselves accept authority or close the product slice.
 
 ## 1. Authority inventory and verified gap
 
