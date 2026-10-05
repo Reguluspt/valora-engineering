@@ -5,7 +5,7 @@ using Valora.Windows.Bridge;
 
 namespace Valora.Windows.App;
 
-internal sealed class WindowsNativeFile(StorageFile file) : INativeFile
+internal sealed class WindowsNativeFile(StorageFile file) : INativeReadableFile
 {
     internal StorageFile File { get; } = file;
     public async Task<NativeFileInfo> InspectAsync(CancellationToken cancellation)
@@ -13,6 +13,8 @@ internal sealed class WindowsNativeFile(StorageFile file) : INativeFile
         var properties = await File.GetBasicPropertiesAsync().AsTask(cancellation);
         return new NativeFileInfo(File.Name, File.FileType.ToLowerInvariant(), properties.Size);
     }
+    public async Task<Stream> OpenReadAsync(CancellationToken cancellation) =>
+        (await File.OpenReadAsync().AsTask(cancellation)).AsStreamForRead();
 }
 
 internal sealed class WindowsNativePlatform(nint window) : INativePlatform
@@ -20,7 +22,8 @@ internal sealed class WindowsNativePlatform(nint window) : INativePlatform
     private readonly ExternalUrlPolicy external = new([]);
     public IReadOnlyCollection<string> EnabledCapabilities { get; } = Array.AsReadOnly(new[]
     {
-        "pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord", "dragDrop"
+        "pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord", "dragDrop",
+        "saveDownloadedArtifact", "prepareSelectedFileTransfer", "prepareArtifactCapture"
     });
 
     public async Task<INativeFile?> PickAsync(bool excel, BridgeGeneration generation)
@@ -41,9 +44,10 @@ internal sealed class WindowsNativePlatform(nint window) : INativePlatform
 
     public async Task<bool?> SaveAsync(INativeFile artifact, string suggestedFilename, BridgeGeneration generation)
     {
-        if (artifact is not WindowsNativeFile selected) { throw new NativeBridgeException(NativeError.HANDLE_INVALID); }
+        if (artifact is not INativeReadableFile selected) { throw new NativeBridgeException(NativeError.HANDLE_INVALID); }
         if (!NativeProtocol.SafeName(suggestedFilename)) { throw new NativeBridgeException(NativeError.INVALID_ARGUMENT); }
-        var extension = selected.File.FileType.ToLowerInvariant();
+        var info = await generation.Start(() => selected.InspectAsync(generation.Cancellation));
+        var extension = info.Extension;
         if (!suggestedFilename.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
         {
             throw new NativeBridgeException(NativeError.TYPE_NOT_ALLOWED);
@@ -53,10 +57,9 @@ internal sealed class WindowsNativePlatform(nint window) : INativePlatform
         WinRT.Interop.InitializeWithWindow.Initialize(picker, window);
         var destination = await generation.Start(() => picker.PickSaveFileAsync().AsTask(generation.Cancellation));
         if (destination is null) { return null; }
-        using var source = await generation.Start(() => selected.File.OpenReadAsync().AsTask(generation.Cancellation));
-        if (source.Size > BridgeGeneration.FileLimit) { throw new NativeBridgeException(NativeError.SIZE_LIMIT); }
+        using var input = await generation.Start(() => selected.OpenReadAsync(generation.Cancellation));
+        if (info.SizeBytes > BridgeGeneration.FileLimit) { throw new NativeBridgeException(NativeError.SIZE_LIMIT); }
         using var target = await generation.Start(() => destination.OpenAsync(FileAccessMode.ReadWrite).AsTask(generation.Cancellation));
-        using var input = source.AsStreamForRead();
         using var output = target.AsStreamForWrite();
         generation.Start(() => { output.SetLength(0); return true; });
         var buffer = new byte[64 * 1024];
@@ -68,6 +71,7 @@ internal sealed class WindowsNativePlatform(nint window) : INativePlatform
             if (copied > BridgeGeneration.FileLimit) { throw new NativeBridgeException(NativeError.SIZE_LIMIT); }
             await generation.Start(() => output.WriteAsync(buffer.AsMemory(0, count), generation.Cancellation).AsTask());
         }
+        if (copied != info.SizeBytes) { throw new NativeBridgeException(NativeError.INVALID_ARGUMENT); }
         await generation.Start(() => output.FlushAsync(generation.Cancellation));
         return true;
     }

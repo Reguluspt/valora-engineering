@@ -1,11 +1,14 @@
 namespace Valora.Windows.Bridge;
 
-public sealed class NativeBridgeSession(INativePlatform platform)
+public sealed class NativeBridgeSession(INativePlatform platform, TimeProvider? transferTime = null)
 {
     private readonly object gate = new();
     private BridgeGeneration? generation;
     private readonly IReadOnlyList<string> capabilities = Array.AsReadOnly(platform.EnabledCapabilities
         .Where(NativeProtocol.Capabilities.Contains).Distinct(StringComparer.Ordinal).ToArray());
+    private readonly IReadOnlyList<string> v2Capabilities = Array.AsReadOnly(platform.EnabledCapabilities
+        .Where(value => NativeProtocol.V2Capabilities.Contains(value) && value is not ("dragDrop" or "deepLink"))
+        .Distinct(StringComparer.Ordinal).ToArray());
     public event Action<string, BridgeGeneration>? NativeEvent;
     public bool Enabled { get { lock (gate) { return generation?.Active == true; } } }
     public BridgeGeneration? CurrentGeneration { get { lock (gate) { return generation; } } }
@@ -15,7 +18,7 @@ public sealed class NativeBridgeSession(INativePlatform platform)
         lock (gate)
         {
             generation?.Revoke();
-            generation = new BridgeGeneration();
+            generation = new BridgeGeneration(transferTime);
         }
     }
 
@@ -25,7 +28,12 @@ public sealed class NativeBridgeSession(INativePlatform platform)
         {
             if (generation?.Active != true) { return; }
             generation.Revoke();
-            NativeEvent?.Invoke(NativeProtocol.Event("bridgeRevoked", new { code = "BRIDGE_REVOKED" }), generation);
+            if (generation.Negotiated || !generation.NegotiatedV2)
+                NativeEvent?.Invoke(NativeProtocol.Event("bridgeRevoked", new { code = "BRIDGE_REVOKED" }), generation);
+            if (generation.NegotiatedV2)
+            {
+                NativeEvent?.Invoke(NativeProtocol.Event("bridgeRevoked", new { code = "BRIDGE_REVOKED" }, NativeProtocol.V2), generation);
+            }
         }
     }
 
@@ -39,24 +47,25 @@ public sealed class NativeBridgeSession(INativePlatform platform)
             var current = generation;
             if (expected is not null && !ReferenceEquals(current, expected))
             {
-                return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.BRIDGE_REVOKED));
+                return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.BRIDGE_REVOKED, request.Protocol));
             }
-            if (current is null || !current.Active) { return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.NOT_TRUSTED)); }
+            if (current is null || !current.Active) { return Task.FromResult(NativeProtocol.Failure(request.RequestId, NativeError.NOT_TRUSTED, request.Protocol)); }
             // Fixed association launches also use TreatAsUntrusted and can show an OS confirmation.
             var interactive = request.Capability is "pickExcelFile" or "pickDocumentFile" or "openInExcel" or "openInWord" or
                 "saveDownloadedArtifact" or "openExternalUrl";
             try
             {
-                if (request.Capability != "hello" && !current.Negotiated) { throw new NativeBridgeException(NativeError.BAD_PROTOCOL); }
-                if (request.Capability != "hello" && !capabilities.Contains(request.Capability))
+                var negotiated = request.Protocol == NativeProtocol.V2 ? current.NegotiatedV2 : current.Negotiated;
+                if (request.Capability != "hello" && !negotiated) { throw new NativeBridgeException(NativeError.BAD_PROTOCOL); }
+                if (request.Capability != "hello" && !(request.Protocol == NativeProtocol.V2 ? v2Capabilities : capabilities).Contains(request.Capability))
                 {
                     throw new NativeBridgeException(NativeError.CAPABILITY_UNAVAILABLE);
                 }
-                var completion = current.Admit(request.RequestId, interactive);
+                var completion = current.Admit(request.RequestId, interactive, request.Protocol);
                 _ = ExecuteAsync(current, request, interactive);
                 return completion.Task;
             }
-            catch (NativeBridgeException error) { return Task.FromResult(NativeProtocol.Failure(request.RequestId, error.Code)); }
+            catch (NativeBridgeException error) { return Task.FromResult(NativeProtocol.Failure(request.RequestId, error.Code, request.Protocol)); }
         }
     }
 
@@ -66,11 +75,11 @@ public sealed class NativeBridgeSession(INativePlatform platform)
         try
         {
             var result = await ExecuteCapabilityAsync(current, request);
-            response = current.Start(() => NativeProtocol.Success(request.RequestId, result));
+            response = current.Start(() => NativeProtocol.Success(request.RequestId, result, request.Protocol));
         }
-        catch (NativeBridgeException error) { response = NativeProtocol.Failure(request.RequestId, error.Code); }
-        catch (OperationCanceledException) { response = NativeProtocol.Failure(request.RequestId, NativeError.BRIDGE_REVOKED); }
-        catch (Exception) { response = NativeProtocol.Failure(request.RequestId, NativeError.FAILED); }
+        catch (NativeBridgeException error) { response = NativeProtocol.Failure(request.RequestId, error.Code, request.Protocol); }
+        catch (OperationCanceledException) { response = NativeProtocol.Failure(request.RequestId, NativeError.BRIDGE_REVOKED, request.Protocol); }
+        catch (Exception) { response = NativeProtocol.Failure(request.RequestId, NativeError.FAILED, request.Protocol); }
         current.Complete(request.RequestId, interactive, response);
     }
 
@@ -82,15 +91,28 @@ public sealed class NativeBridgeSession(INativePlatform platform)
             case "hello":
                 return current.Start(() =>
                 {
+                    if (request.Protocol == NativeProtocol.V2)
+                    {
+                        current.NegotiatedV2 = true;
+                        return (object)new { protocol = NativeProtocol.V2, capabilities = v2Capabilities, clientCompatibility = 1 };
+                    }
                     current.Negotiated = true;
                     return new { protocol = NativeProtocol.Id, capabilities };
                 });
+            case "prepareSelectedFileTransfer":
+                return new { url = await current.Transfers.PrepareSelectedAsync(NativeProtocol.Text(payload, "handle")) };
+            case "prepareArtifactCapture":
+                return new { url = current.Transfers.PrepareCapture(payload) };
             case "pickExcelFile": case "pickDocumentFile":
                 var excel = request.Capability == "pickExcelFile";
                 var selected = await current.Start(() => platform.PickAsync(excel, current));
                 if (selected is null) { return new { selected = false }; }
                 var info = await current.Start(() => selected.InspectAsync(current.Cancellation));
                 BridgeGeneration.ValidateFile(info);
+                if (excel && request.Protocol == NativeProtocol.V2 && info.SizeBytes is 0 or > NativeTransfers.ProductLimit)
+                {
+                    throw new NativeBridgeException(NativeError.SIZE_LIMIT);
+                }
                 if (excel ? info.Extension is not (".xls" or ".xlsx") : info.Extension != ".docx")
                 {
                     throw new NativeBridgeException(NativeError.TYPE_NOT_ALLOWED);
@@ -109,6 +131,8 @@ public sealed class NativeBridgeSession(INativePlatform platform)
                 return new { opened = true };
             case "saveDownloadedArtifact":
                 var artifact = current.Resolve(NativeProtocol.Text(payload, "artifactHandle"), false, true);
+                if (artifact is CapturedNativeArtifact && request.Protocol != NativeProtocol.V2)
+                    throw new NativeBridgeException(NativeError.BAD_PROTOCOL);
                 var artifactInfo = await current.Start(() => artifact.InspectAsync(current.Cancellation));
                 BridgeGeneration.ValidateFile(artifactInfo);
                 var suggestedFilename = NativeProtocol.Text(payload, "suggestedFilename");
@@ -116,8 +140,12 @@ public sealed class NativeBridgeSession(INativePlatform platform)
                 {
                     throw new NativeBridgeException(NativeError.TYPE_NOT_ALLOWED);
                 }
-                var saved = await current.Start(() => platform.SaveAsync(artifact, suggestedFilename, current));
-                return new { saved = saved == true };
+                try
+                {
+                    var saved = await current.Start(() => platform.SaveAsync(artifact, suggestedFilename, current));
+                    return new { saved = saved == true };
+                }
+                finally { current.ReleaseCapturedArtifact(NativeProtocol.Text(payload, "artifactHandle")); }
             case "showNotification":
                 if (!await current.Start(() => platform.NotifyAsync(NativeProtocol.Text(payload, "title"), NativeProtocol.Text(payload, "body"), current)))
                 {

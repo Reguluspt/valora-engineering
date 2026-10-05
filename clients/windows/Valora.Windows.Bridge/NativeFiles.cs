@@ -9,6 +9,11 @@ public interface INativeFile
     Task<NativeFileInfo> InspectAsync(CancellationToken cancellation);
 }
 
+public interface INativeReadableFile : INativeFile
+{
+    Task<Stream> OpenReadAsync(CancellationToken cancellation);
+}
+
 public interface INativePlatform : INativeCapabilityCatalog
 {
     Task<INativeFile?> PickAsync(bool excel, BridgeGeneration generation);
@@ -25,11 +30,14 @@ public sealed class BridgeGeneration
     private readonly object gate = new();
     private readonly CancellationTokenSource cancellation = new();
     private readonly Dictionary<string, (INativeFile File, NativeFileInfo Info, bool Artifact)> handles = new();
-    private readonly Dictionary<string, TaskCompletionSource<string>> pending = new();
+    private readonly Dictionary<string, (TaskCompletionSource<string> Completion, string Protocol)> pending = new();
     private readonly HashSet<string> seen = new(StringComparer.Ordinal);
     private bool active = true;
     private bool interactive;
     internal bool Negotiated { get; set; }
+    internal bool NegotiatedV2 { get; set; }
+    public NativeTransfers Transfers { get; }
+    public BridgeGeneration(TimeProvider? time = null) { Transfers = new NativeTransfers(this, time ?? TimeProvider.System); }
     public CancellationToken Cancellation => cancellation.Token;
     public bool Active { get { lock (gate) { return active; } } }
 
@@ -42,7 +50,9 @@ public sealed class BridgeGeneration
         }
     }
 
-    internal TaskCompletionSource<string> Admit(string id, bool needsInteraction)
+    internal void Cleanup(Action operation) { lock (gate) { operation(); } }
+
+    internal TaskCompletionSource<string> Admit(string id, bool needsInteraction, string protocol = NativeProtocol.Id)
     {
         return Start(() =>
         {
@@ -53,7 +63,7 @@ public sealed class BridgeGeneration
                 throw new NativeBridgeException(NativeError.BUSY);
             }
             var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            pending.Add(id, completion);
+            pending.Add(id, (completion, protocol));
             seen.Add(id);
             if (needsInteraction) { interactive = true; }
             return completion;
@@ -64,7 +74,7 @@ public sealed class BridgeGeneration
     {
         lock (gate)
         {
-            if (pending.Remove(id, out var completion)) { completion.TrySetResult(response); }
+            if (pending.Remove(id, out var entry)) { entry.Completion.TrySetResult(response); }
             if (wasInteractive) { interactive = false; }
         }
     }
@@ -75,13 +85,30 @@ public sealed class BridgeGeneration
         {
             if (!active) { return; }
             active = false;
+            foreach (var entry in handles.Values)
+            {
+                if (entry.Artifact && entry.File is CapturedNativeArtifact artifact) { artifact.Dispose(); }
+            }
             handles.Clear();
+            Transfers.Clear();
             interactive = false;
-            foreach (var (id, completion) in pending) { completion.TrySetResult(NativeProtocol.Failure(id, NativeError.BRIDGE_REVOKED)); }
+            foreach (var (id, entry) in pending) { entry.Completion.TrySetResult(NativeProtocol.Failure(id, NativeError.BRIDGE_REVOKED, entry.Protocol)); }
             pending.Clear();
             seen.Clear();
         }
         cancellation.Cancel();
+    }
+
+    public void ReleaseCapturedArtifact(string id)
+    {
+        lock (gate)
+        {
+            if (handles.TryGetValue(id, out var entry) && entry.Artifact && entry.File is CapturedNativeArtifact artifact)
+            {
+                handles.Remove(id);
+                artifact.Dispose();
+            }
+        }
     }
 
     public string Register(INativeFile file, NativeFileInfo info, bool artifact = false)

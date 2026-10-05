@@ -48,7 +48,7 @@ try {
         }
     })
     [ordered]@{
-        task = 'VALORA-TASK-WIN-3-TYPED-NATIVE-BRIDGE'
+        task = 'VALORA-TASK-WIN-4A-COMPAT-EXCEL-RESULT-INTEGRATION'
         sourceCommit = $commit
         dotnetSdk = $expectedSdk
         target = 'Windows 11 x64'

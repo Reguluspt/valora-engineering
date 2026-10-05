@@ -1,6 +1,9 @@
 import React from "react";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const native = vi.hoisted(() => ({ availability: { state: "browser-only" }, statusText: "Trình duyệt",
+  pickExcelFile: vi.fn(), saveArtifact: vi.fn() }));
+vi.mock("../../../native/useNativeIntegration", () => ({ useNativeIntegration: () => native }));
 
 const api = vi.hoisted(() => ({
   getProject: vi.fn(), listPreliminaryBatches: vi.fn(), createPreliminaryBatch: vi.fn(),
@@ -68,6 +71,8 @@ describe("PreliminaryIntakePage", () => {
   let serverRecovery: ReturnType<typeof recovery>;
   beforeEach(() => {
     vi.resetAllMocks();
+    native.availability = { state: "browser-only" };
+    native.statusText = "Trình duyệt";
     const pending = new Map<string, string>();
     vi.stubGlobal("sessionStorage", {
       getItem: (key: string) => pending.get(key) || null,
@@ -99,6 +104,41 @@ describe("PreliminaryIntakePage", () => {
   function button(root: any, label: string) {
     return root.root.findAllByType("button").find((item: any) => item.children.includes(label));
   }
+
+  it("fills the existing File state through Windows and waits for explicit upload", async () => {
+    native.availability = { state: "native-compatible" };
+    api.getSourceArtifact.mockResolvedValue(null);
+    api.listSourceArtifacts.mockResolvedValue([]);
+    api.getMappingRecovery.mockResolvedValue(recovery("no_selection", { current_source_artifact_id: null }));
+    api.listStructureSnapshots.mockResolvedValue([]);
+    const file = new File([new Uint8Array([1, 2])], "native.xlsx");
+    native.pickExcelFile.mockResolvedValue(file);
+    api.uploadSourceArtifact.mockResolvedValue(source);
+    const root = await mount();
+    expect(root.root.findByType("input").props.type).toBe("file");
+    await act(async () => button(root, "Chọn tệp bằng Windows").props.onClick());
+    expect(api.uploadSourceArtifact).not.toHaveBeenCalled();
+    expect(api.createPreliminaryBatch).not.toHaveBeenCalled();
+    expect(api.analyzeStructure).not.toHaveBeenCalled();
+    expect(api.materializeMapping).not.toHaveBeenCalled();
+    expect(JSON.stringify(root.toJSON())).toContain("native.xlsx");
+    await act(async () => button(root, "Tải tệp Excel").props.onClick());
+    expect(api.uploadSourceArtifact).toHaveBeenCalledWith("p-1", "b-1", file);
+  });
+
+  it.each(["native-incompatible/update-required", "revoked/error"])("preserves the browser input when %s", async state => {
+    native.availability = { state };
+    native.statusText = "Windows cần cập nhật";
+    api.getSourceArtifact.mockResolvedValue(null);
+    api.listSourceArtifacts.mockResolvedValue([]);
+    api.getMappingRecovery.mockResolvedValue(recovery("no_selection", { current_source_artifact_id: null }));
+    api.listStructureSnapshots.mockResolvedValue([]);
+    const root = await mount();
+    expect(button(root, "Chọn tệp bằng Windows")).toBeUndefined();
+    expect(root.root.findByType("input").props.disabled).toBe(false);
+    expect(JSON.stringify(root.toJSON())).toContain("Windows cần cập nhật");
+    expect(api.uploadSourceArtifact).not.toHaveBeenCalled();
+  });
 
   async function selectCandidate(root: any) {
     const selector = root.root.findAllByType("select").find((item: any) =>

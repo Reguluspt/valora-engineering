@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
+import { useNativeIntegration } from "../../native/useNativeIntegration";
 import { getProject, type ProjectSummary } from "../../api/projects";
 import {
   analyzeStructure,
@@ -224,6 +225,20 @@ function ResolvedPreliminaryIntake({
   const [supersedesProfileId, setSupersedesProfileId] = useState<string | null>(null);
   const [reviewed, setReviewed] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const native = useNativeIntegration();
+  const pickNativeExcel = async () => {
+    if (loadState !== "ready" || busy || uncertain) return;
+    setBusy("native-pick");
+    try {
+      const file = await native.pickExcelFile();
+      if (file) {
+        setSelectedFile(file);
+        setNotice({ text: "Đã chọn tệp. Chọn Tải tệp Excel để gửi lên hệ thống.", tone: "info" });
+      } else setNotice({ text: "Đã hủy chọn tệp.", tone: "info" });
+    } catch {
+      setNotice({ text: "Chưa thể chọn tệp bằng Windows. Hãy kiểm tra trạng thái kết nối rồi thử lại.", tone: "error" });
+    } finally { setBusy(null); }
+  };
   const [replaceSource, setReplaceSource] = useState(false);
 
   const markUnknown = (pending: PendingUnknown) => {
@@ -705,6 +720,10 @@ function ResolvedPreliminaryIntake({
             <label className="precase-file-field">Tệp Excel (.xlsx hoặc .xls)
               <input accept=".xlsx,.xls" disabled={controlsBlocked} onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} type="file" />
             </label>
+            <p role="status">{native.statusText}</p>
+            {native.availability.state === "native-compatible" && <button className="valora-button valora-button--secondary"
+              disabled={controlsBlocked} onClick={() => void pickNativeExcel()} type="button">Chọn tệp bằng Windows</button>}
+            {selectedFile && <p role="status">Đã chọn: {selectedFile.name} · {new Intl.NumberFormat("vi-VN").format(selectedFile.size)} byte</p>}
             <button className="valora-button valora-button--primary" disabled={!selectedFile || controlsBlocked} onClick={() => void handleUpload()} type="button">
               {busy === "upload" ? "Đang tải tệp…" : "Tải tệp Excel"}
             </button>

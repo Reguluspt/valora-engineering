@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchCaseState, type CaseStateResponse } from "../../api/caseState";
 import { ApiError } from "../../api/client";
+import { useNativeIntegration } from "../../native/useNativeIntegration";
 import {
   bindPreliminaryCustomer, commitOfficialIntake, downloadPreliminaryResult,
   generatePreliminaryResult, getCustomer, getPreliminaryResult, searchActiveCustomers,
@@ -87,6 +88,9 @@ function ResolvedCompletion({ projectId, projectRef, permissions, onNavigate, on
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const native = useNativeIntegration();
+  const [nativeSaving, setNativeSaving] = useState(false);
+  const nativeSavingRef = useRef(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const confirmRef = useRef<HTMLDialogElement>(null);
@@ -242,7 +246,7 @@ function ResolvedCompletion({ projectId, projectRef, permissions, onNavigate, on
   };
 
   const download = async () => {
-    if (!data?.result) return;
+    if (!data?.result || loadState !== "ready" || busyRef.current || nativeSavingRef.current) return;
     try {
       const blob = await downloadPreliminaryResult(projectId, data.result.id);
       const url = URL.createObjectURL(blob);
@@ -254,6 +258,22 @@ function ResolvedCompletion({ projectId, projectRef, permissions, onNavigate, on
     } catch {
       setNotice("Chưa thể tải tệp kết quả sơ bộ. Hãy kiểm tra kết nối rồi thử lại.");
     }
+  };
+
+  const saveWithWindows = async () => {
+    if (!data?.result || loadState !== "ready" || busyRef.current || nativeSavingRef.current) return;
+    const result = data.result;
+    nativeSavingRef.current = true;
+    setNativeSaving(true);
+    try {
+      const saved = await native.saveArtifact({
+        resultId: result.id, resultVersion: result.version, contentType: result.content_type,
+        extension: ".xlsx", sizeBytes: result.file_size_bytes, sha256: result.content_checksum_sha256,
+      }, () => downloadPreliminaryResult(projectId, result.id), `ket-qua-so-bo-v${result.version}.xlsx`);
+      setNotice(saved ? "Đã lưu tệp bằng Windows." : "Đã hủy lưu tệp. Tệp chưa được lưu.");
+    } catch {
+      setNotice("Chưa thể lưu tệp bằng Windows. Hãy kiểm tra trạng thái kết nối rồi thử lại.");
+    } finally { nativeSavingRef.current = false; setNativeSaving(false); }
   };
 
   if (!data && loadState === "loading") return <LoadingState message="Đang đọc trạng thái kết quả sơ bộ…" />;
@@ -311,7 +331,12 @@ function ResolvedCompletion({ projectId, projectRef, permissions, onNavigate, on
               <dl><div><dt>Phiên bản</dt><dd>{result.version}</dd></div>
                 <div><dt>Tạo lúc</dt><dd>{formatDate(result.created_at)}</dd></div>
                 <div><dt>Dung lượng</dt><dd>{new Intl.NumberFormat("vi-VN").format(result.file_size_bytes)} byte</dd></div></dl>
-              <button className="valora-button valora-button--secondary" onClick={() => void download()} type="button">Tải tệp Excel</button>
+              <p role="status">{native.statusText}</p>
+              <button className="valora-button valora-button--secondary" disabled={busy || nativeSaving || loadState !== "ready"}
+                onClick={() => void download()} type="button">Tải tệp Excel (trình duyệt)</button>
+              {native.availability.state === "native-compatible" && <button className="valora-button valora-button--secondary"
+                disabled={busy || nativeSaving || loadState !== "ready"} onClick={() => void saveWithWindows()} type="button">
+                {nativeSaving ? "Đang lưu tệp…" : "Lưu bằng Windows"}</button>}
             </div> : unavailable ? <div className="valora-message valora-message--info precase-completion-unavailable" role="status">
               <span aria-hidden="true" className="precase-completion-info-icon">i</span>
               <div><strong>Chưa khả dụng</strong>

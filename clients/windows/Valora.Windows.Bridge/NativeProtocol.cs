@@ -14,11 +14,12 @@ public sealed class NativeBridgeException(NativeError code) : Exception(code.ToS
     public NativeError Code { get; } = code;
 }
 
-public sealed record NativeRequest(string RequestId, string Capability, JsonElement Payload);
+public sealed record NativeRequest(string RequestId, string Capability, JsonElement Payload, string Protocol = NativeProtocol.Id);
 
 public static class NativeProtocol
 {
     public const string Id = "valora.native/1";
+    public const string V2 = "valora.native/2";
     public const int MessageLimit = 64 * 1024;
     public const int PendingLimit = 8;
     public static IReadOnlyList<string> Capabilities { get; } = Array.AsReadOnly(new[]
@@ -26,6 +27,8 @@ public static class NativeProtocol
         "pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord", "saveDownloadedArtifact",
         "dragDrop", "showNotification", "deepLink", "openExternalUrl"
     });
+    public static IReadOnlyList<string> V2Capabilities { get; } = Array.AsReadOnly(
+        Capabilities.Concat(new[] { "prepareSelectedFileTransfer", "prepareArtifactCapture" }).ToArray());
 
     public static NativeRequest Parse(string json)
     {
@@ -35,20 +38,21 @@ public static class NativeProtocol
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 });
             var root = document.RootElement;
             Shape(root, "protocol", "type", "requestId", "capability", "payload");
-            if (Text(root, "protocol") != Id) { throw new NativeBridgeException(NativeError.BAD_PROTOCOL); }
+            var protocol = Text(root, "protocol");
+            if (protocol is not (Id or V2)) { throw new NativeBridgeException(NativeError.BAD_PROTOCOL); }
             var id = Text(root, "requestId");
             if (Text(root, "type") != "request" || !Guid.TryParseExact(id, "D", out var uuid) || uuid.ToString("D") != id)
             {
                 throw new NativeBridgeException(NativeError.BAD_MESSAGE);
             }
             var capability = Text(root, "capability");
-            if (capability != "hello" && !Capabilities.Contains(capability))
+            if (capability != "hello" && !(protocol == V2 ? V2Capabilities : Capabilities).Contains(capability))
             {
                 throw new NativeBridgeException(NativeError.CAPABILITY_UNAVAILABLE);
             }
             var payload = root.GetProperty("payload");
             ValidatePayload(capability, payload);
-            return new NativeRequest(id, capability, payload.Clone());
+            return new NativeRequest(id, capability, payload.Clone(), protocol);
         }
         catch (JsonException) { throw new NativeBridgeException(NativeError.BAD_MESSAGE); }
     }
@@ -111,8 +115,12 @@ public static class NativeProtocol
             case "hello": case "pickExcelFile": case "pickDocumentFile": case "dragDrop": case "deepLink":
                 Shape(payload); break;
             case "openInExcel": case "openInWord":
+            case "prepareSelectedFileTransfer":
                 Shape(payload, "handle");
                 if (!IsHandle(Text(payload, "handle"))) { throw new NativeBridgeException(NativeError.HANDLE_INVALID); }
+                break;
+            case "prepareArtifactCapture":
+                NativeTransfers.ValidateMetadata(payload);
                 break;
             case "saveDownloadedArtifact":
                 Shape(payload, "artifactHandle", "suggestedFilename");
@@ -134,14 +142,14 @@ public static class NativeProtocol
     }
 
     public static bool IsHandle(string value) => value.Length == 48 && value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
-    public static string Success(string id, object result) => JsonSerializer.Serialize(new
+    public static string Success(string id, object result, string protocol = Id) => JsonSerializer.Serialize(new
     {
-        protocol = Id, type = "response", requestId = id, ok = true, result
+        protocol, type = "response", requestId = id, ok = true, result
     });
-    public static string Failure(string id, NativeError code) => JsonSerializer.Serialize(new
+    public static string Failure(string id, NativeError code, string protocol = Id) => JsonSerializer.Serialize(new
     {
-        protocol = Id, type = "response", requestId = id, ok = false,
+        protocol, type = "response", requestId = id, ok = false,
         error = new { code = code.ToString(), message = "Native operation unavailable or rejected." }
     });
-    public static string Event(string name, object payload) => JsonSerializer.Serialize(new { protocol = Id, type = "event", @event = name, payload });
+    public static string Event(string name, object payload, string protocol = Id) => JsonSerializer.Serialize(new { protocol, type = "event", @event = name, payload });
 }

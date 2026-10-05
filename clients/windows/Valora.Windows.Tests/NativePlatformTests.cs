@@ -8,19 +8,21 @@ namespace Valora.Windows.Tests;
 public sealed class NativePlatformTests
 {
     [Fact]
-    public async Task ProductionCatalogDoesNotAdvertiseMissingArtifactPackagingActivationOrExternalAuthority()
+    public async Task ProductionCatalogEnablesBoundedArtifactsButKeepsPackagingActivationAndExternalAuthorityDeferred()
     {
         var platform = new WindowsNativePlatform(0);
-        Assert.Equal(new[] { "pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord", "dragDrop" }, platform.EnabledCapabilities);
+        Assert.Equal(new[] { "pickExcelFile", "pickDocumentFile", "openInExcel", "openInWord", "dragDrop",
+            "saveDownloadedArtifact", "prepareSelectedFileTransfer", "prepareArtifactCapture" }, platform.EnabledCapabilities);
         var bridge = new NativeBridgeSession(platform);
         bridge.Enable(); await bridge.DispatchAsync(NativeBridgeTests.Request());
         foreach (var (capability, payload) in new (string, object)[]
         {
-            ("saveDownloadedArtifact", new { artifactHandle = new string('a', 48), suggestedFilename = "result.xlsx" }),
             ("showNotification", new { title = "Valora", body = "Notice" }),
             ("deepLink", new { }),
             ("openExternalUrl", new { url = "https://example.com" })
         }) { NativeBridgeTests.Error(await bridge.DispatchAsync(NativeBridgeTests.Request(capability, payload)), NativeError.CAPABILITY_UNAVAILABLE); }
+        NativeBridgeTests.Error(await bridge.DispatchAsync(NativeBridgeTests.Request("saveDownloadedArtifact",
+            new { artifactHandle = new string('a', 48), suggestedFilename = "result.xlsx" })), NativeError.HANDLE_INVALID);
         var error = await Assert.ThrowsAsync<NativeBridgeException>(() => platform.OpenExternalAsync("https://example.com", bridge.CurrentGeneration!));
         Assert.Equal(NativeError.CAPABILITY_UNAVAILABLE, error.Code);
     }
