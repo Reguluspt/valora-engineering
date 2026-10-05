@@ -21,17 +21,21 @@ internal sealed class WebViewTestDiagnostics
     // Transfer callback failures to the awaited test task; do not recover or rethrow into COM.
     internal void Capture(Action callback)
     {
+        WebViewFixtureTrace.Current?.Write("captured-callback-entry");
         try { callback(); }
         catch (Exception error)
         {
             failure.TrySetException(error);
+            WebViewFixtureTrace.Current?.Write("callback-exception-transport", new { type = error.GetType().Name, error.Message });
             Record($"CALLBACK ERROR {error.GetType().Name}: {error.Message}");
         }
     }
 
     internal async Task Wait(Task signal)
     {
+        WebViewFixtureTrace.Current?.Write("signal-wait-start");
         var completed = await Task.WhenAny(signal, failure.Task).WaitAsync(TimeSpan.FromSeconds(10));
+        WebViewFixtureTrace.Current?.Write("signal-wait-completed", failure.Task.IsCompleted);
         if (failure.Task.IsCompleted) { await failure.Task; }
         await completed;
     }

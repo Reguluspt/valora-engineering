@@ -1,10 +1,13 @@
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using Valora.Windows.App;
 using Xunit;
 
 namespace Valora.Windows.Tests;
 
+[Collection(nameof(WebViewCollection))]
 public sealed class WebViewBoundaryTests
 {
     [Theory]
@@ -108,36 +111,94 @@ public sealed class WebViewBoundaryTests
         Assert.False(webView.CoreWebView2.Settings.AreHostObjectsAllowed);
     });
 
-    internal static Task OnWebView(Func<WebView2, Task> test)
+    internal static Task OnWebView(Func<WebView2, Task> test, [CallerMemberName] string testName = "")
     {
-        var result = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var trace = new WebViewFixtureTrace(testName);
+        trace.Start();
+        var result = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
-            using var form = new System.Windows.Forms.Form { ShowInTaskbar = false, Opacity = 0 };
-            using var webView = new WebView2 { Dock = System.Windows.Forms.DockStyle.Fill };
-            form.Controls.Add(webView);
-            form.Shown += async (_, _) =>
+            Exception? failure = null;
+            try
             {
-                try
+                WebViewFixtureTrace.Current = trace;
+                using var form = new System.Windows.Forms.Form { ShowInTaskbar = false, Opacity = 0 };
+                using var webView = new WebView2 { Dock = System.Windows.Forms.DockStyle.Fill };
+                trace.Write("control-created");
+                webView.Disposed += (_, _) => trace.Write("control-disposed");
+                form.FormClosed += (_, _) => trace.Write("form-closed");
+                form.Controls.Add(webView);
+                form.Shown += async (_, _) =>
                 {
-                    var options = new CoreWebView2EnvironmentOptions
+                    try
                     {
-                        ReleaseChannels = CoreWebView2ReleaseChannels.Stable
-                    };
-                    var profile = Path.Combine(Path.GetTempPath(), "Valora.Win1.Tests", Guid.NewGuid().ToString("N"));
-                    var environment = await CoreWebView2Environment.CreateAsync(null, profile, options);
-                    await webView.EnsureCoreWebView2Async(environment);
-                    await test(webView);
-                    result.TrySetResult();
-                }
-                catch (Exception error) { result.TrySetException(error); }
-                finally { form.Close(); }
-            };
-            System.Windows.Forms.Application.Run(form);
+                        var options = new CoreWebView2EnvironmentOptions
+                        {
+                            ReleaseChannels = CoreWebView2ReleaseChannels.Stable
+                        };
+                        var profile = Path.Combine(Path.GetTempPath(), "Valora.Win1.Tests", Guid.NewGuid().ToString("N"));
+                        trace.Write("environment-start", profile);
+                        var environment = await CoreWebView2Environment.CreateAsync(null, profile, options);
+                        trace.Write("environment-created", profile);
+                        await webView.EnsureCoreWebView2Async(environment);
+                        trace.Write("control-initialized", webView.CoreWebView2.BrowserProcessId);
+                        trace.TrackBrowser(webView.CoreWebView2);
+                        webView.CoreWebView2.NavigationStarting += (_, args) => trace.Write("navigation-start", new { args.NavigationId, args.Uri });
+                        webView.CoreWebView2.NavigationCompleted += (_, args) => trace.Write("navigation-completed", new { args.NavigationId, args.IsSuccess, args.WebErrorStatus });
+                        webView.CoreWebView2.WebResourceRequested += (_, args) => trace.Write("request-callback-entry", new { args.Request.Method, args.Request.Uri });
+                        await test(webView);
+                        trace.Write("test-body-result");
+                    }
+                    catch (Exception error)
+                    {
+                        trace.Write("test-body-exception", new { type = error.GetType().Name, error.Message });
+                        failure = error;
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            webView.Dispose();
+                            // Keep the STA pump available for WebView shutdown callbacks after controller disposal.
+                            await trace.WaitForBrowserRelease();
+                        }
+                        catch (Exception error)
+                        {
+                            failure = failure is null ? error : new AggregateException(failure, error);
+                        }
+                        finally
+                        {
+                            try { trace.Write("form-close-start"); form.Close(); }
+                            catch (Exception error)
+                            {
+                                failure = failure is null ? error : new AggregateException(failure, error);
+                                System.Windows.Forms.Application.ExitThread();
+                            }
+                        }
+                    }
+                };
+                System.Windows.Forms.Application.Run(form);
+                trace.Write("message-loop-ended");
+            }
+            catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
+            finally { result.TrySetResult(failure); }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
         thread.Start();
-        return result.Task.WaitAsync(TimeSpan.FromSeconds(60));
+        return Complete().WaitAsync(TimeSpan.FromSeconds(60));
+
+        async Task Complete()
+        {
+            try
+            {
+                var failure = await result.Task;
+                if (!thread.Join(TimeSpan.FromSeconds(10))) { throw new TimeoutException("Fixture STA did not exit."); }
+                trace.Write(failure is null ? "owning-task-result" : "owning-task-exception",
+                    failure is null ? null : new { type = failure.GetType().Name, failure.Message });
+                if (failure is not null) { ExceptionDispatchInfo.Capture(failure).Throw(); }
+            }
+            finally { trace.End(); }
+        }
     }
 }

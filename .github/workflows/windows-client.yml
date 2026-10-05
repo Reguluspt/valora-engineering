@@ -32,6 +32,8 @@ jobs:
         with:
           global-json-file: clients/windows/global.json
       - name: Restore, build, test and package unsigned engineering evidence
+        env:
+          VALORA_WEBVIEW_TRACE_PATH: ${{ github.workspace }}/clients/windows/artifacts/webview-fixtures.jsonl
         run: ./build.ps1
       - name: Upload engineering artifact and provenance
         uses: actions/upload-artifact@v4
@@ -49,6 +51,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: valora-windows-tests-${{ github.event.pull_request.head.sha || github.sha }}
-          path: clients/windows/artifacts/test-results/*.trx
+          path: |
+            clients/windows/artifacts/test-results/*.trx
+            clients/windows/artifacts/webview-fixtures.jsonl
           if-no-files-found: warn
           retention-days: 14

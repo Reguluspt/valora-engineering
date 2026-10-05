@@ -8,11 +8,42 @@ using Xunit.Abstractions;
 
 namespace Valora.Windows.Tests;
 
+[Collection(nameof(WebViewCollection))]
 public sealed class WebViewLifecycleTests
 {
     private readonly ITestOutputHelper output;
 
     public WebViewLifecycleTests(ITestOutputHelper output) { this.output = output; }
+
+    [Fact]
+    public async Task OwningTaskWaitsForControlDisposalAndBrowserRelease()
+    {
+        using var releaseClose = new ManualResetEventSlim();
+        var closing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        WebView2? ownedView = null;
+        System.Diagnostics.Process? browser = null;
+        var running = WebViewBoundaryTests.OnWebView(view =>
+        {
+            ownedView = view;
+            browser = System.Diagnostics.Process.GetProcessById(checked((int)view.CoreWebView2.BrowserProcessId));
+            view.FindForm()!.FormClosed += (_, _) =>
+            {
+                closing.TrySetResult();
+                releaseClose.Wait(TimeSpan.FromSeconds(10));
+            };
+            return Task.CompletedTask;
+        });
+        try
+        {
+            await closing.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            try { Assert.False(running.IsCompleted, "The owning task completed while form teardown was blocked."); }
+            finally { releaseClose.Set(); }
+            await running;
+            Assert.True(ownedView!.IsDisposed);
+            Assert.True(browser!.HasExited);
+        }
+        finally { releaseClose.Set(); browser?.Dispose(); }
+    }
 
     [Theory]
     [InlineData((int)LifecycleSignal.Suspend, (int)LifecycleSignal.Resume)]
@@ -103,6 +134,7 @@ public sealed class WebViewLifecycleTests
                     new CoreWebView2EnvironmentOptions { ReleaseChannels = CoreWebView2ReleaseChannels.Stable }));
                 Assert.Equal(profile, freshEnvironment.UserDataFolder);
                 await freshView.EnsureCoreWebView2Async(freshEnvironment);
+                WebViewFixtureTrace.Current!.TrackBrowser(freshView.CoreWebView2);
                 events.Record($"fresh control initialized pid={freshView.CoreWebView2.BrowserProcessId}");
                 Assert.NotSame(oldView, freshView);
                 var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
