@@ -1,6 +1,6 @@
 # VALORA PM Operating Playbook v1
 
-**Lifecycle/status:** CURRENT SUPPORTING PM OPERATING TOOLING — 2026-10-05.  
+**Lifecycle/status:** CURRENT SUPPORTING PM OPERATING TOOLING — 2026-10-05.
 **Authority role:** Process and delivery tooling only. This document creates no product, domain, runtime, deployment, provider, RBAC, security-policy, migration or downstream-gate authority.
 
 This playbook operationalizes the current repository process for the Project Manager / Gate Owner. It is subordinate to live Product Owner decisions, `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, accepted scoped authority and the current task contract.

@@ -1,6 +1,6 @@
 # VALORA Gate Review Checklist
 
-**Lifecycle/status:** CURRENT SUPPORTING GATE-REVIEW TEMPLATE — 2026-10-05.  
+**Lifecycle/status:** CURRENT SUPPORTING GATE-REVIEW TEMPLATE — 2026-10-05.
 **Authority role:** Review checklist only. It does not grant Ready, merge, product or runtime authority.
 
 Use this checklist when a Dev/Codex handoff reports `READY FOR GATE REVIEW: YES`.

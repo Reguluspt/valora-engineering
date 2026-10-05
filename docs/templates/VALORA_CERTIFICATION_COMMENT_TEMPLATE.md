@@ -1,6 +1,6 @@
 # VALORA Certification Comment Template
 
-**Lifecycle/status:** CURRENT SUPPORTING CERTIFICATION TEMPLATE — 2026-10-05.  
+**Lifecycle/status:** CURRENT SUPPORTING CERTIFICATION TEMPLATE — 2026-10-05.
 **Authority role:** Closeout evidence format only. It does not grant product/runtime authority or permission to merge.
 
 Use this template only after the applicable Gate Review and integration authority have been satisfied.
