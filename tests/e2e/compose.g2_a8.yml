@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: valora_a8
+      POSTGRES_USER: valora
+      POSTGRES_PASSWORD: synthetic_a8_local
+    ports: ["55438:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U valora -d valora_a8"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: valora
+      MINIO_ROOT_PASSWORD: synthetic_a8_local
+  backend:
+    image: ${A8_BACKEND_IMAGE:-valora-a8-backend:local}
+    build: { context: ../../backend }
+    working_dir: /app
+    volumes: ["../../backend:/app", "../e2e:/acceptance", "a8_blobs:/var/lib/valora/a8-blobs"]
+    ports: ["8000:8000"]
+    environment:
+      VALORA_ENV: development
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: valora_a8
+      POSTGRES_USER: valora
+      POSTGRES_PASSWORD: synthetic_a8_local
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY_ID: valora
+      S3_SECRET_ACCESS_KEY: synthetic_a8_local
+      S3_BUCKET: valora-a8-synthetic
+      BACKEND_CORS_ORIGINS: http://localhost:5173
+      DOCUMENT_BLOB_PROVIDER: local
+      DOCUMENT_BLOB_ROOT: /var/lib/valora/a8-blobs
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio: { condition: service_started }
+volumes:
+  a8_blobs:

@@ -68,7 +68,7 @@ describe("Workbench contextual drawer placement", () => {
     act(() => selectAsset.props.onClick());
     expect(root!.root.findAllByType("aside")).toHaveLength(1);
     expect(JSON.stringify(root!.toJSON())).toContain("Máy cắt");
-    expect(state.syncSelection).toHaveBeenCalledExactlyOnceWith("ProjectAssetLine", ["line-1"]);
+    expect(state.syncSelection).toHaveBeenCalledExactlyOnceWith("project_asset_line", ["line-1"]);
 
     const close = root!.root.findByProps({ "aria-label": "Đóng ngữ cảnh tài sản" });
     act(() => close.props.onClick());

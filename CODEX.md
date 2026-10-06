@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-05 (A6 accepted/certified; A7 backend runtime candidate, pending Gate Owner certification)
+**Last reconciled:** 2026-10-06 (A7 runtime certified; A8 product implementation candidate, pending Gate Owner certification)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -57,12 +57,13 @@ CI #485 SUCCESS. The pre-squash integration source head was
 
 PR-00 through PR-04 — MERGED by PR #29. Historical PR-01 supplied the four-stage prefix foundation.
 Subsequently OS-G1 and OS-G2 A5 / ASSET_REVIEW product closure were CERTIFIED/CLOSED. A6 / Issue #120 /
-PR #121 is CERTIFIED/CLOSED; Product Owner D1–D8 are ACCEPTED. A7 / Issue #122 supplies an uncertified
-ASSET_WORKBENCH backend/domain/provider candidate: `asset_workbench_confirmation_v1` and shared
+PR #121 is CERTIFIED/CLOSED; Product Owner D1–D8 are ACCEPTED. A7 / Issue #122 / PR #123 is CERTIFIED/CLOSED:
+`d7efb4bf6a880b5d397807ed32acd99f929828a3`, exact-main CI #597 / run `37318932525` SUCCESS.
+Its ASSET_WORKBENCH backend/domain/provider uses `asset_workbench_confirmation_v1` and shared
 `global-case-state-v4-asset-workbench-confirmation-v1`, with fact-derived coverage/cap through
-ASSET_WORKBENCH. Certified main remains through ASSET_REVIEW until Gate Owner expected-head
-integration, exact-main CI and A7 certification. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED;
-Workbench COMPLETE opens NO_AUTHORIZED_DOWNSTREAM_ACTION. A8 product UX/E2E is unimplemented.
+ASSET_WORKBENCH. A8 / Issue #126 supplies the bounded Workbench product UX/E2E implementation candidate,
+pending required review/CI, Gate Owner integration and certification. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED;
+Workbench COMPLETE opens NO_AUTHORIZED_DOWNSTREAM_ACTION.
 Full OS-G2 remains PARTIAL; membership mutation, further RBAC and later-stage work remain unauthorized.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
@@ -153,10 +154,10 @@ Alembic head `b5c6d7e8f9a0` grants existing `workbench:open` to standard `owner`
 OS-G2 A5 / Issue #81 / PR #86 is CERTIFIED/CLOSED. Historical closure checkpoint (2026-10-03):
 PR #86 squash merged at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9`, exact-main CI #555 SUCCESS
 (run 37094036324); Issue #81 is CLOSED. It certifies ASSET_REVIEW product closure in the existing
-Workbench, not full OS-G2. Certified scope remains through ASSET_REVIEW pending A7 certification.
+Workbench, not full OS-G2. A7 subsequently certified backend/provider scope through ASSET_WORKBENCH.
 A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED; A7 / Issue #122 implements the
-backend-only ASSET_WORKBENCH candidate and cap, retaining NO_AUTHORIZED_DOWNSTREAM_ACTION after
-completion, absent a higher-priority authorized blocker. A8 UX/E2E is unimplemented. Membership
+certified backend-only ASSET_WORKBENCH runtime and cap via PR #123 / CI #597, retaining NO_AUTHORIZED_DOWNSTREAM_ACTION after
+completion, absent a higher-priority authorized blocker. A8 / Issue #126 product UX/E2E is implemented as an uncertified candidate. Membership
 mutation, further RBAC and PRICE_EVIDENCE+ remain UNAUTHORIZED; full OS-G2 remains PARTIAL.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited

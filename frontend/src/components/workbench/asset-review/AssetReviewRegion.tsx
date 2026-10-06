@@ -51,7 +51,7 @@ export function AssetReviewRegion({ review }: { review: ReturnType<typeof useAss
         : outcome === "COMPLETE" ? <span className="valora-status valora-status--success">Hoàn tất rà soát tài sản</span>
         : <span>{review.row ? `Dòng ${review.row.line_no} · ${review.row.raw_name}` : "Chưa có dòng xử lý khả dụng"}</span>}
     </div>
-    {outcome === "COMPLETE" && <p>Toàn bộ danh mục đã được hệ thống xác nhận hoàn tất. Chưa có hành động giai đoạn tiếp theo được phép.</p>}
+    {outcome === "COMPLETE" && <p>Toàn bộ danh mục đã được hệ thống xác nhận hoàn tất rà soát. Xem trạng thái chuẩn bị danh mục để tiếp tục.</p>}
     {reasonCode === "permission_required" && <p role="alert">Bạn chưa có quyền rà soát tài sản.</p>}
     {reasonCode === "session_required" && <p>Cần phiên bàn làm việc còn hiệu lực. Vui lòng mở lại phiên và tải lại trạng thái.</p>}
     {reasonCode === "line_validation_warning" && <p className="valora-message valora-message--warning">Cảnh báo chưa đủ điều kiện chấp nhận. Hãy sửa dữ liệu chính thức và tải lại trạng thái trước khi kiểm tra lại.</p>}

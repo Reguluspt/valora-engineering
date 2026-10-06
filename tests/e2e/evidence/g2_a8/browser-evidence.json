@@ -1,0 +1,1395 @@
+{
+  "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+  "checkpoints": {
+    "01-asset-review-prerequisite": {
+      "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 2,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": null,
+          "prior_decision_id": null,
+          "finding_codes": []
+        }
+      }
+    },
+    "02-description-required": {
+      "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 2,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": null,
+          "prior_decision_id": null,
+          "finding_codes": []
+        }
+      }
+    },
+    "03-description-1-draft": {
+      "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "81a2c7180b3287b3c7776a656b098168f69911bad691608641a65cca73581946",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 2,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": null,
+          "prior_decision_id": null,
+          "finding_codes": []
+        }
+      }
+    },
+    "03-description-2-draft": {
+      "case_version": "c655e35aa4c232520d8e52123e83d506a0f2f13845b4d6ac8a657980029d16c9",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "c655e35aa4c232520d8e52123e83d506a0f2f13845b4d6ac8a657980029d16c9",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 3,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": null,
+          "prior_decision_id": null,
+          "finding_codes": []
+        }
+      }
+    },
+    "03-description-3-draft": {
+      "case_version": "d0dfbcf6a2b1f80dd8ba79cc019cca0e52a730793b511ddd5973f072e7ca0517",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "d0dfbcf6a2b1f80dd8ba79cc019cca0e52a730793b511ddd5973f072e7ca0517",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 3,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": null,
+          "prior_decision_id": null,
+          "finding_codes": []
+        }
+      }
+    },
+    "03-review-complete-preparation-action": {
+      "case_version": "dd5077adcc60ec7015033f2b60bc3fd3be8160baa0997522b567cea3da79221d",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_WORKBENCH",
+        "semantic_route_key": "asset_workbench_prepare_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "dd5077adcc60ec7015033f2b60bc3fd3be8160baa0997522b567cea3da79221d",
+          "kind": "asset_workbench_preparation",
+          "reason_code": "confirmation_required",
+          "project_row_version": 3,
+          "seal_id": "385afd19-d118-48c0-9153-55a1433e67ae",
+          "authoritative_set_sha256": "f792bb7271ad557255cdd18ffc9d2d3b4bf0c9ec40187a880bc7020380fdc44d",
+          "membership_version": 1,
+          "contract_version": "asset-workbench-confirmation-v1",
+          "confirmation_required": true,
+          "prior_confirmation_id": null,
+          "line_id": null,
+          "line_row_version": null
+        }
+      }
+    },
+    "04-complete-without-price": {
+      "case_version": "2945d1510a98e5e45da70103e23357e4a2dcea52ca0992828d578fd5c5feac79",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "COMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+        "stage": null,
+        "semantic_route_key": null,
+        "validation_issue_id": null
+      }
+    },
+    "05-official-change-draft": {
+      "case_version": "2945d1510a98e5e45da70103e23357e4a2dcea52ca0992828d578fd5c5feac79",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "COMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+        "stage": null,
+        "semantic_route_key": null,
+        "validation_issue_id": null
+      }
+    },
+    "06-stale-after-change": {
+      "case_version": "198479b1336ff3e23184fb1e41271519c9724fe930c269ec155709febd39b19f",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "STALE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": [
+            {
+              "stage": "ASSET_WORKBENCH",
+              "reason_code": "reconfirmation_required",
+              "line_id": null,
+              "batch_id": null,
+              "validation_issue_id": null
+            }
+          ]
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "198479b1336ff3e23184fb1e41271519c9724fe930c269ec155709febd39b19f",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 6,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": "4629a210-c9ca-4760-a1b1-9f398fb39223",
+          "prior_decision_id": "4157cf72-b89f-4303-9366-0fedfe610227",
+          "finding_codes": []
+        }
+      }
+    },
+    "07-reconfirmed": {
+      "case_version": "f790de61bc61dddc6731c8cd2bbd608fbefc623c9b18615654491427f66f3da3",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "COMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+        "stage": null,
+        "semantic_route_key": null,
+        "validation_issue_id": null
+      }
+    },
+    "08-withdrawn": {
+      "case_version": "70ecc91565d7d5affbfb3d99aad157a5602951a77b697a6fe85845b8643a7075",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_WORKBENCH",
+        "semantic_route_key": "asset_workbench_prepare_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "70ecc91565d7d5affbfb3d99aad157a5602951a77b697a6fe85845b8643a7075",
+          "kind": "asset_workbench_preparation",
+          "reason_code": "reconfirmation_required",
+          "project_row_version": 6,
+          "seal_id": "385afd19-d118-48c0-9153-55a1433e67ae",
+          "authoritative_set_sha256": "f792bb7271ad557255cdd18ffc9d2d3b4bf0c9ec40187a880bc7020380fdc44d",
+          "membership_version": 1,
+          "contract_version": "asset-workbench-confirmation-v1",
+          "confirmation_required": true,
+          "prior_confirmation_id": "97d0eabd-8ffe-4fcc-a53f-cdfcaa88159b",
+          "line_id": null,
+          "line_row_version": null
+        }
+      }
+    },
+    "09-conflict-refresh-no-replay": {
+      "case_version": "2ae626f130239488f10c6d1cc564fe98800944107cd66a9d8edd3d4442e0c7f9",
+      "current_stage": "ASSET_REVIEW",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "INCOMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "PENDING",
+        "stage": "ASSET_REVIEW",
+        "semantic_route_key": "asset_review_line_validate_required",
+        "validation_issue_id": null,
+        "context": {
+          "project_id": "9ed065d5-b11f-44fb-afc6-89ddff374cf0",
+          "case_version": "2ae626f130239488f10c6d1cc564fe98800944107cd66a9d8edd3d4442e0c7f9",
+          "kind": "line",
+          "reason_code": "line_validation_required",
+          "membership_version": 1,
+          "line_id": "28c73389-f31c-42cc-8fb2-d837ae0b617f",
+          "line_row_version": 9,
+          "contract_version": "asset-line-validation-v1",
+          "confirmation_required": true,
+          "validation_generation_id": "710650bb-7c30-4563-a021-009ca4092ff2",
+          "prior_decision_id": "58b11124-344e-470f-addd-f5519102e034",
+          "finding_codes": []
+        }
+      }
+    },
+    "10-final-downstream-hold": {
+      "case_version": "3ee527cf7950c52334a4349a64744f6853a1e6d3536aff861756a65298e3be96",
+      "current_stage": "ASSET_WORKBENCH",
+      "stages": [
+        {
+          "stage": "PRELIMINARY_REQUEST",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_request_v2"
+        },
+        {
+          "stage": "PRELIMINARY_ANALYSIS",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_analysis_v2"
+        },
+        {
+          "stage": "PRELIMINARY_READY",
+          "result": "COMPLETE",
+          "provider_key": "preliminary_ready_v2"
+        },
+        {
+          "stage": "OFFICIAL_INTAKE",
+          "result": "COMPLETE",
+          "provider_key": "official_intake_commit_v1"
+        },
+        {
+          "stage": "ASSET_REVIEW",
+          "result": "COMPLETE",
+          "provider_key": "asset_review_line_decision_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "ASSET_WORKBENCH",
+          "result": "COMPLETE",
+          "provider_key": "asset_workbench_confirmation_v1",
+          "diagnostics": []
+        },
+        {
+          "stage": "PRICE_EVIDENCE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_QUOTES",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "SUPPLIER_SELECTION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "APPRAISAL_RESULT",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_WORKSPACE",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "DOCUMENT_SYNC_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_PREPARATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_EXCEPTION_REVIEW",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHING_CONFIRMATION",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        },
+        {
+          "stage": "PUBLISHED",
+          "result": "NOT_AVAILABLE",
+          "provider_key": null
+        }
+      ],
+      "next_action": {
+        "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+        "stage": null,
+        "semantic_route_key": null,
+        "validation_issue_id": null
+      }
+    }
+  },
+  "commands": [
+    {
+      "path": "confirm",
+      "status": 200,
+      "member_count": 3,
+      "explicit_confirm": true
+    },
+    {
+      "path": "confirm",
+      "status": 200,
+      "member_count": 3,
+      "explicit_confirm": true
+    },
+    {
+      "path": "withdraw",
+      "status": 200,
+      "member_count": 3,
+      "explicit_confirm": true
+    },
+    {
+      "path": "confirm",
+      "status": 409,
+      "member_count": 3,
+      "explicit_confirm": true
+    },
+    {
+      "path": "confirm",
+      "status": 200,
+      "member_count": 3,
+      "explicit_confirm": true
+    }
+  ]
+}

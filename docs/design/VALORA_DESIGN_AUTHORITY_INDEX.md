@@ -1,7 +1,7 @@
 # Valora Design Authority Index
 
 **Status:** Canonical reading order and conflict-resolution index
-**Reconciled:** 2026-10-05 (A6 accepted/certified; A7 backend runtime candidate pending certification)
+**Reconciled:** 2026-10-06 (A7 runtime certified; A8 product implementation candidate pending certification)
 **Purpose:** Prevent older roadmap or provisional text from overriding newer owner-approved decisions.
 **Documentation lifecycle:** `docs/DOCUMENTATION_STATUS_INDEX.md`.
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
@@ -54,7 +54,7 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | ADR 0046 | Optional Pre-case Customer, explicit current batch, immutable versioned analysis/result lifecycle | Accepted scoped successor to ADR 0030/0037/0038; bounded lifecycle implemented and OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 / CI #527. Unimplemented extensions still need separate tasks |
 | ADR 0047 | Explicit, versioned current Column Mapping selection and recovery for Pre-case | Accepted 2026-09-29; F0 / PR #62 / CI #514 and G1.1H / PR #63 / CI #516 MERGED/CERTIFIED; bounded journey closed with G1.1K / PR #68 / CI #527 |
 | [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) | Post-Intake guarded Apply v2, sealed initial set and Asset Review Case State | A2 / PR #76 / CI #538 implemented; [Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) retains full-set/fail-closed predicates; later membership/stages remain gated |
-| [ADR 0049](../adr/0049-asset-line-human-review-and-validation-authority.md) | Dedicated server validation and explicit human line review, separate from ADR 0028 value drafts | A4 / PR #80 / CI #545 implemented; [Line Decision Contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md) governs proof/negative-hold/CAS/audit/replay. A5 / PR #86 / CI #555 CERTIFIED/CLOSED ASSET_REVIEW. [A6 authority](../plan/VALORA_OS_G2_ASSET_WORKBENCH_AUTHORITY_PROPOSAL.md) / Issue #120 / PR #121 CERTIFIED/CLOSED, D1–D8 ACCEPTED; A7 / Issue #122 is the uncertified ASSET_WORKBENCH backend candidate. A8 UX/E2E is unimplemented; PRICE_EVIDENCE+ stays UNAUTHORIZED / NOT_AVAILABLE |
+| [ADR 0049](../adr/0049-asset-line-human-review-and-validation-authority.md) | Dedicated server validation and explicit human line review, separate from ADR 0028 value drafts | A4 / PR #80 / CI #545 implemented; [Line Decision Contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md) governs proof/negative-hold/CAS/audit/replay. A5 / PR #86 / CI #555 CERTIFIED/CLOSED ASSET_REVIEW. [A6 authority](../plan/VALORA_OS_G2_ASSET_WORKBENCH_AUTHORITY_PROPOSAL.md) / Issue #120 / PR #121 CERTIFIED/CLOSED, D1–D8 ACCEPTED; A7 / Issue #122 / PR #123 / CI #597 CERTIFIED/CLOSED ASSET_WORKBENCH backend runtime. A8 / Issue #126 UX/E2E is implemented as an uncertified candidate; PRICE_EVIDENCE+ stays UNAUTHORIZED / NOT_AVAILABLE |
 
 ## 3. Engineering baseline (evidence, not evergreen)
 
@@ -96,7 +96,7 @@ ADR 0045 / Working Change Observation design authority: ACCEPTED
 Current product direction:
 Authority cleanup
 → Pre-case product journey CERTIFIED/CLOSED (OS-G1 / G1.1K)
-→ OS-G2 PARTIAL: ASSET_REVIEW and A6 authority CERTIFIED/CLOSED; A7 ASSET_WORKBENCH backend candidate pending certification, A8 UX/E2E unimplemented; PRICE_EVIDENCE+ remains gated
+→ OS-G2 PARTIAL: ASSET_REVIEW, A6 authority and A7 ASSET_WORKBENCH backend CERTIFIED/CLOSED; A8 UX/E2E implementation candidate pending certification; PRICE_EVIDENCE+ remains gated
 → Document Workspace with automatic observation/revalidation + Change Candidate + Human Commit
 → Release/Publishing
 → traceability/state/fidelity/E2E
@@ -163,11 +163,11 @@ Current v2.3 disposition:
 3. PR #32 — MERGED/CLOSED on main; operational frontend + accepted Local G6 + completed G8 offline Exchange are part of the merged OS-G0 baseline.
 4. ADR 0045 — accepted target semantics for automatic Working observation, Change Candidate and
    explicit human-confirmed Revision N+1.
-5. Certified provider coverage reaches ASSET_REVIEW pending Gate Owner integration/exact-main CI/A7
-   certification. A6 D1–D8 are ACCEPTED; A7 candidate coverage/cap reaches ASSET_WORKBENCH using
+5. A7 / Issue #122 / PR #123 / exact-main CI #597 certifies provider coverage/cap through ASSET_WORKBENCH.
+   A6 D1–D8 are ACCEPTED; the certified backend uses
    `asset_workbench_confirmation_v1` and the shared v4 confirmation token. Completion opens no
    downstream action unless a higher-priority authorized blocker applies. PRICE_EVIDENCE+ remains
-   NOT_AVAILABLE / UNAUTHORIZED; A8 UX/E2E is unimplemented and full OS-G2 remains PARTIAL.
+   NOT_AVAILABLE / UNAUTHORIZED; A8 / Issue #126 UX/E2E is an uncertified implementation candidate and full OS-G2 remains PARTIAL.
 6. PR-07 direct OneDrive replacement execution is historical/blocked; new document-change runtime
    requires the ADR-0045 implementation contract.
 7. Historical PR-08 through PR-13 capability gaps remain open, but they must be closed in the current Unified Roadmap order `OS-G0 → OS-G7`, not by restoring the old PR sequence.

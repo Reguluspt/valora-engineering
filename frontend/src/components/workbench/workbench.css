@@ -125,6 +125,7 @@
 
 .grid-scroll-viewport {
   position: relative;
+  min-height: 80px;
   overflow: auto;
   background: var(--valora-color-surface-primary);
 }
@@ -282,6 +283,23 @@
 
 .workbench-body {
   position: relative;
+  min-height: min(280px, 40vh);
+}
+
+.grid-toolbar, .workbench-load-more {
+  flex-shrink: 0;
+}
+
+.workbench-stage-regions {
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.workbench-stage-regions:focus-visible {
+  outline: none;
+  box-shadow: inset var(--valora-focus-ring);
 }
 
 .workbench-grid-pane {
@@ -469,3 +487,4 @@
 .asset-review-dialog::backdrop { background: rgb(0 0 0 / 45%); }
 .asset-review-dialog label { display: grid; gap: var(--valora-space-sm); margin-bottom: var(--valora-space-md); }
 .asset-review-dialog textarea { min-height: 6rem; font: inherit; padding: var(--valora-space-sm); }
+.asset-description { margin-top: var(--valora-space-md); padding-top: var(--valora-space-md); border-top: 1px solid var(--valora-color-border-subtle); }

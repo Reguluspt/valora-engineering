@@ -300,11 +300,26 @@ class AssetReviewDiagnostic(BaseSchema):
     validation_issue_id: Optional[uuid.UUID] = None
 
 
+class AssetWorkbenchDiagnostic(BaseSchema):
+    stage: Literal["ASSET_WORKBENCH"]
+    reason_code: Literal[
+        "open_blocking_issue", "manual_line_conflict", "membership_conflict", "empty_selection",
+        "rows_not_ready", "counter_conflict", "review_flagged", "review_rejected",
+        "validation_invalid", "project_not_draft", "lineage_mismatch", "selection_mismatch",
+        "batch_state_conflict", "seal_mismatch", "provider_unwired", "official_intake_prerequisite",
+        "reconfirmation_required", "confirmation_integrity_conflict",
+    ]
+    line_id: Optional[uuid.UUID] = None
+    batch_id: Optional[uuid.UUID] = None
+    validation_issue_id: Optional[uuid.UUID] = None
+
+
 class CaseStateStageResponse(BaseSchema):
     stage: CaseStage
     result: Literal["COMPLETE", "INCOMPLETE", "BLOCKED", "STALE", "NOT_AVAILABLE"]
     provider_key: Optional[str]
-    diagnostics: Optional[list[AssetReviewDiagnostic]] = None
+    diagnostics: Optional[list[Annotated[AssetReviewDiagnostic | AssetWorkbenchDiagnostic,
+                                        Field(discriminator="stage")]]] = None
 
     @model_serializer(mode="wrap")
     def _serialize_stage(self, handler):

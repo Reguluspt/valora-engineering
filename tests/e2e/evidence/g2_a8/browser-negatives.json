@@ -1,0 +1,10 @@
+{
+  "unauthenticated": 401,
+  "malformed_contract": 400,
+  "foreign_tenant": 404,
+  "closed_session": 404,
+  "viewer_preparation_denied": 403,
+  "readonly_completion_preserved": true,
+  "keyboard_escape_focus": true,
+  "small_laptop_grid_visible": true
+}

@@ -1,4 +1,12 @@
 export const vi = {
+  "workbench.preparation": "Chuẩn bị danh mục tài sản",
+  "workbench.confirmSet": "Xác nhận toàn bộ danh mục",
+  "workbench.reconfirmSet": "Xác nhận lại toàn bộ danh mục",
+  "workbench.withdrawSet": "Rút xác nhận danh mục",
+  "workbench.confirmMeaning": "Xác nhận mô tả chính thức và dữ liệu hiện tại của toàn bộ danh mục đã chốt, sẵn sàng cho công việc nguồn giá được cho phép riêng. Đây không phải phê duyệt kết quả thẩm định giá.",
+  "workbench.draftWarning": "Nội dung đang sửa hoặc đã lưu nháp chưa phải dữ liệu chính thức và không được dùng cho xác nhận này.",
+  "workbench.priceOptional": "Giá thẩm định là dữ liệu làm việc tùy chọn; có thể để trống.",
+  "workbench.downstreamHold": "Danh mục đã hoàn tất chuẩn bị. Chưa có hành động giai đoạn tiếp theo được phép.",
   // Common Actions
   "action.save": "Lưu",
   "action.saveDraft": "Lưu nháp",
