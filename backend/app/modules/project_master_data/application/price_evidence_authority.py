@@ -185,6 +185,21 @@ def _source_eligible(db, snapshot, state, source, now, visiting, cache):
         return False
 
 
+def source_tree_deadlines(state, sources, seen=None):
+    seen = set() if seen is None else seen
+    pending = list(sources)
+    while pending:
+        source = pending.pop()
+        if source is None or source.id in seen:
+            continue
+        seen.add(source.id)
+        if source.expires_at:
+            yield source.expires_at
+        explanation = SourceMaterial.model_validate(source.content_binding["material"]).explanation
+        if explanation:
+            pending.extend(state.sources.get(item.evidence_revision_id) for item in explanation.inputs)
+
+
 def resolve_price_evidence_authority(db, snapshot, *, now=None):
     now = now or utc_now()
     state = PriceEvidenceAuthority()
@@ -234,17 +249,11 @@ def resolve_price_evidence_authority(db, snapshot, *, now=None):
     relevant_sources = set()
 
     def bind_source_deadlines(source):
-        if source is None or source.id in relevant_sources:
-            return
-        relevant_sources.add(source.id)
-        if source.expires_at:
-            deadlines.append(source.expires_at)
-            if now >= source.expires_at:
-                state.stale.append("source_expired")
         try:
-            explanation = SourceMaterial.model_validate(source.content_binding["material"]).explanation
-            for item in explanation.inputs if explanation else []:
-                bind_source_deadlines(state.sources.get(item.evidence_revision_id))
+            for deadline in source_tree_deadlines(state, [source], relevant_sources):
+                deadlines.append(deadline)
+                if now >= deadline:
+                    state.stale.append("source_expired")
         except (ValueError, TypeError, KeyError, AttributeError):
             state.intact = False
     for decision in state.decision_heads.values():

@@ -15,7 +15,7 @@ from app.modules.project_master_data.application.asset_line_validation_rules imp
 from app.modules.project_master_data.application.asset_workbench_provider import evaluate_asset_workbench_provider
 from app.modules.project_master_data.application.asset_workbench_authority import request_digest
 from app.modules.project_master_data.application.price_evidence_authority import (
-    EVENTS, contract_digest, audit_binding, line_binding, upstream_binding, source_eligible, scaled_sum,
+    EVENTS, contract_digest, audit_binding, line_binding, upstream_binding, source_eligible, scaled_sum, source_tree_deadlines,
 )
 from app.modules.project_master_data.price_evidence_models import (
     PriceEvidenceReceipt, ProjectPriceEvidenceSource as Source, ProjectPriceEvidenceDecision as Decision,
@@ -163,6 +163,10 @@ def _execute(db, *, actor, org_id, project_id, request):
         fields = dict(source_id=request.source_id, revision=prior.revision + 1 if prior else 1,
             predecessor_id=prior.id if prior else None, category=material.category, expires_at=material.expires_at)
         deadline = material.expires_at
+        if material.explanation:
+            dependencies = [state.sources[item.evidence_revision_id] for item in material.explanation.inputs]
+            deadlines = list(source_tree_deadlines(state, dependencies)) + ([deadline] if deadline else [])
+            deadline = min(deadlines) if deadlines else None
     elif deciding:
         source = state.sources.get(request.evidence_revision_id)
         if source is None or request.line_id not in {line.id for line in snapshot.lines}:
@@ -195,8 +199,8 @@ def _execute(db, *, actor, org_id, project_id, request):
         fields = dict(relationship_id=relationship_id, source_id=source.source_id, evidence_revision_id=source.id,
             line_id=request.line_id, predecessor_id=prior.id if prior else None,
             outcome=request.outcome, disposition=request.disposition, review_due_at=request.review_due_at)
-        deadline = (min(request.review_due_at, source.expires_at)
-                    if request.outcome == "accepted" and source.expires_at else request.review_due_at)
+        deadlines = list(source_tree_deadlines(state, [source])) if request.outcome == "accepted" else []
+        deadline = min([request.review_due_at, *deadlines])
     elif confirming:
         if request.supersedes_confirmation_id != (state.latest.id if state.latest else None):
             conflict("price_evidence_confirmation_version_conflict")

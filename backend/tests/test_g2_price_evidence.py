@@ -293,6 +293,34 @@ def test_negative_hold_not_hidden_by_withdrawal_or_extra_positive(covered_db):
     assert provider(db, entry).result == "INCOMPLETE"
 
 
+@pytest.mark.parametrize("command_kind", ["registration", "decision"])
+def test_explanation_input_expiry_binds_each_admission_commit(evidence_db, monkeypatch, command_kind):
+    from app.modules.project_master_data.application import price_evidence_authority as authority
+    db, entry = evidence_db
+    deadline = utc_now() + timedelta(days=1)
+    source = execute(db, entry, request_for(db, entry, material=material(expires_at=deadline.isoformat())))
+    db.commit()
+    derived = material(category="unit_price_explanation", capture_method="authored_explanation",
+        explanation=dict(method="sum_of_scaled_source_values",
+            inputs=[dict(evidence_revision_id=source["result"]["record_id"], coefficient="1")],
+            assumptions="Same specification and unit basis", calculations="One unit of retained source value",
+            units="item", currency="VND", proposed_basis_value="100"))
+    execute(db, entry, request_for(db, entry, material=derived))
+    if command_kind == "decision":
+        db.commit()
+        execute(db, entry, request_for(db, entry, "relevance", higher_priorities_considered=["internet_survey"],
+            source_priority_rationale="Explanation retains identified survey input"))
+    monkeypatch.setattr(authority, "utc_now", lambda: deadline)
+    monkeypatch.setattr(commands, "utc_now", lambda: deadline)
+    with pytest.raises(HTTPException) as error:
+        db.commit()
+    assert error.value.status_code == 409
+    db.rollback()
+    expected = 1 if command_kind == "registration" else 2
+    assert counts(db) == (expected, expected, expected)
+    assert provider(db, entry).result == "INCOMPLETE"
+
+
 def test_explanation_input_expiry_binds_confirmation_commit(evidence_db, monkeypatch):
     from app.modules.project_master_data.application import price_evidence_authority as authority
     db, entry = evidence_db
