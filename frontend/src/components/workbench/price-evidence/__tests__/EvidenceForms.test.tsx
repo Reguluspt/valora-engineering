@@ -60,6 +60,21 @@ it("associates field errors and refuses malformed decimal text without calculati
   expect(save).not.toHaveBeenCalled(); expect(root!.root.findAllByProps({ role: "alert" })).toHaveLength(1);
   act(() => root!.unmount());
 });
+it("preserves absent observed value when correcting a retained Internet source", () => {
+  const save = vi.fn(); let root: ReturnType<typeof create>;
+  const initial = { ...material, value: null };
+  act(() => { root = create(<SourceForm projectId="project" initial={initial} sources={[]} moreSources={false}
+    onMore={vi.fn()} onSave={save} onCancel={vi.fn()} />); });
+  expect(root!.root.findByProps({ label: "Nguồn có giá trị quan sát được" }).props.checked).toBe(false);
+  expect(root!.root.findAllByProps({ "data-field": "Giá trị ghi nhận" })).toHaveLength(0);
+  edit(root!, "Lý do tạo phiên bản thay thế", "Correct retained text without inventing a value");
+  act(() => root!.root.findByProps({ label: "Tôi xác nhận tạo phiên bản nguồn thay thế; lịch sử được giữ nguyên" })
+    .props.onChange(null, { checked: true }));
+  act(() => root!.root.findByType("form").props.onSubmit({ preventDefault: vi.fn() }));
+  expect(save).toHaveBeenCalledExactlyOnceWith({ ...initial, captured_at: "2026-10-01T00:00:00.000Z" },
+    "Correct retained text without inventing a value");
+  act(() => root!.unmount());
+});
 it.each(["qualifying_basis", "excluded_alternative", "unresolved_concern"] as const)("maps explicit human %s with finite deadline and exact scope copy", disposition => {
   const save = vi.fn(); let root: ReturnType<typeof create>;
   act(() => { root = create(<RelevanceForm source={{ ...source, decision: { decision_id: "prior" } as any }} lineLabel="Selected asset"

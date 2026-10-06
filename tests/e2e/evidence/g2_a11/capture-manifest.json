@@ -1,6 +1,6 @@
 {
   "task": "VALORA-TASK-OS-G2-A11-PRICE-EVIDENCE-PRODUCT-CLOSURE",
-  "capture_base_head": "387a8d1d630d4245cdc77b886aafa137cf755515",
+  "capture_base_head": "312e9b71665c87bfff954571d4965770d2cd7608",
   "capture_worktree_dirty": true,
   "capture_implementation_git_blobs": {
     "backend/app/api/price_evidence.py": "b09b6fc124e9e4b9c2a5c5e052c087cb0d48cfef",
@@ -17,7 +17,7 @@
     "frontend/src/components/workbench/price-evidence/HistoricalSourceSelector.tsx": "34922bfffef7e00487f158531db9169a12cea6df",
     "frontend/src/components/workbench/price-evidence/PriceEvidenceRegion.tsx": "4fddc2a74ad261485b7192aa2da79425a307fef4",
     "frontend/src/components/workbench/price-evidence/RelevanceForm.tsx": "44bd9fc7cd89950b5b244c350410eb4ae71ee976",
-    "frontend/src/components/workbench/price-evidence/SourceForm.tsx": "e8b937cf6a3759eb11f976981b7e6661416d7f60",
+    "frontend/src/components/workbench/price-evidence/SourceForm.tsx": "4a5bf65e5336ef9fe3567e3e7298b39f88fb36db",
     "frontend/src/components/workbench/price-evidence/usePriceEvidence.ts": "954ce4c9ee209b38228739c0b74589e82e70a1fb",
     "frontend/src/components/workbench/workbench.css": "701803adbc2c9fd21f84406c5f47a7d3461b504b",
     "frontend/src/styles/fluent2-primitives.css": "1738d3b55b92be39b57e75b9ada481f3bbdb692e"
@@ -28,8 +28,8 @@
     "height": 900
   },
   "main_fixture": {
-    "project_id": "8612bf15-706b-4209-84c5-a9e5c47edbe4",
-    "organization_slug": "a11-acceptance-v6",
+    "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+    "organization_slug": "a11-acceptance-v7",
     "sealed_lines": 3
   },
   "dialog_accessibility_fixture": {
@@ -46,47 +46,47 @@
   "captures": [
     {
       "path": "01-first-use-incomplete.png",
-      "sha256": "6749cf565d18cc2c0bc253b4cc29b08907758d511988b2ce0974563b064104ef",
+      "sha256": "3a83fe490d301c8bf6a156052b2ef56ff70f73a92d14fcea339117e2f1216c58",
       "fixture": "main_fixture"
     },
     {
       "path": "02-registered-accepted-one-line.png",
-      "sha256": "4ba301b7c509b7807b6812cfe7bcb4a3fe0cbbf7606831ef588e600b5b548b7c",
+      "sha256": "ef0d1cce30d309a00e1ae6618a5e2b578a57484ff7f3ef4fc5190570240c4682",
       "fixture": "main_fixture"
     },
     {
       "path": "04-complete-downstream-hold.png",
-      "sha256": "67956d78317b0817db2f3d1f9c1cf95b2787b19f5a65327640487dbf559011da",
+      "sha256": "4cfbbd93f794698e697a80bdee1a3349b1076cfcc36f74b972664d0cbd6cb44b",
       "fixture": "main_fixture"
     },
     {
       "path": "05-stale-successor-recovery.png",
-      "sha256": "ad35fcc6a92f00a7a7f20e120e81279f0db49c67c6af24c0daa6d6533f43412a",
+      "sha256": "3128d775333bb5857e552826cd67e525a05eab9b95a8533a8669ccd1108379ba",
       "fixture": "main_fixture"
     },
     {
       "path": "06-withdrawn-confirmation.png",
-      "sha256": "c8d469dd376edc05cf354055686cbf059c675aea46c763ba50f2eff667bf444c",
+      "sha256": "691e746a71baad362571e835097e0b0f9c356e9901360c03eff1319d25c665e6",
       "fixture": "main_fixture"
     },
     {
       "path": "07-conflict-refresh-no-replay.png",
-      "sha256": "6b190ffd0d2b4e37fd0ad4e18a7598fe746deb0e85cb625e5b74348d1a521f43",
+      "sha256": "644b5750c8f91ee7ab3772087a8424f77d6a937f676a16d568f308cae17157f9",
       "fixture": "main_fixture"
     },
     {
       "path": "08-reconciled-current-complete.png",
-      "sha256": "06a545f63052e204794f4b7fd431bc68c701aa06b05687a0a86580577c4bf017",
+      "sha256": "55a0dff0865c53d0d0676b51b7669c906514e2ba91fb1bdaf16f0d5ed4d6963c",
       "fixture": "main_fixture"
     },
     {
       "path": "09-nondraft-read-only-complete.png",
-      "sha256": "0af63f6c727338ee432afccaabf191726364096bea6d43dd819c70e16d310a04",
+      "sha256": "73b6f88fa01bf37ca1996bd210270416041a046232317d1171ce1521bc7c3681",
       "fixture": "main_fixture"
     },
     {
       "path": "10-whole-set-reconfirmation-dialog.png",
-      "sha256": "6553fc4a8c389b5dcd4803c21d1fbd996c0f40a50386bcb007b4e49b2fe6ec28",
+      "sha256": "73a216d4408b99884e7cd38ead14c38df9681e7d5c5b356b77094a9a1d344864",
       "fixture": "dialog_accessibility_fixture"
     }
   ],

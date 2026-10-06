@@ -19,7 +19,7 @@ export function SourceForm({ projectId, initial, sources, moreSources, onMore, o
   const [unknown, setUnknown] = useState(initial?.unknown_date_reason || ""), [capture, setCapture] = useState(localInput(initial?.captured_at || null));
   const [text, setText] = useState(initial?.retained_text || ""), [limitations, setLimitations] = useState(initial?.limitations || "");
   const [expiry, setExpiry] = useState(localInput(initial?.expires_at || null)), [value, setValue] = useState(initial?.value || emptyValue);
-  const [hasValue, setHasValue] = useState(Boolean(initial?.value ?? true));
+  const [hasValue, setHasValue] = useState(initial ? Boolean(initial.value) : true);
   const [inputs, setInputs] = useState(initial?.explanation?.inputs || [{ evidence_revision_id: "", coefficient: "" }]);
   const [assumptions, setAssumptions] = useState(initial?.explanation?.assumptions || ""), [calculations, setCalculations] = useState(initial?.explanation?.calculations || "");
   const [priorProject, setPriorProject] = useState(initial?.historical?.project_id || ""), [priorLine, setPriorLine] = useState(initial?.historical?.line_id || "");
