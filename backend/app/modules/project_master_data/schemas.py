@@ -314,11 +314,22 @@ class AssetWorkbenchDiagnostic(BaseSchema):
     validation_issue_id: Optional[uuid.UUID] = None
 
 
+class PriceEvidenceDiagnostic(AssetWorkbenchDiagnostic):
+    stage: Literal["PRICE_EVIDENCE"]
+    reason_code: Literal[
+        "open_blocking_issue", "manual_line_conflict", "membership_conflict", "empty_selection",
+        "rows_not_ready", "counter_conflict", "review_flagged", "review_rejected", "validation_invalid",
+        "project_not_draft", "lineage_mismatch", "selection_mismatch", "batch_state_conflict", "seal_mismatch",
+        "provider_unwired", "official_intake_prerequisite", "reconfirmation_required", "confirmation_integrity_conflict",
+        "evidence_integrity_conflict", "evidence_currentness_conflict", "source_expired", "suitability_hold",
+    ]
+
+
 class CaseStateStageResponse(BaseSchema):
     stage: CaseStage
     result: Literal["COMPLETE", "INCOMPLETE", "BLOCKED", "STALE", "NOT_AVAILABLE"]
     provider_key: Optional[str]
-    diagnostics: Optional[list[Annotated[AssetReviewDiagnostic | AssetWorkbenchDiagnostic,
+    diagnostics: Optional[list[Annotated[AssetReviewDiagnostic | AssetWorkbenchDiagnostic | PriceEvidenceDiagnostic,
                                         Field(discriminator="stage")]]] = None
 
     @model_serializer(mode="wrap")
@@ -436,10 +447,32 @@ class AssetWorkbenchDiagnosticContext(CaseStateActionContext):
     reload_required: Literal[True]
 
 
+class PriceEvidencePreparationContext(CaseStateActionContext):
+    kind: Literal["price_evidence_preparation"]
+    reason_code: Literal["evidence_required", "acceptance_required", "confirmation_required", "reconfirmation_required"]
+    project_row_version: int = Field(gt=0, strict=True)
+    seal_id: uuid.UUID
+    authoritative_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    membership_version: int = Field(gt=0, strict=True)
+    contract_version: Literal["price-evidence-confirmation-v1"]
+    upstream_confirmation_id: uuid.UUID
+    prior_confirmation_id: uuid.UUID | None
+    confirmation_required: Literal[True]
+    line_id: uuid.UUID | None = None
+    line_row_version: int | None = Field(default=None, gt=0, strict=True)
+
+
+class PriceEvidenceDiagnosticContext(CaseStateActionContext):
+    kind: Literal["price_evidence_diagnostic"]
+    reason_code: Literal["evidence_currentness_conflict", "evidence_integrity_conflict"]
+    reload_required: Literal[True]
+
+
 AssetReviewActionContext = Annotated[
     AssetReviewValidateContext | AssetReviewApplyContext | AssetReviewLineContext
     | AssetReviewIssueContext | AssetReviewEntryContext | AssetReviewStaleContext
-    | AssetReviewPermissionContext | AssetWorkbenchPreparationContext | AssetWorkbenchDiagnosticContext,
+    | AssetReviewPermissionContext | AssetWorkbenchPreparationContext | AssetWorkbenchDiagnosticContext
+    | PriceEvidencePreparationContext | PriceEvidenceDiagnosticContext,
     Field(discriminator="kind"),
 ]
 

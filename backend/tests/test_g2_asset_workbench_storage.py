@@ -36,6 +36,8 @@ def test_exact_migration_round_trip_only_owned_tables_and_append_only(workbench_
     # Base.metadata fixture includes candidate tables: remove those three before exact upgrade.
     with Operations.context(MigrationContext.configure(db.connection())):
         from alembic import op
+        # The successor's empty table references this predecessor migration.
+        op.drop_constraint("fk_pe_confirmation_upstream", "project_price_evidence_confirmations", type_="foreignkey")
         op.drop_constraint("fk_aw_confirmation_reversal", migration.TABLES[1], type_="foreignkey")
         for table in reversed(migration.TABLES):
             op.drop_table(table)
@@ -62,6 +64,9 @@ def test_exact_migration_round_trip_only_owned_tables_and_append_only(workbench_
     db.execute(text(f'SET LOCAL search_path TO "{schema}"'))
     with Operations.context(MigrationContext.configure(db.connection())):
         migration.upgrade()
+        op.create_foreign_key("fk_pe_confirmation_upstream", "project_price_evidence_confirmations",
+            "project_asset_workbench_confirmations", ["organization_id", "project_id", "workbench_confirmation_id"],
+            ["organization_id", "project_id", "id"], ondelete="RESTRICT")
     db.commit()
     # Historical audits survive downgrade: unsupported evidence can never manufacture COMPLETE.
     assert provider(db, entry).result == "STALE"

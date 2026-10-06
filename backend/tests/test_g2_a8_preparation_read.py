@@ -130,7 +130,7 @@ def test_existing_provider_diagnostics_serialize(stage, reason):
 
 
 @pytest.mark.parametrize("stage,reason", [
-    ("ASSET_REVIEW", "reconfirmation_required"), ("PRICE_EVIDENCE", "seal_mismatch"),
+    ("ASSET_REVIEW", "reconfirmation_required"), ("SUPPLIER_QUOTES", "seal_mismatch"),
     ("ASSET_WORKBENCH", "invented_reason"),
 ])
 def test_diagnostic_schema_does_not_expand_provider_authority(stage, reason):

@@ -4494,6 +4494,13 @@ from app.modules.project_master_data.asset_workbench_models import (  # noqa: E4
     ProjectAssetWorkbenchConfirmation as ProjectAssetWorkbenchConfirmation,
     ProjectAssetWorkbenchWithdrawal as ProjectAssetWorkbenchWithdrawal,
 )
+from app.modules.project_master_data.price_evidence_models import (  # noqa: E402
+    PriceEvidenceReceipt as PriceEvidenceReceipt,
+    ProjectPriceEvidenceSource as ProjectPriceEvidenceSource,
+    ProjectPriceEvidenceDecision as ProjectPriceEvidenceDecision,
+    ProjectPriceEvidenceConfirmation as ProjectPriceEvidenceConfirmation,
+    ProjectPriceEvidenceWithdrawal as ProjectPriceEvidenceWithdrawal,
+)
 
 
 

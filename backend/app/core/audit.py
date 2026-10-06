@@ -41,7 +41,8 @@ def log_audit_event(
     actor_user_id: Optional[uuid.UUID] = None,
     command_name: Optional[str] = None,
     correlation_id: Optional[str] = None,
-    payload: Optional[dict] = None
+    payload: Optional[dict] = None,
+    audit_event_id: Optional[uuid.UUID] = None,
 ) -> AuditEvent:
     """
     Creates and persists an AuditEvent record inside the existing DB transaction.
@@ -54,6 +55,7 @@ def log_audit_event(
         sanitized_payload = sanitize_payload(payload)
 
     audit_event = AuditEvent(
+        **({"id": audit_event_id} if audit_event_id is not None else {}),
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         command_name=command_name,
