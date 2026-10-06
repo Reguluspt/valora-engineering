@@ -1,7 +1,7 @@
 """Thin typed PRICE_EVIDENCE commands and scoped invocation/receipt reads."""
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from app.modules.project_master_data.price_evidence_schemas import (
     RegisterProjectPriceEvidenceRequest, DecideProjectPriceEvidenceRelevanceRequest,
     WithdrawProjectPriceEvidenceRequest, ConfirmProjectPriceEvidenceRequest,
     WithdrawProjectPriceEvidenceConfirmationRequest, PriceEvidenceResponse, PriceEvidencePreparation, PriceEvidenceSourceRead,
+    PriceEvidenceWorkspace,
 )
 from app.modules.project_master_data.application import price_evidence_commands as commands
 from app.modules.project_master_data.application.asset_review_authority import resolve_authority, require_mutation_actor, canonical_digest
@@ -125,9 +126,14 @@ def receipt(project_id: uuid.UUID, command_id: uuid.UUID, db: Session = Depends(
 def preparation(project_id: uuid.UUID, db: Session = Depends(get_case_state_db), actor: User = Depends(get_current_user)):
     persisted = require_mutation_actor(db, actor=actor, org_id=actor.organization_id, permission="project:read")
     snapshot = resolve_authority(db, org_id=actor.organization_id, project_id=project_id)
-    state = snapshot.price_evidence
     has_session = db.query(WorkbenchSession.id).filter_by(project_id=project_id, user_id=actor.id, status="active").first() is not None
     permissions = derive_effective_permissions(persisted, db)
+    return _preparation(snapshot, permissions, has_session)
+
+
+def _preparation(snapshot, permissions, has_session):
+    project_id = snapshot.project.id
+    state = snapshot.price_evidence
     upstream = evaluate_asset_workbench_provider(snapshot, effective_permissions=permissions, has_active_session=has_session)
     coherent = bool(state.intact and snapshot.seal_current and snapshot.lineage_current and snapshot.workbench.latest)
     writable = bool(coherent and "workbench:edit" in permissions and has_session and value(snapshot.project.status) == "draft")
@@ -148,3 +154,17 @@ def preparation(project_id: uuid.UUID, db: Session = Depends(get_case_state_db),
         can_decide=bool(writable and upstream.result == "COMPLETE"), can_withdraw=writable,
         can_confirm=bool(writable and upstream.result == "COMPLETE" and not state.content_current and not state.stale
                          and not state.holds and all(state.qualifying.get(line.id) for line in snapshot.lines)))
+
+
+@router.get("/{project_id}/price-evidence/workspace", response_model=PriceEvidenceWorkspace)
+def workspace(project_id: uuid.UUID, line_id: uuid.UUID | None = None,
+              offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=50),
+              db: Session = Depends(get_case_state_db), actor: User = Depends(get_current_user)):
+    from app.modules.project_master_data.application.price_evidence_projection import workspace_projection
+    persisted = require_mutation_actor(db, actor=actor, org_id=actor.organization_id, permission="project:read")
+    snapshot = resolve_authority(db, org_id=actor.organization_id, project_id=project_id)
+    if line_id is not None and line_id not in {line.id for line in snapshot.lines}:
+        raise HTTPException(404, detail="Asset context not found")
+    has_session = db.query(WorkbenchSession.id).filter_by(project_id=project_id, user_id=actor.id, status="active").first() is not None
+    prep = _preparation(snapshot, derive_effective_permissions(persisted, db), has_session)
+    return workspace_projection(db, snapshot, prep, line_id=line_id, offset=offset, limit=limit)

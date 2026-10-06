@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-06 (A9 certified; A10 bounded PRICE_EVIDENCE runtime candidate, product closure deferred)
+**Last reconciled:** 2026-10-06 (A10 runtime certified; A11 PRICE_EVIDENCE product closure candidate)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -66,11 +66,12 @@ exact-main CI #604 / run `37414654381` SUCCESS, certification comment `601028536
 boundary is ASSET_WORKBENCH. A9 / Issue #129 PRICE_EVIDENCE authority D1–D12 is ACCEPTED by the Product Owner
 on 2026-10-06 (comment `6011401776`); see `docs/plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md`.
 A9 is CERTIFIED/CLOSED at `53b26838e4f01f34b1bb3bc0c5c91986d0af13ed`, exact-main CI #609
-/ run `37445602131` SUCCESS, certification comment `6015361224`. A10 / Issue #131 authorizes the
-bounded PRICE_EVIDENCE backend/domain/provider/API candidate described in
+/ run `37445602131` SUCCESS, certification comment `6015361224`. A10 / Issue #131 is CERTIFIED/CLOSED:
+PR #132 merged at `387a8d1d630d4245cdc77b886aafa137cf755515`, exact-main CI #614 / run `37479177837` SUCCESS,
+certification comment `6019045198`. The bounded PRICE_EVIDENCE backend/domain/provider/API is described in
 `docs/implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md`. Its shared Case State v5 may reach
 PRICE_EVIDENCE after current Workbench COMPLETE and holds there with NO_AUTHORIZED_DOWNSTREAM_ACTION.
-This candidate is not certification or product UX closure. SUPPLIER_QUOTES+ remains UNAUTHORIZED.
+A11 / Issue #133 authorizes the existing Workbench/Asset Context product UX, bounded read projection and browser evidence candidate described in `docs/implementation/VALORA_OS_G2_PRICE_EVIDENCE_PRODUCT.md`. This candidate is not product certification. SUPPLIER_QUOTES+ remains UNAUTHORIZED.
 Full OS-G2 remains PARTIAL; membership mutation, further RBAC and later-stage work remain unauthorized.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
@@ -166,8 +167,7 @@ A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED; A7 / Issue 
 certified backend-only ASSET_WORKBENCH runtime and cap via PR #123 / CI #597, retaining NO_AUTHORIZED_DOWNSTREAM_ACTION after
 completion, absent a higher-priority authorized blocker. A8 / Issue #126 product UX/E2E is CERTIFIED/CLOSED
 by exact-main CI #604 and comment `6010285363`. A9 / Issue #129 authority D1–D12 is ACCEPTED (comment
-`6011401776`) and CERTIFIED/CLOSED. A10 / Issue #131 is the authorized bounded PRICE_EVIDENCE runtime
-candidate; its product-facing UX remains deferred. Membership mutation, further RBAC and
+`6011401776`) and CERTIFIED/CLOSED. A10 / Issue #131 runtime is CERTIFIED/CLOSED at PR #132 / CI #614 / comment `6019045198`. A11 / Issue #133 authorizes the bounded product UX candidate; product certification remains pending. Membership mutation, further RBAC and
 SUPPLIER_QUOTES+ remain UNAUTHORIZED; full OS-G2 remains PARTIAL.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited

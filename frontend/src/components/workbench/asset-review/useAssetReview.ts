@@ -178,5 +178,6 @@ export function useAssetReview({ projectId, sessionId, sessionBlocked, rows, gri
 
   return { projection, action, context, row, loading, busy, notice, result, pending,
     canValidate, canReview, canAccept, negative, submit, recover,
+    refreshProjection: refresh,
     refresh: () => { callbacks.current.refreshGrid(); return refresh(); } };
 }

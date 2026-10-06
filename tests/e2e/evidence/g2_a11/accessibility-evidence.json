@@ -1,0 +1,17 @@
+{
+  "project_id": "f4752ccb-ce01-4703-a5fb-3afa6437f5cd",
+  "capture": "10-whole-set-reconfirmation-dialog.png",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "result": "PASS",
+  "checks": [
+    "tab arrows and Enter",
+    "labelled field error aria-invalid/describedby",
+    "50 forward/backward focus-trap checks",
+    "Escape returns modal trigger",
+    "drawer Escape returns context trigger",
+    "zero evidence mutations"
+  ]
+}

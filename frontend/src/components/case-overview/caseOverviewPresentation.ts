@@ -40,6 +40,9 @@ export function mappedNextActionPath(
   projectRef: string
 ): string | null {
   if (!nextAction) return null;
+  if (nextAction.stage === "PRICE_EVIDENCE" && nextAction.kind === "PENDING" &&
+      nextAction.semantic_route_key === "price_evidence_prepare_required" && nextAction.context?.kind === "price_evidence_preparation")
+    return projectWorkbenchPath(projectRef);
   if (isAssetReviewSessionBridge(nextAction)) return projectWorkbenchPath(projectRef);
   if (nextAction.stage === "ASSET_WORKBENCH" && nextAction.semantic_route_key === "asset_workbench_prepare_required" &&
     (nextAction.kind === "PENDING" && nextAction.context?.kind === "asset_workbench_preparation" ||
@@ -75,6 +78,10 @@ export function nextActionCopy(nextAction: CaseStateNextAction | null): {
     };
   }
   const stageLabel = nextAction.stage ? CASE_STAGE_LABELS[nextAction.stage] : null;
+  if (nextAction.stage === "PRICE_EVIDENCE" && nextAction.semantic_route_key === "price_evidence_prepare_required") return {
+    eyebrow: "Hành động tiếp theo", title: "Hoàn thiện nguồn giá và chứng cứ",
+    description: "Mở Bàn làm việc để kiểm tra nguồn và chứng cứ của tài sản. Việc mở màn hình không đăng ký, chấp nhận hoặc xác nhận chứng cứ.",
+  };
   if (nextAction.stage === "ASSET_WORKBENCH" && nextAction.semantic_route_key === "asset_workbench_prepare_required") return {
     eyebrow: "Hành động tiếp theo", title: "Hoàn thiện mô tả và xác nhận danh mục sẵn sàng",
     description: "Mở Bàn làm việc để xem dữ liệu chính thức và điều kiện hiện tại. Việc mở màn hình không xác nhận danh mục.",
