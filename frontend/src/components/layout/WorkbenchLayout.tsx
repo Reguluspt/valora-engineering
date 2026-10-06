@@ -10,6 +10,8 @@ import { useWorkbenchDraftState } from "../workbench/hooks/useWorkbenchDraftStat
 import { commitAssetLineDraft } from "../../api/projects";
 import { useAssetReview } from "../workbench/asset-review/useAssetReview";
 import { AssetReviewRegion } from "../workbench/asset-review/AssetReviewRegion";
+import { useAssetWorkbench } from "../workbench/asset-workbench/useAssetWorkbench";
+import { AssetWorkbenchRegion } from "../workbench/asset-workbench/AssetWorkbenchRegion";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -110,6 +112,7 @@ function WorkbenchLayoutInner({
   } = useProjectAssetLines(projectId);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [reviewTargetId, setReviewTargetId] = useState<string | null>(null);
+  const lastReviewTarget = useRef<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -127,9 +130,22 @@ function WorkbenchLayoutInner({
     sessionBlocked: Boolean(loading || error || rbacError || conflictError),
     rows, gridLoading, gridError: Boolean(gridFriendlyError), hasMore, loadingMore, loadMore,
     refreshGrid: retryGrid, selectLine: id => {
+      if (lastReviewTarget.current === id) return;
+      lastReviewTarget.current = id;
       setActiveRowId(id);
       setReviewTargetId(id);
     }, actorScope });
+  const assetWorkbench = useAssetWorkbench({ projectId, sessionId: session?.id,
+    sessionBlocked: Boolean(loading || error || rbacError || conflictError || assetReview.loading || assetReview.busy), actorScope,
+    revision: assetReview.projection?.case_version, onRefresh: () => { void assetReview.refresh(); reloadDrafts(); } });
+  const preparationTarget = assetWorkbench.projection?.next_action?.context?.kind === "asset_workbench_preparation"
+    ? assetWorkbench.projection.next_action.context.line_id : null;
+  React.useEffect(() => {
+    if (!preparationTarget || gridLoading || gridFriendlyError || loadingMore) return;
+    if (rows.some(row => row.project_asset_line_id === preparationTarget)) {
+      setActiveRowId(preparationTarget); setReviewTargetId(preparationTarget);
+    } else if (hasMore) void loadMore();
+  }, [preparationTarget, rows, gridLoading, gridFriendlyError, loadingMore, hasMore, loadMore]);
 
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState(false);
@@ -153,7 +169,9 @@ function WorkbenchLayoutInner({
     setReviewTargetId(null);
     if (id) {
       setDrawerOpen(true);
-      syncSelection("ProjectAssetLine", [id]);
+      void (async () => {
+        if (await syncSelection("project_asset_line", [id])) retry();
+      })();
     } else {
       setDrawerOpen(false);
     }
@@ -290,7 +308,11 @@ function WorkbenchLayoutInner({
         </span>
       </div>
 
-      <AssetReviewRegion review={assetReview} />
+      <div className="workbench-stage-regions" tabIndex={0} aria-label="Trạng thái và chuẩn bị tài sản">
+        <AssetReviewRegion review={assetReview} />
+        <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
+          onCommitted={() => { void assetReview.refresh(); void assetWorkbench.refresh(); reloadDrafts(); }} />
+      </div>
 
       <div className="workbench-body">
         <div className="workbench-grid-pane">

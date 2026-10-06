@@ -49,6 +49,17 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it("routes only existing Workbench preparation/diagnostic actions and preserves downstream hold", () => {
+    const context = { kind: "asset_workbench_preparation", project_id: "p", case_version: "a".repeat(64), reason_code: "confirmation_required" };
+    const action = { kind: "PENDING" as const, stage: "ASSET_WORKBENCH" as const,
+      semantic_route_key: "asset_workbench_prepare_required", validation_issue_id: null, context };
+    expect(mappedNextActionPath(action, "p")).toBe("/workbench/projects/p");
+    expect(mappedNextActionPath({ ...action, kind: "UNAVAILABLE", context: { ...context, kind: "asset_workbench_diagnostic" } }, "p"))
+      .toBe("/workbench/projects/p");
+    expect(mappedNextActionPath({ ...action, kind: "NO_AUTHORIZED_DOWNSTREAM_ACTION", stage: null, semantic_route_key: null }, "p")).toBeNull();
+    expect(mappedNextActionPath({ ...action, stage: "PRICE_EVIDENCE" }, "p")).toBeNull();
+    expect(mappedNextActionPath({ ...action, context: { ...context, kind: "permission" } }, "p")).toBeNull();
+  });
   it("routes both Asset Review keys and only the exact session-required navigation bridge", () => {
     const action = { kind: "PENDING" as const, stage: "ASSET_REVIEW" as const,
       semantic_route_key: "asset_review_line_validate_required", validation_issue_id: null };

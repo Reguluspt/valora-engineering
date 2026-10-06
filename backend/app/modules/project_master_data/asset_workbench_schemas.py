@@ -88,3 +88,20 @@ class WorkbenchCommandResponse(BaseModel):
     replayed: bool
     historical: bool
     current_case_version: str
+
+
+class WorkbenchPreparationSnapshot(BaseModel):
+    """Invocation metadata only; Case State remains the completion read model."""
+    model_config = ConfigDict(extra="forbid")
+    project_id: uuid.UUID
+    case_version: str
+    project_row_version: int
+    seal_id: uuid.UUID | None
+    authoritative_set_sha256: str | None
+    membership_version: int | None
+    line_versions: list[ExpectedAssetLineVersion]
+    prior_confirmation_id: uuid.UUID | None
+    withdrawn: bool
+    can_confirm: bool
+    can_withdraw: bool
+    can_edit_description: bool

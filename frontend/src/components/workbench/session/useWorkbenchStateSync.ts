@@ -37,14 +37,16 @@ export function useWorkbenchStateSync(sessionId: string | undefined, onError?: (
   }, [sessionId, onError]);
 
   const syncSelection = useCallback(async (targetType: string, ids: string[]) => {
-    if (!sessionId) return;
+    if (!sessionId) return false;
     try {
       await saveSelection(sessionId, {
         selected_target_type: targetType,
         selected_target_ids: ids
       });
+      return true;
     } catch (err: any) {
       if (onError && err instanceof ApiError) onError(err.message);
+      return false;
     }
   }, [sessionId, onError]);
 

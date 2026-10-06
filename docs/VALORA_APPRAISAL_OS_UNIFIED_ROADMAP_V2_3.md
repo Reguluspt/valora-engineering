@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-10-05 (A6 accepted/certified; A7 backend runtime candidate pending certification)
+**Last reconciled:** 2026-10-06 (A7 runtime certified; A8 product implementation candidate pending certification)
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (dated evidence, 2026-09-27):** PR #32 closed OS-G0 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS); G1.0 closed by merged PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. ADR 0046 is accepted G1.1 design authority; G1.1 runtime and OS-G2 remain not started. Verify live main before implementation.
@@ -74,7 +74,7 @@ Conflict resolution / role split:
 
 Run `valora-live-authority-bootstrap`: fetch `origin/main`, verify its live HEAD/CODEX, the assigned task and successful CI on the exact claimed SHA. Dated milestones below are not evergreen current-main certification.
 
-Current certified product disposition (2026-10-05): OS-G0 COMPLETE; OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81` (CI #527 SUCCESS); OS-G2 PARTIAL / certified through ASSET_REVIEW by A5 / PR #86 at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9` (CI #555 SUCCESS). A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with Product Owner D1–D8 ACCEPTED. Separately authorized A7 / Issue #122 supplies the uncertified ASSET_WORKBENCH backend/domain/provider candidate, pending Gate Owner expected-head integration, exact-main CI and certification; A8 product UX/E2E is unimplemented. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED; full OS-G2 and full WIN-4 remain PARTIAL. This reconciliation opens no later-stage task.
+Current certified product disposition (2026-10-06): OS-G0 COMPLETE; OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81` (CI #527 SUCCESS); OS-G2 PARTIAL, with ASSET_REVIEW product closure certified by A5 / PR #86 / CI #555. A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with Product Owner D1–D8 ACCEPTED. A7 / Issue #122 / PR #123 certifies ASSET_WORKBENCH backend/domain/provider runtime at `d7efb4bf6a880b5d397807ed32acd99f929828a3`, exact-main CI #597 / run `37318932525` SUCCESS. A8 / Issue #126 supplies the bounded product UX/E2E implementation candidate, pending required review/CI, Gate Owner integration and certification. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED; full OS-G2 and full WIN-4 remain PARTIAL. This reconciliation opens no later-stage task.
 
 ### Historical OS-G0 / PR #32 milestone (2026-09-27)
 
@@ -297,7 +297,7 @@ Certified closure covers facts → APIs → UI → Case State → Next Action �
 
 ### OS-G2 — Appraisal Core
 
-**Current disposition:** PARTIAL. ASSET_REVIEW product closure is CERTIFIED/CLOSED through A5 / PR #86 (CI #555 SUCCESS); A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED. A7 / Issue #122 implements the uncertified ASSET_WORKBENCH backend/domain/provider candidate (`asset_workbench_confirmation_v1`, shared `global-case-state-v4-asset-workbench-confirmation-v1`), extending candidate fact-derived coverage/current-stage cap through ASSET_WORKBENCH. Certified main remains through ASSET_REVIEW pending Gate Owner expected-head integration, exact-main CI and A7 certification. Workbench COMPLETE retains `NO_AUTHORIZED_DOWNSTREAM_ACTION`; PRICE_EVIDENCE+ remains UNAUTHORIZED / NOT_AVAILABLE. A8 product UX/E2E is unimplemented; full OS-G2 remains PARTIAL. Membership mutation, further RBAC and downstream runtime are outside A7.
+**Current disposition:** PARTIAL. ASSET_REVIEW product closure is CERTIFIED/CLOSED through A5 / PR #86 (CI #555 SUCCESS); A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED. A7 / Issue #122 / PR #123 / CI #597 certifies the ASSET_WORKBENCH backend/domain/provider runtime (`asset_workbench_confirmation_v1`, shared `global-case-state-v4-asset-workbench-confirmation-v1`) and fact-derived coverage/current-stage cap through ASSET_WORKBENCH. Workbench COMPLETE retains `NO_AUTHORIZED_DOWNSTREAM_ACTION`; PRICE_EVIDENCE+ remains UNAUTHORIZED / NOT_AVAILABLE. A8 / Issue #126 product UX/E2E is implemented as an uncertified candidate; full OS-G2 remains PARTIAL. Membership mutation, further RBAC and downstream runtime are outside A7/A8.
 
 Retained vertical order below is roadmap direction, not authorization to start the next stage:
 

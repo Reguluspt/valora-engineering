@@ -28,6 +28,7 @@ export interface AssetLineGridRow {
   project_asset_line_id: string;
   line_no: number;
   raw_name: string;
+  description?: string | null;
   normalized_name: string | null;
   canonical_asset: CanonicalAsset | null;
   asset_variant: AssetVariant | null;

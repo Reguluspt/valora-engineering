@@ -2,7 +2,7 @@ import type { CaseStage, CaseStageResult, CaseStateNextAction } from "../../api/
 import { projectWorkbenchPath, projectPreliminaryAnalysisPath, projectPreliminaryCompletionPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
 
 export function isAssetReviewSessionBridge(nextAction: CaseStateNextAction | null): boolean {
-  return nextAction?.kind === "UNAVAILABLE" && nextAction.stage === "ASSET_REVIEW" &&
+  return nextAction?.kind === "UNAVAILABLE" && ["ASSET_REVIEW", "ASSET_WORKBENCH"].includes(nextAction.stage || "") &&
     nextAction.context?.reason_code === "session_required";
 }
 
@@ -41,6 +41,9 @@ export function mappedNextActionPath(
 ): string | null {
   if (!nextAction) return null;
   if (isAssetReviewSessionBridge(nextAction)) return projectWorkbenchPath(projectRef);
+  if (nextAction.stage === "ASSET_WORKBENCH" && nextAction.semantic_route_key === "asset_workbench_prepare_required" &&
+    (nextAction.kind === "PENDING" && nextAction.context?.kind === "asset_workbench_preparation" ||
+      nextAction.kind === "UNAVAILABLE" && nextAction.context?.kind === "asset_workbench_diagnostic")) return projectWorkbenchPath(projectRef);
   if (nextAction.kind === "BLOCKER" && nextAction.stage === "ASSET_REVIEW" &&
       nextAction.semantic_route_key === "asset_review_line_blocked") return projectWorkbenchPath(projectRef);
   if (nextAction.kind !== "PENDING" || !nextAction.semantic_route_key) return null;
@@ -72,6 +75,10 @@ export function nextActionCopy(nextAction: CaseStateNextAction | null): {
     };
   }
   const stageLabel = nextAction.stage ? CASE_STAGE_LABELS[nextAction.stage] : null;
+  if (nextAction.stage === "ASSET_WORKBENCH" && nextAction.semantic_route_key === "asset_workbench_prepare_required") return {
+    eyebrow: "Hành động tiếp theo", title: "Hoàn thiện mô tả và xác nhận danh mục sẵn sàng",
+    description: "Mở Bàn làm việc để xem dữ liệu chính thức và điều kiện hiện tại. Việc mở màn hình không xác nhận danh mục.",
+  };
   if (isAssetReviewSessionBridge(nextAction)) return {
     eyebrow: "Hành động tiếp theo", title: "Mở Bàn làm việc tài sản",
     description: "Mở không gian làm việc để xác minh phiên và tải lại trạng thái rà soát. Chưa thực hiện kiểm tra hay quyết định.",

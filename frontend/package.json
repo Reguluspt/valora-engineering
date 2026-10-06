@@ -12,6 +12,7 @@
     "browser:fixture": "node scripts/browser-acceptance-server.mjs"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.74.9",
     "@vitejs/plugin-react": "^4.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

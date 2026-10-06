@@ -357,7 +357,8 @@ export function AssetGrid({ rows, authoritativeActiveId, onActiveRowChange, draf
                             status={getDraftStatusBadge(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                             label={getDraftStatusLabelVi(draftStates[row.project_asset_line_id]?.draft_status || "clean", !!drafts[nameDraftKey] || !!drafts[priceDraftKey])}
                           />
-                          {draftStates[row.project_asset_line_id]?.has_saved_draft && row.row_version != null && (
+                          {draftStates[row.project_asset_line_id]?.has_saved_draft &&
+                            draftStates[row.project_asset_line_id]?.changed_fields?.includes("appraised_unit_price") && row.row_version != null && (
                             <button
                               onClick={(event) => {
                                 event.stopPropagation();

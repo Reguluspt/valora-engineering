@@ -29,6 +29,7 @@ export function mapAssetLinesToGridRows(items: ProjectAssetLineResponse[], offse
     project_asset_line_id: item.id,
     line_no: offset + idx + 1,
     raw_name: item.asset_name,
+    description: item.description,
     normalized_name: null,
     canonical_asset: null,
     asset_variant: null,

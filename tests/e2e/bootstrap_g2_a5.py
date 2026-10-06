@@ -23,7 +23,7 @@ def main():
     with SessionLocal() as db:
         entry = seed_guarded_entry(db, storage=storage)
         org, user, project = entry["org"], entry["user"], entry["project"]
-        org.organization_slug = "a5-synthetic"
+        org.organization_slug = os.environ.get("SYNTHETIC_ORGANIZATION_SLUG", "a5-synthetic")
         org.legal_name = "A5 Synthetic Organization"
         user.email = "operator@a5.invalid"
         user.full_name = "Người kiểm thử A5"
