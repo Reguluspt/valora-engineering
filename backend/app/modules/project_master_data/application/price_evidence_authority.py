@@ -231,19 +231,29 @@ def resolve_price_evidence_authority(db, snapshot, *, now=None):
             state.withdrawals[(record.target_kind, record.target_id)] = record
     state.withdrawn = bool(state.latest and ("confirmation", state.latest.id) in state.withdrawals)
     deadlines = []
-    for source in state.source_heads.values():
-        if state.retired(source):
-            continue
+    relevant_sources = set()
+
+    def bind_source_deadlines(source):
+        if source is None or source.id in relevant_sources:
+            return
+        relevant_sources.add(source.id)
         if source.expires_at:
             deadlines.append(source.expires_at)
-        if source.expires_at and now >= source.expires_at:
-            state.stale.append("source_expired")
+            if now >= source.expires_at:
+                state.stale.append("source_expired")
+        try:
+            explanation = SourceMaterial.model_validate(source.content_binding["material"]).explanation
+            for item in explanation.inputs if explanation else []:
+                bind_source_deadlines(state.sources.get(item.evidence_revision_id))
+        except (ValueError, TypeError, KeyError, AttributeError):
+            state.intact = False
     for decision in state.decision_heads.values():
         if decision.disposition == "unresolved_concern":
             state.holds.append(decision.line_id)
         if state.retired(decision) or decision.disposition != "qualifying_basis":
             continue
         source = state.sources.get(decision.evidence_revision_id)
+        bind_source_deadlines(source)
         deadlines.append(decision.review_due_at)
         current = bool(source and source_eligible(db, snapshot, state, source, now)
             and decision.content_binding.get("upstream") == upstream_binding(snapshot)

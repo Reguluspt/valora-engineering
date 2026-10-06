@@ -293,6 +293,57 @@ def test_negative_hold_not_hidden_by_withdrawal_or_extra_positive(covered_db):
     assert provider(db, entry).result == "INCOMPLETE"
 
 
+def test_explanation_input_expiry_binds_confirmation_commit(evidence_db, monkeypatch):
+    from app.modules.project_master_data.application import price_evidence_authority as authority
+    db, entry = evidence_db
+    deadline = utc_now() + timedelta(days=1)
+    source = execute(db, entry, request_for(db, entry, material=material(expires_at=deadline.isoformat())))
+    db.commit()
+    derived = material(category="unit_price_explanation", capture_method="authored_explanation",
+        explanation=dict(method="sum_of_scaled_source_values",
+            inputs=[dict(evidence_revision_id=source["result"]["record_id"], coefficient="1")],
+            assumptions="Same specification and unit basis", calculations="One unit of retained source value",
+            units="item", currency="VND", proposed_basis_value="100"))
+    execute(db, entry, request_for(db, entry, material=derived))
+    db.commit()
+    for line in snapshot(db, entry).lines:
+        execute(db, entry, request_for(db, entry, "relevance", line_id=str(line.id),
+            expected_line_proof_sha256=canonical_digest(line_binding(snapshot(db, entry), line.id)),
+            higher_priorities_considered=["internet_survey"],
+            source_priority_rationale="Reasoned explanation retains identified survey input"))
+        db.commit()
+    assert snapshot(db, entry).price_evidence.earliest_deadline == deadline
+    execute(db, entry, request_for(db, entry, "confirmation"))
+    monkeypatch.setattr(authority, "utc_now", lambda: deadline)
+    monkeypatch.setattr(commands, "utc_now", lambda: deadline)
+    with pytest.raises(HTTPException) as error:
+        db.commit()
+    assert error.value.status_code == 409
+    db.rollback()
+    assert counts(db) == (5, 5, 5)
+    assert provider(db, entry).result == "STALE"
+
+
+def test_unused_source_expiry_does_not_invalidate_accepted_set(covered_db, monkeypatch):
+    from app.modules.project_master_data.application import price_evidence_authority as authority
+    db, entry = covered_db
+    deadline = utc_now() + timedelta(days=1)
+    execute(db, entry, request_for(db, entry, material=material(expires_at=deadline.isoformat())))
+    db.commit()
+    execute(db, entry, request_for(db, entry, "confirmation"))
+    db.commit()
+    before = snapshot(db, entry)
+    assert before.price_evidence.earliest_deadline > deadline
+    monkeypatch.setattr(authority, "utc_now", lambda: deadline)
+    monkeypatch.setattr(commands, "utc_now", lambda: deadline)
+    assert provider(db, entry).result == "COMPLETE"
+    assert snapshot(db, entry).case_version == before.case_version
+    with pytest.raises(HTTPException) as error:
+        execute(db, entry, request_for(db, entry, "relevance"))
+    assert error.value.status_code == 400
+    db.rollback()
+
+
 def test_expired_source_hold_can_be_explicitly_resolved(evidence_db, monkeypatch):
     from app.modules.project_master_data.application import price_evidence_authority as authority
     db, entry = evidence_db
