@@ -1,0 +1,37 @@
+# A10 PRICE_EVIDENCE runtime
+
+Status: implementation candidate for [Issue #131](https://github.com/Reguluspt/valora-engineering/issues/131), not Gate Owner certification. Accepted authority is [A9 D1–D12](../plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md). The certified product boundary remains ASSET_WORKBENCH; PRICE_EVIDENCE product UX and browser E2E require a later task. Full OS-G2 remains incomplete.
+
+## Persistence and commands
+
+Migration `d7e8f9a0b1c2`, successor to `c6d7e8f9a0b1`, adds only five project/tenant-scoped tables: source revisions, relationship/suitability decisions, set confirmations, withdrawals and command receipts. An immutable decision row admits one separately identified relationship revision and its exact human decision atomically. Source correction and relationship reassessment append successors. Unresolved negative holds survive source/relationship withdrawal until an explicit reasoned successor decision resolves them. PostgreSQL triggers and ORM listeners reject update/delete; composite foreign keys bind Project, actor, session, seal, receipts and referenced revisions. Each official fact pins its exact audit-event ID.
+
+The five contracts are `price-evidence-registration-v1`, `price-evidence-relevance-v1`, `price-evidence-withdrawal-v1`, `price-evidence-confirmation-v1` and `price-evidence-confirmation-withdrawal-v1`. Thin POST routes beneath `/api/v1/projects/{project_id}/price-evidence/` use `register`, `decide`, `withdraw`, `confirm` and `withdraw-confirmation`. They enforce an active human/organization, server-derived tenant, active owned Workbench session, existing `workbench:edit`, DRAFT for new writes, strict explicit confirmation, Project row CAS, shared Case State CAS and exact sealed membership/full line versions. There is no permission or grant migration.
+
+Project-first locking serializes new writes with existing upstream writers. Success commits the fact, immutable receipt, one Project increment and exactly one sanitized success AuditEvent together. A Session outer-commit hook rechecks current access, the resulting shared authority token and the applicable UTC deadline. The hook is cleared when the outer transaction ends. Caller-owned transactions must roll back on failure; HTTP handlers do so.
+
+Receipt UUIDs are globally unique within this aggregate and bind tenant, Project, actor, contract and canonical request digest. Exact replay rechecks current access, returns the original historical result and makes no new write. Read reconciliation uses scoped `project:read` and the original actor. Unknown outcome requires receipt/result/audit reconciliation, followed by fresh Case State; a receipt never asserts current completion.
+
+## Source boundary
+
+Source material is retained plain text, up to 20,000 Unicode characters. Rationale/reference fields are bounded; source URLs are public HTTPS references without credentials, query or fragment. No source URL is fetched, resolved, previewed or redirected. HTML/template forms, private/local literal hosts, unsafe schemes, floats, missing currencies and unknown input fields are rejected. HTTP command bodies are capped before JSON parsing.
+
+Internet survey registration retains publisher/origin, locator, dated or explicitly unknown provenance, capture method/time, excerpt, limitations and exact Decimal value/range/unit/currency/qualifiers where present. Sources without a value may be retained but do not qualify as a minimum price basis. Unit-price explanation v1 supports an exact sum of scaled, identified retained source values with matching currency/unit, assumptions and calculations. It cannot reference `appraised_unit_price`; no implicit FX or tax computation is performed. Historical appraisal sources retain the exact same-tenant prior Project/asset, appraisal date and result excerpt/locator/value. Human transcription remains a declared source limitation, not a claim of authenticated original bytes. Generic legacy evidence and supplier quotes are never queried for qualifying coverage.
+
+This slice admits no file/document ID as source proof. Such fields are rejected until a separately implemented admission path can prove immutable tenant ownership, retrievability and checksum. Fresh upload, binary parsing, providers and OAuth remain outside scope. A scoped source-revision GET returns the protected retained material only after intact receipt/audit proof and a bounded source-access audit. Safe preparation GET exposes invocation IDs/versions and eligibility; public Case State and success audits contain no source text, price, URL or freeform rationale.
+
+## Read-derived completion and currentness
+
+The existing shared resolver now uses `global-case-state-v5-price-evidence-confirmation-v1`, retaining every v4 input. Added facts include immutable source/decision/withdrawal/confirmation generations, explicit absence, contract digest, receipt/audit integrity, deterministic freshness and the earliest relevant deadline. Wall-clock time itself is not hashed.
+
+Provider `price_evidence_confirmation_v1` uses the existing five results and four action kinds. COMPLETE requires current ASSET_WORKBENCH, exact non-empty sealed membership, a qualifying current accepted relationship for every line, no unresolved suitability hold, an intact non-withdrawn whole-set confirmation matching the server-resolved manifest, and intact receipts/audits. A shared source requires a separate human relationship/decision per line. Every official evidence change changes the set binding. Withdrawal preserves history and does not reset values, review, Workbench or membership.
+
+Actual description/working-price/non-restricted input changes, validation/review generations, Workbench confirmation changes, source supersession/withdrawal, decision changes and deadlines invalidate the relevant bindings. Same canonical-value writes do not stale evidence just because row versions change. Issue blockers retain precedence; status controls new-write eligibility while a content-current COMPLETE can survive leaving DRAFT. Receipt history never replaces current state.
+
+The current stage reaches PRICE_EVIDENCE only after current ASSET_WORKBENCH COMPLETE and never advances to SUPPLIER_QUOTES. Ordinary unfinished work exposes `price_evidence_prepare_required` / `PENDING` / `price_evidence_preparation`; stale or unprovable states expose safe `UNAVAILABLE` diagnostics. Completion returns `NO_AUTHORIZED_DOWNSTREAM_ACTION`. Existing frontend routing fails closed for this new action; no PRICE_EVIDENCE mutation CTA or frontend change is included.
+
+## Validation and delivery boundary
+
+Candidate tests are `test_g2_price_evidence.py`, `test_g2_price_evidence_api.py`, `test_g2_price_evidence_postgresql.py` and `test_g2_price_evidence_storage.py`, alongside upstream Asset Review/Workbench regressions. They exercise durable coverage, strict contracts, sources, access negatives, receipt recovery, audit rollback, currentness, migration round trips, SQL immutability and real PostgreSQL lock waits in both race orderings. Local disposable PostgreSQL evidence proves transaction/serialization behavior, not crash durability.
+
+Exact results, frozen SHA, both independent reviews and exact-head CI belong to the candidate's Draft PR evidence. No local test result certifies this task. Gate Owner owns Ready, guarded squash integration, exact-main CI and certification. No SUPPLIER_QUOTES, supplier selection, appraisal-result, product UX, Windows, deployment or release authority is added.

@@ -20,7 +20,7 @@ from app.modules.project_master_data.models import (
 )
 
 CONTRACT_VERSION = "s12-post-intake-guarded-apply-v2"
-CASE_CONTRACT = "global-case-state-v4-asset-workbench-confirmation-v1"
+CASE_CONTRACT = "global-case-state-v5-price-evidence-confirmation-v1"
 REGISTERED_INPUTS = ("proposed_asset_name", "proposed_description", "proposed_quantity",
                      "proposed_unit", "proposed_raw_price", "proposed_currency")
 
@@ -77,6 +77,7 @@ class AuthoritySnapshot:
     line_proofs: dict = field(default_factory=dict)
     references: dict = field(default_factory=dict)
     workbench: Any = None
+    price_evidence: Any = None
 
 
 def lock_project(db, *, org_id, project_id):
@@ -314,5 +315,8 @@ def resolve_authority(db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID,
         from app.modules.project_master_data.application.asset_workbench_authority import resolve_workbench_authority
         snapshot.workbench = resolve_workbench_authority(db, snapshot)
         facts.append("asset_workbench_authority_v1:" + canonical_digest(snapshot.workbench.facts))
+        from app.modules.project_master_data.application.price_evidence_authority import resolve_price_evidence_authority
+        snapshot.price_evidence = resolve_price_evidence_authority(db, snapshot)
+        facts.append("price_evidence_authority_v1:" + canonical_digest(snapshot.price_evidence.facts))
         snapshot.case_version, snapshot.facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
         return snapshot

@@ -121,9 +121,10 @@ def test_confirmation_is_current_after_own_increment_and_holds_downstream(workbe
     with Session(db.get_bind().execution_options(isolation_level="REPEATABLE READ")) as reader:
         projection = get_case_state_projection(reader, actor=entry["user"], org_id=entry["org"].id,
                                               project_id=entry["project"].id)
-        assert projection.current_stage == "ASSET_WORKBENCH"
-        assert all(stage.result == "NOT_AVAILABLE" for stage in projection.stages[6:])
-        assert projection.next_action.kind == "NO_AUTHORIZED_DOWNSTREAM_ACTION"
+        assert projection.current_stage == "PRICE_EVIDENCE"
+        assert projection.stages[6].result == "INCOMPLETE"
+        assert all(stage.result == "NOT_AVAILABLE" for stage in projection.stages[7:])
+        assert projection.next_action.semantic_route_key == "price_evidence_prepare_required"
     replay = execute(db, entry, req)
     db.commit()
     assert replay["replayed"] and replay["result"] == original["result"] and not replay["historical"]

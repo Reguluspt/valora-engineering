@@ -145,11 +145,12 @@ def test_full_set_completion_requires_actual_proofs_and_caps_stage(line_db):
                                               project_id=entry["project"].id)
         assert projection.current_stage == "ASSET_WORKBENCH"
         from app.modules.project_master_data.application.case_state_projection import CAPABILITY_REGISTRY_VERSION
-        assert CAPABILITY_REGISTRY_VERSION == "global-case-state-v4-asset-workbench-confirmation-v1"
+        assert CAPABILITY_REGISTRY_VERSION == "global-case-state-v5-price-evidence-confirmation-v1"
         assert projection.capabilities[4].provider_key == "asset_review_line_decision_v1"
         assert projection.next_action.kind in ("PENDING", "UNAVAILABLE")
         assert projection.stages[5].result == "INCOMPLETE"
-        assert all(s.result == "NOT_AVAILABLE" for s in projection.stages[6:])
+        assert projection.stages[6].result == "INCOMPLETE"
+        assert all(s.result == "NOT_AVAILABLE" for s in projection.stages[7:])
 
 
 @pytest.mark.parametrize("kind", ["warning", "invalid", "obsolete_invalid"])

@@ -700,9 +700,11 @@ def test_all_four_complete_semantics(test_db: Session) -> None:
     assert proj.stages[4].provider_key == "asset_review_line_decision_v1"
     assert proj.stages[5].result == "STALE"
     assert proj.stages[5].provider_key == "asset_workbench_confirmation_v1"
-    # The ten stages beyond the accepted preparation runtime remain unavailable.
+    # PRICE_EVIDENCE has a provider, but its seal prerequisite is absent here.
     assert len(proj.stages) == 16
-    for downstream in proj.stages[6:]:
+    assert proj.stages[6].result == "NOT_AVAILABLE"
+    assert proj.stages[6].provider_key == "price_evidence_confirmation_v1"
+    for downstream in proj.stages[7:]:
         assert downstream.result == "NOT_AVAILABLE"
         assert downstream.provider_key is None
 
@@ -735,7 +737,7 @@ def test_compute_case_version_golden_vector() -> None:
     token, sorted_facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
     assert sorted_facts == sorted(facts)
     expected_envelope = {
-        "contract": "global-case-state-v4-asset-workbench-confirmation-v1",
+        "contract": "global-case-state-v5-price-evidence-confirmation-v1",
         "facts": sorted(facts),
         "organization_id": "11111111-1111-1111-1111-111111111111",
         "project_id": "22222222-2222-2222-2222-222222222222",

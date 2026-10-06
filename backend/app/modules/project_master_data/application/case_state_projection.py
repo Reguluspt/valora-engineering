@@ -1,4 +1,4 @@
-"""Read-only Global Case State through ASSET_WORKBENCH; PRICE_EVIDENCE+ remains unavailable."""
+"""Read-only Global Case State through PRICE_EVIDENCE; SUPPLIER_QUOTES+ is unavailable."""
 from __future__ import annotations
 
 import datetime
@@ -96,7 +96,7 @@ class StageCapability:
     version: str = "pr01-prefix-v1"
 
 
-CAPABILITY_REGISTRY_VERSION = "global-case-state-v4-asset-workbench-confirmation-v1"
+CAPABILITY_REGISTRY_VERSION = "global-case-state-v5-price-evidence-confirmation-v1"
 
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
@@ -105,7 +105,8 @@ STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("OFFICIAL_INTAKE", available=True, provider_key="official_intake_commit_v1"),
     StageCapability("ASSET_REVIEW", available=True, provider_key="asset_review_line_decision_v1", version="asset_review_line_decision_v1"),
     StageCapability("ASSET_WORKBENCH", available=True, provider_key="asset_workbench_confirmation_v1", version="asset_workbench_confirmation_v1"),
-    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[6:]),
+    StageCapability("PRICE_EVIDENCE", available=True, provider_key="price_evidence_confirmation_v1", version="price_evidence_confirmation_v1"),
+    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[7:]),
 )
 
 
@@ -446,6 +447,9 @@ def determine_current_stage(
     if leading_complete == 4 and len(stage_results) > 4 and stage_results[4].provider_key == "asset_review_line_decision_v1":
         if (stage_results[4].result == "COMPLETE" and len(stage_results) > 5
                 and stage_results[5].provider_key == "asset_workbench_confirmation_v1"):
+            if (stage_results[5].result == "COMPLETE" and len(stage_results) > 6
+                    and stage_results[6].provider_key == "price_evidence_confirmation_v1"):
+                return "PRICE_EVIDENCE"
             return "ASSET_WORKBENCH"
         return "ASSET_REVIEW"
     return "OFFICIAL_INTAKE"
@@ -583,7 +587,7 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
             provider_key=None,
             fact_token=None,
         )
-        for stage in CANONICAL_CASE_STAGES[6:]
+        for stage in CANONICAL_CASE_STAGES[7:]
     )
 
     from app.modules.project_master_data.application.asset_review_provider import evaluate_asset_review_provider
@@ -600,11 +604,18 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
         diagnostics=asset.blockers + asset.stale))
     stage_projections.insert(5, StageProjection("ASSET_WORKBENCH", workbench.result, "asset_workbench_confirmation_v1",
         diagnostics=workbench.blockers + workbench.stale))
+    from app.modules.project_master_data.application.price_evidence_provider import evaluate_price_evidence_provider
+    evidence = evaluate_price_evidence_provider(authority,
+        effective_permissions=derive_effective_permissions(persisted_actor, db), has_active_session=has_session)
+    stage_projections.insert(6, StageProjection("PRICE_EVIDENCE", evidence.result, evidence.provider_key,
+        diagnostics=evidence.blockers + evidence.stale))
     case_version, sorted_facts = authority.case_version, authority.facts
     current_stage = determine_current_stage(stage_projections)
     next_action = determine_internal_next_action(stage_projections, blockers=blockers)
     if all(stage.result == "COMPLETE" for stage in stage_projections[:4]):
         selected_action = workbench.next_action if asset.result == "COMPLETE" else asset.next_action
+        if workbench.result == "COMPLETE":
+            selected_action = evidence.next_action
         next_action = InternalNextAction(**selected_action) if selected_action else None
 
     blocker_dicts = [
@@ -637,7 +648,7 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
         stages=stage_projections,
         blockers=blocker_dicts,
         warnings=warning_dicts,
-        stale=asset.stale + workbench.stale,
+        stale=asset.stale + workbench.stale + evidence.stale,
         facts=sorted_facts,
         capabilities=STATIC_STAGE_CAPABILITIES,
         preliminary={
