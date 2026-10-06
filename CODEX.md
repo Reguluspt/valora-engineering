@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-06 (A7 runtime certified; A8 product implementation candidate, pending Gate Owner certification)
+**Last reconciled:** 2026-10-06 (A8 certified/closed; A9 PRICE_EVIDENCE authority D1–D12 accepted, runtime unauthorized)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -61,8 +61,11 @@ PR #121 is CERTIFIED/CLOSED; Product Owner D1–D8 are ACCEPTED. A7 / Issue #122
 `d7efb4bf6a880b5d397807ed32acd99f929828a3`, exact-main CI #597 / run `37318932525` SUCCESS.
 Its ASSET_WORKBENCH backend/domain/provider uses `asset_workbench_confirmation_v1` and shared
 `global-case-state-v4-asset-workbench-confirmation-v1`, with fact-derived coverage/cap through
-ASSET_WORKBENCH. A8 / Issue #126 supplies the bounded Workbench product UX/E2E implementation candidate,
-pending required review/CI, Gate Owner integration and certification. PRICE_EVIDENCE+ remains NOT_AVAILABLE / UNAUTHORIZED;
+ASSET_WORKBENCH. A8 / Issue #126 is CERTIFIED/CLOSED at `58f9613a260e8e66889569e3b8954763d9b56086`,
+exact-main CI #604 / run `37414654381` SUCCESS, certification comment `6010285363`. The certified product
+boundary is ASSET_WORKBENCH. A9 / Issue #129 PRICE_EVIDENCE authority D1–D12 is ACCEPTED by the Product Owner
+on 2026-10-06 (comment `6011401776`); see `docs/plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md`.
+PRICE_EVIDENCE runtime remains UNAUTHORIZED / NOT IMPLEMENTED; SUPPLIER_QUOTES+ remains UNAUTHORIZED;
 Workbench COMPLETE opens NO_AUTHORIZED_DOWNSTREAM_ACTION.
 Full OS-G2 remains PARTIAL; membership mutation, further RBAC and later-stage work remain unauthorized.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
@@ -157,8 +160,9 @@ PR #86 squash merged at `9233429d43c99f7d22a3e87ba04c85ca7e3293f9`, exact-main C
 Workbench, not full OS-G2. A7 subsequently certified backend/provider scope through ASSET_WORKBENCH.
 A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED; A7 / Issue #122 implements the
 certified backend-only ASSET_WORKBENCH runtime and cap via PR #123 / CI #597, retaining NO_AUTHORIZED_DOWNSTREAM_ACTION after
-completion, absent a higher-priority authorized blocker. A8 / Issue #126 product UX/E2E is implemented as an uncertified candidate. Membership
-mutation, further RBAC and PRICE_EVIDENCE+ remain UNAUTHORIZED; full OS-G2 remains PARTIAL.
+completion, absent a higher-priority authorized blocker. A8 / Issue #126 product UX/E2E is CERTIFIED/CLOSED
+by exact-main CI #604 and comment `6010285363`. A9 / Issue #129 authority D1–D12 is ACCEPTED (comment `6011401776`); runtime requires a later separately authorized task. Membership
+mutation, further RBAC and PRICE_EVIDENCE+ runtime remain UNAUTHORIZED; full OS-G2 remains PARTIAL.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
