@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-10-06 (A7 runtime certified; A8 product implementation candidate pending certification)
+**Last reconciled:** 2026-10-06 (A8 certified/closed; A9 PRICE_EVIDENCE proposal under review, runtime unauthorized)
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (dated evidence, 2026-09-27):** PR #32 closed OS-G0 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS); G1.0 closed by merged PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. ADR 0046 is accepted G1.1 design authority; G1.1 runtime and OS-G2 remain not started. Verify live main before implementation.
