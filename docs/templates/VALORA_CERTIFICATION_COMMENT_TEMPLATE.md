@@ -51,6 +51,12 @@ Task-specific acceptance evidence:
 - <tests/checks>
 - <limitations/skips, if any>
 
+Local Saturation Gate / Early Push Exception evidence:
+<before-first-push proof, or all four exception fields plus completed mandatory evidence>
+
+First Push Maturity / delivery metrics:
+<YES/NO/UNKNOWN and per-task record under PM playbook §19, retaining failed attempts>
+
 ### Integration
 
 Gate Review:
@@ -94,7 +100,7 @@ Next authorized action:
 1. Do not post `CERTIFIED / CLOSED` before exact-main CI is completed SUCCESS on the captured merge SHA.
 2. A merged PR with pending/failed exact-main CI is `MERGED / UNCERTIFIED`.
 3. Candidate CI cannot replace post-merge exact-main certification.
-4. A same-SHA rerun may be cited when current policy/evidence supports a transient failure classification; record the successful attempt accurately.
+4. Use the [operating protocol CI failure taxonomy](../plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md#ci-failure-taxonomy). A rerun may be cited only when classification/current policy/evidence justify it; record failed and successful attempts accurately. No blind rerun; UNKNOWN remains blocked pending diagnosis.
 5. If code changes after a failed merge-state remediation, use the new SHA's applicable evidence; never reuse stale exact-head certification.
 6. State both certified scope and explicitly unauthorized downstream scope so closure cannot be misread as a product-gate expansion.
 7. After certification, rebaseline live repository before opening or resuming another slice.
