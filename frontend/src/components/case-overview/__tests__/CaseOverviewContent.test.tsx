@@ -49,6 +49,15 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it("routes the exact supplier quotation preparation action to the same Workbench", () => {
+    const action = { kind: "PENDING" as const, stage: "SUPPLIER_QUOTES" as const, semantic_route_key: "supplier_quotes_prepare_required",
+      validation_issue_id: null, context: { kind: "supplier_quotes_preparation", project_id: "p", case_version: "case", reason_code: "coverage_required" } };
+    expect(mappedNextActionPath(action, "p")).toBe("/workbench/projects/p");
+    expect(mappedNextActionPath({ ...action, kind: "UNAVAILABLE" }, "p")).toBeNull();
+    expect(mappedNextActionPath({ ...action, context: { ...action.context, kind: "permission" } }, "p")).toBeNull();
+    expect(mappedNextActionPath({ ...action, context: { ...action.context, project_id: "other" } }, "p")).toBeNull();
+    expect(mappedNextActionPath({ ...action, kind: "NO_AUTHORIZED_DOWNSTREAM_ACTION", stage: null, semantic_route_key: null }, "p")).toBeNull();
+  });
   it("routes only the exact A10 PRICE_EVIDENCE preparation contract and leaves downstream hold unmapped", () => {
     const action = { kind: "PENDING" as const, stage: "PRICE_EVIDENCE" as const, semantic_route_key: "price_evidence_prepare_required",
       validation_issue_id: null, context: { kind: "price_evidence_preparation", project_id: "p", case_version: "case", reason_code: "coverage_required" } };

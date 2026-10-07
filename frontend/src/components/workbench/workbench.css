@@ -302,6 +302,14 @@
   box-shadow: inset var(--valora-focus-ring);
 }
 
+.workbench-stage-regions--expanded {
+  max-height: var(--valora-workspace-max-height);
+}
+
+.workbench-container--workspace .workbench-body {
+  min-height: var(--valora-workspace-grid-min-height);
+}
+
 .workbench-grid-pane {
   display: flex;
   min-width: 0;

@@ -14,6 +14,8 @@ import { useAssetWorkbench } from "../workbench/asset-workbench/useAssetWorkbenc
 import { AssetWorkbenchRegion } from "../workbench/asset-workbench/AssetWorkbenchRegion";
 import { usePriceEvidence } from "../workbench/price-evidence/usePriceEvidence";
 import { PriceEvidenceRegion } from "../workbench/price-evidence/PriceEvidenceRegion";
+import { useSupplierQuotes } from "../workbench/supplier-quotes/useSupplierQuotes";
+import { SupplierQuotesRegion } from "../workbench/supplier-quotes/SupplierQuotesRegion";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -118,6 +120,8 @@ function WorkbenchLayoutInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [focusPrice, setFocusPrice] = useState(false);
   const lastEvidenceTarget = useRef<string | null>(null);
+  const [quotesOpen, setQuotesOpen] = useState(false);
+  const quoteTrigger = useRef<HTMLButtonElement>(null), lastQuoteFocus = useRef<string | null>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
   const {
@@ -155,6 +159,20 @@ function WorkbenchLayoutInner({
     sessionBlocked: Boolean(loading || error || rbacError || conflictError || assetReview.busy || assetWorkbench.busy),
     revision: assetWorkbench.projection?.case_version, onRefresh: () => { void assetReview.refreshProjection(); void assetWorkbench.refresh(); } });
   const evidenceAction = priceEvidence.projection?.next_action;
+  const supplierQuotes = useSupplierQuotes({ projectId, sessionId: session?.id, actorScope,
+    sessionBlocked: Boolean(loading || error || rbacError || conflictError || assetReview.busy || assetWorkbench.busy || priceEvidence.busy),
+    revision: priceEvidence.projection?.case_version, onRefresh: () => { void assetReview.refreshProjection(); void assetWorkbench.refresh(); void priceEvidence.refresh(); } });
+  const quoteAction = supplierQuotes.projection?.next_action;
+  const quoteFocus = quoteAction?.kind === "PENDING" && quoteAction.stage === "SUPPLIER_QUOTES" &&
+    quoteAction.semantic_route_key === "supplier_quotes_prepare_required" && quoteAction.context?.kind === "supplier_quotes_preparation" &&
+    quoteAction.context.project_id === projectId && quoteAction.context.case_version === supplierQuotes.projection?.case_version ? projectId : null;
+  const quoteTarget = quoteFocus ? supplierQuotes.snapshot?.coverage.find(c => c.deficient)?.line_id : null;
+  React.useEffect(() => { if (quoteFocus && lastQuoteFocus.current !== quoteFocus) { lastQuoteFocus.current = quoteFocus; setQuotesOpen(true); } }, [quoteFocus]);
+  React.useEffect(() => {
+    if (!quoteTarget || gridLoading || gridFriendlyError || loadingMore) return;
+    if (rows.some(row => row.project_asset_line_id === quoteTarget)) { setActiveRowId(quoteTarget); setReviewTargetId(quoteTarget); }
+    else if (hasMore) void loadMore();
+  }, [quoteTarget, rows, gridLoading, gridFriendlyError, loadingMore, hasMore, loadMore]);
   const evidenceTarget = evidenceAction?.kind === "PENDING" && evidenceAction.stage === "PRICE_EVIDENCE" &&
     evidenceAction.semantic_route_key === "price_evidence_prepare_required" && evidenceAction.context?.kind === "price_evidence_preparation" &&
     evidenceAction.context.project_id === projectId && evidenceAction.context.case_version === priceEvidence.projection?.case_version
@@ -259,7 +277,7 @@ function WorkbenchLayoutInner({
   const draftsCount = Object.keys(drafts).length;
 
   return (
-    <div className="workbench-container">
+    <div className={`workbench-container${quotesOpen ? " workbench-container--workspace" : ""}`}>
       <WorkbenchHeader
         projectTitle={displayName}
         onNavigateOverview={onNavigateOverview}
@@ -329,8 +347,8 @@ function WorkbenchLayoutInner({
         </span>
       </div>
 
-      <div className="workbench-stage-regions" tabIndex={0} aria-label="Trạng thái và chuẩn bị tài sản">
-        {priceEvidence.projection?.current_stage === "PRICE_EVIDENCE" ? <details>
+      <div className={`workbench-stage-regions${quotesOpen ? " workbench-stage-regions--expanded" : ""}`} tabIndex={0} aria-label="Trạng thái và chuẩn bị tài sản">
+        {quotesOpen || ["PRICE_EVIDENCE", "SUPPLIER_QUOTES"].includes(supplierQuotes.projection?.current_stage || priceEvidence.projection?.current_stage || "") ? <details>
           <summary>Rà soát và chuẩn bị danh mục tài sản</summary>
           <AssetReviewRegion review={assetReview} />
           <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
@@ -340,7 +358,12 @@ function WorkbenchLayoutInner({
           <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
             onCommitted={() => { void assetReview.refresh(); void assetWorkbench.refresh(); reloadDrafts(); }} />
         </>}
-        <PriceEvidenceRegion evidence={priceEvidence} />
+        {quotesOpen || supplierQuotes.projection?.current_stage === "SUPPLIER_QUOTES" ? <details><summary>Nguồn giá & Chứng cứ</summary><PriceEvidenceRegion evidence={priceEvidence} /></details>
+          : <PriceEvidenceRegion evidence={priceEvidence} />}
+        <button ref={quoteTrigger} type="button" className="valora-button valora-button--secondary" aria-expanded={quotesOpen}
+          onClick={() => setQuotesOpen(true)}>Mở báo giá NCC toàn hồ sơ</button>
+        <SupplierQuotesRegion quotes={supplierQuotes} open={quotesOpen} focusRequest={quoteFocus}
+          onClose={() => { setQuotesOpen(false); quoteTrigger.current?.focus(); }} />
       </div>
 
       <div className="workbench-body">

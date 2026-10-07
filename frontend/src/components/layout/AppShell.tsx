@@ -19,9 +19,10 @@ interface AppShellProps {
   children: React.ReactNode;
   account: AccountContext;
   onLogout: () => void;
+  supplierSelectionAvailable?: boolean;
 }
 
-export function AppShell({ currentPath, onNavigate, account, onLogout, children }: AppShellProps) {
+export function AppShell({ currentPath, onNavigate, account, onLogout, children, supplierSelectionAvailable = false }: AppShellProps) {
   const projectRoute = splitProjectRoute(currentPath);
 
   const workbenchPath = projectRoute
@@ -102,7 +103,7 @@ export function AppShell({ currentPath, onNavigate, account, onLogout, children 
               projectRoute.view === "documents",
               "▣",
             )}
-            {projectRoute && navItem(
+            {projectRoute && supplierSelectionAvailable && navItem(
               projectNccSelectionPath(projectRoute.projectRef),
               t("nav.nccSelection"),
               projectRoute.view === "ncc-selection",

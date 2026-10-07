@@ -88,6 +88,10 @@
   --valora-table-row-height: 36px;
   --valora-shell-sidebar-width: 216px;
   --valora-shell-topbar-height: 44px;
+  --valora-form-column-min-width: 16rem;
+  --valora-dialog-wide-max-width: 70rem;
+  --valora-workspace-max-height: 60vh;
+  --valora-workspace-grid-min-height: 160px;
 
   /* Shape and elevation */
   --valora-radius-small: 2px;

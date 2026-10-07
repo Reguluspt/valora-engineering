@@ -325,11 +325,21 @@ class PriceEvidenceDiagnostic(AssetWorkbenchDiagnostic):
     ]
 
 
+class SupplierQuotesDiagnostic(BaseSchema):
+    stage: Literal["SUPPLIER_QUOTES"]
+    reason_code: Literal[
+        "quote_integrity_conflict", "project_not_draft", "identity_concern", "authenticity_concern",
+        "integrity_concern", "supplier_identity_ambiguous", "currency_not_current", "source_not_current",
+        "supplier_not_current", "upstream_not_current", "price_evidence_not_current", "not_effective",
+        "quote_expired", "line_not_current",
+    ]
+
+
 class CaseStateStageResponse(BaseSchema):
     stage: CaseStage
     result: Literal["COMPLETE", "INCOMPLETE", "BLOCKED", "STALE", "NOT_AVAILABLE"]
     provider_key: Optional[str]
-    diagnostics: Optional[list[Annotated[AssetReviewDiagnostic | AssetWorkbenchDiagnostic | PriceEvidenceDiagnostic,
+    diagnostics: Optional[list[Annotated[AssetReviewDiagnostic | AssetWorkbenchDiagnostic | PriceEvidenceDiagnostic | SupplierQuotesDiagnostic,
                                         Field(discriminator="stage")]]] = None
 
     @model_serializer(mode="wrap")

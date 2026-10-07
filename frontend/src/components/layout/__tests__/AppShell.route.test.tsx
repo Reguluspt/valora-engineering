@@ -21,6 +21,13 @@ describe("AppShell routing", () => {
   const findLink = (root: any, label: string) =>
     root.root.findAllByType("a").find((link: any) => link.props.children === label);
 
+  it("holds supplier selection navigation unless the server authorizes it", () => {
+    let root: any;
+    act(() => { root = create(React.createElement(AppShell, { account, currentPath: "/workbench/projects/example",
+      onLogout: vi.fn(), onNavigate: vi.fn(), children: null })); });
+    expect(findLink(root, "nav.nccSelection")).toBeUndefined();
+  });
+
   it("renders named semantic navigation with hash links and aria-current", () => {
     let root: any;
     act(() => {
@@ -129,7 +136,7 @@ describe("AppShell routing", () => {
     let root: any;
     act(() => {
       root = create(
-        React.createElement(AppShell, { account, currentPath: "/workbench/projects/hd-98-test", onLogout: vi.fn(), onNavigate: nav, children: null })
+        React.createElement(AppShell, { supplierSelectionAvailable: true, account, currentPath: "/workbench/projects/hd-98-test", onLogout: vi.fn(), onNavigate: nav, children: null })
       );
     });
     const link = findLink(root!, "nav.nccSelection");

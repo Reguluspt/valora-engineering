@@ -1,0 +1,847 @@
+{
+  "task": "VALORA-TASK-OS-G2-A14-SUPPLIER-QUOTES-PRODUCT-CLOSURE",
+  "baseline": "6e9c60f9bad6117f90fcdd85d636903f91097df5",
+  "baseline_ci": {
+    "number": 622,
+    "run_id": 37605372094,
+    "result": "success"
+  },
+  "capture_head": "3a06debe7e3405a414e2f1f0f15e38e0754a3d89",
+  "capture_binding": "Final candidate captures precede freeze; these Git source blob hashes are verified against the separately recorded frozen HEAD. Capture bytes SHA256 are immutable. Frozen SHA/native reviews/CI are in the external handoff; no self-referential commit SHA.",
+  "baseline_comparison": "Exact A13 Workbench, existing Fluent 2 shared primitives/tokens and VALORA_FRONTEND_ARCHITECTURE_RULE; A13 has no quotation product UI.",
+  "source_git_blobs": {
+    "backend/app/api/supplier_quotes.py": "8b2c412c7ba641c800fa5b4a30376a3370c01c2b",
+    "backend/app/modules/project_master_data/schemas.py": "82ecc90a7c23d8473b452559828588c8739207b9",
+    "backend/tests/test_g2_supplier_quotes_product_projection.py": "33271ab3fab49c929f59116bdc5421a1c74e5135",
+    "frontend/src/App.tsx": "36d0feb0245d9ed3b825e52444b27d768ede42de",
+    "frontend/src/api/__tests__/supplierQuotes.test.ts": "1fa0f1eda43fc5e9b4aee47726d130c0875d9fbf",
+    "frontend/src/api/supplierQuotes.ts": "2a65975d23836f584d84d171fa2810f2ed44fbe8",
+    "frontend/src/components/case-overview/__tests__/CaseOverviewContent.test.tsx": "a7d0db1833079ef8600e0b7f344367abdddd8891",
+    "frontend/src/components/case-overview/caseOverviewPresentation.ts": "1f92149abf5043dfe59f271bbd3c3b7eee5a584c",
+    "frontend/src/components/case-overview/useStageNavigation.ts": "045df82d1ee65f1b9e00c0d59b3aadc2856c1bad",
+    "frontend/src/components/layout/AppShell.tsx": "7c0f277e35e8aee32648fefd7bd9f3346b98d60d",
+    "frontend/src/components/layout/WorkbenchLayout.tsx": "2d74e3c1ab5f666faef28fcb46fcb1456b51c2bc",
+    "frontend/src/components/layout/__tests__/AppShell.route.test.tsx": "4aae380e47d868498bb2c1e907349be2db8fc25b",
+    "frontend/src/components/ui/FormField.tsx": "d8bad06c83003395def5e0c9e0ec480ae6eb4a53",
+    "frontend/src/components/workbench/supplier-quotes/QuoteEditor.tsx": "28d8d5018598a1306cbd35210b39679812e8e32a",
+    "frontend/src/components/workbench/supplier-quotes/SupplierQuotesRegion.tsx": "0596c277a8054e117ff351d0db8e9ddc87ffae8a",
+    "frontend/src/components/workbench/supplier-quotes/__tests__/SupplierQuotesRegion.test.tsx": "a95ad8c57cc66a984db132938537e3a28327b1f1",
+    "frontend/src/components/workbench/supplier-quotes/__tests__/fixtures.ts": "b284267ce78891a81b210b05411a655a8f05fe34",
+    "frontend/src/components/workbench/supplier-quotes/__tests__/useSupplierQuotes.test.tsx": "df3fbe89694b747736ef2dac4cc4b27530e63540",
+    "frontend/src/components/workbench/supplier-quotes/useSupplierQuotes.ts": "6750ade2d032dff7527db0548d355f319eface0c",
+    "frontend/src/components/workbench/workbench.css": "7e8d11fc04e8c6b41b1c8218bd0c833beb50976f",
+    "frontend/src/styles/fluent2-primitives.css": "1acd18a5e637f6daa7d9ead2a5af318f24462006",
+    "frontend/src/styles/fluent2-tokens.css": "ac8b76bb4c66acef9bf3c159fe2e158dad492c95",
+    "tests/e2e/bootstrap_g2_a14.py": "acac760d0aa92af060723d172b381824b7bebb48",
+    "tests/e2e/g2_a14_fixture_fault.py": "70e804cdc85a181cc50811c4b05eabb1f83482ca",
+    "tests/e2e/g2_a14_transport_proxy.py": "112470a36ee4bfbd47adae51f75f6d3e901cedfe",
+    "tests/e2e/run_g2_a14_currentness.py": "99ebe6897c1dfa271a9af190feede03b34ea70b7",
+    "tests/e2e/run_g2_a14_live.py": "33c29a71fc8bdab8b755f52b1fd2023e16fd7cae",
+    "tests/e2e/run_g2_a14_negatives.py": "be776c95772da9032b84f9f1be5c73e50de96102"
+  },
+  "captures": [
+    {
+      "path": "01-first-use-incomplete.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "INCOMPLETE",
+      "case_version": "cb79c23a0e1c3f481c5c334b27025a1991a37ae288e606289af2fcc472119ba8",
+      "sha256": "0dd0641aef012e623e22c1e71219f64d0d3b4320d61b25b7eb28b0af64f5291e"
+    },
+    {
+      "path": "02-draft-mapped-warnings.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "INCOMPLETE",
+      "case_version": "b9dc71278c734aa8b95067b2f5b755eef2cb3a9f2a0301dad8851c8b4964a3b3",
+      "sha256": "b943b4ee6ef8ed6af93fddad7d8080a0a87ab18bbe27e9640386163e95c67e42"
+    },
+    {
+      "path": "03-conflict-recovery.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "INCOMPLETE",
+      "case_version": "c451de307da6d38e71bb423a6573b9ecafda89b7fcdac8e89cd1b1560297d068",
+      "sha256": "73330d1cf4f2164f48d664f4c86ac3c747e0dd2dcd094cdf736c80f7a5646c52"
+    },
+    {
+      "path": "04-confirmed-complete-downstream-hold.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "case_version": "a5a694f5fba1fc8a4f007e0d53004c91131225ddf7dcf11156e94556ee30c26e",
+      "sha256": "14a4dc607432c739fce385495d3310dc0a0b66588e7ebb755d70683ce08698c8"
+    },
+    {
+      "path": "05-unknown-committed-outcome.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "case_version": "ffc5afa3e4c046e9a5c83f772cf98ffd0427b0a9bf4d0d0f3edcf0bb2273f828",
+      "sha256": "70c2fc1348248b55b5bb6a1d8f3eb45871ca6704de1f6b82b62fd20a85a3a06e"
+    },
+    {
+      "path": "06-withdrawn-no-coverage.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "INCOMPLETE",
+      "case_version": "c23af7a44622dfa23c027d4cb260136ac655a9a5f60eda8469676d99baa3da36",
+      "sha256": "cbc2482f632e33e0900a6db6196dc748c72aaaae672e1903fc71995ea2993ef4"
+    },
+    {
+      "path": "07-nondraft-complete-read-only.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "case_version": "194dd20853f11250d6b7eb74420beb3fc81b6b7350d3a91733e31f7993c13dab",
+      "sha256": "66f75093d9a04b1595934650ae28406b8bed031fa9895eb22b8cc5ecab9f6868"
+    },
+    {
+      "path": "08-viewer-read-only.png",
+      "fixture": {
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
+        "source_document_ids": [
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
+        ],
+        "source_revision_ids": [
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
+        ],
+        "lines": [
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "actor": "migrated viewer",
+      "sha256": "3caeebaa632e30a5fcdaf262b0ae9c6309bb2231a38b8f809d2c8f70e17abf76"
+    },
+    {
+      "path": "09-confirmed-exact-decimal-detail.png",
+      "fixture": {
+        "project_id": "6b9fc662-ecd1-400f-8a20-a5c655f3c2d9",
+        "organization_slug": "a14-synthetic-comparable-zero",
+        "supplier_id": "6679aec8-b8e4-4292-846c-2169de46aec3",
+        "source_document_ids": [
+          "ce852fc5-c0e9-41a4-b410-45adc497daf1",
+          "2cf7ab2a-c521-4ee7-909f-b119c653def0"
+        ],
+        "source_revision_ids": [
+          "be0ba0d3-5496-4d9b-9bf1-eaefaa2354b7",
+          "e6f9e811-14fc-44a1-bcdb-4f605c62bcd2"
+        ],
+        "lines": [
+          "6e09c609-eb25-4f32-bd23-0e09d86416a7",
+          "964d1bd0-9cd8-4dfd-ae8b-b36d67707170",
+          "98cd3b6b-dd2a-4715-8f49-30d4158dd044"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "dialog_width": 1012.5717468261719,
+      "decimal_cell_bounds": [
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        },
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        },
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        }
+      ],
+      "proof": "PASS: wide Fluent dialog token wins cascade; every long Decimal text rectangle stays within its own mapped-item cell",
+      "sha256": "6ca2dfc3765c1470197038ca4e14bc43a49d3e8458788f229738da9478b0fab6"
+    },
+    {
+      "path": "currentness-missing.png",
+      "fixture": {
+        "project_id": "db7a74a3-6ea9-4e56-8c3a-0b0f6993b06e",
+        "organization_slug": "a14-synthetic-dto-missing",
+        "supplier_id": "7c843eaf-35db-4c15-99c8-894c608b928e",
+        "source_document_ids": [
+          "9a24cb8e-ef73-47c7-8aea-1035738d3d9a",
+          "f51e1259-21ec-4f21-bbb4-f0502a875377"
+        ],
+        "source_revision_ids": [
+          "91a6e5d7-91d0-42bd-916a-12a9ed904969",
+          "4989fcb5-1624-48df-b296-f3ea7fb4990d"
+        ],
+        "lines": [
+          "3813ee8b-c30a-4e14-961a-74684ef6f5fb",
+          "57d36ce0-aa50-42fb-9b9b-af2fc31d3ec9",
+          "ad2a1b21-0f66-42e1-823e-9ebc9a608e00"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "STALE",
+      "case_version": "10c4baadfbb748b909587219d63899be6b57fb246d7552786f1c11879874897d",
+      "quote_commands": 0,
+      "sha256": "298aadbd53bbde3f1332615ebb16894e6a2e54d7baf7af4a2aeb5ad5695c7048"
+    },
+    {
+      "path": "currentness-corrupt.png",
+      "fixture": {
+        "project_id": "b0c6a180-e7f5-4fb9-b8e6-ebf5b16d366a",
+        "organization_slug": "a14-synthetic-dto-corrupt",
+        "supplier_id": "f5e2d731-7753-4ab3-8388-73ecd1cf58d8",
+        "source_document_ids": [
+          "178a879b-95e2-4422-94bb-a9c0fcc159cd",
+          "b066f505-737d-4282-be63-7f2203f9c990"
+        ],
+        "source_revision_ids": [
+          "4b752ce7-97c8-4a70-bb9c-40e16f163c97",
+          "249dfe37-5f52-41f9-9e1d-59f229e72096"
+        ],
+        "lines": [
+          "32413d0f-001f-49c1-bb1f-29fab34ddb63",
+          "7d04aa2d-0f9f-461f-b63a-5ceb5cd164d9",
+          "c6e29852-cdda-42fb-8ef5-2eb4b2b50bfc"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "STALE",
+      "case_version": "6a415d16b5c454a32e1409093b55f9f90614555f8c9f39e8e51bbe665333ca42",
+      "quote_commands": 0,
+      "sha256": "9021bf1ccda4088a4546f1d72d41e10f88168733d5687fb607812e1d13a9c525"
+    },
+    {
+      "path": "currentness-inactive.png",
+      "fixture": {
+        "project_id": "dbab34bd-4299-4d93-be95-0df9106ad526",
+        "organization_slug": "a14-synthetic-dto-inactive",
+        "supplier_id": "1cc012f0-d4a3-4765-9c72-d8079bf59472",
+        "source_document_ids": [
+          "fb073693-8601-40fb-93db-a4a76d1cae6e",
+          "13ec0b26-4c7d-4c0d-940f-59776daf3772"
+        ],
+        "source_revision_ids": [
+          "d6acc587-8bcf-4203-aa44-ab12f20a62b7",
+          "ce1f676d-ff69-4939-b21d-f03cf029923b"
+        ],
+        "lines": [
+          "67dd4fa6-8390-4ac6-a932-5aad973ebd9a",
+          "a67f933a-487c-49d7-8650-6277da9e2856",
+          "edc8c82b-762d-4b77-ba94-3e0e1262c821"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "STALE",
+      "case_version": "5f8f5be6a5ad9fa874cfbf9b07f8d7a4a93c4cd21022fa80c7210c7363df82f0",
+      "quote_commands": 0,
+      "sha256": "07908a5b961ddc8fe1c0ee6b1ade67a2f84d716671ba0940caaab3923f67265e"
+    },
+    {
+      "path": "currentness-merged.png",
+      "fixture": {
+        "project_id": "4ef9b963-5eb1-4032-b3d4-02ed3db38825",
+        "organization_slug": "a14-synthetic-dto-merged",
+        "supplier_id": "8d7c4571-651f-4982-9670-14ac32f11d01",
+        "source_document_ids": [
+          "c214a061-1952-4a8c-88bd-31030a35fa29",
+          "54001661-3eb7-4ca8-ae7f-fda1729f3b49"
+        ],
+        "source_revision_ids": [
+          "cd47e8fa-8419-49ac-8875-1475872bdf53",
+          "3df72de0-baef-48ed-816d-55b723aa9694"
+        ],
+        "lines": [
+          "48901165-7ddd-4553-b2fb-7ea3d7821d7b",
+          "64a778b4-d2ad-4776-91a6-247d99144810",
+          "db190eda-a155-42d0-84da-95678979eea5"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "STALE",
+      "case_version": "0db83683a8826be066b7bb736cf3fafe59ad033ccbfab4c43a8429dfe850e2f1",
+      "quote_commands": 0,
+      "sha256": "a49ffc5e5f104f30e6e84553d856103814378ea0ff7a6ff7f6a4198fd4811bc3"
+    },
+    {
+      "path": "currentness-ambiguous.png",
+      "fixture": {
+        "project_id": "8eba8db8-777d-41b6-93cf-93bda25b582d",
+        "organization_slug": "a14-synthetic-dto-ambiguous",
+        "supplier_id": "84885c1f-6955-4193-b8a4-a9b2f3c1378c",
+        "source_document_ids": [
+          "5c217d35-d408-452e-b767-7a1155c6ec0e",
+          "60b80c3d-487e-47d9-a4e0-6bd4d1f82a66"
+        ],
+        "source_revision_ids": [
+          "fd31753b-f3c2-454b-aebd-f5fc1ae7a674",
+          "51456514-d5c9-47bb-8703-88d77c966567"
+        ],
+        "lines": [
+          "2be044fd-3bc3-43b4-afa8-1fadc16f4bb4",
+          "63cdfbdf-369d-44b4-9aee-5ee29c498cb7",
+          "bedff853-dceb-4bf2-b615-dc9eda90529b"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "BLOCKED",
+      "case_version": "b91ffd8a61854135cb5cb6a60483c77d4a10f363d869e29ec469ee2f0abd3018",
+      "quote_commands": 0,
+      "sha256": "1c5c9f9c8f6e59fa0b3ee1273379060d068e160763241a39560a0d173c88f48f"
+    },
+    {
+      "path": "negatives-zero-incomparable.png",
+      "fixture": {
+        "project_id": "be1b30a2-07a7-443c-b058-cbce2db35319",
+        "organization_slug": "a14-synthetic-freeze-negatives",
+        "supplier_id": "16df3b3c-54eb-417c-80de-9a87419e8d90",
+        "source_document_ids": [
+          "f0695a9c-9e39-41e7-b05f-9031537d22c8",
+          "2e38d01e-e250-4366-9082-639d37fff70a"
+        ],
+        "source_revision_ids": [
+          "7f74a2f7-718f-4be8-a779-9f8526b4f89a",
+          "2b684f6d-303f-46ab-a0bb-f9040f8d98c4"
+        ],
+        "lines": [
+          "1b7eac3e-f260-4f2f-a7c7-8026f1fea7ec",
+          "33adf294-f142-477e-91fc-35605ba4a85a",
+          "e5261c87-a989-481b-b3c8-0345c1b32194"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "proof": "PASS: server sends no synthetic warning; deterministic comparable-zero threshold test also passes",
+      "sha256": "30a64ccefaa71143dd8cc0191764d0d5335d30f342d3ebf76fb788b9d922c92e"
+    },
+    {
+      "path": "negatives-closed-session.png",
+      "fixture": {
+        "project_id": "be1b30a2-07a7-443c-b058-cbce2db35319",
+        "organization_slug": "a14-synthetic-freeze-negatives",
+        "supplier_id": "16df3b3c-54eb-417c-80de-9a87419e8d90",
+        "source_document_ids": [
+          "f0695a9c-9e39-41e7-b05f-9031537d22c8",
+          "2e38d01e-e250-4366-9082-639d37fff70a"
+        ],
+        "source_revision_ids": [
+          "7f74a2f7-718f-4be8-a779-9f8526b4f89a",
+          "2b684f6d-303f-46ab-a0bb-f9040f8d98c4"
+        ],
+        "lines": [
+          "1b7eac3e-f260-4f2f-a7c7-8026f1fea7ec",
+          "33adf294-f142-477e-91fc-35605ba4a85a",
+          "e5261c87-a989-481b-b3c8-0345c1b32194"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "proof": "PASS: actual session closed after form opened; original revision rejected safe 404, no fact/receipt mutation; refreshed controls disabled",
+      "sha256": "aa5ebe265c8e956f7f2f55c7f7a5d24d2f2f28a267367b31a84a1b4a7a6f0c41"
+    }
+  ],
+  "browser_matrix": [
+    {
+      "scenario": 1,
+      "requirement": "PRICE_EVIDENCE COMPLETE → SUPPLIER_QUOTES Next Action opens existing Workbench",
+      "result": "PASS",
+      "evidence": "PASS: PRICE_EVIDENCE COMPLETE; existing Workbench opens/focuses; zero coverage; navigation has no quotation command"
+    },
+    {
+      "scenario": 2,
+      "requirement": "First use INCOMPLETE, zero coverage and downstream hold",
+      "result": "PASS",
+      "evidence": "PASS: PRICE_EVIDENCE COMPLETE; existing Workbench opens/focuses; zero coverage; navigation has no quotation command"
+    },
+    {
+      "scenario": 3,
+      "requirement": "Readable issuer selector; no UUID typing",
+      "result": "PASS",
+      "evidence": "PASS: readable issuer and retained source; no UUID typing, upload/OCR or checklist; registration contributes zero"
+    },
+    {
+      "scenario": 4,
+      "requirement": "Readable retained source selector; no UUID typing/upload/OCR",
+      "result": "PASS",
+      "evidence": "PASS: readable issuer and retained source; no UUID typing, upload/OCR or checklist; registration contributes zero"
+    },
+    {
+      "scenario": 5,
+      "requirement": "Register one Supplier draft",
+      "result": "PASS",
+      "evidence": "PASS: readable issuer and retained source; no UUID typing, upload/OCR or checklist; registration contributes zero"
+    },
+    {
+      "scenario": 6,
+      "requirement": "Explicit exact Decimal item mapping to sealed line",
+      "result": "PASS",
+      "evidence": "PASS: three explicit mappings; exact Decimal string; draft zero coverage; below price and strict >15% warnings do not block; NULL working price has no fabricated warning"
+    },
+    {
+      "scenario": 7,
+      "requirement": "Draft alone contributes zero completion coverage",
+      "result": "PASS",
+      "evidence": "PASS: three explicit mappings; exact Decimal string; draft zero coverage; below price and strict >15% warnings do not block; NULL working price has no fabricated warning"
+    },
+    {
+      "scenario": 8,
+      "requirement": "D6: one explicit activation, one command, no second confirmation/checklist",
+      "result": "PASS",
+      "evidence": "PASS: one keyboard activation, one confirmation command, no second professional step; one issuer explicitly covers all sealed lines; COMPLETE from server"
+    },
+    {
+      "scenario": 9,
+      "requirement": "Confirmed quote has server coverage",
+      "result": "PASS",
+      "evidence": "PASS: one keyboard activation, one confirmation command, no second professional step; one issuer explicitly covers all sealed lines; COMPLETE from server"
+    },
+    {
+      "scenario": 10,
+      "requirement": "One Supplier covers all sealed lines and completes",
+      "result": "PASS",
+      "evidence": "PASS: one keyboard activation, one confirmation command, no second professional step; one issuer explicitly covers all sealed lines; COMPLETE from server"
+    },
+    {
+      "scenario": 11,
+      "requirement": "Additional optional draft preserves valid COMPLETE",
+      "result": "PASS",
+      "evidence": "PASS: optional draft preserves COMPLETE; explicit reason required; no rejection of confirmed authority"
+    },
+    {
+      "scenario": 12,
+      "requirement": "Below-working-price warning is visible and nonblocking",
+      "result": "PASS",
+      "evidence": "PASS: three explicit mappings; exact Decimal string; draft zero coverage; below price and strict >15% warnings do not block; NULL working price has no fabricated warning"
+    },
+    {
+      "scenario": 13,
+      "requirement": "Strict >15% warning is visible and nonblocking",
+      "result": "PASS",
+      "evidence": "PASS: three explicit mappings; exact Decimal string; draft zero coverage; below price and strict >15% warnings do not block; NULL working price has no fabricated warning"
+    },
+    {
+      "scenario": 14,
+      "requirement": "NULL/zero/incomparable has no fabricated warning",
+      "result": "PASS",
+      "evidence": "PASS: server sends no synthetic warning; deterministic comparable-zero threshold test also passes",
+      "scope": "Real browser: NULL working price, zero working price with unassessed basis. Comparable zero and other incomparable bases: accepted exact provider tests plus UI renders server warning codes only."
+    },
+    {
+      "scenario": 15,
+      "requirement": "Correction appends successor under backend authority",
+      "result": "PASS",
+      "evidence": "PASS: append-only successor; coverage consequence observed from backend, never assumed locally"
+    },
+    {
+      "scenario": 16,
+      "requirement": "Replacement appends successor under backend authority",
+      "result": "PASS",
+      "evidence": "PASS: append-only successor; coverage consequence observed from backend, never assumed locally"
+    },
+    {
+      "scenario": 17,
+      "requirement": "Negotiation draft preserves current confirmed coverage",
+      "result": "PASS",
+      "evidence": "PASS: append-only successor; coverage consequence observed from backend, never assumed locally"
+    },
+    {
+      "scenario": 18,
+      "requirement": "Withdrawal removes coverage without fallback",
+      "result": "PASS",
+      "evidence": "PASS: explicit target/reason; field error association; dialog focus trap; keyboard command; no older revision fallback"
+    },
+    {
+      "scenario": 19,
+      "requirement": "Reasoned draft-only rejection",
+      "result": "PASS",
+      "evidence": "PASS: optional draft preserves COMPLETE; explicit reason required; no rejection of confirmed authority"
+    },
+    {
+      "scenario": 20,
+      "requirement": "Missing/corrupt bytes: STALE, no source rebind",
+      "result": "PASS",
+      "evidence": [
+        {
+          "fault": "missing",
+          "result": "STALE",
+          "case_state_coherent": true,
+          "zero_coverage": true,
+          "quote_commands": 0
+        },
+        {
+          "fault": "corrupt",
+          "result": "STALE",
+          "case_state_coherent": true,
+          "zero_coverage": true,
+          "quote_commands": 0
+        }
+      ]
+    },
+    {
+      "scenario": 21,
+      "requirement": "Inactive/merged/ambiguous issuer: server status, no alias fallback",
+      "result": "PASS",
+      "evidence": [
+        {
+          "fault": "inactive",
+          "result": "STALE",
+          "case_state_coherent": true,
+          "zero_coverage": true,
+          "quote_commands": 0
+        },
+        {
+          "fault": "merged",
+          "result": "STALE",
+          "case_state_coherent": true,
+          "zero_coverage": true,
+          "quote_commands": 0
+        },
+        {
+          "fault": "ambiguous",
+          "result": "BLOCKED",
+          "case_state_coherent": true,
+          "zero_coverage": true,
+          "quote_commands": 0
+        }
+      ]
+    },
+    {
+      "scenario": 22,
+      "requirement": "Real PostgreSQL 409: refresh, no blind retry",
+      "result": "PASS",
+      "evidence": "PASS: competing PostgreSQL line command; old confirmation rejected 409; fresh preparation/history/Case State; no automatic confirmation replay"
+    },
+    {
+      "scenario": 23,
+      "requirement": "Actual committed response dropped: original UUID receipt before fresh state",
+      "result": "PASS",
+      "evidence": "PASS: actual committed response lost; original UUID retained; historical receipt queried before fresh authority; no automatic new command"
+    },
+    {
+      "scenario": 24,
+      "requirement": "Viewer has no write controls",
+      "result": "PASS",
+      "evidence": "PASS: real viewer read-only; safe out-of-scope 404; intact COMPLETE readable after archive; official UI writes unavailable"
+    },
+    {
+      "scenario": 25,
+      "requirement": "Closed session fails closed, no quote fact/receipt mutation",
+      "result": "PASS",
+      "evidence": "PASS: actual session closed after form opened; original revision rejected safe 404, no fact/receipt mutation; refreshed controls disabled"
+    },
+    {
+      "scenario": 26,
+      "requirement": "Actual cross-tenant project read safe 404",
+      "result": "PASS",
+      "evidence": "PASS: authenticated owner of another actual synthetic tenant receives safe 404 for the main journey project"
+    },
+    {
+      "scenario": 27,
+      "requirement": "Non-DRAFT intact COMPLETE readable; writes unavailable",
+      "result": "PASS",
+      "evidence": "PASS: real viewer read-only; safe out-of-scope 404; intact COMPLETE readable after archive; official UI writes unavailable"
+    },
+    {
+      "scenario": 28,
+      "requirement": "COMPLETE holds downstream and legacy selection route",
+      "result": "PASS",
+      "evidence": "PASS: direct legacy route remains unavailable; no selection service called"
+    },
+    {
+      "scenario": 29,
+      "requirement": "Every quotation action leaves working prices unchanged",
+      "result": "PASS",
+      "evidence": "PASS: no SUPPLIER_SELECTION CTA; downstream NOT_AVAILABLE; initial working prices unchanged by every quotation action"
+    },
+    {
+      "scenario": 30,
+      "requirement": "No AppraisedPriceDecision or Selection revision created",
+      "result": "PASS",
+      "evidence": "PASS: no SUPPLIER_SELECTION CTA; downstream NOT_AVAILABLE; initial working prices unchanged by every quotation action"
+    },
+    {
+      "scenario": 31,
+      "requirement": "Keyboard/focus: workspace, native labels, Enter confirm, reason dialogs",
+      "result": "PASS",
+      "evidence": "PASS: explicit target/reason; field error association; dialog focus trap; keyboard command; no older revision fallback",
+      "scope": "Real keyboard Enter confirmation/withdrawal and focus containment; labeled registration/item/revision forms and draft rejection. No exhaustive screen-reader certification."
+    }
+  ],
+  "assertions": {
+    "main_browser_observed_commands": 17,
+    "page_errors": [],
+    "before_forbidden_counts": {
+      "appraised_price_decisions": 0,
+      "ncc_selection_revisions": 0
+    },
+    "after_forbidden_counts": {
+      "appraised_price_decisions": 0,
+      "ncc_selection_revisions": 0
+    },
+    "negative_quote_fact_receipt_counts": {
+      "before": {
+        "appraised_price_decisions": 0,
+        "ncc_selection_revisions": 0,
+        "quote_facts": 5,
+        "quote_receipts": 5
+      },
+      "after": {
+        "appraised_price_decisions": 0,
+        "ncc_selection_revisions": 0,
+        "quote_facts": 5,
+        "quote_receipts": 5
+      }
+    },
+    "actual_unauthenticated": "PASS: actual cookies removed; API 401, protected quotation content removed and writes locked, no mutation"
+  },
+  "local_checks": {
+    "frontend_test_files": 59,
+    "frontend_tests": 496,
+    "frontend_lint_build_bundle": "PASS",
+    "backend_windows_initial": "88 passed, 1 Linux/POSIX case skipped",
+    "backend_linux_posix": "1 passed",
+    "backend_projection_final": "4 passed, including two added Case State STALE/BLOCKED HTTP regressions",
+    "backend_distinct_cases_passed": 91,
+    "ruff": "PASS",
+    "security_policy_secret_scan": "PASS",
+    "whitespace": "PASS"
+  },
+  "limits": [
+    "Synthetic local single-browser concurrency; no production load test or performance certification.",
+    "Comparable zero working-price basis is covered deterministically; real browser uses zero with unassessed basis and separate NULL row.",
+    "No exhaustive screen-reader/viewport/production-dataset certification.",
+    "Local Windows POSIX skip is covered separately in Linux, with full exact-head Linux CI required.",
+    "Screenshots precede commit freeze and are bound by exact source blobs plus external frozen-head artifact manifest."
+  ],
+  "reproduction": [
+    "tests/e2e/bootstrap_g2_a14.py",
+    "tests/e2e/run_g2_a14_live.py",
+    "tests/e2e/run_g2_a14_currentness.py",
+    "tests/e2e/run_g2_a14_negatives.py"
+  ],
+  "raw_evidence": "Private local synthetic fixtures, server projections, transport IDs and raw logs; credentials and retained byte contents excluded."
+}

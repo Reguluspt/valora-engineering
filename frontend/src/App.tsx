@@ -6,6 +6,7 @@ import { ErrorState } from "./components/common/ErrorState";
 import { LoadingState } from "./components/common/LoadingState";
 import { CaseOverviewPage } from "./components/case-overview/CaseOverviewPage";
 import { NccSelectionPage } from "./components/ncc-selection/NccSelectionPage";
+import { useStageNavigation } from "./components/case-overview/useStageNavigation";
 import { ProjectListPage } from "./components/projects/ProjectListPage";
 import { PreliminaryRequestCreatePage } from "./components/precase/PreliminaryRequestCreatePage";
 import { PreliminaryRequestsPage } from "./components/precase/PreliminaryRequestsPage";
@@ -73,6 +74,8 @@ export function AuthenticatedApp() {
     window.location.hash = path;
     setCurrentPath(path);
   };
+  const supplierSelectionAvailable = useStageNavigation(splitProjectRoute(currentPath)?.projectRef || null,
+    account ? `${account.organization_id}:${account.id}` : "");
 
   const renderRoute = () => {
     const projectRoute = splitProjectRoute(currentPath);
@@ -103,7 +106,9 @@ export function AuthenticatedApp() {
     }
 
     if (projectRoute?.view === "ncc-selection") {
-      return <NccSelectionPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />;
+      return supplierSelectionAvailable ? <NccSelectionPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} />
+        : <EmptyState title="Chưa có hành động tiếp theo được phép" message="Trạng thái hồ sơ hiện tại chưa cho phép chọn nhà cung cấp."
+          actionLabel="Về tổng quan hồ sơ" onAction={() => handleNavigate(projectOverviewPath(projectRoute.projectRef))} />;
     }
 
     if (projectRoute?.view === "documents") {
@@ -140,6 +145,7 @@ export function AuthenticatedApp() {
     <AppShell
       account={account!}
       currentPath={currentPath}
+      supplierSelectionAvailable={supplierSelectionAvailable}
       onLogout={() => void logout()}
       onNavigate={handleNavigate}
     >
