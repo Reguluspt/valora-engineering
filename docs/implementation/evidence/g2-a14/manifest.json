@@ -6,8 +6,8 @@
     "run_id": 37605372094,
     "result": "success"
   },
-  "capture_head": "6e9c60f9bad6117f90fcdd85d636903f91097df5",
-  "capture_binding": "Uncommitted candidate on baseline; these Git source blob hashes are verified against the separately recorded frozen HEAD. Capture bytes SHA256 are immutable. Frozen SHA/native reviews/CI are in the external handoff; no self-referential commit SHA.",
+  "capture_head": "3a06debe7e3405a414e2f1f0f15e38e0754a3d89",
+  "capture_binding": "Final candidate captures precede freeze; these Git source blob hashes are verified against the separately recorded frozen HEAD. Capture bytes SHA256 are immutable. Frozen SHA/native reviews/CI are in the external handoff; no self-referential commit SHA.",
   "baseline_comparison": "Exact A13 Workbench, existing Fluent 2 shared primitives/tokens and VALORA_FRONTEND_ARCHITECTURE_RULE; A13 has no quotation product UI.",
   "source_git_blobs": {
     "backend/app/api/supplier_quotes.py": "8b2c412c7ba641c800fa5b4a30376a3370c01c2b",
@@ -24,13 +24,13 @@
     "frontend/src/components/layout/__tests__/AppShell.route.test.tsx": "4aae380e47d868498bb2c1e907349be2db8fc25b",
     "frontend/src/components/ui/FormField.tsx": "d8bad06c83003395def5e0c9e0ec480ae6eb4a53",
     "frontend/src/components/workbench/supplier-quotes/QuoteEditor.tsx": "28d8d5018598a1306cbd35210b39679812e8e32a",
-    "frontend/src/components/workbench/supplier-quotes/SupplierQuotesRegion.tsx": "c63b8d9f7e8a49bb5106c7c5088f65fe65ec9143",
+    "frontend/src/components/workbench/supplier-quotes/SupplierQuotesRegion.tsx": "0596c277a8054e117ff351d0db8e9ddc87ffae8a",
     "frontend/src/components/workbench/supplier-quotes/__tests__/SupplierQuotesRegion.test.tsx": "a95ad8c57cc66a984db132938537e3a28327b1f1",
     "frontend/src/components/workbench/supplier-quotes/__tests__/fixtures.ts": "b284267ce78891a81b210b05411a655a8f05fe34",
     "frontend/src/components/workbench/supplier-quotes/__tests__/useSupplierQuotes.test.tsx": "df3fbe89694b747736ef2dac4cc4b27530e63540",
     "frontend/src/components/workbench/supplier-quotes/useSupplierQuotes.ts": "6750ade2d032dff7527db0548d355f319eface0c",
     "frontend/src/components/workbench/workbench.css": "7e8d11fc04e8c6b41b1c8218bd0c833beb50976f",
-    "frontend/src/styles/fluent2-primitives.css": "a8e38be67b3e909109aad2d36061c703803e328d",
+    "frontend/src/styles/fluent2-primitives.css": "1acd18a5e637f6daa7d9ead2a5af318f24462006",
     "frontend/src/styles/fluent2-tokens.css": "ac8b76bb4c66acef9bf3c159fe2e158dad492c95",
     "tests/e2e/bootstrap_g2_a14.py": "acac760d0aa92af060723d172b381824b7bebb48",
     "tests/e2e/g2_a14_fixture_fault.py": "70e804cdc85a181cc50811c4b05eabb1f83482ca",
@@ -43,21 +43,21 @@
     {
       "path": "01-first-use-incomplete.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -66,27 +66,27 @@
         "height": 900
       },
       "result": "INCOMPLETE",
-      "case_version": "734f2ad4ced7b5f4fb1bb67c69e2780eda4a30c4e09962a78542437e17fd8306",
-      "sha256": "f7d7e747948bd22bb76b3f99a9f042d5ce327fe51f630bf492d8115822b8dd55"
+      "case_version": "cb79c23a0e1c3f481c5c334b27025a1991a37ae288e606289af2fcc472119ba8",
+      "sha256": "0dd0641aef012e623e22c1e71219f64d0d3b4320d61b25b7eb28b0af64f5291e"
     },
     {
       "path": "02-draft-mapped-warnings.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -95,27 +95,27 @@
         "height": 900
       },
       "result": "INCOMPLETE",
-      "case_version": "04736b78febcb37ce742a5f377996a3752bcc1d574df02e414398b2f4e914eff",
-      "sha256": "97ead430db1d1006a5050f8fa2bb13e2170b0e37124809215b37fa6b37cd587c"
+      "case_version": "b9dc71278c734aa8b95067b2f5b755eef2cb3a9f2a0301dad8851c8b4964a3b3",
+      "sha256": "b943b4ee6ef8ed6af93fddad7d8080a0a87ab18bbe27e9640386163e95c67e42"
     },
     {
       "path": "03-conflict-recovery.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -124,27 +124,27 @@
         "height": 900
       },
       "result": "INCOMPLETE",
-      "case_version": "de7bd03f3f3b8bb6f7323efe10de8a9bec943ec30991fbf20e9b06d4a728346b",
-      "sha256": "001b2046330f378185988e84a9656403e2d5906ef33b1cfe99f6ea0d1865ca9b"
+      "case_version": "c451de307da6d38e71bb423a6573b9ecafda89b7fcdac8e89cd1b1560297d068",
+      "sha256": "73330d1cf4f2164f48d664f4c86ac3c747e0dd2dcd094cdf736c80f7a5646c52"
     },
     {
       "path": "04-confirmed-complete-downstream-hold.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -153,27 +153,27 @@
         "height": 900
       },
       "result": "COMPLETE",
-      "case_version": "1131df1ddc753a6994fa1e28587dbbff099f944bae52fa96b82f8623d43726b3",
-      "sha256": "ed31385899db42c84007598f606a6279700ed2eb172837825e42355f15a963f8"
+      "case_version": "a5a694f5fba1fc8a4f007e0d53004c91131225ddf7dcf11156e94556ee30c26e",
+      "sha256": "14a4dc607432c739fce385495d3310dc0a0b66588e7ebb755d70683ce08698c8"
     },
     {
       "path": "05-unknown-committed-outcome.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -182,27 +182,27 @@
         "height": 900
       },
       "result": "COMPLETE",
-      "case_version": "fd0e07e1408eb905c4b1247e97284c6cea9715dd0db321212920a3eb4bc5a736",
-      "sha256": "029986aa0aa1225af9b045d4fffcc27c8e3d82c3938c748133f084167a3e3054"
+      "case_version": "ffc5afa3e4c046e9a5c83f772cf98ffd0427b0a9bf4d0d0f3edcf0bb2273f828",
+      "sha256": "70c2fc1348248b55b5bb6a1d8f3eb45871ca6704de1f6b82b62fd20a85a3a06e"
     },
     {
       "path": "06-withdrawn-no-coverage.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -211,27 +211,27 @@
         "height": 900
       },
       "result": "INCOMPLETE",
-      "case_version": "fc39becf6b3eec0f5e786ec3a954a92dc62f38412b75afe95cd93c2d5dae78ed",
-      "sha256": "cd522c9a75d04848c1c5a19d47519286f463b4f22c6443f5564ad3fa0fda9ff5"
+      "case_version": "c23af7a44622dfa23c027d4cb260136ac655a9a5f60eda8469676d99baa3da36",
+      "sha256": "cbc2482f632e33e0900a6db6196dc748c72aaaae672e1903fc71995ea2993ef4"
     },
     {
       "path": "07-nondraft-complete-read-only.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -240,27 +240,27 @@
         "height": 900
       },
       "result": "COMPLETE",
-      "case_version": "88900a7a692c7986ea3550e29a01a2bfaa6ce89b8255c6cc2a74ca0c7f14b65d",
-      "sha256": "d948b30be838d2667ad1f7b415f420e43a5ccfb89d78a50b186dbe5fa248b4fd"
+      "case_version": "194dd20853f11250d6b7eb74420beb3fc81b6b7350d3a91733e31f7993c13dab",
+      "sha256": "66f75093d9a04b1595934650ae28406b8bed031fa9895eb22b8cc5ecab9f6868"
     },
     {
       "path": "08-viewer-read-only.png",
       "fixture": {
-        "project_id": "46bdbab6-75ff-49ef-b5a6-0d8539acf9fe",
-        "organization_slug": "a14-synthetic-final-captures",
-        "supplier_id": "70498216-bfb9-4007-a882-88c915f66882",
+        "project_id": "033dbedd-323c-4cdf-b147-36eb6498166d",
+        "organization_slug": "a14-synthetic-final-wide",
+        "supplier_id": "a40bb9b5-670a-42b9-bac0-7a829bac0132",
         "source_document_ids": [
-          "11654fe9-8958-45cb-8ada-1f59df210679",
-          "f6499eea-677f-45f0-baa7-f82c16959a1f"
+          "fd7afeea-5692-4ef6-b247-c12a21ba8f09",
+          "ce6ee6d7-1703-47b3-8bfe-8999bda338f0"
         ],
         "source_revision_ids": [
-          "4566543f-4aa5-4922-9097-6a61bd5c00b4",
-          "c7b4d3de-05f2-4cd6-b265-bfa0a5ec0e3b"
+          "7c262b74-b496-403f-a5f7-241a68efb1b5",
+          "4c2f1851-0d0d-4c7a-bbe9-2287e365fce4"
         ],
         "lines": [
-          "5648a865-07b1-4d3d-98d3-0d6cfc4bae45",
-          "644bcd16-f279-4db2-84d2-29f4416a19c6",
-          "7db4edef-e369-40a2-b467-28fd88413413"
+          "03e71799-1458-4649-b951-3a58759de844",
+          "76eb14f8-38ea-4b6f-bf2b-f3ad5726e118",
+          "ddd7c677-da80-4515-8920-49630405686e"
         ],
         "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
       },
@@ -270,7 +270,90 @@
       },
       "result": "COMPLETE",
       "actor": "migrated viewer",
-      "sha256": "1cd5618b561d1d8dcf761bbf62fccc91f181aaaf659e787b10d910b79dadf8ab"
+      "sha256": "3caeebaa632e30a5fcdaf262b0ae9c6309bb2231a38b8f809d2c8f70e17abf76"
+    },
+    {
+      "path": "09-confirmed-exact-decimal-detail.png",
+      "fixture": {
+        "project_id": "6b9fc662-ecd1-400f-8a20-a5c655f3c2d9",
+        "organization_slug": "a14-synthetic-comparable-zero",
+        "supplier_id": "6679aec8-b8e4-4292-846c-2169de46aec3",
+        "source_document_ids": [
+          "ce852fc5-c0e9-41a4-b410-45adc497daf1",
+          "2cf7ab2a-c521-4ee7-909f-b119c653def0"
+        ],
+        "source_revision_ids": [
+          "be0ba0d3-5496-4d9b-9bf1-eaefaa2354b7",
+          "e6f9e811-14fc-44a1-bcdb-4f605c62bcd2"
+        ],
+        "lines": [
+          "6e09c609-eb25-4f32-bd23-0e09d86416a7",
+          "964d1bd0-9cd8-4dfd-ae8b-b36d67707170",
+          "98cd3b6b-dd2a-4715-8f49-30d4158dd044"
+        ],
+        "fixture": "Migrated PostgreSQL / real MinIO / Linux immutable local document bytes"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "result": "COMPLETE",
+      "dialog_width": 1012.5717468261719,
+      "decimal_cell_bounds": [
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        },
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        },
+        {
+          "text": "123456789012345678.12345678",
+          "cell": {
+            "left": 719.98583984375,
+            "right": 881.2091064453125
+          },
+          "textRects": [
+            {
+              "left": 730.8348388671875,
+              "right": 866.4329833984375
+            },
+            {
+              "left": 730.8348388671875,
+              "right": 762.5201416015625
+            }
+          ]
+        }
+      ],
+      "proof": "PASS: wide Fluent dialog token wins cascade; every long Decimal text rectangle stays within its own mapped-item cell",
+      "sha256": "6ca2dfc3765c1470197038ca4e14bc43a49d3e8458788f229738da9478b0fab6"
     },
     {
       "path": "currentness-missing.png",
@@ -300,7 +383,7 @@
       "result": "STALE",
       "case_version": "10c4baadfbb748b909587219d63899be6b57fb246d7552786f1c11879874897d",
       "quote_commands": 0,
-      "sha256": "57dc8f307c83e92223e808dc4709a74da41d9b0285127f4b2b8b233d6f92b479"
+      "sha256": "298aadbd53bbde3f1332615ebb16894e6a2e54d7baf7af4a2aeb5ad5695c7048"
     },
     {
       "path": "currentness-corrupt.png",
@@ -330,7 +413,7 @@
       "result": "STALE",
       "case_version": "6a415d16b5c454a32e1409093b55f9f90614555f8c9f39e8e51bbe665333ca42",
       "quote_commands": 0,
-      "sha256": "39b82bc9a6546f2f78c21a2f74e76ba0477ec5dbfdc9bd801829518c44390eee"
+      "sha256": "9021bf1ccda4088a4546f1d72d41e10f88168733d5687fb607812e1d13a9c525"
     },
     {
       "path": "currentness-inactive.png",
@@ -360,7 +443,7 @@
       "result": "STALE",
       "case_version": "5f8f5be6a5ad9fa874cfbf9b07f8d7a4a93c4cd21022fa80c7210c7363df82f0",
       "quote_commands": 0,
-      "sha256": "8c600d23ee479a65410dcb765947ac38cc1d01dc2b67e46b54c7ae06f34b6c2e"
+      "sha256": "07908a5b961ddc8fe1c0ee6b1ade67a2f84d716671ba0940caaab3923f67265e"
     },
     {
       "path": "currentness-merged.png",
@@ -390,7 +473,7 @@
       "result": "STALE",
       "case_version": "0db83683a8826be066b7bb736cf3fafe59ad033ccbfab4c43a8429dfe850e2f1",
       "quote_commands": 0,
-      "sha256": "7679b747d37f66b57112daebfbe804c2c22bd81bffd955e4c87b980db66fa628"
+      "sha256": "a49ffc5e5f104f30e6e84553d856103814378ea0ff7a6ff7f6a4198fd4811bc3"
     },
     {
       "path": "currentness-ambiguous.png",
@@ -420,7 +503,7 @@
       "result": "BLOCKED",
       "case_version": "b91ffd8a61854135cb5cb6a60483c77d4a10f363d869e29ec469ee2f0abd3018",
       "quote_commands": 0,
-      "sha256": "eff34a2b65bf3113d6067830f10da9bfecd260f614e661931c4a6eecc27568bc"
+      "sha256": "1c5c9f9c8f6e59fa0b3ee1273379060d068e160763241a39560a0d173c88f48f"
     },
     {
       "path": "negatives-zero-incomparable.png",
@@ -449,7 +532,7 @@
       },
       "result": "COMPLETE",
       "proof": "PASS: server sends no synthetic warning; deterministic comparable-zero threshold test also passes",
-      "sha256": "772cfa9c0e65b5228113e6bce8a63ed650e6dfb5a9fdf5c42a9163c21d910280"
+      "sha256": "30a64ccefaa71143dd8cc0191764d0d5335d30f342d3ebf76fb788b9d922c92e"
     },
     {
       "path": "negatives-closed-session.png",
@@ -478,7 +561,7 @@
       },
       "result": "COMPLETE",
       "proof": "PASS: actual session closed after form opened; original revision rejected safe 404, no fact/receipt mutation; refreshed controls disabled",
-      "sha256": "ca7cce19e6d2ae9e09edc53c8eb142065d80bfc6d2634af31451f3a2bc87cb8b"
+      "sha256": "aa5ebe265c8e956f7f2f55c7f7a5d24d2f2f28a267367b31a84a1b4a7a6f0c41"
     }
   ],
   "browser_matrix": [
