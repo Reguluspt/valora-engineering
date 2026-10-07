@@ -24,6 +24,7 @@ from app.modules.project_master_data.application.asset_line_validation_rules imp
 
 
 class PriceEvidenceRoute(APIRoute):
+    contract_name = "PRICE_EVIDENCE"
     def get_route_handler(self):
         handler = super().get_route_handler()
 
@@ -34,12 +35,12 @@ class PriceEvidenceRoute(APIRoute):
                 async for chunk in request.stream():
                     body.extend(chunk)
                     if len(body) > 2_000_000:
-                        raise HTTPException(400, detail="PRICE_EVIDENCE command too large")
+                        raise HTTPException(400, detail=f"{self.contract_name} command too large")
                 request._body = bytes(body)
             try:
                 return await handler(request)
             except RequestValidationError:
-                raise HTTPException(400, detail="Invalid PRICE_EVIDENCE command contract") from None
+                raise HTTPException(400, detail=f"Invalid {self.contract_name} command contract") from None
 
         return bounded_contract
 

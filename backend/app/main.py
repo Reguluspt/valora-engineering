@@ -20,9 +20,7 @@ from app.core.logging import configure_logging
 from app.modules.m365_integration.infrastructure.access_log_redaction import (
     OAuthCallbackAccessLogRedactionMiddleware,
 )
-from app.modules.document_workspace.infrastructure.document_blob_store_factory import (
-    build_document_blob_store,
-)
+from app.modules.project_master_data.application.supplier_quote_source import runtime_store
 
 settings = get_settings()
 configure_logging(settings.valora_log_level)
@@ -38,7 +36,7 @@ app = FastAPI(
     openapi_url=None if is_prod else "/openapi.json",
     dependencies=[Depends(csrf_gate)]
 )
-app.state.document_blob_store = build_document_blob_store(settings)
+app.state.document_blob_store = runtime_store()
 
 # Configure CORS Middleware safely
 app.add_middleware(

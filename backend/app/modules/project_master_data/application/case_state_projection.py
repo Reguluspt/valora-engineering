@@ -1,4 +1,4 @@
-"""Read-only Global Case State through PRICE_EVIDENCE; SUPPLIER_QUOTES+ is unavailable."""
+"""Read-only Global Case State through SUPPLIER_QUOTES; selection remains unavailable."""
 from __future__ import annotations
 
 import datetime
@@ -96,7 +96,7 @@ class StageCapability:
     version: str = "pr01-prefix-v1"
 
 
-CAPABILITY_REGISTRY_VERSION = "global-case-state-v5-price-evidence-confirmation-v1"
+CAPABILITY_REGISTRY_VERSION = "global-case-state-v6-supplier-quotes-v1"
 
 STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("PRELIMINARY_REQUEST", available=True, provider_key="preliminary_request_v2", version="pr01-prefix-v2"),
@@ -106,7 +106,8 @@ STATIC_STAGE_CAPABILITIES: tuple[StageCapability, ...] = (
     StageCapability("ASSET_REVIEW", available=True, provider_key="asset_review_line_decision_v1", version="asset_review_line_decision_v1"),
     StageCapability("ASSET_WORKBENCH", available=True, provider_key="asset_workbench_confirmation_v1", version="asset_workbench_confirmation_v1"),
     StageCapability("PRICE_EVIDENCE", available=True, provider_key="price_evidence_confirmation_v1", version="price_evidence_confirmation_v1"),
-    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[7:]),
+    StageCapability("SUPPLIER_QUOTES", available=True, provider_key="supplier_quotes_v1", version="supplier_quotes_v1"),
+    *(StageCapability(stage, available=False, provider_key=None) for stage in CANONICAL_CASE_STAGES[8:]),
 )
 
 
@@ -449,6 +450,9 @@ def determine_current_stage(
                 and stage_results[5].provider_key == "asset_workbench_confirmation_v1"):
             if (stage_results[5].result == "COMPLETE" and len(stage_results) > 6
                     and stage_results[6].provider_key == "price_evidence_confirmation_v1"):
+                if (stage_results[6].result == "COMPLETE" and len(stage_results) > 7
+                        and stage_results[7].provider_key == "supplier_quotes_v1"):
+                    return "SUPPLIER_QUOTES"
                 return "PRICE_EVIDENCE"
             return "ASSET_WORKBENCH"
         return "ASSET_REVIEW"
@@ -587,7 +591,7 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
             provider_key=None,
             fact_token=None,
         )
-        for stage in CANONICAL_CASE_STAGES[7:]
+        for stage in CANONICAL_CASE_STAGES[8:]
     )
 
     from app.modules.project_master_data.application.asset_review_provider import evaluate_asset_review_provider
@@ -609,6 +613,11 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
         effective_permissions=derive_effective_permissions(persisted_actor, db), has_active_session=has_session)
     stage_projections.insert(6, StageProjection("PRICE_EVIDENCE", evidence.result, evidence.provider_key,
         diagnostics=evidence.blockers + evidence.stale))
+    from app.modules.project_master_data.application.supplier_quote_provider import evaluate_supplier_quote_provider
+    quotes = evaluate_supplier_quote_provider(authority,
+        effective_permissions=derive_effective_permissions(persisted_actor, db), has_active_session=has_session)
+    stage_projections.insert(7, StageProjection("SUPPLIER_QUOTES", quotes.result, quotes.provider_key,
+        diagnostics=quotes.blockers + quotes.stale))
     case_version, sorted_facts = authority.case_version, authority.facts
     current_stage = determine_current_stage(stage_projections)
     next_action = determine_internal_next_action(stage_projections, blockers=blockers)
@@ -616,6 +625,8 @@ def _get_case_state_projection(db: Session, *, actor: User, org_id: uuid.UUID,
         selected_action = workbench.next_action if asset.result == "COMPLETE" else asset.next_action
         if workbench.result == "COMPLETE":
             selected_action = evidence.next_action
+        if evidence.result == "COMPLETE":
+            selected_action = quotes.next_action
         next_action = InternalNextAction(**selected_action) if selected_action else None
 
     blocker_dicts = [

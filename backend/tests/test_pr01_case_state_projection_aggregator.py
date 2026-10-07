@@ -704,7 +704,9 @@ def test_all_four_complete_semantics(test_db: Session) -> None:
     assert len(proj.stages) == 16
     assert proj.stages[6].result == "NOT_AVAILABLE"
     assert proj.stages[6].provider_key == "price_evidence_confirmation_v1"
-    for downstream in proj.stages[7:]:
+    assert proj.stages[7].result == "NOT_AVAILABLE"
+    assert proj.stages[7].provider_key == "supplier_quotes_v1"
+    for downstream in proj.stages[8:]:
         assert downstream.result == "NOT_AVAILABLE"
         assert downstream.provider_key is None
 
@@ -737,7 +739,7 @@ def test_compute_case_version_golden_vector() -> None:
     token, sorted_facts = compute_case_version(org_id=org_id, project_id=project_id, facts=facts)
     assert sorted_facts == sorted(facts)
     expected_envelope = {
-        "contract": "global-case-state-v5-price-evidence-confirmation-v1",
+        "contract": "global-case-state-v6-supplier-quotes-v1",
         "facts": sorted(facts),
         "organization_id": "11111111-1111-1111-1111-111111111111",
         "project_id": "22222222-2222-2222-2222-222222222222",
