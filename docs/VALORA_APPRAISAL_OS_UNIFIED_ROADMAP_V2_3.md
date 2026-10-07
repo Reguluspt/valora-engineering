@@ -1,7 +1,7 @@
 # VALORA Appraisal OS — Unified Reconciliation & Development Roadmap v2.3
 
 **Status:** CURRENT ROADMAP / PRODUCT-ENGINEERING DIRECTION
-**Last reconciled:** 2026-10-06 (A8 certified/closed; A9 PRICE_EVIDENCE authority D1–D12 accepted, runtime unauthorized)
+**Last reconciled:** 2026-10-07 (A14 SUPPLIER_QUOTES certified; Issue #142 visual-governance / OS-G6 reconciliation)
 **Roadmap authority:** this Unified Roadmap v2.3 supersedes v2.2 for development ordering while preserving its reconciled decisions
 **Integrated sub-domain:** Report Template Recognition / Fill Engine technical direction
 **Repository state (dated evidence, 2026-09-27):** PR #32 closed OS-G0 at `51eab8648005186197d2fbb37a19bde4332aeaa5` (CI #485 SUCCESS); G1.0 closed by merged PR #51 at `7db69708b4668b77f49c97ec59b195be2b0f6037` (CI #491 SUCCESS). The pre-squash integration source head `0ccc9c14aba520d2f6ae405129018e5d5ec26cb2` is historical branch evidence only. ADR 0046 is accepted G1.1 design authority; G1.1 runtime and OS-G2 remain not started. Verify live main before implementation.
@@ -26,7 +26,8 @@ Authority cleanup
 → Document Runtime
 → Release / Publishing
 → Template Intelligence / Fidelity expansion
-→ Product E2E completion
+→ OS-G6 Product Completion, including Final Visual Convergence
+→ Windows Preview / Formal UAT
 → Valora Intelligence Platform & Assistant
 ```
 
@@ -74,7 +75,7 @@ Conflict resolution / role split:
 
 Run `valora-live-authority-bootstrap`: fetch `origin/main`, verify its live HEAD/CODEX, the assigned task and successful CI on the exact claimed SHA. Dated milestones below are not evergreen current-main certification.
 
-Current certified product disposition (2026-10-06): OS-G0 COMPLETE; OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 at `d283c690b9f014833fa5c98e1125939351966b81` (CI #527 SUCCESS); OS-G2 PARTIAL, with ASSET_REVIEW product closure certified by A5 / PR #86 / CI #555. A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with Product Owner D1–D8 ACCEPTED. A7 / Issue #122 / PR #123 certifies ASSET_WORKBENCH backend/domain/provider runtime at `d7efb4bf6a880b5d397807ed32acd99f929828a3`, exact-main CI #597 / run `37318932525` SUCCESS. A8 / Issue #126 is CERTIFIED/CLOSED at `58f9613a260e8e66889569e3b8954763d9b56086`, exact-main CI #604 / run `37414654381` SUCCESS, certification comment `6010285363`; the certified product boundary is ASSET_WORKBENCH. A9 / Issue #129 PRICE_EVIDENCE authority D1–D12 is ACCEPTED by the Product Owner on 2026-10-06 (comment `6011401776`). A9 is CERTIFIED/CLOSED at main `53b26838e4f01f34b1bb3bc0c5c91986d0af13ed` / CI #609. A10 / Issue #131 authorizes the [bounded PRICE_EVIDENCE runtime candidate](implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md); product UX remains deferred and candidate certification is pending. SUPPLIER_QUOTES+ remains UNAUTHORIZED; full OS-G2 and full WIN-4 remain PARTIAL.
+Current certified product disposition (verified 2026-10-07): OS-G0 COMPLETE; OS-G1 CERTIFIED/CLOSED through G1.1K / PR #68 / CI #527. OS-G2 remains **PARTIAL / INCOMPLETE**. Its earlier ASSET_REVIEW / ASSET_WORKBENCH and PRICE_EVIDENCE milestones are followed by [A14 / Issue #139 final certification](https://github.com/Reguluspt/valora-engineering/issues/139#issuecomment-6041091878): PR #140 merged at main `dbcc4f5ca39803dffa360e4eddba064156335dd3`, [exact-main CI #625 / run 37639051093](https://github.com/Reguluspt/valora-engineering/actions/runs/37639051093) COMPLETED / SUCCESS. **Certified product/runtime boundary = SUPPLIER_QUOTES. SUPPLIER_SELECTION and APPRAISAL_RESULT remain UNAUTHORIZED.** After SUPPLIER_QUOTES COMPLETE, product truth remains `NO_AUTHORIZED_DOWNSTREAM_ACTION`. Full WIN-4 remains PARTIAL. This dated evidence does not certify a later main or authorize a next implementation task.
 
 ### Historical OS-G0 / PR #32 milestone (2026-09-27)
 
@@ -249,11 +250,19 @@ A canonical stage is green only when all five axes are green:
 
 1. durable Domain Fact;
 2. Application/API;
-3. Product Surface — conforms to current UI/UX Design Authority and Fluent 2 light baseline;
+3. Product Surface — conforms to current UI/UX Design Authority and Fluent 2 light baseline, applying Continuous Visual Integrity during OS-G2→OS-G5 and Final Visual Convergence in OS-G6;
 4. OS Integration — Case State + Next Action + blocker/warning/stale + Resume;
 5. Acceptance — tests/browser/E2E appropriate to the slice, including visual regression for authority-defined golden screens.
 
 A model/table/API alone is not product completion.
+
+### 10.1 Visual acceptance by phase — Product Owner decision, Issue #142
+
+**OS-G2→OS-G5: functional correctness first + Continuous Visual Integrity.** Every new/materially changed frontend surface preserves Fluent 2 light, token and shared-component discipline, usable hierarchy, no broken layout, explicit loading/empty/error/stale/conflict/denied/uncertain states, basic keyboard/focus/accessibility and no serious IA contradiction. No feature-local visual system or architecture debt requiring a G6 rewrite is allowed.
+
+Level 1 does not require product-wide pixel-perfect convergence. Controlled visual debt is allowed only with usability, IA and architecture intact and a recorded G6 disposition in the [Visual Debt Register](plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md#11-lightweight-visual-debt-register). Architecture violations and serious usability/IA issues must be fixed in their owning tasks. Existing task-required golden checks and document fidelity gates remain binding.
+
+**Level 2: Final Visual Convergence in OS-G6** covers typography, spacing, density, surface hierarchy, borders/elevation, navigation, page headers, command bars, data grids, drawers, forms, dialogs, status semantics, loading/empty/error, desktop composition, cross-product consistency and golden screenshots. OS-G6 MUST NOT close without it. The [G6 plan](plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md) defines the detailed acceptance and the binding External Design Skill Advisory Policy; external heuristics never override current Valora authority or authorize implementation.
 
 ## 11. Unified roadmap
 
@@ -297,7 +306,7 @@ Certified closure covers facts → APIs → UI → Case State → Next Action �
 
 ### OS-G2 — Appraisal Core
 
-**Current disposition:** PARTIAL. ASSET_REVIEW product closure is CERTIFIED/CLOSED through A5 / PR #86 (CI #555 SUCCESS); A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED. A7 / Issue #122 / PR #123 / CI #597 certifies the ASSET_WORKBENCH backend/domain/provider runtime (`asset_workbench_confirmation_v1`, shared `global-case-state-v4-asset-workbench-confirmation-v1`) and fact-derived coverage/current-stage cap through ASSET_WORKBENCH. That A7 checkpoint held after Workbench COMPLETE; the A10 candidate below extends the backend boundary only. A8 / Issue #126 product UX/E2E is CERTIFIED/CLOSED by exact-main CI #604 and certification comment `6010285363`; the certified product boundary is ASSET_WORKBENCH. [A9 / Issue #129 authority](plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md) D1–D12 is ACCEPTED by the Product Owner on 2026-10-06 (comment `6011401776`); A9 is subsequently CERTIFIED/CLOSED through PR #130 / CI #609. A10 / Issue #131 supplies the [bounded PRICE_EVIDENCE runtime candidate](implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md), shared Case State v5 and a backend cap at PRICE_EVIDENCE with `NO_AUTHORIZED_DOWNSTREAM_ACTION`. Product-facing PRICE_EVIDENCE closure and Gate Owner certification are pending; SUPPLIER_QUOTES+ remains UNAUTHORIZED, and full OS-G2 remains PARTIAL. Membership mutation, further RBAC and downstream runtime are outside A7/A8.
+**Current disposition:** PARTIAL / INCOMPLETE. A14 / Issue #139 is CERTIFIED/CLOSED through PR #140 / exact-main CI #625; see §3 for the exact SHA and certification evidence. The certified product/runtime boundary is **SUPPLIER_QUOTES**, retaining server-authoritative coverage, completion, currentness, warnings, independence and permitted actions under A12/A13/A14 authority. After COMPLETE, `NO_AUTHORIZED_DOWNSTREAM_ACTION` remains product truth. **SUPPLIER_SELECTION and APPRAISAL_RESULT are UNAUTHORIZED**; roadmap direction below is not activation. Membership mutation, new RBAC and downstream runtime require separately assigned owning tasks.
 
 Retained vertical order below is roadmap direction, not authorization to start the next stage:
 
@@ -388,17 +397,32 @@ AI mapping remains proposal-only.
 
 ### OS-G6 — Product Completion
 
-Complete:
-- unified contextual lineage;
-- cross-product states;
-- Resume context;
-- template/document fidelity gates;
-- full exact-SHA North-star E2E;
-- negative/tenant/provider-uncertain paths.
+The [Product Completion and Visual Convergence Plan v1](plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md) formalizes the following sequence after required OS-G2→OS-G5 functional closure:
+
+| Gate | Required purpose |
+| --- | --- |
+| OS-G6.0 | Product Scope Freeze / Rebaseline |
+| OS-G6.1 | Functional North-star E2E Candidate |
+| OS-G6.2 | VALORA Internal Business Trial |
+| OS-G6.3 | UX Reconciliation |
+| OS-G6.4 | Design-System Hardening |
+| OS-G6.5 | Visual Convergence |
+| OS-G6.6 | Accessibility + Visual Regression |
+| OS-G6.7 | Exact-SHA Product Completion Certification |
+
+G6.1 proves the authorized Pre-case → Appraisal Core → PRICE_EVIDENCE → SUPPLIER_QUOTES → SUPPLIER_SELECTION → APPRAISAL_RESULT → Document → Release journey; final polish is not required at that candidate step. It retains unified contextual lineage, cross-product states, Resume context, template/document fidelity and negative/tenant/provider-uncertain paths. Listing future stages grants no current activation.
+
+G6.2 is an Internal Business Trial, not Formal UAT. G6.3 routes presentation findings to G6, interaction/UX findings without authority change to a Product Owner UX decision then G6, and domain/workflow semantics back to the owning domain gate. Final baseline = approved UI/UX authority + trial findings + current authoritative workflow; current semantics win over obsolete mockup semantics.
+
+G6.7 requires Domain, API, Case State, North-star E2E, trial findings resolved/adjudicated, Design System, Visual Convergence, Accessibility, Visual Regression and exact-main CI all PASS. Only Gate Owner certification on the exact accepted SHA establishes **OS-G6 PRODUCT COMPLETION — CERTIFIED / Software Completion**. This governance plan starts none of those implementation gates.
+
+### Windows Preview / Formal UAT — after OS-G6 Software Completion
+
+Formal Windows Preview/UAT follows certified Software Completion, including Final Visual Convergence. It cannot compensate for incomplete product runtime. Separately authorized architecture/foundation work remains subject to ADR 0050 and does not reorder this acceptance gate.
 
 ### OS-G7 — Valora Intelligence Platform & Assistant
 
-Runtime activation remains **after the authoritative operating loop is closed**. Architecture/design may be frozen earlier so OS-G1→OS-G6 remain AI-readable-by-design without activating AI.
+OS-G7 follows Windows Preview / Formal UAT in this roadmap; runtime activation remains **after stable OS-G6 Product Completion and closure of the authoritative operating loop**, under explicit task/provider gates. Architecture/design may be frozen earlier so OS-G1→OS-G6 remain AI-readable-by-design without activating AI. Future Assistant UI should reuse hardened Valora presentation components rather than introduce a separate visual language.
 
 Master architecture: `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md`.
 
@@ -469,8 +493,9 @@ The [Linux Server plan](plan/VALORA_LINUX_SERVER_V1_PLAN.md) separately covers T
    blocker proves the need.
 5. Release/Publishing.
 6. Template intelligence/fidelity expansion.
-7. Full product E2E.
-8. Valora Intelligence Platform & Assistant — execute OS-G7.0→OS-G7.9 only under explicit gates; provider/runtime activation remains downstream of authoritative-loop completion.
+7. OS-G6.0→OS-G6.7 Product Completion, including Internal Business Trial, UX reconciliation, Final Visual Convergence and exact-SHA certification.
+8. Windows Preview / Formal UAT after Software Completion.
+9. Valora Intelligence Platform & Assistant — execute OS-G7.0→OS-G7.9 only under explicit gates after stable Product Completion; provider/runtime activation remains downstream of authoritative-loop completion.
 
 ## 14. Governing principles
 
