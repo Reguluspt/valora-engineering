@@ -336,3 +336,20 @@
   border: 1px solid var(--valora-color-border-subtle);
   padding: var(--valora-space-md);
 }
+.valora-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--valora-form-column-min-width)), 1fr));
+  gap: var(--valora-space-md);
+  margin-block: var(--valora-space-md);
+}
+
+.valora-table--multiline td {
+  vertical-align: top;
+  padding-top: var(--valora-space-sm);
+  padding-bottom: var(--valora-space-sm);
+}
+
+.valora-dialog-wide {
+  width: calc(100vw - var(--valora-space-2xl));
+  max-width: var(--valora-dialog-wide-max-width);
+}
