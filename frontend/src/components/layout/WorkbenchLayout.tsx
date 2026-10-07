@@ -12,6 +12,8 @@ import { useAssetReview } from "../workbench/asset-review/useAssetReview";
 import { AssetReviewRegion } from "../workbench/asset-review/AssetReviewRegion";
 import { useAssetWorkbench } from "../workbench/asset-workbench/useAssetWorkbench";
 import { AssetWorkbenchRegion } from "../workbench/asset-workbench/AssetWorkbenchRegion";
+import { usePriceEvidence } from "../workbench/price-evidence/usePriceEvidence";
+import { PriceEvidenceRegion } from "../workbench/price-evidence/PriceEvidenceRegion";
 
 import { useDraftSession } from "../workbench/drafts/useDraftSession";
 import { UndoRedoControls } from "../workbench/drafts/UndoRedoControls";
@@ -114,6 +116,8 @@ function WorkbenchLayoutInner({
   const [reviewTargetId, setReviewTargetId] = useState<string | null>(null);
   const lastReviewTarget = useRef<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [focusPrice, setFocusPrice] = useState(false);
+  const lastEvidenceTarget = useRef<string | null>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
   const {
@@ -147,6 +151,22 @@ function WorkbenchLayoutInner({
     } else if (hasMore) void loadMore();
   }, [preparationTarget, rows, gridLoading, gridFriendlyError, loadingMore, hasMore, loadMore]);
 
+  const priceEvidence = usePriceEvidence({ projectId, lineId: activeRowId, sessionId: session?.id, actorScope,
+    sessionBlocked: Boolean(loading || error || rbacError || conflictError || assetReview.busy || assetWorkbench.busy),
+    revision: assetWorkbench.projection?.case_version, onRefresh: () => { void assetReview.refreshProjection(); void assetWorkbench.refresh(); } });
+  const evidenceAction = priceEvidence.projection?.next_action;
+  const evidenceTarget = evidenceAction?.kind === "PENDING" && evidenceAction.stage === "PRICE_EVIDENCE" &&
+    evidenceAction.semantic_route_key === "price_evidence_prepare_required" && evidenceAction.context?.kind === "price_evidence_preparation" &&
+    evidenceAction.context.project_id === projectId && evidenceAction.context.case_version === priceEvidence.projection?.case_version
+    ? evidenceAction.context.line_id : null;
+  React.useEffect(() => {
+    if (!evidenceTarget || lastEvidenceTarget.current === evidenceTarget || gridLoading || gridFriendlyError || loadingMore) return;
+    if (rows.some(row => row.project_asset_line_id === evidenceTarget)) {
+      lastEvidenceTarget.current = evidenceTarget; setActiveRowId(evidenceTarget); setReviewTargetId(evidenceTarget);
+      setFocusPrice(true); setDrawerOpen(true);
+    } else if (hasMore) void loadMore();
+  }, [evidenceTarget, rows, gridLoading, gridFriendlyError, loadingMore, hasMore, loadMore]);
+
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState(false);
 
@@ -167,6 +187,7 @@ function WorkbenchLayoutInner({
   const handleActiveRowChange = (id: string | null) => {
     setActiveRowId(id);
     setReviewTargetId(null);
+    setFocusPrice(false);
     if (id) {
       setDrawerOpen(true);
       void (async () => {
@@ -309,9 +330,17 @@ function WorkbenchLayoutInner({
       </div>
 
       <div className="workbench-stage-regions" tabIndex={0} aria-label="Trạng thái và chuẩn bị tài sản">
-        <AssetReviewRegion review={assetReview} />
-        <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
-          onCommitted={() => { void assetReview.refresh(); void assetWorkbench.refresh(); reloadDrafts(); }} />
+        {priceEvidence.projection?.current_stage === "PRICE_EVIDENCE" ? <details>
+          <summary>Rà soát và chuẩn bị danh mục tài sản</summary>
+          <AssetReviewRegion review={assetReview} />
+          <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
+            onCommitted={() => { void assetReview.refresh(); void assetWorkbench.refresh(); reloadDrafts(); }} />
+        </details> : <>
+          <AssetReviewRegion review={assetReview} />
+          <AssetWorkbenchRegion workbench={assetWorkbench} row={activeRow} projectId={projectId} sessionId={session?.id}
+            onCommitted={() => { void assetReview.refresh(); void assetWorkbench.refresh(); reloadDrafts(); }} />
+        </>}
+        <PriceEvidenceRegion evidence={priceEvidence} />
       </div>
 
       <div className="workbench-body">
@@ -364,6 +393,9 @@ function WorkbenchLayoutInner({
           <div id="asset-context-drawer" className="workbench-drawer-layer">
             <WorkbenchRightPanelShell
               asset={activeRow}
+              evidence={priceEvidence}
+              projectId={projectId}
+              focusPrice={focusPrice}
               contextData={resolvedContextData}
               loading={contextLoading}
               error={contextError}

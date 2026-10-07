@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkbenchRightPanelShell } from "../WorkbenchRightPanelShell";
 import type { AssetLineGridRow } from "../../workbench/AssetGridTypes";
 import type { AssetLineContext } from "../../workbench/panels/ContextPanelTypes";
+import { TabList } from "@fluentui/react-components";
+
+vi.mock("@fluentui/react-components", async importOriginal => {
+  const original = await importOriginal<typeof import("@fluentui/react-components")>();
+  return { ...original, TabList: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    Tab: ({ children, ...props }: any) => <button role="tab" {...props}>{children}</button> };
+});
 
 const asset: AssetLineGridRow = {
   project_asset_line_id: "line-1",
@@ -41,14 +48,16 @@ describe("contextual asset drawer", () => {
 
     const initial = JSON.stringify(root!.toJSON());
     expect(initial).toContain("Máy cắt kim loại");
-    expect(initial).toContain("Thông tin tài sản");
+    expect(initial).toContain("Tổng quan");
     expect(initial).not.toContain("Review Queue");
     expect(initial).not.toContain("phê duyệt");
 
-    const price = root!.root.findByProps({ className: "asset-context-drawer__section", children: "Nguồn giá & chứng cứ" });
-    act(() => price.props.onClick());
-    expect(price.props["aria-pressed"]).toBe(true);
-    expect(JSON.stringify(root!.toJSON())).toContain("Chưa có dữ liệu nguồn giá và chứng cứ");
+    const tabs = root!.root.findByType(TabList);
+    expect(root!.root.findAllByProps({ role: "tab" }).map(t => t.props.children)).toEqual(["Tổng quan", "Thông số kỹ thuật", "Nguồn giá & Chứng cứ", "Lịch sử"]);
+    act(() => tabs.props.onTabSelect({}, { value: "price" }));
+    expect(tabs.props.selectedValue).toBe("price");
+    expect(JSON.stringify(root!.toJSON())).toContain("Nguồn chứng cứ hiện chưa khả dụng");
+    expect(JSON.stringify(root!.toJSON())).not.toContain("Giá thẩm định");
     expect(onClose).not.toHaveBeenCalled();
 
     const close = root!.root.findByProps({ "aria-label": "Đóng ngữ cảnh tài sản" });

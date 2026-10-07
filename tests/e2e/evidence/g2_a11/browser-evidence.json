@@ -1,0 +1,2659 @@
+{
+  "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+  "fixture": "A11 migrated synthetic live stack",
+  "checkpoints": {
+    "01-first-use-incomplete": {
+      "case_state": {
+        "case_version": "6a246d52ad13ed106cfe0b2994079962e24567b13062ef9311ce403822130ad2",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "PENDING",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": "price_evidence_prepare_required",
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "6a246d52ad13ed106cfe0b2994079962e24567b13062ef9311ce403822130ad2",
+            "kind": "price_evidence_preparation",
+            "reason_code": "evidence_required",
+            "project_row_version": 4,
+            "seal_id": "09d9627e-1c5b-4322-a5f9-f1b5a1d1ed32",
+            "authoritative_set_sha256": "26930ae4d2138d149cceb817d482a93990589b8c1a160d5193cd972954aa8881",
+            "membership_version": 1,
+            "contract_version": "price-evidence-confirmation-v1",
+            "upstream_confirmation_id": "30c5c70d-2de1-4738-b808-682b6228bfe4",
+            "prior_confirmation_id": null,
+            "confirmation_required": true,
+            "line_id": "25e69fdf-b208-40d3-b45d-2ae0cf1d48c9",
+            "line_row_version": 3
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "INCOMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 4,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "6a246d52ad13ed106cfe0b2994079962e24567b13062ef9311ce403822130ad2",
+        "line_id": null,
+        "covered_count": 0,
+        "sealed_count": 3,
+        "confirmation_id": null,
+        "confirmation_withdrawn": false,
+        "confirmation_current": false,
+        "can_withdraw_confirmation": false,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [],
+        "offset": 0,
+        "total": 0,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "01-first-use-incomplete.png"
+    },
+    "02-registered-accepted-one-line": {
+      "case_state": {
+        "case_version": "2d14218d9140c470f430a4e37c726ae83e8b399df0db020f492c62d31da8cc03",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "PENDING",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": "price_evidence_prepare_required",
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "2d14218d9140c470f430a4e37c726ae83e8b399df0db020f492c62d31da8cc03",
+            "kind": "price_evidence_preparation",
+            "reason_code": "evidence_required",
+            "project_row_version": 6,
+            "seal_id": "09d9627e-1c5b-4322-a5f9-f1b5a1d1ed32",
+            "authoritative_set_sha256": "26930ae4d2138d149cceb817d482a93990589b8c1a160d5193cd972954aa8881",
+            "membership_version": 1,
+            "contract_version": "price-evidence-confirmation-v1",
+            "upstream_confirmation_id": "30c5c70d-2de1-4738-b808-682b6228bfe4",
+            "prior_confirmation_id": null,
+            "confirmation_required": true,
+            "line_id": "3302cc5c-7167-4ad5-a18a-7b3f37eef9e5",
+            "line_row_version": 3
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "INCOMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 6,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "2d14218d9140c470f430a4e37c726ae83e8b399df0db020f492c62d31da8cc03",
+        "line_id": null,
+        "covered_count": 1,
+        "sealed_count": 3,
+        "confirmation_id": null,
+        "confirmation_withdrawn": false,
+        "confirmation_current": false,
+        "can_withdraw_confirmation": false,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:16:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 1,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "02-registered-accepted-one-line.png"
+    },
+    "03-whole-set-confirmation-dialog": {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "03-whole-set-confirmation-dialog.png",
+      "case_state": {
+        "case_version": "df56f98f23700fd1a0463546520a82419ce8b88fc425483bb4685559ac21dc23",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "PENDING",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": "price_evidence_prepare_required",
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "df56f98f23700fd1a0463546520a82419ce8b88fc425483bb4685559ac21dc23",
+            "kind": "price_evidence_preparation",
+            "reason_code": "confirmation_required",
+            "project_row_version": 8,
+            "seal_id": "09d9627e-1c5b-4322-a5f9-f1b5a1d1ed32",
+            "authoritative_set_sha256": "26930ae4d2138d149cceb817d482a93990589b8c1a160d5193cd972954aa8881",
+            "membership_version": 1,
+            "contract_version": "price-evidence-confirmation-v1",
+            "upstream_confirmation_id": "30c5c70d-2de1-4738-b808-682b6228bfe4",
+            "prior_confirmation_id": null,
+            "confirmation_required": true,
+            "line_id": null,
+            "line_row_version": null
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "INCOMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 8,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      }
+    },
+    "04-complete-downstream-hold": {
+      "case_state": {
+        "case_version": "15adc990efeb93e4e06f9d69032fc4657b6c61571bbb2383cc616d5f423321fa",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+          "stage": null,
+          "semantic_route_key": null,
+          "validation_issue_id": null
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "COMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 9,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "15adc990efeb93e4e06f9d69032fc4657b6c61571bbb2383cc616d5f423321fa",
+        "line_id": null,
+        "covered_count": 3,
+        "sealed_count": 3,
+        "confirmation_id": "d4bb5ec3-02a9-4e86-be2b-cb6f03a4bf14",
+        "confirmation_withdrawn": false,
+        "confirmation_current": true,
+        "can_withdraw_confirmation": true,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:16:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 1,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "04-complete-downstream-hold.png"
+    },
+    "05-stale-successor-recovery": {
+      "case_state": {
+        "case_version": "914fda03a6117dc2fe23042c633d1220293152bf54979178af6f7c7aa4e4fb31",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "UNAVAILABLE",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": null,
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "914fda03a6117dc2fe23042c633d1220293152bf54979178af6f7c7aa4e4fb31",
+            "kind": "price_evidence_diagnostic",
+            "reason_code": "evidence_currentness_conflict",
+            "reload_required": true
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "STALE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": [
+              {
+                "stage": "PRICE_EVIDENCE",
+                "reason_code": "evidence_currentness_conflict",
+                "line_id": null,
+                "batch_id": null,
+                "validation_issue_id": null
+              },
+              {
+                "stage": "PRICE_EVIDENCE",
+                "reason_code": "reconfirmation_required",
+                "line_id": null,
+                "batch_id": null,
+                "validation_issue_id": null
+              }
+            ]
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [
+          {
+            "stage": "PRICE_EVIDENCE",
+            "reason_code": "evidence_currentness_conflict"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "reason_code": "reconfirmation_required"
+          }
+        ],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 10,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "914fda03a6117dc2fe23042c633d1220293152bf54979178af6f7c7aa4e4fb31",
+        "line_id": null,
+        "covered_count": 0,
+        "sealed_count": 3,
+        "confirmation_id": "d4bb5ec3-02a9-4e86-be2b-cb6f03a4bf14",
+        "confirmation_withdrawn": false,
+        "confirmation_current": false,
+        "can_withdraw_confirmation": true,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [
+          "evidence_currentness_conflict"
+        ],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "9fec2f52-cd3f-46c6-92cc-cf5fbee139df",
+            "revision": 2,
+            "predecessor_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11 đã cập nhật",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 1,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "05-stale-successor-recovery.png"
+    },
+    "06-withdrawn-confirmation": {
+      "case_state": {
+        "case_version": "5d9ff6e25bca4dd0ffab7f23242e1cb844682147f621bc9d237f19ca817e5d79",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "PENDING",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": "price_evidence_prepare_required",
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "5d9ff6e25bca4dd0ffab7f23242e1cb844682147f621bc9d237f19ca817e5d79",
+            "kind": "price_evidence_preparation",
+            "reason_code": "confirmation_required",
+            "project_row_version": 15,
+            "seal_id": "09d9627e-1c5b-4322-a5f9-f1b5a1d1ed32",
+            "authoritative_set_sha256": "26930ae4d2138d149cceb817d482a93990589b8c1a160d5193cd972954aa8881",
+            "membership_version": 1,
+            "contract_version": "price-evidence-confirmation-v1",
+            "upstream_confirmation_id": "30c5c70d-2de1-4738-b808-682b6228bfe4",
+            "prior_confirmation_id": "83ca19f0-281f-4b74-9c20-1dfd48b773fb",
+            "confirmation_required": true,
+            "line_id": null,
+            "line_row_version": null
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "INCOMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 15,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "5d9ff6e25bca4dd0ffab7f23242e1cb844682147f621bc9d237f19ca817e5d79",
+        "line_id": null,
+        "covered_count": 3,
+        "sealed_count": 3,
+        "confirmation_id": "83ca19f0-281f-4b74-9c20-1dfd48b773fb",
+        "confirmation_withdrawn": true,
+        "confirmation_current": false,
+        "can_withdraw_confirmation": false,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "9fec2f52-cd3f-46c6-92cc-cf5fbee139df",
+            "revision": 2,
+            "predecessor_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11 đã cập nhật",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 1,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "06-withdrawn-confirmation.png"
+    },
+    "07-conflict-refresh-no-replay": {
+      "case_state": {
+        "case_version": "4e41e673e5d134b6d909af59e2d78c1cdd9343c713e9914fa6783a9f80cef757",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "PENDING",
+          "stage": "PRICE_EVIDENCE",
+          "semantic_route_key": "price_evidence_prepare_required",
+          "validation_issue_id": null,
+          "context": {
+            "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+            "case_version": "4e41e673e5d134b6d909af59e2d78c1cdd9343c713e9914fa6783a9f80cef757",
+            "kind": "price_evidence_preparation",
+            "reason_code": "confirmation_required",
+            "project_row_version": 16,
+            "seal_id": "09d9627e-1c5b-4322-a5f9-f1b5a1d1ed32",
+            "authoritative_set_sha256": "26930ae4d2138d149cceb817d482a93990589b8c1a160d5193cd972954aa8881",
+            "membership_version": 1,
+            "contract_version": "price-evidence-confirmation-v1",
+            "upstream_confirmation_id": "30c5c70d-2de1-4738-b808-682b6228bfe4",
+            "prior_confirmation_id": "83ca19f0-281f-4b74-9c20-1dfd48b773fb",
+            "confirmation_required": true,
+            "line_id": null,
+            "line_row_version": null
+          }
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "INCOMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 16,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "4e41e673e5d134b6d909af59e2d78c1cdd9343c713e9914fa6783a9f80cef757",
+        "line_id": null,
+        "covered_count": 3,
+        "sealed_count": 3,
+        "confirmation_id": "83ca19f0-281f-4b74-9c20-1dfd48b773fb",
+        "confirmation_withdrawn": true,
+        "confirmation_current": false,
+        "can_withdraw_confirmation": false,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "9fec2f52-cd3f-46c6-92cc-cf5fbee139df",
+            "revision": 2,
+            "predecessor_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11 đã cập nhật",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          },
+          {
+            "source_id": "94e63ec5-0364-4ff7-b390-f52170f3b7a1",
+            "evidence_revision_id": "a178bc74-a9c5-4fcf-ae38-af9441971b95",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "internet_survey",
+            "origin": "Nguồn bổ sung đồng thời tổng hợp",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 2,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "07-conflict-refresh-no-replay.png"
+    },
+    "08-reconciled-current-complete": {
+      "case_state": {
+        "case_version": "0efeff10fd3c0724e139b393824c289c61cf1a60df052ad48cc6d306282e54d3",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+          "stage": null,
+          "semantic_route_key": null,
+          "validation_issue_id": null
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "COMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 17,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "0efeff10fd3c0724e139b393824c289c61cf1a60df052ad48cc6d306282e54d3",
+        "line_id": null,
+        "covered_count": 3,
+        "sealed_count": 3,
+        "confirmation_id": "8f059dea-df12-4369-ac9d-de88a4ac301b",
+        "confirmation_withdrawn": false,
+        "confirmation_current": true,
+        "can_withdraw_confirmation": true,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "9fec2f52-cd3f-46c6-92cc-cf5fbee139df",
+            "revision": 2,
+            "predecessor_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11 đã cập nhật",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          },
+          {
+            "source_id": "94e63ec5-0364-4ff7-b390-f52170f3b7a1",
+            "evidence_revision_id": "a178bc74-a9c5-4fcf-ae38-af9441971b95",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "internet_survey",
+            "origin": "Nguồn bổ sung đồng thời tổng hợp",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": true,
+            "can_withdraw": true,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 2,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "08-reconciled-current-complete.png"
+    },
+    "09-nondraft-read-only-complete": {
+      "case_state": {
+        "case_version": "22477dba1a9c68ea298fd2d0ad0cd7118bdc90125a7930b038e5e9d21aa8e858",
+        "current_stage": "PRICE_EVIDENCE",
+        "next_action": {
+          "kind": "NO_AUTHORIZED_DOWNSTREAM_ACTION",
+          "stage": null,
+          "semantic_route_key": null,
+          "validation_issue_id": null
+        },
+        "stages": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_request_v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_analysis_v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "result": "COMPLETE",
+            "provider_key": "preliminary_ready_v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "result": "COMPLETE",
+            "provider_key": "official_intake_commit_v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "result": "COMPLETE",
+            "provider_key": "asset_review_line_decision_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "result": "COMPLETE",
+            "provider_key": "asset_workbench_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "result": "COMPLETE",
+            "provider_key": "price_evidence_confirmation_v1",
+            "diagnostics": []
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          },
+          {
+            "stage": "PUBLISHED",
+            "result": "NOT_AVAILABLE",
+            "provider_key": null
+          }
+        ],
+        "blockers": [],
+        "warnings": [],
+        "stale": [],
+        "capabilities": [
+          {
+            "stage": "PRELIMINARY_REQUEST",
+            "available": true,
+            "provider_key": "preliminary_request_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_ANALYSIS",
+            "available": true,
+            "provider_key": "preliminary_analysis_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "PRELIMINARY_READY",
+            "available": true,
+            "provider_key": "preliminary_ready_v2",
+            "version": "pr01-prefix-v2"
+          },
+          {
+            "stage": "OFFICIAL_INTAKE",
+            "available": true,
+            "provider_key": "official_intake_commit_v1",
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "ASSET_REVIEW",
+            "available": true,
+            "provider_key": "asset_review_line_decision_v1",
+            "version": "asset_review_line_decision_v1"
+          },
+          {
+            "stage": "ASSET_WORKBENCH",
+            "available": true,
+            "provider_key": "asset_workbench_confirmation_v1",
+            "version": "asset_workbench_confirmation_v1"
+          },
+          {
+            "stage": "PRICE_EVIDENCE",
+            "available": true,
+            "provider_key": "price_evidence_confirmation_v1",
+            "version": "price_evidence_confirmation_v1"
+          },
+          {
+            "stage": "SUPPLIER_QUOTES",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "SUPPLIER_SELECTION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "APPRAISAL_RESULT",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_WORKSPACE",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "DOCUMENT_SYNC_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_PREPARATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_EXCEPTION_REVIEW",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHING_CONFIRMATION",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          },
+          {
+            "stage": "PUBLISHED",
+            "available": false,
+            "provider_key": null,
+            "version": "pr01-prefix-v1"
+          }
+        ],
+        "preliminary": {
+          "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+          "customer_id": "50e5a7ec-00f8-4751-8c6b-dc2823b79988",
+          "project_row_version": 23,
+          "current_preliminary_import_batch_id": "cf32a40e-b777-4eba-9ff1-32dae3323df9",
+          "current_source_artifact_id": "79b0e4cc-5583-44c2-9ba7-4640afb69351",
+          "current_preliminary_analysis_snapshot_id": "487ed7f6-e36c-4096-bc9e-f00b9a111ab0",
+          "current_preliminary_analysis_version": 1,
+          "current_preliminary_result_artifact_id": "59c100f3-52b4-56ba-ae52-904f6772f0d4",
+          "current_preliminary_result_version": 1,
+          "official_intake_commit_id": "511d36d5-6c93-46ec-8f9c-f5c85bc91a69"
+        }
+      },
+      "workspace": {
+        "project_id": "c9b88cec-ae2a-4475-b27f-1d0be5ffbd31",
+        "case_version": "22477dba1a9c68ea298fd2d0ad0cd7118bdc90125a7930b038e5e9d21aa8e858",
+        "line_id": null,
+        "covered_count": 3,
+        "sealed_count": 3,
+        "confirmation_id": "ce5167d4-27f6-4dc9-92b4-0f5f9297573f",
+        "confirmation_withdrawn": false,
+        "confirmation_current": true,
+        "can_withdraw_confirmation": false,
+        "line_covered": null,
+        "line_hold": false,
+        "reason_codes": [],
+        "sources": [
+          {
+            "source_id": "24eb379e-3b3f-4e1a-80be-bb98888abfba",
+            "evidence_revision_id": "9fec2f52-cd3f-46c6-92cc-cf5fbee139df",
+            "revision": 2,
+            "predecessor_revision_id": "199f6e52-d915-4f44-91a0-be78c28c24ba",
+            "category": "internet_survey",
+            "origin": "Nguồn tổng hợp A11 đã cập nhật",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": false,
+            "can_withdraw": false,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          },
+          {
+            "source_id": "94e63ec5-0364-4ff7-b390-f52170f3b7a1",
+            "evidence_revision_id": "a178bc74-a9c5-4fcf-ae38-af9441971b95",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "internet_survey",
+            "origin": "Nguồn bổ sung đồng thời tổng hợp",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": false,
+            "can_withdraw": false,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          },
+          {
+            "source_id": "7c7d82eb-4ff1-422e-b0d6-5df614399ecb",
+            "evidence_revision_id": "4030b998-cb09-43e9-ac9e-0a14ca13a32f",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "unit_price_explanation",
+            "origin": "Giải trình tổng hợp A11",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": false,
+            "can_withdraw": false,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          },
+          {
+            "source_id": "9edee316-c5f4-4e8b-892d-b8e40c7fa7f6",
+            "evidence_revision_id": "a968f441-8376-4239-b187-27a21b92050e",
+            "revision": 1,
+            "predecessor_revision_id": null,
+            "category": "prior_appraisal_result",
+            "origin": "Kết quả lịch sử tổng hợp A11",
+            "effective_date": "2026-10-07",
+            "date_unknown": false,
+            "captured_at": "2026-10-06T17:17:00Z",
+            "expires_at": null,
+            "expired": false,
+            "current": true,
+            "withdrawn": false,
+            "eligible": true,
+            "can_correct": false,
+            "can_withdraw": false,
+            "can_accept": false,
+            "can_reject": false,
+            "explanation_input_eligible": true,
+            "decision": null
+          }
+        ],
+        "offset": 0,
+        "total": 4,
+        "next_offset": null
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "capture": "09-nondraft-read-only-complete.png"
+    }
+  },
+  "commands": [
+    {
+      "operation": "register",
+      "status": 200,
+      "command_id": "c7c2dc6e-8469-4d4e-8edd-08097271b230",
+      "contract": "price-evidence-registration-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "c60fc139-64db-4b78-80b7-e279220f6b25",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "25e69fdf-b208-40d3-b45d-2ae0cf1d48c9",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "f91c544b-fa48-4187-8090-b94121fe029e",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "3302cc5c-7167-4ad5-a18a-7b3f37eef9e5",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "8804a92d-8184-435a-8d1d-9a3fa4db3180",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "da18a649-cf8b-464d-a1df-b5ef9b942175",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "confirm",
+      "status": 200,
+      "command_id": "a85a6002-61a9-4a9b-9aff-1200f5ceab31",
+      "contract": "price-evidence-confirmation-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "register",
+      "status": 200,
+      "command_id": "871175ee-c735-4fd8-8b60-5110d85a1ade",
+      "contract": "price-evidence-registration-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "9541aff2-1f14-48ea-a8d2-accc410acbef",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "25e69fdf-b208-40d3-b45d-2ae0cf1d48c9",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "b49d3e67-547b-467e-99b6-4133610ff4d2",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "3302cc5c-7167-4ad5-a18a-7b3f37eef9e5",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "3e31a184-7854-4a1b-9049-c168518d524d",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "da18a649-cf8b-464d-a1df-b5ef9b942175",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "confirm",
+      "status": 200,
+      "command_id": "174c807a-6256-49ba-acc2-ed4ad2411bd4",
+      "contract": "price-evidence-confirmation-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "withdraw-confirmation",
+      "status": 200,
+      "command_id": "58cc8404-5928-42ef-90a2-68e2c0d55004",
+      "contract": "price-evidence-confirmation-withdrawal-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "confirm",
+      "status": 409,
+      "command_id": "b6d6e84e-edbb-4b4b-a175-8d296e0f2bb8",
+      "contract": "price-evidence-confirmation-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "register",
+      "status": 200,
+      "command_id": "ccbcc2ed-38d7-461a-b464-6e7c0f4f71a4",
+      "contract": "price-evidence-registration-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "register",
+      "status": 200,
+      "command_id": "9b3316ff-db88-45cc-ad1e-5744b7df0786",
+      "contract": "price-evidence-registration-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "withdraw",
+      "status": 200,
+      "command_id": "4e6ad06a-7aee-4644-96e5-8854bb1708ce",
+      "contract": "price-evidence-withdrawal-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "decide",
+      "status": 200,
+      "command_id": "b8d75663-f468-450e-84d0-5cbca435c356",
+      "contract": "price-evidence-relevance-v1",
+      "line_id": "25e69fdf-b208-40d3-b45d-2ae0cf1d48c9",
+      "member_count": 3,
+      "confirm": true
+    },
+    {
+      "operation": "confirm",
+      "status": 200,
+      "command_id": "ebb5662c-4c71-4d38-bc82-2c3193a1e434",
+      "contract": "price-evidence-confirmation-v1",
+      "line_id": null,
+      "member_count": 3,
+      "confirm": true
+    }
+  ],
+  "matrix": {
+    "01-next-action-navigation": "PASS: existing Workbench, no evidence mutation",
+    "02-exact-deficient-line-focus": "PASS: 25e69fdf-b208-40d3-b45d-2ae0cf1d48c9",
+    "03-first-use-boundary": "PASS: four canonical tabs; no legacy final-price authority",
+    "04-internet-registration": "PASS: retained text and HTTPS reference, no remote request, zero coverage",
+    "05-exact-line-acceptance": "PASS: one line qualifying",
+    "06-shared-source-separate-decisions": "PASS: distinct exact line commands, no fanout",
+    "07-full-sealed-coverage": "PASS: server projection covers three sealed lines",
+    "08-whole-set-confirm": "PASS",
+    "09-fresh-complete": "PASS: Case State v5",
+    "10-downstream-hold": "PASS: NO_AUTHORIZED_DOWNSTREAM_ACTION",
+    "11-optional-working-price": "PASS: all absent; PRICE_EVIDENCE COMPLETE",
+    "18-keyboard-focus": "PASS: selected tab, labelled fields, dialog trap, Escape returns trigger, explicit confirmation",
+    "12-correction-stale": "PASS: successor revision invalidates previous coverage; no silent reconciliation",
+    "13-reconfirmation": "PASS: reason and three new exact-line decisions restore COMPLETE",
+    "14-confirmation-withdrawal": "PASS: non-COMPLETE; sources and qualifying coverage retained",
+    "15-cas-conflict": "PASS: real concurrent registration, one 409, fresh reads, no replay",
+    "16-unknown-original-receipt": {
+      "result": "PASS",
+      "fault": "real commit, response aborted, reload persists UUID",
+      "command_id": "de0a6518-01f9-4e3f-9f10-38a1a1f29008",
+      "receipt_command_id": "de0a6518-01f9-4e3f-9f10-38a1a1f29008"
+    },
+    "category-unit-price-explanation": "PASS: registered-source selector, decimal strings, exact structured method",
+    "category-prior-appraisal-result": {
+      "result": "PASS: readable same-tenant project and exact line selectors",
+      "fixture_limitation": "manual retained result transcription under A10; fixture is not a certified appraisal-result record",
+      "project_id": "02d47a57-2907-4013-9076-3f87bef5f5f0"
+    },
+    "exact-relationship-withdrawal": "PASS: reasoned append-only withdrawal loses one line; explicit successor decision restores that line",
+    "17-denied-nondraft": "PASS: live closed session 404 and UI writes unavailable; non-DRAFT 400, COMPLETE read preserved; viewer 403; out-of-scope 404."
+  },
+  "remote_reference_requests": [],
+  "execution_result": "PASS",
+  "visual_capture_notes": "Fresh sequential run on corrected implementation. Package retains explicitly awaited 10 reconfirmation modal from the separately documented accessibility fixture; original candidate 03 was rejected during prior visual QA and remains excluded. No approved baseline changed."
+}

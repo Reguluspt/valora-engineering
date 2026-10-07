@@ -1,6 +1,6 @@
 # A10 PRICE_EVIDENCE runtime
 
-Status: implementation candidate for [Issue #131](https://github.com/Reguluspt/valora-engineering/issues/131), not Gate Owner certification. Accepted authority is [A9 D1–D12](../plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md). The certified product boundary remains ASSET_WORKBENCH; PRICE_EVIDENCE product UX and browser E2E require a later task. Full OS-G2 remains incomplete.
+Status: backend/domain/provider/API CERTIFIED/CLOSED for [Issue #131](https://github.com/Reguluspt/valora-engineering/issues/131), [certification comment 6019045198](https://github.com/Reguluspt/valora-engineering/issues/131#issuecomment-6019045198). PR #132 merged at `387a8d1d630d4245cdc77b886aafa137cf755515`; exact-main CI #614 / run `37479177837` succeeded. Accepted authority is [A9 D1–D12](../plan/VALORA_OS_G2_PRICE_EVIDENCE_AUTHORITY_PROPOSAL.md). The certified product boundary remains ASSET_WORKBENCH; [A11 / Issue #133](https://github.com/Reguluspt/valora-engineering/issues/133) separately authorizes the product UX/browser evidence candidate. Full OS-G2 remains incomplete.
 
 ## Persistence and commands
 
@@ -28,7 +28,7 @@ Provider `price_evidence_confirmation_v1` uses the existing five results and fou
 
 Actual description/working-price/non-restricted input changes, validation/review generations, Workbench confirmation changes, source supersession/withdrawal, decision changes and deadlines invalidate the relevant bindings. Same canonical-value writes do not stale evidence just because row versions change. Issue blockers retain precedence; status controls new-write eligibility while a content-current COMPLETE can survive leaving DRAFT. Receipt history never replaces current state.
 
-The current stage reaches PRICE_EVIDENCE only after current ASSET_WORKBENCH COMPLETE and never advances to SUPPLIER_QUOTES. Ordinary unfinished work exposes `price_evidence_prepare_required` / `PENDING` / `price_evidence_preparation`; stale or unprovable states expose safe `UNAVAILABLE` diagnostics. Completion returns `NO_AUTHORIZED_DOWNSTREAM_ACTION`. Existing frontend routing fails closed for this new action; no PRICE_EVIDENCE mutation CTA or frontend change is included.
+The current stage reaches PRICE_EVIDENCE only after current ASSET_WORKBENCH COMPLETE and never advances to SUPPLIER_QUOTES. Ordinary unfinished work exposes `price_evidence_prepare_required` / `PENDING` / `price_evidence_preparation`; stale or unprovable states expose safe `UNAVAILABLE` diagnostics. Completion returns `NO_AUTHORIZED_DOWNSTREAM_ACTION`. A10 included no PRICE_EVIDENCE mutation CTA or frontend change; [A11 product implementation](VALORA_OS_G2_PRICE_EVIDENCE_PRODUCT.md) consumes these certified contracts in the existing Workbench.
 
 ## Validation and delivery boundary
 

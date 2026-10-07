@@ -324,3 +324,60 @@ class PriceEvidenceSourceRead(StrictObject):
     registrar_id: uuid.UUID
     registered_at: datetime
     material: SourceMaterial
+
+
+class PriceEvidenceDecisionView(StrictObject):
+    decision_id: uuid.UUID
+    relationship_id: uuid.UUID
+    evidence_revision_id: uuid.UUID
+    line_id: uuid.UUID
+    outcome: Literal["accepted", "rejected"]
+    disposition: Literal["qualifying_basis", "excluded_alternative", "unresolved_concern"]
+    qualifying: bool
+    withdrawn: bool
+    review_due_at: datetime
+    review_expired: bool
+    unresolved_concern: bool
+    can_withdraw: bool
+
+
+class PriceEvidenceSourceView(StrictObject):
+    source_id: uuid.UUID
+    evidence_revision_id: uuid.UUID
+    revision: int
+    predecessor_revision_id: uuid.UUID | None
+    category: Literal["internet_survey", "unit_price_explanation", "prior_appraisal_result"]
+    origin: str
+    effective_date: date | None
+    date_unknown: bool
+    captured_at: datetime
+    expires_at: datetime | None
+    expired: bool
+    current: bool
+    withdrawn: bool
+    eligible: bool
+    can_correct: bool
+    can_withdraw: bool
+    can_accept: bool
+    can_reject: bool
+    explanation_input_eligible: bool
+    decision: PriceEvidenceDecisionView | None
+
+
+class PriceEvidenceWorkspace(StrictObject):
+    project_id: uuid.UUID
+    case_version: Digest
+    line_id: uuid.UUID | None
+    covered_count: int | None
+    sealed_count: int
+    confirmation_id: uuid.UUID | None
+    confirmation_withdrawn: bool
+    confirmation_current: bool
+    can_withdraw_confirmation: bool
+    line_covered: bool | None
+    line_hold: bool
+    reason_codes: list[str]
+    sources: list[PriceEvidenceSourceView]
+    offset: int
+    total: int
+    next_offset: int | None

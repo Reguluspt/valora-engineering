@@ -323,3 +323,16 @@
     animation: none;
   }
 }
+.valora-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--valora-space-md);
+}
+
+.valora-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--valora-space-sm);
+  border: 1px solid var(--valora-color-border-subtle);
+  padding: var(--valora-space-md);
+}
