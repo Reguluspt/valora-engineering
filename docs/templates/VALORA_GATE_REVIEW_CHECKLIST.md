@@ -96,6 +96,8 @@ Conclusion:
 ```
 
 - [ ] Required local/focused evidence is recorded with raw results.
+- [ ] Local Saturation Gate before first push is evidenced, or a valid Early Push Exception records all four required fields and the mandatory remote evidence is now complete; use the [operating protocol](../plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md#local-saturation-gate).
+- [ ] First Push Maturity and CI attempts (including failures/reruns) are recorded truthfully under [delivery metrics](../plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#19-delivery-metrics).
 - [ ] Limitations and skips are explicit.
 - [ ] No skip is represented as PASS.
 - [ ] Exact-head CI belongs to the frozen candidate HEAD.
@@ -103,6 +105,8 @@ Conclusion:
 - [ ] CI conclusion is `success`.
 
 A green parent/earlier SHA does not certify this candidate.
+
+After any CI trigger, sanity-check and record exact run/SHA, schedule a condition check and move to other authorized work. Resume on terminal result; IN PROGRESS waits without user noise. Do not repeatedly poll CI manually.
 
 ## 7. Gate Owner independent review
 
@@ -178,9 +182,9 @@ Only after all four conditions are true may the Gate Owner post `CERTIFIED / CLO
 If exact-main CI is not SUCCESS:
 
 - [ ] Keep/reopen task as uncertified when needed.
-- [ ] Identify deterministic code/product/security failure vs plausible transient infrastructure failure.
+- [ ] Use the [CI failure taxonomy](../plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md#ci-failure-taxonomy); record failed run/SHA/job, log-backed classification and authorized next action. UNKNOWN remains blocked pending diagnosis.
 - [ ] Do not waive a security/dependency/test failure without evidence.
-- [ ] A same-SHA rerun is acceptable only when current policy and evidence support a transient classification.
+- [ ] Rerun only when classification, current policy and evidence justify it; record the reason/attempt and preserve failures. No blind rerun.
 - [ ] Any code change creates a new SHA and requires the applicable new evidence.
 
 ## 12. Certification and next action
