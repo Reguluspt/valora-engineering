@@ -468,11 +468,26 @@ class PriceEvidenceDiagnosticContext(CaseStateActionContext):
     reload_required: Literal[True]
 
 
+class SupplierQuotesPreparationContext(CaseStateActionContext):
+    kind: Literal["supplier_quotes_preparation"]
+    project_row_version: int = Field(gt=0, strict=True)
+    seal_id: uuid.UUID
+    authoritative_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    membership_version: int = Field(gt=0, strict=True)
+    contract_version: Literal["supplier-quote-registration-v1"]
+
+
+class SupplierQuotesDiagnosticContext(CaseStateActionContext):
+    kind: Literal["supplier_quotes_diagnostic"]
+    reload_required: Literal[True]
+
+
 AssetReviewActionContext = Annotated[
     AssetReviewValidateContext | AssetReviewApplyContext | AssetReviewLineContext
     | AssetReviewIssueContext | AssetReviewEntryContext | AssetReviewStaleContext
     | AssetReviewPermissionContext | AssetWorkbenchPreparationContext | AssetWorkbenchDiagnosticContext
-    | PriceEvidencePreparationContext | PriceEvidenceDiagnosticContext,
+    | PriceEvidencePreparationContext | PriceEvidenceDiagnosticContext
+    | SupplierQuotesPreparationContext | SupplierQuotesDiagnosticContext,
     Field(discriminator="kind"),
 ]
 

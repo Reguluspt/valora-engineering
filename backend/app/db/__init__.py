@@ -22,6 +22,7 @@ from app.modules.document_workspace.models import (
     DocumentStorageExecutionIntent, DocumentStorageCandidate,
     DocumentStorageExecutionEvent, DocumentStorageExecutionState, StorageObjectBinding,
 )
+from app.modules.project_master_data.supplier_quote_models import SupplierQuoteReceipt, SupplierQuoteFact, SupplierQuoteItem
 from app.modules.m365_integration.models import (
     M365EncryptedCredential,
     M365ManagedContentBaseline,
@@ -33,6 +34,9 @@ from app.modules.m365_integration.models import (
 )
 
 __all__ = [
+    "SupplierQuoteReceipt",
+    "SupplierQuoteFact",
+    "SupplierQuoteItem",
     "Base",
     "engine",
     "SessionLocal",
