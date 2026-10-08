@@ -2,7 +2,7 @@
 
 **Task:** `VALORA-TASK-OS-G2-A16-APPRAISAL-RESULT-READONLY-AUTHORITY-INVENTORY` (Issue [#146](https://github.com/Reguluspt/valora-engineering/issues/146))
 **Inventory date:** 2026-10-08
-**Repository baseline:** `579d68a2122eac017615320a7f79c18184678183` (`main`; exact-main CI #630 / run `37717959755`, SUCCESS)
+**Repository baseline:** `ee9a5611d2b6217413d43293cd3c3f7fc2fce996` (`main`; exact-main CI #640 / run `37745117988`, SUCCESS; all five required jobs)
 **Scope:** factual, read-only discovery. This document does not authorize APPRAISAL_RESULT, answer D1–D12, or grant implementation authority.
 
 `docs/discovery/` does not exist in this repository. Existing read-only audit records are kept in `docs/audits/`, so this inventory uses that closest established location. No product, runtime, schema, API, frontend, workflow, or authority file was changed.
@@ -10,8 +10,9 @@
 ## 1. Authority snapshot
 
 - Current certified OS-G2 product/runtime boundary: `SUPPLIER_QUOTES`; OS-G2 remains PARTIAL / INCOMPLETE. The current roadmap records this boundary in [`VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md`](../VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md).
-- A15 / Issue [#145](https://github.com/Reguluspt/valora-engineering/issues/145) is open as the `SUPPLIER_SELECTION` authority proposal task. The issue says its future D1–D12 require Product Owner acceptance. No accepted A15 decision was assumed in this inventory.
-- `SUPPLIER_SELECTION` runtime and `APPRAISAL_RESULT` remain UNAUTHORIZED. APPRAISAL_RESULT cannot proceed until its A15 dependency is resolved and its own authority is separately accepted.
+- A15 / Issue [#145](https://github.com/Reguluspt/valora-engineering/issues/145) is closed for its proposal deliverable. Its proposal is CERTIFIED / INTEGRATED on this baseline, and the Product Owner explicitly accepted A15 D1–D12 in [Issue #145 comment 6055863807](https://github.com/Reguluspt/valora-engineering/issues/145#issuecomment-6055863807). This acceptance supersedes historical `PENDING` labels only as to acceptance status; the accepted proposal's recommended semantics are unchanged. It does not certify or authorize runtime.
+- A15's accepted domain direction is a server suggestion of the lowest safely comparable current eligible A13 quote item per exact sealed line, editable by the professional, followed by one explicit whole-set confirmation. No selected-item runtime fact is produced yet: successor ADR 0051 is tracked by [A17 Issue #149](https://github.com/Reguluspt/valora-engineering/issues/149); its proposal remains Draft and is NOT PO-accepted. `SUPPLIER_SELECTION` runtime remains UNIMPLEMENTED / UNAUTHORIZED. `APPRAISAL_RESULT` authority/runtime also remain UNAUTHORIZED.
+- The A15 accepted one-item-per-line design does not decide how the fixed NCC1/NCC2/NCC3 company-form columns are populated, which additional eligible quotes appear there, or what exact quote set is mandatory for APPRAISAL_RESULT comparison.
 - Current product route in design authority: `SUPPLIER_SELECTION → APPRAISAL_RESULT → Document`. This is a future design sequence, not current runtime activation.
 
 ### 1.1 Design authority and supersession
@@ -24,6 +25,7 @@
 | [`design/VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md`](../design/VALORA_UIUX_HANDOFF_v2.3_NCC_PRICE_WARNING_RULE_ADDENDUM.md) | Supporting current NCC price comparison semantics. | Does not authorize final-price selection or APPRAISAL_RESULT completion semantics. |
 | [`design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`](../design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md) and [`design/VALORA_DESIGN_AUTHORITY_INDEX.md`](../design/VALORA_DESIGN_AUTHORITY_INDEX.md) | Authority entrypoints and visual/product precedence. | Fluent 2 governs the application surface; the approved company-form layout remains immutable. |
 | [`design/VALORA_USER_FLOW_MINDMAP_v2.3.md`](../design/VALORA_USER_FLOW_MINDMAP_v2.3.md) | Supporting workflow map. | Older sections are subordinate to the later final-result and price/evidence addenda where they conflict. |
+| [`VALORA_OS_G2_SUPPLIER_SELECTION_AUTHORITY_PROPOSAL.md`](../plan/VALORA_OS_G2_SUPPLIER_SELECTION_AUTHORITY_PROPOSAL.md) | Certified A15 proposal authority on the current baseline; its D1–D12 design recommendations are PO-accepted by [Issue #145 comment 6055863807](https://github.com/Reguluspt/valora-engineering/issues/145#issuecomment-6055863807). | A15 domain authority only; the successor ADR 0051 proposal tracked by [A17 Issue #149](https://github.com/Reguluspt/valora-engineering/issues/149) and runtime remain pending/unauthorized. It does not set APPRAISAL_RESULT form-column mapping or comparison-set rules. |
 
 The final-result baseline establishes presentation layout and route. It does **not** define a backend result identity, sealed-line COMPLETE predicate, result revision policy, lifecycle, or a document-generation authorization.
 
@@ -67,18 +69,13 @@ Supplier quotations are not the primary source for the final appraisal price. A 
 
 ## 3. Pending SUPPLIER_SELECTION dependency
 
-Issue #145 remains OPEN as an authority-proposal task. Treat each item here as **PENDING DEPENDENCY** until A15 authority is accepted and the relevant current facts are available:
+The A15 proposal is certified and its D1–D12 recommendations are PO-accepted, but successor ADR 0051 and runtime are not accepted/authorized. Distinguish this accepted future design from current data: no A15-selected item or selection receipt is currently produced.
 
-- the exact selected quote item for each sealed asset line;
-- Supplier identity and supplier lineage;
-- quote identity/revision and quote-item identity;
-- exact line identity and line-to-quote lineage;
-- retained source document/revision lineage;
-- eligibility and currentness, including stale detection;
-- explicit change/reconfirmation behavior; no silent rebind to a quote, item, source, or successor;
-- the selected quote set available for APPRAISAL_RESULT comparison.
+- **A13 available facts:** current confirmed eligible quote candidates, their Supplier, quote/item, exact line, retained source, and currentness lineage. These are candidate facts, not selected facts.
+- **A15 PO-accepted future design:** one current eligible A13 item per exact sealed line; the server suggests the lowest safely comparable item, the professional may edit, then explicitly confirms the whole prepared set once. The accepted design preserves exact identities/currentness, no silent rebind, and explicit whole-set reconfirmation after staleness. A15 runtime has not implemented these durable selection facts or receipts.
+- **APPRAISAL_RESULT still undecided:** mapping one selected item and any additional eligible quote candidates to the fixed three supplier-price columns; display/fill order; exact mandatory comparison set; and what happens when no comparable selected item exists. A15 does not decide these matters and imposes no mandatory-three rule.
 
-Current A13 supplier-quote authority and runtime facts can provide quotation records; they do not themselves establish which exact item is selected for each line. The legacy NCC-selection routes and PR-03/PR-04 concepts are not evidence that A15 has accepted their semantics. No A15 D1–D12, exact comparison set, or completion rule is presumed here.
+Current A13 supplier-quote authority and runtime facts provide quotation records, not A15 selections. Legacy NCC-selection routes and PR-03/PR-04 concepts are not evidence of current A15 selection facts. No APPRAISAL_RESULT D1–D12, comparison set, or completion rule is presumed here.
 
 ## 4. Backend inventory
 
@@ -112,7 +109,7 @@ Classifications describe present repository artifacts only and do not promote th
 | Surface | Evidence | Authority risk / boundary |
 |---|---|---|
 | Workbench `AssetGrid` | `frontend/src/components/workbench/AssetGrid.tsx`, `AssetGridTypes.ts`, `hooks/useProjectAssetLines.ts`, and `session/useWorkbenchDraftSync.ts` display/edit `appraised_unit_price` as `appraised_price`; the grid labels it `Giá TĐ` and has an “Áp dụng nháp” command. | A prominent appraisal-price label and an official-data commit can look like final result authority. The field remains working data under current authority. |
-| Legacy NCC Selection page/table/drawer | `frontend/src/components/ncc-selection/NccSelectionPage.tsx`, `NccSelectionTable.tsx`, `NccSelectionDrawer.tsx`, and `frontend/src/api/nccSelection.ts` display the line's current `appraised_unit_price` beside selected quote price, difference, warnings, and selection state. | The “Đơn giá hiện hành” label plus selected supplier comparison may imply an accepted result baseline or selection authority. Issue #145 remains open; this older surface is not proof of accepted A15/current supplier-item binding. App routing also gates the page on the supplier-selection availability flag. |
+| Legacy NCC Selection page/table/drawer | `frontend/src/components/ncc-selection/NccSelectionPage.tsx`, `NccSelectionTable.tsx`, `NccSelectionDrawer.tsx`, and `frontend/src/api/nccSelection.ts` display the line's current `appraised_unit_price` beside selected quote price, difference, warnings, and selection state. | The “Đơn giá hiện hành” label plus selected supplier comparison may imply an accepted result baseline or current A15 selection fact. A15 design is now PO-accepted, but this legacy surface does not implement its accepted lineage/currentness/whole-set confirmation contract. App routing also gates the page on the supplier-selection availability flag. |
 | `AppraisedPriceDecision` frontend shape | `frontend/src/components/workbench/panels/ContextPanelTypes.ts` declares a typed `appraised_price_decision` panel field. Search found no frontend rendering/use of that field or a decision editor. | A type alone does not establish an active user surface or an authoritative project result. |
 | Case Overview future-stage timeline | `frontend/src/components/case-overview/CaseOverviewPage.tsx` groups `APPRAISAL_RESULT` under “Kết quả thẩm định”; `caseOverviewPresentation.ts` supplies its stage label/result label. The overview renders projection stages and shows “Chưa có nguồn trạng thái được xác nhận” when a stage lacks an available capability. | This is a generic Case State progress surface, not a result editor or result model. Its future-stage entry still needs to remain clearly unavailable until the server exposes accepted authority; stage vocabulary does not grant completion or output authority. |
 | Final-result mockups/assets | `docs/design/assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md` and `docs/design/visual-reference/v2.3/` contain approved design/reference material. | These govern the visual/form contract, not server state, final-price confirmation, completeness, or revision history. No active final-result frontend route/component was found in `frontend/src`. |
@@ -123,7 +120,7 @@ No UI was changed.
 
 ## 6. Company-form field/data map
 
-Availability is evaluated against current repository data and accepted authority at this baseline. `DEPENDS ON A15` denotes a future selected-supplier fact, not a statement that the A15 decision has been made.
+Availability is evaluated against current repository data and accepted authority at this baseline. `DEPENDS ON A15` denotes a PO-accepted future design fact whose implementation/runtime data is still unavailable. `MISSING AUTHORITY` denotes an APPRAISAL_RESULT rule not decided by A15.
 
 | Form field / cell | Required fact | Status | Repository evidence / gap |
 |---|---|---|---|
@@ -132,7 +129,9 @@ Availability is evaluated against current repository data and accepted authority
 | Form 1 — `Đặc điểm kinh tế - kỹ thuật` | Complete company-form text for one asset in one cell | `PARTIAL` | `description`, brand/manufacturer references, taxonomy/canonical/technical-specification foundations exist; no guarantee that all form-required technical attributes are present as one approved line snapshot. |
 | Forms 1–3 — `ĐVT` | Unit label tied to the exact line/unit | `PARTIAL` | `unit_id` and unit reference exist but are nullable; historical/future unit display snapshot and normalization are not frozen for result output. |
 | Forms 1–3 — `SL` | Quantity tied to the exact line | `AVAILABLE` | `ProjectAssetLine.quantity` exists; result snapshot/rounding semantics are not defined. |
-| Form 2 — `NCC 1`, `NCC 2`, `NCC 3` unit prices | Exact selected eligible confirmed quote item(s), price/currency, Supplier, quote/line/source lineage, and currentness | `DEPENDS ON A15` | A13 supplies quote facts; A15 selection of exact current quote items per sealed line and its lineage/currentness semantics are still pending. |
+| Form 2 — underlying eligible quotation candidates | Current confirmed eligible A13 quote-item facts, including price/currency, Supplier, quote/item, exact line/source lineage, and currentness | `AVAILABLE` | A13 provides candidate quote records. Candidate availability does not assign selected status or a column. |
+| Form 2 — future selected item per exact sealed line | One current eligible A13 item per line, with accepted A15 lineage/currentness and explicit whole-set confirmation | `DEPENDS ON A15` | This is PO-accepted A15 design authority (Issue #145 comment `6055863807`), but successor ADR 0051 is not PO-accepted and runtime is unimplemented/unauthorized; no current selected item or receipt is available. |
+| Form 2 — mapping to `NCC 1`, `NCC 2`, `NCC 3` columns and mandatory comparison set | APPRAISAL_RESULT rule for selected and any additional eligible candidates, column assignment/order, mandatory comparisons, and no-comparable behavior | `MISSING AUTHORITY` | The fixed company form has three unit-price columns, but A15's one-selected-item-per-line design does not determine their fill/order or comparison membership. No mandatory-three rule is accepted. These remain APPRAISAL_RESULT Product Owner decisions. |
 | Form 2 — `Tổ TĐG đánh giá / Đơn giá` | Human appraisal-team comparison amount, with authority/source context | `LEGACY` | `appraised_unit_price` is optional working data. Price-source priority is accepted, but no APPRAISAL_RESULT result identity or confirmation command exists. |
 | Form 2 — `Tổ TĐG đánh giá / Thành tiền` | Result unit price × exact quantity, under accepted unit/currency and rounding rules | `MISSING AUTHORITY` | No result snapshot, arithmetic/precision authority, or output rounding contract was found. |
 | Form 3 — `Đơn giá` | Human-confirmed final appraisal unit price | `MISSING AUTHORITY` | No APPRAISAL_RESULT authority or current result model/API exists. The working line field cannot be silently promoted. |
@@ -153,13 +152,14 @@ If result price is greater than a quote in the mandatory comparison set, UI vali
 
 Product Owner decision gaps:
 
-- Which exact supplier quotation set is mandatory for each line? **PENDING DEPENDENCY on A15.**
+- How does APPRAISAL_RESULT map its one future A15-selected item plus any additional eligible candidates into the fixed NCC1/NCC2/NCC3 columns, and in what order?
+- Which exact supplier quotation set is mandatory for comparison on each line? **APPRAISAL_RESULT decision; not determined by A15.**
 - Is the validation Warning or Blocking?
 - Does an above-quote result affect APPRAISAL_RESULT `COMPLETE`?
 - How are multi-currency prices compared?
 - How are unit differences normalized?
 - How are tax, delivery, warranty, and commercial terms normalized?
-- What happens when no comparable selected quote exists?
+- What happens when no comparable quote exists in the eventual mandatory set?
 
 No comparison outcome or severity is decided here.
 
@@ -176,8 +176,8 @@ All rows have Product Owner status **NOT YET PROPOSED**. “Accepted facts” be
 | **D5 — lifecycle / correction / withdrawal** | Legacy decision statuses exist for catalog records only; final-result design does not specify lifecycle. | Draft/confirm/correct/reconfirm/withdraw states, append-only history, and effects on output/currentness. | `AppraisedPriceDecisionStatus`; no result lifecycle implementation. | Corrections may rewrite history, retain invalid current values, or silently change an issued output. | NOT YET PROPOSED |
 | **D6 — human final-price confirmation** | Human decides current/final price; automated systems may not overwrite it. | Actor/permission/session, explicit confirmation, line/result scope, acknowledgements, and change confirmation. | Price/evidence authority addendum; guarded Workbench price draft is not a final-result confirmation. | AI, automation, or a generic edit could acquire professional decision authority. | NOT YET PROPOSED |
 | **D7 — PRICE_EVIDENCE relation** | Three source classes and their priority are accepted; old result is historical evidence and does not copy its value into current price. | Whether evidence links are live or snapshotted; required evidence, provenance retention, staleness, and citation granularity. | `price_evidence_authority.py`, price-evidence models/schemas/commands, addendum. | Evidence could be detached from the value or a historical value could be silently reused. | NOT YET PROPOSED |
-| **D8 — SUPPLIER_SELECTION / comparison relation** | Selected NCC quote is comparison context, not automatic final price; comparison inequality is accepted. | Mandatory comparison set, quote/item identity, currency/unit/terms normalization, validation location/severity, and no-comparable behavior. | Price/evidence addendum; A13 quote authority; A15 Issue #145 remains OPEN. | A non-selected, stale, incomparable, or wrong-line quotation could validate/invalidate a professional result. | NOT YET PROPOSED |
-| **D9 — currentness / stale** | A15-derived quote/source currentness and no-silent-rebind requirements remain pending; result must not assume them. | Which changes stale a result/evidence set, how stale is surfaced, and whether output is blocked pending explicit reconfirmation. | A13 currentness mechanisms; A15 Issue #145; no result currentness provider. | Changed source facts could be presented as current without professional review. | NOT YET PROPOSED |
+| **D8 — SUPPLIER_SELECTION / comparison relation** | Selected NCC quote is comparison context, not automatic final price; comparison inequality is accepted. A15 D1–D12 PO-accepted design calls for one current eligible selected A13 item per sealed line after explicit whole-set confirmation, once its separate ADR/runtime gates are met. | APPRAISAL_RESULT's exact comparison set and mapping to three columns; quote/item identity binding; currency/unit/terms normalization; validation location/severity; no-comparable behavior. | Price/evidence addendum; A13 quote authority; certified A15 proposal and PO acceptance #145 comment `6055863807`; A15 runtime unavailable; no result model. | A non-selected, stale, incomparable, or wrong-line quotation could validate/invalidate a professional result. | NOT YET PROPOSED |
+| **D9 — currentness / stale** | A15's accepted future design includes exact quote/source currentness, durable invalidation observations, no silent rebind, and explicit whole-set reconfirmation; A15 runtime has not implemented these facts. | Which changes stale a result/evidence set beyond A15 selection currentness, how stale is surfaced, and whether output is blocked pending explicit reconfirmation. | A13 currentness mechanisms; certified A15 proposal and PO acceptance #145 comment `6055863807`; pending successor ADR 0051 and runtime; no result currentness provider. | Changed source facts could be presented as current without professional review. | NOT YET PROPOSED |
 | **D10 — security / CAS / idempotency / audit** | Existing code has project/line row versions, Workbench sessions/drafts, permissions, audit, and quote command patterns; those patterns have different scopes. | Actor/tenant rules, Project DRAFT, lock ordering, aggregate CAS, UUID receipts/replay, atomic audit, unknown outcomes, concurrency matrix. | `projects.py`, Workbench draft command, `supplier_quote_authority.py`, generic knowledge routes. | Cross-tenant mutation, lost updates, duplicate commits, or an unaudited official result. | NOT YET PROPOSED |
 | **D11 — Case State / Next Action / product surface** | Final-result design is the next step after supplier selection and uses Fluent 2 around the forms; current runtime boundary is earlier. | Provider/stage/context/state/action semantics, route/feature gate, source-of-truth ownership, and exact operator surface. | Final-result baseline/addendum; Case State API/provider registry; no APPRAISAL_RESULT provider found. | UI may display a future/mock screen as enabled or imply completion that server truth does not authorize. | NOT YET PROPOSED |
 | **D12 — output / document boundary** | The forms are output-facing company layouts; routing continues from final result to report/certificate document work. | Whether output is preview-only or generated; immutable snapshot identity; document versions, correction/reissue, and downstream handoff. | Final-result baseline; document workspace; dossier extraction models; no current result-to-document output pipeline found. | A document could contain mutable, unconfirmed, stale, or unsupported values. | NOT YET PROPOSED |
@@ -213,10 +213,10 @@ Patterns for a later authority proposal to reconcile—not decisions made for AP
 3. The approved three-table final-result design fixes presentation layout; it does not define backend `COMPLETE` semantics.
 4. Selected NCC price is comparison context, not an automatic final appraisal price.
 5. Severity and completion impact when result price exceeds the selected quote comparison set remain unresolved.
-6. APPRAISAL_RESULT authority cannot be finalized until the A15 `SUPPLIER_SELECTION` dependency is resolved.
+6. A15's proposal and D1–D12 design authority are now certified/PO-accepted, but selection runtime remains unavailable pending ADR 0051 acceptance and a separate authorized implementation task; no APPRAISAL_RESULT facts should be inferred from the accepted future design.
 7. The existing Workbench and legacy NCC-selection UI can present working price and quote comparison in ways that look more authoritative than the currently certified business truth.
 8. Historical extracted final-result rows and generic decision records are supporting/historical artifacts, not current project result authority.
 
 ## 12. Boundary and next gate
 
-This inventory prepares later authority work only. It does not answer or accept D1–D12, request Product Owner acceptance, implement runtime, create an APPRAISAL_RESULT authority proposal, or authorize a stage advance. Recheck live main and A15 before using this snapshot; changes to A15-derived facts require rebaselining the dependency section.
+This inventory prepares later authority work only. It does not answer or accept APPRAISAL_RESULT D1–D12, request Product Owner acceptance, implement runtime, create an APPRAISAL_RESULT authority proposal, or authorize a stage advance. This snapshot is based on certified main `ee9a5611d2b6217413d43293cd3c3f7fc2fce996`, exact-main CI #640, A15 certification, and PO acceptance comment `6055863807`. Recheck current main, A15 runtime/ADR gates, and any A17 integration before a later APPRAISAL_RESULT task uses it.
