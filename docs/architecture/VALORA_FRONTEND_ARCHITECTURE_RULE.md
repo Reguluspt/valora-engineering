@@ -4,6 +4,8 @@
 
 **Decision date:** 2026-10-04
 
+**Visual-governance reconciliation:** 2026-10-07 — Product Owner decision [Issue #142](https://github.com/Reguluspt/valora-engineering/issues/142); implementation remains separately gated.
+
 **Project:** Valora
 
 **Scope:** Frontend architecture / React + Fluent 2 presentation layer
@@ -292,13 +294,17 @@ The correct direction remains:
 ```text
 Domain / Server Authority
         ↓
-API / Read Model
+Application / API
+        ↓
+Server-authoritative Read Models
         ↓
 Feature presentation
         ↓
 Shared UI components
         ↓
-Rendered screen
+Fluent 2 primitives
+        ↓
+Design tokens
 ```
 
 ---
@@ -639,6 +645,10 @@ A frontend PR should answer, as applicable:
 - [ ] Are accessibility/focus/keyboard behaviors preserved?
 - [ ] Are relevant visual/component/browser tests updated?
 - [ ] Does the implementation avoid creating a second visual system?
+- [ ] Does a new/materially changed surface pass Continuous Visual Integrity, with any controlled presentation deviation recorded for G6?
+- [ ] Are architecture violations and serious usability/IA issues resolved in the owning task rather than deferred as visual debt?
+- [ ] If this is an authorized OS-G6 convergence task, does it meet its final baseline, accessibility and visual-regression acceptance?
+- [ ] If external design advice is used, is the exact revision/version recorded and subordinate to Valora authority?
 
 Not every PR needs every form of testing. Test scope remains risk- and task-based under the current Valora operating protocol.
 
@@ -726,5 +736,27 @@ It does **not** by itself authorize:
 Implementation should follow the incremental ratchet strategy and be incorporated into future frontend work as relevant.
 
 ---
+
+## 17. Visual acceptance and Product Completion — Issue #142
+
+**OS-G2→OS-G5: functional correctness first + Continuous Visual Integrity.** Every new/materially changed frontend surface must preserve Microsoft Fluent 2 light, design tokens, shared components, usable hierarchy, no broken layout, explicit loading/empty/error/stale/conflict/denied/uncertain states, basic keyboard/focus/accessibility and no serious IA contradiction. Product language stays desktop-first, Vietnamese-first and data-heavy/table-first.
+
+Level 1 has no product-wide pixel-perfect requirement. No feature-local visual system or architecture debt requiring a G6 rewrite is allowed. Controlled presentation debt may be deferred only while usability, IA and architecture remain intact and the deviation is recorded in the [G6 Visual Debt Register](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md#11-lightweight-visual-debt-register). Architecture violations and serious usability/IA issues belong to the owning current task. Existing task-required golden checks remain binding.
+
+**Level 2 — Final Visual Convergence, OS-G6** covers typography, spacing, density, surface hierarchy, borders/elevation, navigation, page headers, command bars, grids, drawers, forms, dialogs, status semantics, loading/empty/error, desktop composition, cross-product consistency and golden screenshots. OS-G6 MUST NOT close without it.
+
+The [G6 plan](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md) sequences Scope Freeze → Functional North-star Candidate → VALORA Internal Business Trial → UX Reconciliation → Design-System Hardening → Visual Convergence → Accessibility/Visual Regression → Exact-SHA Certification. Final polish is not required at G6.1. Visual remediation should primarily change tokens, shared presentation and layout primitives; shared components must never own completion/current stage or other business truth. Windows shell remains bounded OS integration, not the main presentation layer.
+
+Current workflow/domain semantics win over obsolete mockup semantics. Approved mockups still govern visual grammar, layout, hierarchy, density and Fluent 2 drawer/table/navigation patterns. Final visual baseline reconciles approved UI/UX authority, Internal Business Trial findings and current authoritative workflow; it is not a blind historical pixel clone.
+
+Formal Windows Preview/UAT follows OS-G6 Software Completion; OS-G7 follows stable Product Completion and the roadmap's Windows Preview/UAT gate. Future Assistant should reuse hardened presentation components. This rule does not open Visual Convergence implementation, downstream product stages, Windows work or AI runtime.
+
+## 18. External Design Skill Advisory Policy
+
+External skills are **ADVISORY ONLY** under the binding [G6 policy](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md#12-external-design-skill-advisory-policy): explicit current Product Owner / Valora UIUX authority > current domain/workflow/server truth > Valora Frontend Architecture + Fluent 2 + tokens + shared components > approved visual baselines + Internal Business Trial findings > external heuristics. Illustrative mockup semantics never override server/domain truth.
+
+OS-G2→OS-G5 uses external skills primarily for audit/advice; prefer `redesign-existing-projects` where relevant. `gpt-taste` is not default authority for core product UI. `minimalist-ui` and other style skills supply isolated compatible heuristics, never a whole visual system. OS-G6.3→OS-G6.5 may use stronger visual-quality auditing after business authority is correct; `image-to-code` may analyze approved references while current semantics win. External visual review supplements, never replaces, required security/domain/high-risk gate reviewers.
+
+Record the exact external revision/version when used; do not pull moving main into gated work or add Taste Skill as a frontend/runtime dependency. The pinned reviewed upstream revision and license are recorded in the G6 policy. Advisory dials, when applicable, are variance 2–3, motion 1–2, density 7–8; they are not tokens or domain rules. Future internal `valora-ui-visual-quality` requires a separate bounded task.
 
 **End of document**

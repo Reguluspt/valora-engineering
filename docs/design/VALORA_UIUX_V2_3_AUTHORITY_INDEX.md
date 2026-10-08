@@ -2,6 +2,7 @@
 
 **Status:** Canonical UI/UX reading order for v2.3
 **Consolidation:** 21/09/2026 — `Working Change Observation / DocumentChangeCandidate / Human Commit Contract v1`.
+**Visual-governance reconciliation:** 2026-10-07 — Product Owner decision [Issue #142](https://github.com/Reguluspt/valora-engineering/issues/142).
 **Authority roles:** `VALORA_UIUX_HANDOFF_v2.3.md` + this index + applicable addenda govern product semantics, workflow, IA, interaction and **Microsoft Fluent 2 light** visual baseline. `docs/VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md` governs development sequencing / architecture integration. `docs/architecture/VALORA_AI_MASTER_PLAN_V1.md` details OS-G7 architecture only; it does not override this UI/UX authority or authorize provider AI by itself.
 
 ## Deployment/client architecture scope — 2026-10-03
@@ -18,7 +19,35 @@ The Product Owner-approved [Frontend Architecture Rule](../architecture/VALORA_F
 
 Current product visual language is **Microsoft Fluent 2 light, desktop-first, Vietnamese-first, data-heavy/table-first**. Approved visual baselines/mockups are authority. Astryx is historical/low-level reference only; retained Astryx primitives must be fully remapped and must not introduce dark/cyan/glassmorphic language.
 
+Mockups govern visual grammar, layout, hierarchy, density, Fluent 2, drawer/table composition and navigation patterns. **Current authoritative workflow/domain semantics always win over obsolete mockup semantics**; do not blindly pixel-clone historical references. Final OS-G6 baseline reconciles approved UI/UX authority + VALORA Internal Business Trial findings + current authoritative workflow, with explicit Product Owner UX decisions where needed. Preserve historical evidence.
+
 Part 2C `PR-00 → PR-13` remains historical implementation-closure evidence; its sequencing is superseded by the Unified Roadmap v2.3, while still-current UX/business contracts remain valid.
+
+### 0.1 Visual acceptance and OS-G6 completion
+
+The [G6 Product Completion and Visual Convergence Plan](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md) is the current detailed planning reference under the Unified Roadmap; it does not replace the UI/UX master or open implementation.
+
+**Level 1 — Continuous Visual Integrity, OS-G2→OS-G5:** functional correctness first, while every new/materially changed surface preserves Fluent 2 light, tokens, shared components, usable hierarchy, no broken layout, explicit loading/empty/error/stale/conflict/denied/uncertain states, basic keyboard/focus/accessibility and no serious IA contradiction. No product-wide pixel-perfect requirement, feature-local visual system or architecture debt requiring G6 rewrite. Existing task-specific golden checks remain required.
+
+Only controlled presentation deviations preserving usability, IA and architecture may be recorded for G6 in the [Visual Debt Register](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md#11-lightweight-visual-debt-register). Architecture violations and serious usability/IA issues must be fixed in their owning tasks.
+
+**Level 2 — Final Visual Convergence, OS-G6:** typography, spacing, density, surface hierarchy, borders/elevation, navigation, page headers, command bars, grids, drawers, forms, dialogs, status semantics, loading/empty/error, desktop composition, cross-product consistency and golden screenshots. OS-G6 MUST NOT close without this, accessibility, visual regression and exact-SHA Product Completion acceptance.
+
+OS-G6.0→G6.7: Scope Freeze / Rebaseline → Functional North-star E2E Candidate → VALORA Internal Business Trial → UX Reconciliation → Design-System Hardening → Visual Convergence → Accessibility + Visual Regression → Exact-SHA Certification. Final polish is not required at G6.1. The Internal Business Trial is not Formal UAT; presentation-only findings resolve in G6, interaction/UX without authority change requires a Product Owner UX decision then G6, and domain/workflow semantics return to the owning domain gate.
+
+Formal Windows Preview/UAT remains after OS-G6 Software Completion; OS-G7 follows stable Product Completion and the roadmap's Preview/UAT gate. Future Assistant should reuse hardened presentation components. This reconciliation grants no Visual Convergence, Windows or AI implementation authority.
+
+### 0.2 External Design Skill Advisory Policy
+
+External design skills are **ADVISORY ONLY** under the binding [Product Owner policy and pinned upstream evidence](../plan/VALORA_OS_G6_PRODUCT_COMPLETION_AND_VISUAL_CONVERGENCE_PLAN_V1.md#12-external-design-skill-advisory-policy): explicit current Product Owner / Valora UIUX authority > current domain/workflow/server truth > Valora Frontend Architecture + Fluent 2 + tokens + shared components > approved visual baselines + Internal Business Trial findings > external heuristics. This precedence never elevates obsolete image semantics above current business truth.
+
+During OS-G2→OS-G5 use primarily visual audit/advice, preferring `redesign-existing-projects` where relevant. `gpt-taste` is not default authority for core Valora UI; other styles such as `minimalist-ui` contribute isolated compatible heuristics, never a full design system. G6.3→G6.5 may use stronger visual auditing after business authority is correct. `image-to-code` may analyze approved references; current semantics still win. External visual review supplements and never replaces required security/domain/high-risk reviewers.
+
+Record exact revision/version when used; do not pull moving main into gated work or add Taste Skill as project/runtime dependency. The reviewed revision is `b482f7a970abb98c4108d4a9f761e458c64cefc8` (MIT), with experimental default v2 excluding dashboards, tables and multi-step product UI. Advisory dials (variance 2–3, motion 1–2, density 7–8) are not tokens/domain rules. Future internal `valora-ui-visual-quality` needs a separate bounded task.
+
+### 0.3 Current certified product boundary — dated verification, 2026-10-07
+
+[A14 / Issue #139](https://github.com/Reguluspt/valora-engineering/issues/139#issuecomment-6041091878) is CERTIFIED/CLOSED at main `dbcc4f5ca39803dffa360e4eddba064156335dd3`, [exact-main CI #625 / run 37639051093](https://github.com/Reguluspt/valora-engineering/actions/runs/37639051093) SUCCESS. Certified product/runtime boundary = **SUPPLIER_QUOTES**. After COMPLETE, `NO_AUTHORIZED_DOWNSTREAM_ACTION` remains product truth; **SUPPLIER_SELECTION and APPRAISAL_RESULT are UNAUTHORIZED, full OS-G2 PARTIAL / INCOMPLETE**. Future stage descriptions and visual references below are target authority, not runtime activation. Re-fetch live main before any task; this is dated evidence.
 
 ## 1. Thứ tự đọc hiện hành
 1. `VALORA_UIUX_HANDOFF_v2.3.md` — canonical master.
