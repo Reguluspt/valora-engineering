@@ -110,7 +110,7 @@ class Repository:
         actual = Path(self.git("rev-parse", "--show-toplevel").decode().strip()).resolve()
         require(actual == self.root, "REPOSITORY_ROOT_REQUIRED")
         # Status can execute clean filters; refuse them before inspecting the worktree.
-        keys = self.git("config", "--local", "--includes", "--name-only", "--list").decode().splitlines()
+        keys = self.git("config", "--includes", "--name-only", "--list").decode().splitlines()
         require(not any(key.lower().startswith("filter.") for key in keys), "UNSAFE_GIT_FILTER")
 
     def git(self, *args):

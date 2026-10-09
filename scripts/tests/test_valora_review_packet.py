@@ -392,6 +392,12 @@ class PacketTests(unittest.TestCase):
         with self.blocked("UNSAFE_GIT_FILTER"):
             builder.Repository(self.root)
 
+    def test_worktree_specific_git_filter_is_rejected_before_status(self):
+        git(self.root, "config", "extensions.worktreeConfig", "true")
+        git(self.root, "config", "--worktree", "filter.inject.clean", "never-executed")
+        with self.blocked("UNSAFE_GIT_FILTER"):
+            builder.Repository(self.root)
+
     def test_unrelated_base_is_rejected(self):
         tree = git(self.root, "rev-parse", self.input["head_sha"] + "^{tree}").decode().strip()
         self.input["base_sha"] = git(self.root, "commit-tree", tree, "-m", "unrelated").decode().strip()
