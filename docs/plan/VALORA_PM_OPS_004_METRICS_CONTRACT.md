@@ -10,7 +10,7 @@ Requested implementing route `gpt-6.1-sol / medium` was accepted, task `/root/so
 
 [`scripts/valora_llm_usage_audit.py`](../../scripts/valora_llm_usage_audit.py) uses Python standard library (3.12+), without network, directory discovery, environment/credential access, Git commands or provider requests. Its sole source is one explicitly chosen regular `.json`/`.jsonl` file, UTF-8, at most 2,000,000 bytes and 2,000 events. It rejects symlink input, duplicate JSON keys, unexpected fields at every object boundary, malformed or unbounded values, and unsupported versions. This is a sanitized metadata importer, not a native log sanitizer: prepare exports separately without ever feeding raw transcripts to it. A supplied sanitation flag/provenance reference is an assertion, not independent authentication. Deliberately encoded private data cannot be detected by schema validation; supply only reviewed synthetic/sanitized exports.
 
-JSON envelope has exactly `schema_version: "1.0"`, `sanitized_metadata: true`, `events: [event, ...]`. JSONL has one envelope per nonblank line with exactly `schema_version`, `sanitized_metadata`, `event`. All event fields below are required; nullable values express unavailable evidence. Missing counters remain null rather than zero. `usage` may contain only fields named for its adapter, with nonnegative integers ≤10^15 or null. Unknown keys, even if apparently harmless, block the entire input; no partial success or quarantine artifact is emitted.
+JSON envelope has exactly `schema_version: "1.0"`, `sanitized_metadata: true`, `events: [event, ...]`. JSONL has one envelope per nonblank line with exactly `schema_version`, `sanitized_metadata`, `event`. All event fields below are required; nullable values express unavailable evidence. Within the required `usage` object, individual counter keys are optional: an omitted key and an explicit null both mean unavailable, never zero; an empty usage object is valid with WARN. `usage` may contain only fields named for its adapter, with nonnegative integers ≤10^15 or null. Unknown keys, even if apparently harmless, block the entire input; no partial success or quarantine artifact is emitted.
 
 | Event field | v1 constraint and meaning |
 | --- | --- |
@@ -52,7 +52,7 @@ API maps describe official API usage objects exported into flat sanitized counte
 
 Official references verified on 2026-10-09: [DeepSeek Chat Completions usage](https://api-docs.deepseek.com/api/create-chat-completion/), [Gemini UsageMetadata](https://ai.google.dev/api/generate-content#UsageMetadata), [OpenAI prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching). DeepSeek input=hit+miss; output includes reasoning. Gemini total includes prompt+thoughts+candidates, so thoughts must not be treated as a subset of candidates. OpenAI output includes nonvisible tokens; reasoning is a subset, not added to output; current cache-write input is separate from cache-read. See [OpenAI token counting](https://developers.openai.com/api/docs/guides/token-counting). Missing any needed component prevents reconstruction. Gemini tool-use prompt counters are outside this bounded adapter; their appearance is rejected rather than silently miscounted.
 
-Inclusive cached tokens must not exceed input; inclusive OpenAI read+write must not exceed input. Available DeepSeek/OpenAI/Codex total must equal input+output, available reasoning cannot exceed output. Available Gemini total must equal input+candidates+thoughts. Missing values are accepted with WARN; no zero fill, visible-output conversion, tokenizer estimate, token ratio, undocumented exclusive-cache conversion or rate lookup. UNKNOWN is an honest supported measurement state, not a parser PASS.
+Inclusive cached tokens must not exceed input; inclusive OpenAI read+write must not exceed input. Available DeepSeek/OpenAI/Codex total must equal input+output, available reasoning cannot exceed output. Available Gemini total must equal input+candidates+thoughts. Report rows and phase summaries carry `usage_format`, `cache_semantics` and `output_semantics`: `INCLUDES_REASONING` for DeepSeek/OpenAI API output, `EXCLUDES_REASONING` for Gemini API candidates, `UNKNOWN` for runner/Codex source fields. Native `total` is preserved, never regenerated as a universal formula or compared across formats. Missing values are accepted with WARN; no zero fill, visible-output conversion, tokenizer estimate, token ratio, undocumented exclusive-cache conversion or rate lookup. UNKNOWN is an honest supported measurement state, not a parser PASS.
 
 ## Cumulative, delta and phase accounting
 
@@ -64,7 +64,21 @@ Increment belongs to the incoming snapshot's phase. Accurate phase allocation th
 
 ## Finish, quality, cost and privacy
 
-Review `COMPLETE` requires both terminal finish (`stop`/`STOP`/`completed`) and `report_state=COMPLETE`. `length`/`MAX_TOKENS`/`incomplete`, errors and safety/filter outcomes remain INCOMPLETE even if report state falsely says COMPLETE. `tool_calls`/UNKNOWN cannot establish a complete review. Earlier failed attempts stay visible when a later report completes; no review independence or authority is inferred. Quality is retained as reported evidence and never promoted to Gate PASS.
+For `phase=review`, `review_completeness=COMPLETE` requires both terminal finish (`stop`/`STOP`/`completed`) and `report_state=COMPLETE`. `length`/`MAX_TOKENS`/`incomplete`, errors and safety/filter outcomes or `report_state=INCOMPLETE` produce INCOMPLETE even if another field claims success. Other review combinations are UNKNOWN. Non-review phases produce NOT_APPLICABLE; raw finish/report fields remain visible. Earlier failed attempts stay visible when a later report completes; no review independence or authority is inferred. Quality is retained as reported evidence and never promoted to Gate PASS.
+
+Report warning codes are sorted, deduplicated and independent of input order. A row is WARN when any code appears, otherwise OBSERVED; document status is WARN if any row warns. There is no PASS status. Partial measurement refers only to applicable native counters: cache-write is structurally inapplicable for DeepSeek/Gemini APIs and its null does not cause a partial warning. Missing ordinary uncached attribution is separately classified.
+
+| Warning code | Exact emission condition |
+| --- | --- |
+| `CACHE_SEMANTICS_UNKNOWN` | Provider is UNKNOWN or adapter cache inclusion is UNKNOWN |
+| `ACTUAL_MODEL_UNVERIFIED` | Model identity is explicitly ACTUAL_MODEL_UNVERIFIED |
+| `SOURCE_REPORTED_DELTA_NOT_RECONSTRUCTED` | Snapshot kind delta; external origin endpoints not reconstructed |
+| `MISSING_ZERO_ORIGIN_BASELINE_ONLY` | Initial cumulative origin UNAVAILABLE; contribution null |
+| `REPEATED_SNAPSHOT_ZERO_CONTRIBUTION` | Subsequent cumulative raw counter dictionary equals predecessor |
+| `PARTIAL_TOKEN_MEASUREMENT` | At least one applicable measured counter null; applicable fields are all six counters except cache-write for DeepSeek/Gemini APIs |
+| `UNCACHED_NOT_MEASURABLE` | Derived ordinary uncached counter unavailable, including unknown inclusion or missing cache components |
+| `REVIEW_NOT_COMPLETE` | Review phase and derived review completeness is INCOMPLETE or UNKNOWN |
+| `COST_NOT_MEASURABLE` | Cost object null; unavailable charge stays NOT MEASURABLE |
 
 Absent charge is `NOT MEASURABLE`. Present cost requires nonnegative finite decimal text (≤13 integer/8 fractional digits), three uppercase currency letters, `source=billing-<64 lowercase hex digest>` of separately sanitized billing evidence, and `original_charge=true`. Output says `SOURCE_ASSERTED_ORIGINAL_CHARGE`, preserving original amount/currency/digest without certifying source authenticity or ISO currency membership. Cumulative billing counters are unsupported and block: do not sum overlapping charges. Charges are never summed or compared; phase cost classification is `NOT COMPARABLE`. Tariffs, inferred prices, token discounts, subscription conversions, FX, ROI and monetary savings are unsupported. Missing charge is a warning, not zero dollars.
 

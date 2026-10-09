@@ -60,6 +60,19 @@ class MeasurementTests(unittest.TestCase):
         del op["usage"]["cache_write_tokens"]
         self.assertIsNone(audit.audit([op])["rows"][0]["uncached"])
 
+    def test_complete_applicable_counters_and_explicit_output_semantics(self):
+        report = audit.audit(events())
+        rows = {row["event_id"]:row for row in report["rows"]}
+        for event_id in ("e-00000001", "e-00000006", "e-00000007", "e-00000009"):
+            self.assertNotIn("PARTIAL_TOKEN_MEASUREMENT", rows[event_id]["warnings"])
+        self.assertEqual(rows["e-00000001"]["output_semantics"], "INCLUDES_REASONING")
+        self.assertEqual(rows["e-00000009"]["output_semantics"], "EXCLUDES_REASONING")
+        self.assertEqual(rows["e-00000006"]["output_semantics"], "UNKNOWN")
+        self.assertEqual(rows["e-00000006"]["review_completeness"], "NOT_APPLICABLE")
+        self.assertEqual(rows["e-00000008"]["review_completeness"], "NOT_APPLICABLE")
+        self.assertIn("UNCACHED_NOT_MEASURABLE", rows["e-00000007"]["warnings"])
+        self.assertTrue(all("output_semantics" in group for group in report["phase_totals"]))
+
     def test_missing_counters_never_become_zero(self):
         record = events()[0]
         record["usage"] = {}

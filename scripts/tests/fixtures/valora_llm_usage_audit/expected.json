@@ -3,94 +3,112 @@
   "gate_authority": "NONE",
   "phase_totals": [
     {
+      "cache_semantics": "INCLUDES_READ",
       "cache_write": null,
       "cached": 20,
       "cost_classification": "NOT COMPARABLE",
       "events": 1,
       "input": 100,
       "output": 10,
+      "output_semantics": "EXCLUDES_REASONING",
       "phase": "review",
       "provider": "google",
       "reasoning": 5,
       "session_sha256": "7bc4306882b98ca94766761a3050cb0f2ba01a114eb5fd1cbfb024fcdcb85ac0",
       "task_id": "VALORA-TASK-OS-G2-A18",
       "total": 115,
-      "uncached": 80
+      "uncached": 80,
+      "usage_format": "gemini_generate"
     },
     {
+      "cache_semantics": "INCLUDES_READ",
       "cache_write": null,
       "cached": 1200,
       "cost_classification": "NOT COMPARABLE",
       "events": 3,
       "input": 3000,
       "output": 65200,
+      "output_semantics": "INCLUDES_REASONING",
       "phase": "review",
       "provider": "deepseek",
       "reasoning": 64200,
       "session_sha256": "5c4abdee86a1523711dfbbd4d115edf2f16f7ddc4056d52f81a2203db2f7536c",
       "task_id": "VALORA-TASK-OS-G2-A19",
       "total": 68200,
-      "uncached": 1800
+      "uncached": 1800,
+      "usage_format": "deepseek_chat"
     },
     {
+      "cache_semantics": "UNKNOWN",
       "cache_write": null,
       "cached": 0,
       "cost_classification": "NOT COMPARABLE",
       "events": 2,
       "input": 22000,
       "output": 900,
+      "output_semantics": "UNKNOWN",
       "phase": "review",
       "provider": "google",
       "reasoning": null,
       "session_sha256": "b4aa8fb2cec738121e2b946e6bab096243e96b043afff77d614c4ae35bb83fc8",
       "task_id": "VALORA-TASK-OS-G2-A19",
       "total": 22900,
-      "uncached": null
+      "uncached": null,
+      "usage_format": "runner_metadata"
     },
     {
+      "cache_semantics": "UNKNOWN",
       "cache_write": 0,
       "cached": 6912,
       "cost_classification": "NOT COMPARABLE",
       "events": 1,
       "input": 23822,
       "output": 50,
+      "output_semantics": "UNKNOWN",
       "phase": "preflight",
       "provider": "openai",
       "reasoning": 28,
       "session_sha256": "6f1277acf9dd70bfca0749aca24661d69d4d907bfa6a329bb7e03e2df4e17a16",
       "task_id": "VALORA-TASK-OS-G2-A19",
       "total": 23872,
-      "uncached": null
+      "uncached": null,
+      "usage_format": "codex_metadata"
     },
     {
+      "cache_semantics": "UNKNOWN",
       "cache_write": 0,
       "cached": 350464,
       "cost_classification": "NOT COMPARABLE",
       "events": 1,
       "input": 384638,
       "output": 4309,
+      "output_semantics": "UNKNOWN",
       "phase": "review",
       "provider": "openai",
       "reasoning": 993,
       "session_sha256": "6f1277acf9dd70bfca0749aca24661d69d4d907bfa6a329bb7e03e2df4e17a16",
       "task_id": "VALORA-TASK-OS-G2-A19",
       "total": 388947,
-      "uncached": null
+      "uncached": null,
+      "usage_format": "codex_metadata"
     },
     {
+      "cache_semantics": "UNKNOWN",
       "cache_write": null,
       "cached": null,
       "cost_classification": "NOT COMPARABLE",
       "events": 1,
       "input": null,
       "output": null,
+      "output_semantics": "UNKNOWN",
       "phase": "adjudication",
       "provider": "openai",
       "reasoning": null,
       "session_sha256": "750a0c56f881bbfb84fb03a67ecd108092c09cd7613d9cc1d7b6c0be37dfb4cb",
       "task_id": "VALORA-TASK-OS-G2-A19",
       "total": null,
-      "uncached": null
+      "uncached": null,
+      "usage_format": "codex_metadata"
     }
   ],
   "rows": [
@@ -114,6 +132,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": null,
       "output": 10,
+      "output_semantics": "EXCLUDES_REASONING",
       "packet_bytes": 100,
       "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
       "phase": "review",
@@ -134,8 +153,7 @@
       "usage_format": "gemini_generate",
       "usage_source": "SYNTHETIC",
       "warnings": [
-        "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT"
+        "COST_NOT_MEASURABLE"
       ]
     },
     {
@@ -158,6 +176,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": null,
       "output": 32000,
+      "output_semantics": "INCLUDES_REASONING",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -179,7 +198,6 @@
       "usage_source": "SYNTHETIC",
       "warnings": [
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT",
         "REVIEW_NOT_COMPLETE"
       ]
     },
@@ -203,6 +221,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": null,
       "output": 32000,
+      "output_semantics": "INCLUDES_REASONING",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -224,7 +243,6 @@
       "usage_source": "SYNTHETIC",
       "warnings": [
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT",
         "REVIEW_NOT_COMPLETE"
       ]
     },
@@ -248,6 +266,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": null,
       "output": 1200,
+      "output_semantics": "INCLUDES_REASONING",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -268,8 +287,7 @@
       "usage_format": "deepseek_chat",
       "usage_source": "SYNTHETIC",
       "warnings": [
-        "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT"
+        "COST_NOT_MEASURABLE"
       ]
     },
     {
@@ -292,6 +310,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": "ZERO",
       "output": 500,
+      "output_semantics": "UNKNOWN",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -315,7 +334,8 @@
         "CACHE_SEMANTICS_UNKNOWN",
         "COST_NOT_MEASURABLE",
         "PARTIAL_TOKEN_MEASUREMENT",
-        "REVIEW_NOT_COMPLETE"
+        "REVIEW_NOT_COMPLETE",
+        "UNCACHED_NOT_MEASURABLE"
       ]
     },
     {
@@ -338,6 +358,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": "e-00000004",
       "output": 400,
+      "output_semantics": "UNKNOWN",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -360,7 +381,8 @@
       "warnings": [
         "CACHE_SEMANTICS_UNKNOWN",
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT"
+        "PARTIAL_TOKEN_MEASUREMENT",
+        "UNCACHED_NOT_MEASURABLE"
       ]
     },
     {
@@ -383,6 +405,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": "ZERO",
       "output": 50,
+      "output_semantics": "UNKNOWN",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "preflight",
@@ -391,7 +414,7 @@
       "quality": "NOT_EVALUATED",
       "reasoning": 28,
       "report_state": "NOT_APPLICABLE",
-      "review_completeness": "UNKNOWN",
+      "review_completeness": "NOT_APPLICABLE",
       "sequence": 6,
       "session_sha256": "6f1277acf9dd70bfca0749aca24661d69d4d907bfa6a329bb7e03e2df4e17a16",
       "snapshot_kind": "cumulative",
@@ -405,7 +428,7 @@
       "warnings": [
         "CACHE_SEMANTICS_UNKNOWN",
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT"
+        "UNCACHED_NOT_MEASURABLE"
       ]
     },
     {
@@ -428,6 +451,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": "e-00000006",
       "output": 4309,
+      "output_semantics": "UNKNOWN",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "review",
@@ -450,8 +474,8 @@
       "warnings": [
         "CACHE_SEMANTICS_UNKNOWN",
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT",
-        "REVIEW_NOT_COMPLETE"
+        "REVIEW_NOT_COMPLETE",
+        "UNCACHED_NOT_MEASURABLE"
       ]
     },
     {
@@ -474,6 +498,7 @@
       "model_identity": "NATIVE_REPORTED",
       "origin": null,
       "output": null,
+      "output_semantics": "UNKNOWN",
       "packet_bytes": 421925,
       "packet_sha256": "49256929af7f0c16c7ae9b7949aef7ce0893d0932af2b882c3eeecfb4a4099eb",
       "phase": "adjudication",
@@ -482,7 +507,7 @@
       "quality": "NOT_EVALUATED",
       "reasoning": null,
       "report_state": "UNKNOWN",
-      "review_completeness": "UNKNOWN",
+      "review_completeness": "NOT_APPLICABLE",
       "sequence": 8,
       "session_sha256": "750a0c56f881bbfb84fb03a67ecd108092c09cd7613d9cc1d7b6c0be37dfb4cb",
       "snapshot_kind": "per_turn",
@@ -496,7 +521,8 @@
       "warnings": [
         "CACHE_SEMANTICS_UNKNOWN",
         "COST_NOT_MEASURABLE",
-        "PARTIAL_TOKEN_MEASUREMENT"
+        "PARTIAL_TOKEN_MEASUREMENT",
+        "UNCACHED_NOT_MEASURABLE"
       ]
     }
   ],

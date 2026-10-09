@@ -39,7 +39,7 @@ CSV_FIELDS = (
     "event_id", "task_id", "issue", "pr", "base_sha", "candidate_sha", "packet_sha256",
     "packet_bytes", "provider", "model", "model_identity", "session_sha256", "phase", "attempt",
     "sequence", "timestamp", "snapshot_kind", "origin", "usage_format", "usage_source",
-    "cache_semantics", "finish_reason", "report_state", "quality", "elapsed_ms", "status",
+    "cache_semantics", "output_semantics", "finish_reason", "report_state", "quality", "elapsed_ms", "status",
     "review_completeness", "input", "cached", "cache_write", "output", "reasoning", "total",
     "uncached", "cost_classification", "cost_amount", "cost_currency", "cost_source", "warnings",
 )
@@ -271,13 +271,20 @@ def audit(events: list[dict], expected_head: str | None = None,
                     semantics == "INCLUDES_READ_WRITE":
                 require(cache + write <= inp, "CACHE_DELTA_EXCEEDS_INPUT")
                 uncached = inp - cache - write
-            if any(value is None for value in measured.values()) or uncached is None:
+            applicable = COUNTERS if event["usage_format"] not in {
+                "deepseek_chat", "gemini_generate",
+            } else tuple(key for key in COUNTERS if key != "cache_write")
+            if any(measured[key] is None for key in applicable):
                 warnings.append("PARTIAL_TOKEN_MEASUREMENT")
+            if uncached is None:
+                warnings.append("UNCACHED_NOT_MEASURABLE")
             terminal = event["finish_reason"] in {"stop", "STOP", "completed"}
             completeness = "COMPLETE" if terminal and event["report_state"] == "COMPLETE" \
                 else "INCOMPLETE" if event["finish_reason"] in {
                     "length", "MAX_TOKENS", "incomplete", "error", "content_filter", "SAFETY",
                 } or event["report_state"] == "INCOMPLETE" else "UNKNOWN"
+            if event["phase"] != "review":
+                completeness = "NOT_APPLICABLE"
             if event["phase"] == "review" and completeness != "COMPLETE":
                 warnings.append("REVIEW_NOT_COMPLETE")
             cost = event["cost"]
@@ -286,6 +293,9 @@ def audit(events: list[dict], expected_head: str | None = None,
             row = {key: event[key] for key in CSV_FIELDS if key in event and key != "cost"}
             row.update(session_sha256=hashlib.sha256(event["session_id"].encode()).hexdigest(),
                        cache_semantics=semantics, review_completeness=completeness,
+                       output_semantics="EXCLUDES_REASONING" if event["usage_format"] ==
+                       "gemini_generate" else "INCLUDES_REASONING" if event["usage_format"] in
+                       {"deepseek_chat", "openai_responses"} else "UNKNOWN",
                        uncached=uncached, warnings=sorted(set(warnings)),
                        status="WARN" if warnings else "OBSERVED",
                        cost_classification="SOURCE_ASSERTED_ORIGINAL_CHARGE" if cost else
@@ -305,6 +315,8 @@ def audit(events: list[dict], expected_head: str | None = None,
     for key, members in sorted(groups.items()):
         summary = dict(zip(("task_id", "provider", "session_sha256", "phase"), key))
         summary["events"] = len(members)
+        for field in ("usage_format", "cache_semantics", "output_semantics"):
+            summary[field] = members[0][field]
         for counter in (*COUNTERS, "uncached"):
             values = [member[counter] for member in members]
             summary[counter] = sum(values) if all(value is not None for value in values) else None
