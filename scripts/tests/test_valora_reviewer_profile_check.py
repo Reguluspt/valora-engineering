@@ -33,6 +33,13 @@ def pins(document):
     return [identity["base_sha"], identity["head_sha"], identity["packet_sha256"], hashlib.sha256(encoded).hexdigest()]
 
 
+def fresh_history():
+    document = load("a19_attempts.json")
+    for index, attempt in enumerate(document["attempts"], 1):
+        attempt["session_sha256"] = f"{index:064x}"
+    return document
+
+
 def modify(document, operations):
     for operation in operations:
         tokens = operation["path"].strip("/").split("/")
@@ -84,6 +91,37 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual([x["mechanical_preflight"] for x in result["attempts"]],
                          ["INCOMPLETE", "INCOMPLETE", "COMPLETE", "UNKNOWN", "COMPLETE"])
         self.assertEqual(len(result["attempts"]), 5)
+
+    def test_cross_provider_collision_checks_every_historical_pair(self):
+        for deepseek_index in range(3):
+            for google_index in range(2):
+                for reverse in (False, True):
+                    with self.subTest(deepseek=deepseek_index, google=google_index, reverse=reverse):
+                        document = fresh_history()
+                        lanes = {provider: [x for x in document["attempts"] if x["provider"] == provider]
+                                 for provider in ("deepseek", "google")}
+                        lanes["google"][google_index]["session_sha256"] = lanes["deepseek"][deepseek_index]["session_sha256"]
+                        if reverse:
+                            document["attempts"].reverse()
+                        result = self.check(document)
+                        self.assertEqual(result["mechanical_preflight"], "INCOMPLETE")
+                        self.assertEqual(result["codes"], ["REVIEWER_SESSION_COLLISION"])
+
+    def test_full_history_collision_keeps_independent_and_null_controls(self):
+        independent = fresh_history()
+        self.assertEqual(self.check(independent)["mechanical_preflight"], "COMPLETE")
+        self.assertEqual(self.check(load("a19_attempts.json"))["mechanical_preflight"], "COMPLETE")
+        for latest in (False, True):
+            document = fresh_history()
+            for provider in ("deepseek", "google"):
+                lane = [x for x in document["attempts"] if x["provider"] == provider]
+                lane[-1 if latest else 0]["session_sha256"] = None
+            result = self.check(document)
+            self.assertEqual(result["mechanical_preflight"], "UNKNOWN" if latest else "COMPLETE")
+            self.assertNotIn("REVIEWER_SESSION_COLLISION", result["codes"])
+        independent["attempts"].reverse()
+        self.assertEqual(checker.canonical(self.check(independent)),
+                         checker.canonical(self.check(fresh_history())))
 
     def test_retry_without_approval_stays_incomplete_after_later_success(self):
         document = load("a19_attempts.json")
@@ -279,6 +317,26 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(output["mechanical_preflight"], "COMPLETE")
                 self.assertEqual(output["gate_authority"], "NONE")
                 self.assertNotIn(b"PASS", result.stdout)
+
+    def test_historical_cross_provider_collision_through_actual_cli(self):
+        for historical_provider, other_latest in (("deepseek", True), ("google", True), ("deepseek", False)):
+            for reverse in (False, True):
+                with self.subTest(historical=historical_provider, other_latest=other_latest, reverse=reverse):
+                    document = fresh_history()
+                    historical = [x for x in document["attempts"] if x["provider"] == historical_provider][0]
+                    other = [x for x in document["attempts"] if x["provider"] != historical_provider]
+                    other[-1 if other_latest else 0]["session_sha256"] = historical["session_sha256"]
+                    historical["independence"]["isolated"] = False
+                    if reverse:
+                        document["attempts"].reverse()
+                    result = self.cli(document)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertEqual(result.stderr, b"")
+                    output = json.loads(result.stdout)
+                    self.assertEqual(output["mechanical_preflight"], "INCOMPLETE")
+                    self.assertIn("REVIEWER_SESSION_COLLISION", output["codes"])
+                    self.assertEqual(output["gate_authority"], "NONE")
+                    self.assertNotIn(historical["session_sha256"].encode(), result.stdout)
 
     def test_all_negative_cases_through_actual_cli(self):
         for case in load("negative_cases.json"):

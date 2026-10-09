@@ -322,7 +322,10 @@ def check(document, base, head, packet, inventory):
     if any(set(x["codes"]) & {"RETRY_APPROVAL_MISSING", "RETRY_CLASSIFICATION_INVALID", "UNVERIFIED_SETTINGS_CHANGE"}
            for x in results):
         codes.add("RETRY_HISTORY_INVALID")
-    if len(latest) == 2 and latest["deepseek"]["session_sha256"] is not None and latest["deepseek"]["session_sha256"] == latest["google"]["session_sha256"]:
+    sessions = {provider: {value["session_sha256"] for value in attempts
+                          if value["provider"] == provider and value["session_sha256"] is not None}
+                for provider in MODELS}
+    if sessions["deepseek"] & sessions["google"]:
         codes.add("REVIEWER_SESSION_COLLISION")
     for provider, final_attempt in latest.items():
         history = [x for x in attempts if x["provider"] == provider and x["attempt"] < final_attempt["attempt"]]
