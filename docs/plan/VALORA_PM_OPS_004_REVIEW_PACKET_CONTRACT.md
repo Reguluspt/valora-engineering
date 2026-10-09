@@ -8,6 +8,8 @@ Authority: [CODEX §§8.1,10.1–10.4](../../CODEX.md), [Engineering Guardrails]
 
 [`scripts/valora_review_packet.py`](../../scripts/valora_review_packet.py) is a Python stdlib offline CLI. An explicitly selected reviewed inventory is the only source selection input; there is no discovery of credentials, transcripts or customer material. Input is strict UTF-8 JSON with duplicate keys and unknown fields rejected. `--inventory-sha256` pins the exact reviewed inventory file bytes; obtain that digest at the review/approval checkpoint and compare it before dispatch. Recomputing a digest of an unreviewed inventory does not approve it.
 
+Inventory input is at most 2,000,000 bytes, read with a bounded limit plus one sentinel byte; oversize input blocks before JSON parsing or output creation. This metadata limit never truncates Git source or packet bytes. CLI syntax/choice errors also emit only constant error codes, without rejected argument values. Blob identity uses SHA-1 as a non-security Git identifier (`usedforsecurity=False`); the separate SHA-256 remains the raw source digest.
+
 Required top-level fields:
 
 | Field | Constraint |

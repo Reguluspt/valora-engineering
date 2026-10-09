@@ -398,6 +398,42 @@ class PacketTests(unittest.TestCase):
         with self.blocked("GIT_READ_FAILED"):
             self.build()
 
+    def test_invalid_cli_arguments_never_echo(self):
+        result = self.cli(extra=("--mode", "private-rejected-value"))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stderr)["code"], "INVALID_ARGUMENTS")
+        self.assertNotIn(b"private-rejected-value", result.stderr)
+        self.assertEqual(result.stdout, b"")
+        self.assertFalse((Path(self.temp.name) / "packet.txt").exists())
+        result = subprocess.run([sys.executable, str(SCRIPT), "build"], capture_output=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stderr)["code"], "INVALID_ARGUMENTS")
+
+    def test_oversized_inventory_blocks_without_output(self):
+        result = self.cli(input_raw=b" " * (builder.MAX_INVENTORY_BYTES + 1))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stderr)["code"], "INVENTORY_TOO_LARGE")
+        self.assertFalse((Path(self.temp.name) / "packet.txt").exists())
+
+    def test_inventory_size_boundary_and_unbounded_packet_reader(self):
+        path = Path(self.temp.name) / "limit.json"
+        path.write_bytes(b"a" * builder.MAX_INVENTORY_BYTES)
+        self.assertEqual(len(builder.read_regular(path, builder.MAX_INVENTORY_BYTES)), builder.MAX_INVENTORY_BYTES)
+        path.write_bytes(b"a" * (builder.MAX_INVENTORY_BYTES + 1))
+        self.assertEqual(len(builder.read_regular(path)), builder.MAX_INVENTORY_BYTES + 1)
+
+    def test_sha1_blob_identity_is_not_a_fips_security_operation(self):
+        original = hashlib.sha1
+
+        def fips_sha1(raw, *, usedforsecurity=True):
+            if usedforsecurity:
+                raise ValueError("FIPS blocks security SHA-1")
+            return original(raw, usedforsecurity=False)
+
+        with patch.object(builder.hashlib, "sha1", fips_sha1):
+            self.assertEqual(self.repo.blob(self.input["head_sha"], "changed.py")[0],
+                             next(row["blob_sha"] for row in self.input["sources"] if row["path"] == "changed.py"))
+
 
 if __name__ == "__main__":
     unittest.main()

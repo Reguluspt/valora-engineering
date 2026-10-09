@@ -17,10 +17,16 @@ SUFFIXES = {".py", ".md", ".txt", ".json", ".jsonl", ".csv", ".yaml", ".yml",
             ".toml", ".rs", ".ts", ".tsx", ".js", ".jsx", ".css", ".html",
             ".sql", ".sh", ".ps1", ".ini", ".cfg"}
 MANDATORY = {"CODEX.md", "ENGINEERING_GUARDRAILS.md"}
+MAX_INVENTORY_BYTES = 2_000_000
 
 
 class Blocked(ValueError):
     """Only constant, privacy-safe error codes may leave the CLI."""
+
+
+class SafeArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise Blocked("INVALID_ARGUMENTS")
 
 
 def require(condition, code):
@@ -154,7 +160,8 @@ class Repository:
         require(actual_path.decode("utf-8") == path, "MISSING_SOURCE")
         require(mode in {"100644", "100755"} and kind == "blob", "UNSUPPORTED_GIT_MODE")
         raw = self.git("cat-file", "blob", blob)
-        identity = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+        identity = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw,
+                                usedforsecurity=False).hexdigest()
         require(identity == blob, "GIT_BLOB_MISMATCH")
         return blob, mode, raw
 
@@ -263,10 +270,13 @@ def build(repo, inventory, mode, escalation=None):
     return result, canonical(manifest)
 
 
-def read_regular(path):
+def read_regular(path, limit=None):
     path = Path(path)
     require(not path.is_symlink() and path.is_file(), "REGULAR_FILE_REQUIRED")
-    return path.read_bytes()
+    with path.open("rb") as stream:
+        raw = stream.read() if limit is None else stream.read(limit + 1)
+    require(limit is None or len(raw) <= limit, "INVENTORY_TOO_LARGE")
+    return raw
 
 
 def verify(repo, inventory, packet, manifest):
@@ -278,7 +288,7 @@ def verify(repo, inventory, packet, manifest):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = SafeArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("build", "verify"))
     parser.add_argument("--repo", required=True)
     parser.add_argument("--inventory", required=True)
@@ -288,9 +298,9 @@ def main(argv=None):
     parser.add_argument("--escalate", choices=("CONTEXT_INSUFFICIENT",))
     parser.add_argument("--packet", required=True)
     parser.add_argument("--manifest", required=True)
-    args = parser.parse_args(argv)
     try:
-        raw = read_regular(args.inventory)
+        args = parser.parse_args(argv)
+        raw = read_regular(args.inventory, MAX_INVENTORY_BYTES)
         require(sha256(raw) == args.inventory_sha256, "INVENTORY_HASH_MISMATCH")
         inventory = decode_json(raw)
         repo = Repository(args.repo)
