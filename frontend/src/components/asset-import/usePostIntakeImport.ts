@@ -29,11 +29,37 @@ function readPending(key: string): Pending {
   } catch { return "unreadable"; }
 }
 
-function rejection(status: number): string {
+const CONFLICT_MESSAGES: Record<string, string> = {
+  validation_project_not_draft: "Hồ sơ không còn ở trạng thái nháp. Tải lại dữ liệu để kiểm tra bước tiếp theo.",
+  validation_lineage_conflict: "Nguồn dữ liệu của lô nhập đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát trước khi tiếp tục.",
+  validation_version_conflict: "Trạng thái hồ sơ đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát và xác nhận lại.",
+  apply_state_not_allowed: "Lô nhập không còn ở trạng thái có thể áp dụng. Tải lại dữ liệu để kiểm tra bước tiếp theo.",
+  apply_rows_not_ready: "Lô nhập chưa sẵn sàng để áp dụng. Rà soát các dòng chưa hợp lệ rồi tải lại dữ liệu.",
+  apply_intake_required: "Hồ sơ chưa hoàn tất tiếp nhận chính thức. Tải lại dữ liệu để kiểm tra bước tiếp theo.",
+  apply_entry_conflict: "Danh mục tài sản hiện tại đã thay đổi hoặc không còn trống. Tải lại dữ liệu và rà soát trước khi tiếp tục.",
+  apply_lineage_conflict: "Nguồn dữ liệu của lô nhập đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát trước khi tiếp tục.",
+  apply_version_conflict: "Trạng thái hồ sơ đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát và xác nhận lại.",
+};
+
+function safeErrorCode(cause: unknown): string | undefined {
+  if (!cause || typeof cause !== "object") return undefined;
+  const source = cause as Record<string, unknown>;
+  const detail = source.detail;
+  const nested = detail && typeof detail === "object" ? detail as Record<string, unknown> : undefined;
+  const nestedDetail = nested?.detail;
+  const deeper = nestedDetail && typeof nestedDetail === "object"
+    ? nestedDetail as Record<string, unknown> : undefined;
+  const candidates = [source.code, source.error_code, nested?.error_code, nested?.code,
+    deeper?.error_code, deeper?.code];
+  return candidates.find((value): value is string => typeof value === "string" && value in CONFLICT_MESSAGES);
+}
+
+function rejection(status: number, errorCode?: string): string {
   if (status === 401) return "Phiên đăng nhập hết hiệu lực. Đăng nhập lại và tải lại dữ liệu trước khi tiếp tục.";
   if (status === 403) return "Bạn chưa có quyền thực hiện thao tác này. Kiểm tra quyền truy cập trước khi tải lại.";
   if (status === 404) return "Không tìm thấy dữ liệu trong phạm vi truy cập hiện tại. Không thể tiếp tục thao tác.";
-  if (status === 409) return "Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.";
+  if (status === 409) return (errorCode && CONFLICT_MESSAGES[errorCode])
+    || "Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.";
   return "Máy chủ từ chối yêu cầu. Kiểm tra điều kiện hồ sơ và tải lại dữ liệu trước khi xác nhận lại.";
 }
 
@@ -222,7 +248,7 @@ export function usePostIntakeImport({ projectId, actorScope, canEdit, projection
       const status = Number((cause as { status?: number }).status || 0);
       if (dispatched && [400, 401, 403, 404, 409, 422].includes(status)) {
         try { retain(null); } catch { setPending("unreadable"); }
-        setSnapshot(null); setNotice(rejection(status)); setConflict(status === 409);
+        setSnapshot(null); setNotice(rejection(status, status === 409 ? safeErrorCode(cause) : undefined)); setConflict(status === 409);
         if (status === 409) await read();
         else setError(rejection(status));
       } else {

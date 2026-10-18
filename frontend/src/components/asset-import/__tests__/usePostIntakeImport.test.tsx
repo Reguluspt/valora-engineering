@@ -82,6 +82,24 @@ it.each([400, 401, 403, 404, 409, 422])("known %s rejection closes the dialog an
   expect(flow.notice).not.toBe("");
   if (status !== 409) expect(flow.canApply).toBe(false);
 });
+it.each([
+  ["apply_version_conflict", "Trạng thái hồ sơ đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát và xác nhận lại."],
+  ["apply_lineage_conflict", "Nguồn dữ liệu của lô nhập đã thay đổi. Tải lại dữ liệu mới nhất rồi rà soát trước khi tiếp tục."],
+  ["apply_rows_not_ready", "Lô nhập chưa sẵn sàng để áp dụng. Rà soát các dòng chưa hợp lệ rồi tải lại dữ liệu."],
+] as const)("maps verified 409 code %s to safe actionable feedback", async (code, message) => {
+  server = projection("apply"); valid = true; await mount(); await act(async () => { await flow.openConfirmation(); });
+  vi.mocked(applyAssetImport).mockRejectedValue({ status: 409, code });
+  await act(async () => { await flow.submit("apply"); });
+  expect(applyAssetImport).toHaveBeenCalledTimes(1); expect(flow.notice).toBe(message); expect(flow.conflict).toBe(true);
+});
+it("uses the generic safe 409 feedback for unknown or malformed codes without echoing server content", async () => {
+  server = projection("apply"); valid = true; await mount(); await act(async () => { await flow.openConfirmation(); });
+  const secret = "internal-token-or-diagnostic";
+  vi.mocked(applyAssetImport).mockRejectedValue({ status: 409, code: "unknown_conflict", detail: { error_code: secret, detail: secret } });
+  await act(async () => { await flow.submit("apply"); });
+  expect(flow.notice).toBe("Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.");
+  expect(flow.notice).not.toContain(secret); expect(flow.conflict).toBe(true);
+});
 it.each([0, 500])("unknown %s outcome survives remount and old-looking GETs cannot unlock", async status => {
   server = projection("apply"); valid = true; await mount(); await act(async () => { await flow.openConfirmation(); });
   vi.mocked(applyAssetImport).mockRejectedValue({ status }); await act(async () => { await flow.submit("apply"); });
