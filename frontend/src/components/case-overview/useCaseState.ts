@@ -82,5 +82,13 @@ export function useCaseState(projectId: string) {
 
   const retry = useCallback(() => setRetryToken((token) => token + 1), []);
 
-  return { projection, state, error, retry };
+  // The feature publishes only its bracketed authoritative readback to this page owner.
+  const acceptReadback = useCallback((fresh: CaseStateResponse) => {
+    if (fresh.preliminary.project_id !== projectId) return;
+    setProjection(fresh);
+    setState("READY");
+    setError(null);
+  }, [projectId]);
+
+  return { projection, state, error, retry, acceptReadback };
 }

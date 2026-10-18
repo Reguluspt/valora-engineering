@@ -1,4 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
+import { useSession } from "../../auth/SessionProvider";
+import { PostIntakeImportRegion } from "../asset-import/PostIntakeImportRegion";
+import { importContext } from "../asset-import/postIntakeImportModel";
 
 import type { CaseStage, CaseStateIssue, CaseStateResponse } from "../../api/caseState";
 import { useResolvedProject } from "../workbench/project-context";
@@ -63,7 +66,18 @@ function ResolvedCaseOverview({
   projectName: string;
   onNavigate: (path: string) => void;
 }) {
-  const { projection, state, error, retry } = useCaseState(projectId);
+  const { account, status } = useSession();
+  const actorScope = status === "authenticated" && account ? `${account.organization_id}:${account.id}` : "";
+  return <ScopedCaseOverview key={`${projectId}:${actorScope}:${status}:${account?.permissions.join(",")}`} projectId={projectId}
+    projectName={projectName} onNavigate={onNavigate} actorScope={actorScope}
+    canEdit={status === "authenticated" && account?.status === "active" && account.permissions.includes("workbench:edit")} />;
+}
+
+function ScopedCaseOverview({ projectId, projectName, onNavigate, actorScope, canEdit }: {
+  projectId: string; projectName: string; onNavigate: (path: string) => void; actorScope: string; canEdit: boolean;
+}) {
+  const { projection, state, error, retry, acceptReadback } = useCaseState(projectId);
+  const [focusRequest, setFocusRequest] = useState(0);
 
   if (state === "INITIAL_LOADING") return <CaseOverviewSkeleton />;
   if (state === "PAGE_ERROR" || !projection) {
@@ -83,6 +97,10 @@ function ResolvedCaseOverview({
       projection={projection}
       projectRef={projectId}
       onNavigate={onNavigate}
+      onOpenImport={actorScope && canEdit && importContext(projection, projectId) ? () => setFocusRequest(n => n + 1) : undefined}
+      postIntakeRegion={actorScope && projection.preliminary.official_intake_commit_id ?
+        <PostIntakeImportRegion key={actorScope} projectId={projectId} actorScope={actorScope} canEdit={canEdit}
+          projection={projection} onProjection={acceptReadback} focusRequest={focusRequest} /> : undefined}
     />
   );
 }
@@ -92,11 +110,15 @@ export function CaseOverviewContent({
   projection,
   projectRef,
   onNavigate,
+  onOpenImport,
+  postIntakeRegion,
 }: {
   projectName: string;
   projection: CaseStateResponse;
   projectRef: string;
   onNavigate: (path: string) => void;
+  onOpenImport?: () => void;
+  postIntakeRegion?: React.ReactNode;
 }) {
   const currentStageLabel = CASE_STAGE_LABELS[projection.current_stage];
   const actionCopy = nextActionCopy(projection.next_action);
@@ -133,6 +155,7 @@ export function CaseOverviewContent({
 
       <div className="case-overview-layout">
         <div className="case-overview-main-column">
+          {postIntakeRegion}
           <section className="case-overview-section" aria-labelledby="case-progress-title">
             <div className="case-overview-section-heading">
               <div>
@@ -227,6 +250,8 @@ export function CaseOverviewContent({
             <p>{actionCopy.eyebrow}</p>
             <h2>{actionCopy.title}</h2>
             <span>{actionCopy.description}</span>
+            {onOpenImport && <button className="valora-button valora-button--primary case-primary-action"
+              type="button" data-primary-action={true} onClick={onOpenImport}>{actionCopy.title}</button>}
             {actionPath && (
               <button
                 className="valora-button valora-button--primary case-primary-action"
@@ -237,7 +262,7 @@ export function CaseOverviewContent({
                 {isAssetReviewSessionBridge(projection.next_action) ? "Mở Bàn làm việc tài sản" : "Tiếp tục xử lý"}
               </button>
             )}
-            {!actionPath && (
+            {!actionPath && !onOpenImport && (
               <div className="case-next-action-unavailable">
                 Chưa có màn xử lý được liên kết cho trạng thái này.
               </div>

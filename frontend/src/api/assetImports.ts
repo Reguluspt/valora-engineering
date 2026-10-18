@@ -72,17 +72,19 @@ export async function createAssetImportBatch(
 }
 
 export async function fetchAssetImportBatches(
-  projectId: string
+  projectId: string,
+  signal?: AbortSignal
 ): Promise<ProjectAssetImportBatchResponse[]> {
   return request<ProjectAssetImportBatchResponse[]>(
-    `/api/v1/projects/${projectId}/asset-imports`
+    `/api/v1/projects/${projectId}/asset-imports`, { signal }
   );
 }
 
 export async function fetchAssetImportRows(
   projectId: string,
   batchId: string,
-  params: FetchAssetImportRowsParams = {}
+  params: FetchAssetImportRowsParams = {},
+  signal?: AbortSignal
 ): Promise<ProjectAssetImportStagingRowPaginationResponse> {
   const query = new URLSearchParams();
   if (params.limit !== undefined) query.set("limit", String(params.limit));
@@ -91,7 +93,39 @@ export async function fetchAssetImportRows(
 
   const queryString = query.toString();
   const path = `/api/v1/projects/${projectId}/asset-imports/${batchId}/rows${queryString ? `?${queryString}` : ""}`;
-  return request<ProjectAssetImportStagingRowPaginationResponse>(path);
+  return request<ProjectAssetImportStagingRowPaginationResponse>(path, { signal });
+}
+
+export interface AssetImportValidateRequest {
+  expected_case_version: string;
+}
+
+export interface AssetImportApplyRequest extends AssetImportValidateRequest {
+  confirm: true;
+  contract_version: "s12-post-intake-guarded-apply-v2";
+}
+
+export interface AssetImportApplyResponse {
+  project_id: string;
+  import_batch_id: string;
+  status: string;
+  created_count: number;
+  created_lines: { line_id: string; staging_row_id: string; source_row_number: number }[];
+}
+
+export function validateAssetImport(projectId: string, batchId: string, payload: AssetImportValidateRequest) {
+  return request<ProjectAssetImportBatchResponse>(
+    `/api/v1/projects/${projectId}/asset-imports/${batchId}/validate`,
+    { method: "POST", body: JSON.stringify({ expected_case_version: payload.expected_case_version }) }, true,
+  );
+}
+
+export function applyAssetImport(projectId: string, batchId: string, payload: AssetImportApplyRequest) {
+  return request<AssetImportApplyResponse>(
+    `/api/v1/projects/${projectId}/asset-imports/${batchId}/apply`,
+    { method: "POST", body: JSON.stringify({ confirm: payload.confirm,
+      contract_version: payload.contract_version, expected_case_version: payload.expected_case_version }) }, true,
+  );
 }
 
 export async function uploadAssetImportWorkbook(
