@@ -405,21 +405,30 @@ audit, idempotency, human-approval or exact-SHA requirements.
 
 - Gate Owner / Architect interprets project-wide authority, classifies risk, supplies a compact
   contract and owns integration decisions. An agent task never grants itself the next product gate.
-- Codex verifies the exact baseline and CI, implements the bounded contract, inspects the actual
-  diff, runs risk-appropriate checks, adjudicates review findings and reports the exact result.
-  Codex commits or pushes only when the task authorizes it.
-- A mechanical worker is optional for specified repetitive work on exact files. It cannot reinterpret
-  authority, commit, push, change PR state, merge, deploy or use live credentials; its self-check
-  is not independent.
+- Developer — Codex is the sole implementation owner. Codex verifies the exact baseline and CI,
+  implements the bounded contract, owns coding, tests and diffs, runs risk-appropriate checks,
+  adjudicates review findings and reports the exact result. Codex commits or pushes only when
+  the task authorizes it. The mechanical-worker role is removed; implementation must not be
+  delegated to Gemini or other models.
+- Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent and
+  strictly read-only.
+- Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent and strictly read-only.
+  Gemini 3.8 is Reviewer B only and must never receive delegated implementation work.
 - Independent reviewers are read-only and cannot mutate files, credentials, networks or cloud
-  resources. A required unavailable reviewer leaves the review INCOMPLETE.
+  resources. Required reviewers inspect the same frozen HEAD and identical unchanged source packet.
+  A required unavailable reviewer leaves the review INCOMPLETE.
 
-Current provider implementations are unchanged: optional mechanical worker
-`gemini-3.8-flash-high` via `agy`; independent reviewers `opencode-go/deepseek-v4.1-flash`
-via `opencode` and `gemini-3.1-pro-high` via `agy`. Query the model list when invoking a provider;
-do not add one by inference. If Antigravity headless read permissions block a reviewer,
-`--dangerously-skip-permissions` may bypass only that read gate with the same strict read-only
-prompt; it grants no write or resource-mutation authority.
+`gemini-3.1-pro-high` is retired: never invoke it or use it as a fallback. Query the model list
+when invoking an authorized provider; do not infer aliases or substitute models. An unavailable
+required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner.
+
+Prefer Reviewer B no-tools review: supply the complete unchanged frozen source packet directly
+as model input, with exact HEAD, changed-file/hash evidence and scoped authority; no shell or
+`command` permission is needed. Preserve strict isolation. If the route cannot accept the complete
+packet without tools, or required read permissions are missing, STOP and escalate the precise
+capability or permission gap to PM / Gate Owner for approval of the narrowest verified read-only
+alternative. Never automatically bypass permissions, grant broad command access, change global
+AGY settings or retry automatically.
 
 ### 10.2 Task-scoped context and resume
 
