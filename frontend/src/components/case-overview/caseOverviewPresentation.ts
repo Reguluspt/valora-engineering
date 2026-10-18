@@ -81,6 +81,16 @@ export function nextActionCopy(nextAction: CaseStateNextAction | null): {
     };
   }
   const stageLabel = nextAction.stage ? CASE_STAGE_LABELS[nextAction.stage] : null;
+  if (nextAction.kind === "PENDING" && nextAction.stage === "ASSET_REVIEW" &&
+      nextAction.semantic_route_key === "asset_import_validate_pending" && nextAction.context?.kind === "validate") return {
+    eyebrow: "Hành động tiếp theo", title: "Kiểm tra danh mục nhập",
+    description: "Xem đúng danh mục đã được tiếp nhận và chủ động yêu cầu kiểm tra dữ liệu.",
+  };
+  if (nextAction.kind === "PENDING" && nextAction.stage === "ASSET_REVIEW" &&
+      nextAction.semantic_route_key === "asset_import_apply_confirm" && nextAction.context?.kind === "apply") return {
+    eyebrow: "Hành động tiếp theo", title: "Xem và xác nhận áp dụng danh mục",
+    description: "Rà soát danh mục được chọn và xác nhận riêng trước khi tạo danh mục tài sản chính thức.",
+  };
   if (nextAction.stage === "SUPPLIER_QUOTES" && nextAction.kind === "PENDING" && nextAction.semantic_route_key === "supplier_quotes_prepare_required" && nextAction.context?.kind === "supplier_quotes_preparation") return {
     eyebrow: "Hành động tiếp theo", title: "Tạo và hoàn thiện báo giá NCC",
     description: "Mở không gian báo giá toàn hồ sơ trong Bàn làm việc. Việc mở màn hình không đăng ký hoặc xác nhận báo giá.",

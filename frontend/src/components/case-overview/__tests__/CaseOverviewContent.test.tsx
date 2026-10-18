@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { CaseStateResponse } from "../../../api/caseState";
 import { CANONICAL_CASE_STAGES } from "../../../contracts/valoraV23";
 import { CaseOverviewContent } from "../CaseOverviewPage";
-import { mappedNextActionPath } from "../caseOverviewPresentation";
+import { mappedNextActionPath, nextActionCopy } from "../caseOverviewPresentation";
+import { projection as importProjection } from "../../asset-import/__tests__/fixtures";
 
 function buildProjection(): CaseStateResponse {
   return {
@@ -49,6 +50,18 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it.each(["validate", "apply"] as const)("focuses the same-screen %s feature without navigation or command", kind => {
+    const p = importProjection(kind), open = vi.fn(), navigate = vi.fn();
+    let root: ReturnType<typeof create>;
+    act(() => { root = create(<CaseOverviewContent projectName="Hồ sơ tổng hợp" projection={p} projectRef={p.preliminary.project_id}
+      onNavigate={navigate} onOpenImport={open} postIntakeRegion={<section data-import-feature={true} />} />); });
+    expect(mappedNextActionPath(p.next_action, p.preliminary.project_id)).toBeNull();
+    const button = root!.root.findByProps({ "data-primary-action": true });
+    expect(button.children).toContain(nextActionCopy(p.next_action).title);
+    act(() => button.props.onClick());
+    expect(open).toHaveBeenCalledTimes(1); expect(navigate).not.toHaveBeenCalled();
+    expect(root!.root.findAllByProps({ "data-import-feature": true })).toHaveLength(1);
+  });
   it("routes the exact supplier quotation preparation action to the same Workbench", () => {
     const action = { kind: "PENDING" as const, stage: "SUPPLIER_QUOTES" as const, semantic_route_key: "supplier_quotes_prepare_required",
       validation_issue_id: null, context: { kind: "supplier_quotes_preparation", project_id: "p", case_version: "case", reason_code: "coverage_required" } };

@@ -22,7 +22,7 @@ export interface CaseStateNextAction {
   stage: CaseStage | null;
   semantic_route_key: string | null;
   validation_issue_id: string | null;
-  context?: AssetReviewActionContext | null;
+  context?: AssetReviewActionContext | AssetReviewValidateContext | AssetReviewApplyContext | null;
 }
 
 export interface AssetReviewActionContext {
@@ -39,6 +39,29 @@ export interface AssetReviewActionContext {
   prior_decision_id?: string | null;
   finding_codes?: string[];
 }
+
+interface AssetImportTarget {
+  project_id: string;
+  case_version: string;
+  official_intake_commit_id: string;
+  result_id: string;
+  batch_id: string;
+  staging_usage_id: string;
+}
+
+export interface AssetReviewValidateContext extends AssetReviewActionContext, AssetImportTarget {
+  kind: "validate";
+  reason_code: "validation_required" | "validation_retry";
+}
+
+export interface AssetReviewApplyContext extends AssetReviewActionContext, AssetImportTarget {
+  kind: "apply";
+  reason_code: "apply_required";
+  contract_version: "s12-post-intake-guarded-apply-v2";
+  confirmation_required: true;
+}
+
+export type PostIntakeImportContext = AssetReviewValidateContext | AssetReviewApplyContext;
 
 export interface CaseStateIssue {
   id: string;
