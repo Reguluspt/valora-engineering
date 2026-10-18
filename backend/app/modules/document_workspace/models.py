@@ -9,6 +9,9 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
+    ForeignKey,
+    JSON,
+    Integer,
     Index,
     String,
     UniqueConstraint,
@@ -492,4 +495,93 @@ class StorageObjectBinding(Base, UUIDMixin):
             "minimum_retain_until >= retention_anchor_at", name="chk_storage_binding_retention"
         ),
         CheckConstraint(_sha256_check("content_sha256"), name="chk_storage_binding_content"),
+    )
+
+
+class QuotationDocumentImportRequest(Base, UUIDMixin):
+    """Immutable human command envelope, committed with the initial storage intent."""
+
+    __tablename__ = "quotation_document_import_requests"
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    execution_intent_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    byte_length: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    expected_case_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    expected_project_row_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    plan_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    retention_policy_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_manifest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_manifest: Mapped[dict] = mapped_column(JSON, nullable=False)
+    storage_profile_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    container_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    prepared_audit_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("audit_events.id", ondelete="RESTRICT"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("command_id", name="uq_txt_import_command"),
+        UniqueConstraint("execution_intent_id", name="uq_txt_import_intent"),
+        UniqueConstraint("prepared_audit_id", name="uq_txt_import_prepared_audit"),
+        UniqueConstraint("organization_id", "project_id", "actor_user_id", "id", name="uq_txt_import_request_scope"),
+        ForeignKeyConstraint(["organization_id", "project_id", "document_id"], ["document_records.organization_id", "document_records.project_id", "document_records.id"], name="fk_txt_request_document", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "project_id"], ["projects.organization_id", "projects.id"], name="fk_txt_request_project", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "actor_user_id"], ["users.organization_id", "users.id"], name="fk_txt_request_actor", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "execution_intent_id"], ["document_storage_execution_intents.organization_id", "document_storage_execution_intents.id"], name="fk_txt_request_intent", ondelete="RESTRICT"),
+        CheckConstraint("byte_length BETWEEN 1 AND 1048576 AND expected_project_row_version > 0", name="chk_txt_request_bounds"),
+        CheckConstraint("policy_version = 1 AND retention_policy_code = 'quotation-txt-record-10y-v1'", name="chk_txt_request_policy"),
+        CheckConstraint("provider_kind = 'local' AND storage_profile_id = 'exchange-local' AND container_name = 'valora-document-blobs'", name="chk_txt_request_target"),
+        *[CheckConstraint(_sha256_check(c), name=f"chk_txt_request_{c}") for c in ("content_sha256", "expected_case_version", "snapshot_sha256", "plan_sha256", "decision_sha256", "request_sha256", "policy_manifest_sha256")],
+    )
+
+
+class QuotationDocumentImportReceipt(Base, UUIDMixin):
+    """One immutable, committed import milestone; live availability is separate."""
+
+    __tablename__ = "quotation_document_import_receipts"
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    execution_intent_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    revision_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    binding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("storage_object_bindings.id", ondelete="RESTRICT"), nullable=False)
+    milestone_audit_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("audit_events.id", ondelete="RESTRICT"), nullable=False)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    byte_length: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    retention_policy_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_manifest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_manifest: Mapped[dict] = mapped_column(JSON, nullable=False)
+    finalized_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    retention_anchor_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    minimum_retain_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    post_project_row_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    receipt_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("request_id", name="uq_txt_receipt_request"),
+        UniqueConstraint("execution_intent_id", name="uq_txt_receipt_intent"),
+        UniqueConstraint("binding_id", name="uq_txt_receipt_binding"),
+        UniqueConstraint("revision_id", name="uq_txt_receipt_revision"),
+        UniqueConstraint("milestone_audit_id", name="uq_txt_receipt_audit"),
+        ForeignKeyConstraint(["organization_id", "project_id", "actor_user_id", "request_id"], ["quotation_document_import_requests.organization_id", "quotation_document_import_requests.project_id", "quotation_document_import_requests.actor_user_id", "quotation_document_import_requests.id"], name="fk_txt_receipt_request", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "execution_intent_id"], ["storage_object_bindings.organization_id", "storage_object_bindings.execution_intent_id"], name="fk_txt_receipt_binding_tenant", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "project_id", "document_id", "revision_id", "content_sha256"], ["document_revisions.organization_id", "document_revisions.project_id", "document_revisions.document_id", "document_revisions.id", "document_revisions.content_checksum_sha256"], name="fk_txt_receipt_revision", ondelete="RESTRICT"),
+        CheckConstraint("byte_length BETWEEN 1 AND 1048576 AND post_project_row_version > 1", name="chk_txt_receipt_bounds"),
+        CheckConstraint("finalized_at = retention_anchor_at AND minimum_retain_until >= retention_anchor_at", name="chk_txt_receipt_retention"),
+        CheckConstraint("policy_version = 1 AND retention_policy_code = 'quotation-txt-record-10y-v1'", name="chk_txt_receipt_policy"),
+        *[CheckConstraint(_sha256_check(c), name=f"chk_txt_receipt_{c}") for c in ("content_sha256", "policy_manifest_sha256", "receipt_sha256")],
     )

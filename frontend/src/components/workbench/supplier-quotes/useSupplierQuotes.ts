@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuotationDocumentImport } from "./useQuotationDocumentImport";
 import { fetchCaseState, type CaseStateResponse } from "../../../api/caseState";
 import { fetchQuotePreparation, fetchQuoteHistory, fetchQuoteSources, fetchQuoteSuppliers, fetchQuoteReceipt,
   quoteCommand, submitQuoteCommand, QUOTE_CONTRACTS, type QuotePreparation, type QuoteHistory,
@@ -156,7 +157,8 @@ export function useSupplierQuotes({ projectId, sessionId, sessionBlocked, actorS
         if ([401, 403, 404].includes(status)) { setProjection(null); setSnapshot(null); setHistory(null); setSuppliers(null); setSources(null); } }
     } finally { locked.current = false; if (current() && gen === generation.current) setLoading(false); }
   };
-  return { projection: scoped ? projection : null, snapshot: scoped ? snapshot : null, history: scoped ? history : null,
+  const documentImport = useQuotationDocumentImport({ projectId, actorScope, onImported: async () => { await refresh(); latest.current(); } });
+  return { documentImport, projection: scoped ? projection : null, snapshot: scoped ? snapshot : null, history: scoped ? history : null,
     suppliers: scoped ? suppliers : null, sources: scoped ? sources : null, loading, busy, error, notice, conflict,
     pending: scoped ? pending : null, enabled, refresh, recover, submit, loadMore };
 }

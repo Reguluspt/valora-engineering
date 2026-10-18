@@ -10,6 +10,7 @@ from app.api.asset_review_lines import router as asset_review_lines_router
 from app.api.asset_workbench import router as asset_workbench_router
 from app.api.price_evidence import router as price_evidence_router
 from app.api.supplier_quotes import router as supplier_quotes_router
+from app.api.quotation_documents import router as quotation_documents_router
 from app.db import get_db
 from app.db.session import get_case_state_db
 from app.core.rbac import get_current_user, require_permission
@@ -150,6 +151,7 @@ router.include_router(asset_review_lines_router)
 router.include_router(asset_workbench_router)
 router.include_router(price_evidence_router)
 router.include_router(supplier_quotes_router)
+router.include_router(quotation_documents_router)
 
 
 # ==========================================

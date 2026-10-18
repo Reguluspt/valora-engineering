@@ -309,6 +309,7 @@ def prepare_initial_storage_intent(
     plan_digest_sha256: str,
     decision_digest_sha256: str,
     correlation_id: str | None = None,
+    preparation_callback: Callable[[Session, DocumentStorageExecutionIntent], None] | None = None,
 ) -> DocumentStorageExecutionIntent:
     """Prepare revision 1 without publishing an unbound seed revision."""
     normalized_key = idempotency_key.strip()
@@ -387,6 +388,8 @@ def prepare_initial_storage_intent(
             recorded_by_user_id=actor.id,
         )
     )
+    if preparation_callback is not None:
+        preparation_callback(db, intent)
     try:
         db.commit()
         return intent
@@ -668,6 +671,7 @@ def finalize_storage_revision(
     retention_policy_code: str,
     retention_anchor_at: datetime,
     minimum_retain_until: datetime,
+    pre_finalization_guard: Callable[[Session], None] | None = None,
     finalization_callback: Callable[
         [Session, DocumentRevision, StorageObjectBinding], None
     ]
@@ -685,6 +689,8 @@ def finalize_storage_revision(
     if existing is not None:
         db.commit()
         return existing
+    if pre_finalization_guard is not None:
+        pre_finalization_guard(db)
     candidate = (
         db.query(DocumentStorageCandidate)
         .filter_by(organization_id=organization_id, execution_intent_id=intent_id)

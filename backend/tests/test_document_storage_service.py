@@ -67,7 +67,13 @@ def storage_context() -> dict[str, Any]:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-    Base.metadata.create_all(engine, tables=[*TABLES, *STORAGE_TABLES])
+    tables = set([*TABLES, *STORAGE_TABLES])
+    while True:
+        dependencies = {fk.column.table for table in tables for fk in table.foreign_keys}
+        if dependencies.issubset(tables):
+            break
+        tables.update(dependencies)
+    Base.metadata.create_all(engine, tables=list(tables))
     db = Session(bind=engine)
     seeded = _seed(db, suffix="storage-fake")
     revision = _document(db, seeded)

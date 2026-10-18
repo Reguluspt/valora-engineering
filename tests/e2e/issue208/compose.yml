@@ -1,0 +1,48 @@
+name: valora-issue208-20261018
+services:
+  postgres:
+    image: postgres:16
+    pull_policy: never
+    environment:
+      POSTGRES_DB: valora_issue208
+      POSTGRES_USER: valora
+      POSTGRES_PASSWORD: synthetic_issue208_local
+    volumes: ["issue208_postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U valora -d valora_issue208"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    networks: [isolated]
+  backend:
+    image: valora-g11k-backend:latest
+    pull_policy: never
+    working_dir: /app
+    entrypoint: ["python", "-c"]
+    command:
+      - "import os; os.chmod('/var/lib/valora/issue208', 0o700); os.execvp('uvicorn', ['uvicorn', 'app.main:app', '--host', '0.0.0.0', '--port', '8000'])"
+    volumes: ["../../../backend:/app:ro", ".:/acceptance:ro", "issue208_blobs:/var/lib/valora/issue208"]
+    environment:
+      VALORA_ENV: test
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPATH: /app
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: valora_issue208
+      POSTGRES_USER: valora
+      POSTGRES_PASSWORD: synthetic_issue208_local
+      TEST_DATABASE_URL: postgresql+psycopg://valora:synthetic_issue208_local@postgres:5432/valora_issue208
+      DOCUMENT_BLOB_PROVIDER: local
+      DOCUMENT_BLOB_ROOT: /var/lib/valora/issue208
+      APP_SECRET_KEY: synthetic-issue208-independent-test-key-only
+      BACKEND_CORS_ORIGINS: http://localhost:51208
+      ISSUE208_SYNTHETIC_PASSWORD: synthetic-issue208-acceptance-only
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [isolated]
+networks:
+  isolated:
+    internal: true
+volumes:
+  issue208_postgres:
+  issue208_blobs:

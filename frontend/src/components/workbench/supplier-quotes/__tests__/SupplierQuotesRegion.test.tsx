@@ -2,6 +2,7 @@ import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, expect, it, vi } from "vitest";
 import { SupplierQuotesRegion } from "../SupplierQuotesRegion";
+vi.mock("../QuotationDocumentImport", () => ({ QuotationDocumentImport: () => null }));
 import { exactDecimal } from "../QuoteEditor";
 import type { SupplierQuotesController } from "../useSupplierQuotes";
 import { prep, quote, state, token, id, revision } from "./fixtures";
