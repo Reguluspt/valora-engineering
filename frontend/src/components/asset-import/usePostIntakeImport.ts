@@ -51,15 +51,20 @@ function safeErrorCode(cause: unknown): string | undefined {
     ? nestedDetail as Record<string, unknown> : undefined;
   const candidates = [source.code, source.error_code, nested?.error_code, nested?.code,
     deeper?.error_code, deeper?.code];
-  return candidates.find((value): value is string => typeof value === "string" && value in CONFLICT_MESSAGES);
+  return candidates.find((value): value is string => typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(CONFLICT_MESSAGES, value) && typeof CONFLICT_MESSAGES[value] === "string");
 }
 
 function rejection(status: number, errorCode?: string): string {
   if (status === 401) return "Phiên đăng nhập hết hiệu lực. Đăng nhập lại và tải lại dữ liệu trước khi tiếp tục.";
   if (status === 403) return "Bạn chưa có quyền thực hiện thao tác này. Kiểm tra quyền truy cập trước khi tải lại.";
   if (status === 404) return "Không tìm thấy dữ liệu trong phạm vi truy cập hiện tại. Không thể tiếp tục thao tác.";
-  if (status === 409) return (errorCode && CONFLICT_MESSAGES[errorCode])
-    || "Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.";
+  if (status === 409) {
+    const message = errorCode && Object.prototype.hasOwnProperty.call(CONFLICT_MESSAGES, errorCode)
+      ? CONFLICT_MESSAGES[errorCode] : undefined;
+    return typeof message === "string" ? message
+      : "Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.";
+  }
   return "Máy chủ từ chối yêu cầu. Kiểm tra điều kiện hồ sơ và tải lại dữ liệu trước khi xác nhận lại.";
 }
 

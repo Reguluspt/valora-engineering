@@ -100,6 +100,19 @@ it("uses the generic safe 409 feedback for unknown or malformed codes without ec
   expect(flow.notice).toBe("Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.");
   expect(flow.notice).not.toContain(secret); expect(flow.conflict).toBe(true);
 });
+it.each([
+  ["constructor", { status: 409, code: "constructor" }],
+  ["toString", { status: 409, detail: { error_code: "toString" } }],
+  ["__proto__", { status: 409, code: "__proto__" }],
+  ["unknown string", { status: 409, code: "not_a_conflict_code" }],
+  ["malformed nested payload", { status: 409, detail: { error_code: { raw: "internal diagnostic" }, detail: { code: ["apply_lineage_conflict"] } } }],
+] as const)("uses the generic safe 409 fallback for %s", async (_case, cause) => {
+  server = projection("apply"); valid = true; await mount(); await act(async () => { await flow.openConfirmation(); });
+  vi.mocked(applyAssetImport).mockRejectedValue(cause);
+  await act(async () => { await flow.submit("apply"); });
+  expect(flow.notice).toBe("Trạng thái, nguồn hoặc phiên bản hồ sơ đã thay đổi. Rà soát dữ liệu mới và xác nhận lại.");
+  expect(typeof flow.notice).toBe("string"); expect(flow.conflict).toBe(true);
+});
 it.each([0, 500])("unknown %s outcome survives remount and old-looking GETs cannot unlock", async status => {
   server = projection("apply"); valid = true; await mount(); await act(async () => { await flow.openConfirmation(); });
   vi.mocked(applyAssetImport).mockRejectedValue({ status }); await act(async () => { await flow.submit("apply"); });
