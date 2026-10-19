@@ -475,6 +475,8 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "quotation_document_import_receipts",
+        "quotation_document_import_requests",
         "supplier_quote_items",
         "supplier_quote_facts",
         "supplier_quote_receipts",
