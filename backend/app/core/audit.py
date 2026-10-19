@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Optional, Any
 from sqlalchemy.orm import Session
 from app.modules.project_master_data.models import AuditEvent
@@ -43,6 +44,8 @@ def log_audit_event(
     correlation_id: Optional[str] = None,
     payload: Optional[dict] = None,
     audit_event_id: Optional[uuid.UUID] = None,
+    *,
+    created_at: Optional[datetime] = None,
 ) -> AuditEvent:
     """
     Creates and persists an AuditEvent record inside the existing DB transaction.
@@ -50,12 +53,15 @@ def log_audit_event(
     be written atomically as part of the overall transaction.
     """
     # Sanitize the payload if provided
+    if created_at is not None and (created_at.tzinfo is None or created_at.utcoffset() is None):
+        raise ValueError("Explicit audit timestamp must be timezone-aware")
     sanitized_payload = None
     if payload is not None:
         sanitized_payload = sanitize_payload(payload)
 
     audit_event = AuditEvent(
         **({"id": audit_event_id} if audit_event_id is not None else {}),
+        **({"created_at": created_at} if created_at is not None else {}),
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         command_name=command_name,

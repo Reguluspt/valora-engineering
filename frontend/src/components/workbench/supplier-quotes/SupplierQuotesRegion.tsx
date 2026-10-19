@@ -9,6 +9,7 @@ import type { QuoteIntent, QuoteItem, QuoteRevision } from "../../../api/supplie
 import { quoteItemInput } from "../../../api/supplierQuotes";
 import type { SupplierQuotesController } from "./useSupplierQuotes";
 import { QuoteEditor, ItemFields, validItem, revisionLabels } from "./QuoteEditor";
+import { QuotationDocumentImport } from "./QuotationDocumentImport";
 
 const statusLabels: Record<string, string> = { draft: "Nháp", confirmed: "Đã xác nhận", withdrawn: "Đã thu hồi", rejected: "Đã loại", superseded: "Đã thay thế" };
 const reasonLabels: Record<string, string> = {
@@ -78,6 +79,7 @@ export function SupplierQuotesRegion({ quotes, open, onClose, focusRequest }: { 
       {prep && !prep.writable && <p>Chỉ đọc. Điều kiện hồ sơ, quyền hoặc phiên làm việc hiện tại chưa cho phép ghi nhận báo giá.</p>}
       {quotes.projection?.next_action?.kind === "NO_AUTHORIZED_DOWNSTREAM_ACTION" && <p role="status">Chưa có hành động tiếp theo được phép.</p>}
       <p>Một nhà cung cấp độc lập có báo giá đã xác nhận và hiện hành cho mỗi dòng đã chốt là đủ. Báo giá bổ sung là tùy chọn; báo giá nháp chưa tạo độ phủ.</p>
+      {quotes.documentImport && <QuotationDocumentImport controller={quotes.documentImport} />}
       <div className="asset-review-actions">
         {quotes.enabled && prep?.can_register && <Button appearance="primary" onClick={e => show({ kind: "register", token: prep.case_version }, e.currentTarget)}>Đăng ký báo giá nháp</Button>}
         <Button disabled={quotes.busy || quotes.loading} appearance={quotes.pending ? "primary" : "secondary"}
