@@ -881,7 +881,7 @@ def test_multi_item_later_error_keeps_earlier_failed(db_session: Session, fake_s
 def test_pg_migration_roundtrip_s13():
     """S13 revision round-trip on an isolated representable PostgreSQL database.
 
-    Sequence: head present → downgrade parent → table gone → upgrade f2a3 →
+    Sequence: pre-D7 head → downgrade parent → table gone → upgrade f2a3 →
     columns present → upgrade head → single head.
     """
     url = os.environ.get("TEST_DATABASE_URL") or ""
@@ -933,9 +933,15 @@ def test_pg_migration_roundtrip_s13():
 
         eng = create_engine(url)
         try:
-            # Normalize to head first (CI smoke already did this)
-            command.upgrade(cfg, "head")
+            # Historical round-trip must not cross D7's retained-receipt boundary.
+            command.upgrade(cfg, "f9a0b1c2d3e4")
             with eng.connect() as c:
+                assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
+                    "f9a0b1c2d3e4"
+                )
+                assert c.execute(
+                    text("SELECT to_regclass('public.preliminary_project_create_receipts')")
+                ).scalar() is None
                 r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
 
@@ -966,6 +972,9 @@ def test_pg_migration_roundtrip_s13():
 
             command.upgrade(cfg, "head")
             with eng.connect() as c:
+                assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
+                    script.get_current_head()
+                )
                 r = c.execute(text("SELECT to_regclass('public.import_source_artifacts')")).scalar()
                 assert r is not None
             assert len(ScriptDirectory.from_config(cfg).get_heads()) == 1

@@ -900,10 +900,15 @@ def test_exchange_tenant_and_project_isolation(postgres_exchange_database: URL):
 
 def test_exchange_migration_up_down_up_when_empty(postgres_exchange_database: URL):
     _run_alembic(postgres_exchange_database, "upgrade", "b8d9e0f1a2b3")
-    _run_alembic(postgres_exchange_database, "upgrade", "head")
+    # Exercise historical downgrade before the irreversible D7 boundary.
+    _run_alembic(postgres_exchange_database, "upgrade", "f9a0b1c2d3e4")
     engine = create_engine(postgres_exchange_database)
     with engine.connect() as connection:
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
+            "f9a0b1c2d3e4"
+        )
         tables = set(inspect(connection).get_table_names())
+        assert "preliminary_project_create_receipts" not in tables
         assert {"m365_exchange_artifacts", "m365_exchange_operations"} <= tables
         assert "intent_kind" in {
             column["name"]
