@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
+import { activateCreateScope, clearCreatePayloads } from "./components/precase/preliminaryCreateIntent";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
 import { EmptyState } from "./components/common/EmptyState";
@@ -54,6 +55,10 @@ function SessionGate() {
 
 export function AuthenticatedApp() {
   const { account, logout, restore } = useSession();
+  useLayoutEffect(() => {
+    activateCreateScope(account ? { organization_id: account.organization_id, actor_user_id: account.id } : null);
+    return () => activateCreateScope(null);
+  }, [account?.organization_id, account?.id]);
   const [currentPath, setCurrentPath] = useState(() => {
     const hash = window.location.hash?.replace("#", "");
     return hash || NEUTRAL_PATH;
@@ -120,7 +125,7 @@ export function AuthenticatedApp() {
     }
 
     if (currentPath === APP_ROUTES.preliminaryRequestCreate) {
-      return <PreliminaryRequestCreatePage onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
+      return <PreliminaryRequestCreatePage scope={{ organization_id: account!.organization_id, actor_user_id: account!.id }} canCreate={account!.permissions.includes("project:create")} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
     }
 
     if (currentPath === APP_ROUTES.preliminaryRequestManagement) {
@@ -146,9 +151,10 @@ export function AuthenticatedApp() {
       account={account!}
       currentPath={currentPath}
       supplierSelectionAvailable={supplierSelectionAvailable}
-      onLogout={() => void logout()}
+      onLogout={() => { clearCreatePayloads(); void logout(); }}
       onNavigate={handleNavigate}
     >
+      <button className="valora-button valora-button--secondary" onClick={() => handleNavigate(APP_ROUTES.preliminaryRequestCreate)}>Khôi phục yêu cầu sơ bộ</button>
       {renderRoute()}
     </AppShell>
   );

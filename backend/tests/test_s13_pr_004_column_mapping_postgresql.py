@@ -475,6 +475,7 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
         "fk_workbook_structure_creator_tenant",
     }
     later_tables = (
+        "preliminary_project_create_receipts",
         "quotation_document_import_receipts",
         "quotation_document_import_requests",
         "supplier_quote_items",
@@ -548,6 +549,7 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
                 table = Base.metadata.tables.get(table_name)
                 if table is not None:
                     table.drop(connection, checkfirst=True)
+            assert "preliminary_project_create_receipts" not in inspect(connection).get_table_names()
             # This historical migration owns the Customer unique target; the
             # later G1.1A Project FK is outside its schema slice.
             operations.drop_constraint(

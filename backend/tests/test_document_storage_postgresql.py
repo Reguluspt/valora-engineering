@@ -301,8 +301,10 @@ def test_s5_storage_migration_roundtrip_restores_tables_and_checksum_constraint(
             engine.dispose()
 
     _run_alembic(postgres_storage_database, "upgrade", "b7c8d9e0f1a2")
-    _run_alembic(postgres_storage_database, "upgrade", "head")
+    # Historical downgrades stop before D7's irreversible receipt migration.
+    _run_alembic(postgres_storage_database, "upgrade", "f9a0b1c2d3e4")
     tables, constraints, checks = artifacts()
+    assert "preliminary_project_create_receipts" not in tables
     assert storage_tables <= tables
     assert "uq_document_revision_content_checksum" in constraints
     assert "'local'" in checks["chk_storage_candidate_provider"]
@@ -322,11 +324,13 @@ def test_s5_storage_migration_roundtrip_restores_tables_and_checksum_constraint(
 def test_local_provider_migration_refuses_downgrade_while_local_rows_exist(
     postgres_storage_database: URL,
 ) -> None:
-    _run_alembic(postgres_storage_database, "upgrade", "head")
+    _run_alembic(postgres_storage_database, "upgrade", "f9a0b1c2d3e4")
     engine = create_engine(postgres_storage_database, connect_args={"connect_timeout": 5})
     try:
         with engine.begin() as connection:
             head_before = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            assert head_before == "f9a0b1c2d3e4"
+            assert not inspect(connection).has_table("preliminary_project_create_receipts")
             connection.execute(text("SET LOCAL session_replication_role = replica"))
             connection.execute(
                 text(

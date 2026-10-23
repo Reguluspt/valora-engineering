@@ -1,190 +1,66 @@
-import React, { FormEvent, useRef, useState } from "react";
-
-import { ApiError } from "../../api/client";
-import { createProject } from "../../api/projects";
-import { APP_ROUTES, projectListVerificationPath, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
+import React, { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Button, Field, Input, Textarea, Checkbox, FluentProvider, webLightTheme, makeStyles } from "@fluentui/react-components";
+import { APP_ROUTES, projectPreliminaryIntakePath } from "../../contracts/valoraV23";
+import { CreateScope, createIntents } from "./preliminaryCreateIntent";
+import { PreliminaryCreateRecovery } from "./PreliminaryCreateRecovery";
 import "./precase.css";
 
-type SubmitState = "idle" | "submitting" | "uncertain" | "sessionExpired";
+const useStyles = makeStyles({
+  page: { display: "flex", flexDirection: "column", gap: "var(--valora-space-lg)", minHeight: 0,
+    backgroundColor: "var(--valora-color-canvas)", "& > *": { flexShrink: 0 } },
+  field: { "& label": { display: "block" } },
+  distinct: { maxWidth: "52rem" },
+});
 
-function knownCreateError(error: unknown): string {
-  if (!(error instanceof ApiError)) {
-    return "Không thể tạo yêu cầu sơ bộ. Vui lòng kiểm tra thông tin và thử lại.";
-  }
-  if (error.status === 401) return "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.";
-  if (error.status === 403 && error.code === "CSRF_ERROR") {
-    return "Phiên làm việc cần được làm mới. Vui lòng tải lại trang và thử lại.";
-  }
-  if (error.status === 403) return "Tài khoản chưa có quyền tạo yêu cầu sơ bộ.";
-  if (error.status === 409) return "Mã hồ sơ đã tồn tại trong đơn vị. Vui lòng dùng mã khác.";
-  if (error.status === 422) return "Thông tin yêu cầu sơ bộ chưa hợp lệ. Vui lòng kiểm tra lại.";
-  return "Không thể tạo yêu cầu sơ bộ. Vui lòng kiểm tra thông tin và thử lại.";
-}
-
-export function PreliminaryRequestCreatePage({
-  onNavigate,
-  onSessionExpired,
-}: {
-  onNavigate: (path: string) => void;
-  onSessionExpired: () => void;
+export function PreliminaryRequestCreatePage({ scope, canCreate, onNavigate, onSessionExpired }: {
+  scope: CreateScope; canCreate: boolean; onNavigate: (path: string) => void; onSessionExpired: () => void;
 }) {
-  const [code, setCode] = useState("");
+  const styles = useStyles();
+  const store = createIntents(scope);
+  useSyncExternalStore(store.subscribe, store.snapshot);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const submitLocked = useRef(false);
-  const submittedCode = useRef<string | null>(null);
-
+  const [feedback, setFeedback] = useState("");
+  const [distinct, setDistinct] = useState(false);
+  const locked = useRef(false);
+  const mounted = useRef(true);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { if (feedback) errorRef.current?.focus(); }, [feedback]);
+  const uncertain = store.markers.some(m => m.phase === "UNCERTAIN");
+  const retained = store.markers.length > 0;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitState !== "idle" || submitLocked.current) return;
-
-    const normalizedCode = code.trim();
-    const normalizedName = name.trim();
-    if (!normalizedCode || !normalizedName) {
-      setFeedback("Mã hồ sơ và tên yêu cầu sơ bộ là thông tin bắt buộc.");
-      return;
-    }
-
-    setFeedback(null);
-    submitLocked.current = true;
-    submittedCode.current = normalizedCode;
-    setSubmitState("submitting");
+    if (locked.current || !canCreate || uncertain || store.problem || (retained && !distinct)) return;
+    locked.current = true; setFeedback(""); setDistinct(false);
     try {
-      const created = await createProject({
-        code: normalizedCode,
-        name: normalizedName,
-        description: description.trim() || null,
-        customer_id: null,
-      });
-      onNavigate(projectPreliminaryIntakePath(created.id));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setFeedback(knownCreateError(error));
-        setSubmitState("sessionExpired");
-        return;
-      }
-      if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status === 429 || error.status >= 500) {
-        setFeedback(
-          "Chưa xác định yêu cầu đã được tạo hay chưa. Hãy về danh sách hồ sơ để kiểm tra trước khi gửi lại."
-        );
-        setSubmitState("uncertain");
-        return;
-      }
-      setFeedback(knownCreateError(error));
-      submitLocked.current = false;
-      setSubmitState("idle");
-    }
+      const result = await store.submit(name, description, distinct);
+      if (result && mounted.current && store.isActive()) onNavigate(projectPreliminaryIntakePath(result.project.id));
+    } catch (error) { if (mounted.current) setFeedback(error instanceof Error ? error.message : "Chưa thể tạo yêu cầu."); }
+    finally { locked.current = false; }
   };
-
-  const canSubmit = Boolean(code.trim() && name.trim()) && submitState === "idle";
-
-  return (
-    <div className="precase-create-page">
-      <header className="precase-create-header">
-        <p>Yêu cầu sơ bộ</p>
-        <h1>Tạo yêu cầu sơ bộ</h1>
-        <span>
-          Bạn có thể tạo yêu cầu mà chưa gắn khách hàng. Cần gắn khách hàng trước khi chuyển sang
-          thẩm định chính thức.
-        </span>
-      </header>
-
-      <form aria-busy={submitState === "submitting"} className="precase-create-form valora-panel" onSubmit={submit}>
-        <div className="valora-panel__header">Thông tin yêu cầu</div>
-        <div className="valora-panel__body precase-create-fields">
-          <label>
-            Mã hồ sơ
-            <input
-              className="valora-field"
-              disabled={submitState !== "idle"}
-              maxLength={64}
-              name="code"
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="Ví dụ: SB-2026-001"
-              required
-              value={code}
-            />
-          </label>
-          <label>
-            Tên yêu cầu sơ bộ
-            <input
-              className="valora-field"
-              disabled={submitState !== "idle"}
-              maxLength={255}
-              name="name"
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Nhập tên hồ sơ hoặc tài sản cần thẩm định"
-              required
-              value={name}
-            />
-          </label>
-          <label>
-            Mô tả <span>(không bắt buộc)</span>
-            <textarea
-              className="valora-field precase-create-description"
-              disabled={submitState !== "idle"}
-              name="description"
-              onChange={(event) => setDescription(event.target.value)}
-              rows={4}
-              value={description}
-            />
-          </label>
-
-          {feedback && (
-            <div
-              className={`valora-message ${
-                submitState === "uncertain" ? "valora-message--warning" : "valora-message--error"
-              }`}
-              id="precase-create-feedback"
-              role="alert"
-            >
-              {feedback}
-            </div>
-          )}
-        </div>
-        <div className="valora-panel__footer precase-create-actions">
-          {submitState === "uncertain" ? (
-            <button
-              className="valora-button valora-button--primary"
-              onClick={() => onNavigate(projectListVerificationPath(submittedCode.current ?? code.trim()))}
-              type="button"
-            >
-              Về danh sách hồ sơ để kiểm tra
-            </button>
-          ) : submitState === "sessionExpired" ? (
-            <button
-              className="valora-button valora-button--primary"
-              onClick={() => {
-                onSessionExpired();
-                onNavigate(APP_ROUTES.projectList);
-              }}
-              type="button"
-            >
-              Đăng nhập lại
-            </button>
-          ) : (
-            <>
-              <button
-                className="valora-button valora-button--secondary"
-                disabled={submitState === "submitting"}
-                onClick={() => onNavigate(APP_ROUTES.preliminaryRequestManagement)}
-                type="button"
-              >
-                Hủy
-              </button>
-              <button
-                className="valora-button valora-button--primary"
-                disabled={!canSubmit}
-                type="submit"
-              >
-                {submitState === "submitting" ? "Đang tạo…" : "Tạo yêu cầu sơ bộ"}
-              </button>
-            </>
-          )}
-        </div>
-      </form>
-    </div>
-  );
+  return <FluentProvider theme={webLightTheme} className={`precase-create-page ${styles.page}`}>
+    <header className="precase-create-header"><p>Yêu cầu sơ bộ</p><h1>Tạo yêu cầu sơ bộ</h1>
+      <span>Bạn có thể tạo yêu cầu mà chưa gắn khách hàng. Cần gắn khách hàng trước khi chuyển sang thẩm định chính thức.</span>
+    </header>
+    {(retained || store.problem || store.message) && <PreliminaryCreateRecovery store={store} onNavigate={onNavigate} onSessionExpired={onSessionExpired} />}
+    {!canCreate && <p role="alert">Tài khoản chưa có quyền tạo yêu cầu sơ bộ.</p>}
+    {retained && !uncertain && <Checkbox className={styles.distinct} checked={distinct} label={store.markers.some(marker => marker.phase === "PARKED")
+      ? "Tạo yêu cầu khác: tôi xác nhận đây là ý định mới; yêu cầu tạm gác vẫn chưa rõ kết quả."
+      : "Tạo yêu cầu khác: tôi xác nhận đây là ý định mới."} onChange={(_, data) => {
+      setDistinct(!!data.checked); if (data.checked) store.retireCommitted();
+    }} />}
+    <form aria-busy={store.busy.size > 0} className="precase-create-form valora-panel" onSubmit={submit}>
+      <div className="valora-panel__header">Thông tin yêu cầu</div>
+      <div className="valora-panel__body precase-create-fields">
+        <Field className={styles.field} label="Tên yêu cầu sơ bộ" required><Input name="name" value={name} disabled={!canCreate || uncertain || store.busy.size > 0} onChange={(_, data) => setName(data.value)} /></Field>
+        <Field className={styles.field} label="Mô tả (không bắt buộc)"><Textarea name="description" value={description} disabled={!canCreate || uncertain || store.busy.size > 0} rows={4} onChange={(_, data) => setDescription(data.value)} /></Field>
+        {feedback && <p role="alert" tabIndex={-1} ref={errorRef}>{feedback}</p>}
+      </div>
+      <div className="valora-panel__footer precase-create-actions">
+        <Button onClick={() => onNavigate(APP_ROUTES.preliminaryRequestManagement)} type="button">Hủy</Button>
+        <Button appearance="primary" type="submit" disabled={!canCreate || !name || uncertain || !!store.problem || store.busy.size > 0 || (retained && !distinct)}>{store.busy.size ? "Đang tạo…" : "Tạo yêu cầu sơ bộ"}</Button>
+      </div>
+    </form>
+  </FluentProvider>;
 }

@@ -31,6 +31,7 @@ pytest_plugins = ("tests.test_g11a_foundation_postgresql",)
 PRIOR = "e4f5a6b7c8d9"
 CURRENT = "f5a6b7c8d9e0"
 RUNTIME_HEAD = "head"
+HISTORICAL_RUNTIME_HEAD = "f9a0b1c2d3e4"
 
 
 def _session_factory(url):
@@ -99,9 +100,9 @@ def test_receipt_migration_roundtrip_and_nonempty_downgrade_refusal(pg_database)
             "SELECT customer_id, current_preliminary_import_batch_id FROM projects WHERE id=:id"
         ), {"id": project_id}).one() == (customer_id, batches[0])
 
-    # Seed through the current ORM (which includes the F0 nullable Usage CAS
-    # column), then return to the historical G1.1B head for its refusal proof.
-    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
+    # The pre-D7 schema supports this ORM fixture and can reach the historical
+    # lifecycle revision. Other runtime proofs below continue using live head.
+    _must_alembic(pg_database, "upgrade", HISTORICAL_RUNTIME_HEAD)
     with Session(engine) as db:
         seeded = _seed_case(db)
         _bind(db, seeded, version=seeded["project"].row_version)
