@@ -202,6 +202,7 @@ LINEAGE_PARENT_REV = "db5977424e7b"
 LINEAGE_HEAD_REV = "e1f2a3b4c5d6"
 # Live single graph head across release branches.
 CURRENT_ALEMBIC_HEAD = "head"
+HISTORICAL_RUNTIME_HEAD = "f9a0b1c2d3e4"
 
 LINEAGE_COL_BATCH = "source_import_batch_id"
 LINEAGE_COL_STAGING = "source_staging_row_id"
@@ -490,9 +491,9 @@ class TestM2ExecutableMigration:
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
 
-            # 2b) advance to live graph head so ORM model columns match schema
-            # (e.g. S13-PR-002 current_source_artifact_id on import batches).
-            command.upgrade(cfg, CURRENT_ALEMBIC_HEAD)
+            # This historical cycle needs the modern ORM columns but must stay
+            # before D7's unconditional retention boundary.
+            command.upgrade(cfg, HISTORICAL_RUNTIME_HEAD)
             isolated_engine.dispose()
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
@@ -513,6 +514,9 @@ class TestM2ExecutableMigration:
             command.upgrade(cfg, CURRENT_ALEMBIC_HEAD)
             isolated_engine = create_engine(isolated_url_str)
             _assert_lineage_artifacts_at_head(isolated_engine)
+            # Independently retain live-head schema and DML coverage after the
+            # historical downgrade cycle; never downgrade this phase through D7.
+            _run_lineage_dml_proof(isolated_engine)
 
             assert len(ScriptDirectory.from_config(cfg).get_heads()) == 1
         finally:

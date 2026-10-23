@@ -1,10 +1,21 @@
 import hashlib
 import uuid
 import re
+import json
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
+from app.api.auth import get_current_session
+from app.modules.project_master_data.preliminary_project_create_schemas import (
+    CreatePreliminaryRequest, PreliminaryCreateResponse, request_uuid,
+)
+from app.modules.project_master_data.application.preliminary_project_create_service import (
+    Principal, create_preliminary_request, recover_preliminary_request,
+)
 
 from app.api.asset_review_lines import router as asset_review_lines_router
 from app.api.asset_workbench import router as asset_workbench_router
@@ -157,6 +168,48 @@ router.include_router(quotation_documents_router)
 # ==========================================
 # PROJECT ENDPOINTS
 # ==========================================
+
+def _preliminary_json_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON member")
+        result[key] = value
+    return result
+
+
+@router.post("/preliminary-create", response_model=PreliminaryCreateResponse, status_code=201)
+async def preliminary_create(
+    request: Request, response: Response,
+    current_user: User = Depends(require_permission("project:create")),
+    current_session=Depends(get_current_session),
+):
+    try:
+        data = json.loads(await request.body(), object_pairs_hook=_preliminary_json_pairs,
+                          parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Invalid JSON number")))
+        payload = CreatePreliminaryRequest.model_validate(data)
+    except ValidationError as exc:
+        raise RequestValidationError([{"loc": ("body", *error["loc"]), "msg": error["msg"],
+                                       "type": error["type"]} for error in exc.errors()]) from None
+    except (ValueError, UnicodeError):
+        raise RequestValidationError([{"loc": ("body",), "msg": "Invalid JSON object", "type": "json_invalid"}]) from None
+    principal = Principal(current_user.organization_id, current_user.id, current_session.id)
+    result, response.status_code = await run_in_threadpool(create_preliminary_request, principal, payload)
+    return result
+
+
+@router.get("/preliminary-create-requests/{request_id}", response_model=PreliminaryCreateResponse)
+def preliminary_create_recovery(
+    request_id: str,
+    current_user: User = Depends(require_permission("project:read")),
+    current_session=Depends(get_current_session),
+):
+    try:
+        nonce = request_uuid(request_id)
+    except ValueError:
+        raise RequestValidationError([{"loc": ("path", "request_id"), "msg": "Invalid UUIDv4", "type": "value_error"}]) from None
+    return recover_preliminary_request(Principal(current_user.organization_id, current_user.id, current_session.id), nonce)
+
 
 @router.post("", response_model=ProjectResponse, status_code=201)
 def create_project(
