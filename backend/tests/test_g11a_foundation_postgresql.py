@@ -40,6 +40,7 @@ from tests.test_pr01_preliminary_result_postgresql import _seed
 PRIOR = "c9d0e1f2a3b4"
 CURRENT = "e4f5a6b7c8d9"
 RUNTIME_HEAD = "head"
+HISTORICAL_RUNTIME_HEAD = "f9a0b1c2d3e4"
 MIGRATION = Path(__file__).parents[1] / "alembic/versions/e4f5a6b7c8d9_precase_identity_batch_foundation.py"
 
 
@@ -151,8 +152,9 @@ def test_migration_backfills_zero_one_and_ambiguous_multiple_then_roundtrips(pg_
     engine.dispose()
 
 
-def test_nullable_project_customer_pointer_and_all_fact_ownership_fks(pg_database):
-    _must_alembic(pg_database, "upgrade", RUNTIME_HEAD)
+@pytest.mark.parametrize("runtime_head", [RUNTIME_HEAD, HISTORICAL_RUNTIME_HEAD])
+def test_nullable_project_customer_pointer_and_all_fact_ownership_fks(pg_database, runtime_head):
+    _must_alembic(pg_database, "upgrade", runtime_head)
     engine = create_engine(pg_database)
     db = Session(engine)
     try:
@@ -246,9 +248,11 @@ def test_nullable_project_customer_pointer_and_all_fact_ownership_fks(pg_databas
             committed_by_user_id=first["actor_id"],
         ))
         db.commit()
-        refused = _alembic(pg_database, "downgrade", PRIOR)
-        assert refused.returncode != 0
-        assert "unbound Customer history" in refused.stderr
+        if runtime_head == HISTORICAL_RUNTIME_HEAD:
+            # Test the old refusal itself without crossing D7's retained receipts.
+            refused = _alembic(pg_database, "downgrade", PRIOR)
+            assert refused.returncode != 0
+            assert "unbound Customer history" in refused.stderr
     finally:
         db.close()
         engine.dispose()

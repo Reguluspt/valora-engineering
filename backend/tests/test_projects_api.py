@@ -25,6 +25,15 @@ from app.modules.project_master_data.models import (
     Unit
 )
 
+
+def test_preliminary_create_static_routes_precede_dynamic_project_routes():
+    from app.api.projects import router
+    paths = [route.path for route in router.routes if hasattr(route, "path")]
+    command = paths.index("/api/v1/projects/preliminary-create")
+    recovery = paths.index("/api/v1/projects/preliminary-create-requests/{request_id}")
+    dynamic = paths.index("/api/v1/projects/{project_id}")
+    assert command < dynamic and recovery < dynamic
+
 @pytest.fixture
 def db_session() -> Session:
     engine = create_engine(

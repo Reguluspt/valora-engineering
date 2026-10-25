@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid, BigInteger, Integer
+from sqlalchemy import String, Text, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, Boolean, DateTime, JSON, text, Numeric, CheckConstraint, func, Uuid, BigInteger, Integer, LargeBinary
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -1518,9 +1518,41 @@ class AuditEvent(Base, UUIDMixin):
     actor: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
+        UniqueConstraint("organization_id", "actor_user_id", "entity_id", "id", name="uq_pcreate_audit_binding"),
         Index("idx_audit_event_org", "organization_id"),
         Index("idx_audit_event_actor", "actor_user_id"),
         Index("idx_audit_event_entity", "entity_type", "entity_id"),
+    )
+
+
+class PreliminaryProjectCreateReceipt(Base, UUIDMixin):
+    """Append-only identity and canonical input of an acknowledged create command."""
+
+    __tablename__ = "preliminary_project_create_receipts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_code: Mapped[str] = mapped_column(String(39), nullable=False)
+    audit_event_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    canonical_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    canonical_payload: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    payload_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "actor_user_id", "request_id", name="uq_pcreate_scope"),
+        UniqueConstraint("project_id", name="uq_pcreate_project"),
+        UniqueConstraint("audit_event_id", name="uq_pcreate_audit"),
+        CheckConstraint("canonical_version = 'preliminary-create-v1'", name="ck_pcreate_version"),
+        CheckConstraint("project_code ~ '^[0-9]{39}$'", name="ck_pcreate_code"),
+        CheckConstraint("payload_digest ~ '^[0-9a-f]{64}$'", name="ck_pcreate_digest"),
+        CheckConstraint("octet_length(canonical_payload) BETWEEN 1 AND 60000", name="ck_pcreate_payload_size"),
+        ForeignKeyConstraint(["organization_id"], ["organization_profiles.id"], name="fk_pcreate_org", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "actor_user_id"], ["users.organization_id", "users.id"], name="fk_pcreate_actor", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "project_id"], ["projects.organization_id", "projects.id"], name="fk_pcreate_project", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["organization_id", "actor_user_id", "project_id", "audit_event_id"], ["audit_events.organization_id", "audit_events.actor_user_id", "audit_events.entity_id", "audit_events.id"], name="fk_pcreate_audit", ondelete="RESTRICT"),
     )
 
 

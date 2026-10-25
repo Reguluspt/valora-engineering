@@ -53,6 +53,13 @@ class UserMeResponse(BaseModel):
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+def expiry_as_utc(value: datetime) -> datetime:
+    # Existing UTC writers round-trip as naive datetimes in SQLite fixtures.
+    # PostgreSQL timestamptz values already carry an offset; preserve their instant.
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
 def get_cookie_keys():
     if settings.valora_env == "production":
         return "__Host-Access-Token", "__Host-Refresh-Token"
@@ -299,10 +306,10 @@ def get_current_session(
         raise_401("Phiên làm việc không tồn tại hoặc đã bị thu hồi.")
 
     now = datetime.now(timezone.utc)
-    if session.access_expires_at.replace(tzinfo=timezone.utc) < now:
+    if expiry_as_utc(session.access_expires_at) < now:
         raise_401("Phiên đăng nhập đã hết hạn.")
 
-    if session.idle_expires_at.replace(tzinfo=timezone.utc) < now:
+    if expiry_as_utc(session.idle_expires_at) < now:
         terminate_session_safely(
             db=db,
             session=session,
@@ -313,7 +320,7 @@ def get_current_session(
         db.commit()
         raise_401("Phiên làm việc đã hết hạn do không hoạt động.")
 
-    if session.absolute_expires_at.replace(tzinfo=timezone.utc) < now:
+    if expiry_as_utc(session.absolute_expires_at) < now:
         terminate_session_safely(
             db=db,
             session=session,
@@ -577,16 +584,16 @@ def refresh(
         if not session:
             is_expired = True
             expire_reason = "Phiên làm việc không tồn tại hoặc đã bị thu hồi."
-        elif session.idle_expires_at.replace(tzinfo=timezone.utc) < now:
+        elif expiry_as_utc(session.idle_expires_at) < now:
             is_expired = True
             expire_reason = "Phiên làm việc đã hết hạn do không hoạt động (idle timeout)."
             status_to_set = "expired"
-        elif session.absolute_expires_at.replace(tzinfo=timezone.utc) < now:
+        elif expiry_as_utc(session.absolute_expires_at) < now:
             is_expired = True
             expire_reason = "Thời gian phiên làm việc tối đa đã hết (absolute timeout)."
             status_to_set = "expired"
             
-        if ref_record.expires_at.replace(tzinfo=timezone.utc) < now:
+        if expiry_as_utc(ref_record.expires_at) < now:
             is_expired = True
             expire_reason = "Token làm mới phiên đã hết hạn."
             status_to_set = "revoked"
