@@ -143,7 +143,14 @@ export class PreliminaryCreateIntents {
     // Lock before GET too: two explicit replay clicks must never dispatch two POSTs.
     this.busy.add(id); this.changed();
     let unresolved = false;
-    try { const result = await getPreliminaryCreate(id); if (this.isActive() && generation === scopeGeneration) this.commit(result); }
+    try {
+      const result = await getPreliminaryCreate(id);
+      if (this.isActive() && generation === scopeGeneration) {
+        this.commit(result);
+        this.message = "Đã tìm thấy hồ sơ của mã yêu cầu này. Chọn mở hồ sơ để tiếp tục.";
+      }
+      return;
+    }
     catch (error) { unresolved = isUnresolved(error, id); }
     finally { this.busy.delete(id); this.changed(); }
     if (unresolved && this.isActive() && generation === scopeGeneration && this.originals.get(id) === body) return this.send(id, body);

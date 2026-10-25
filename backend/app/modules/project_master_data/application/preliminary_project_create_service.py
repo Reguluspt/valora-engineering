@@ -93,6 +93,12 @@ def authorize(db, principal, permission):
         require_permission(permission)(current_user=user, db=db)
 
 
+def require_receipt_schema(db, request_id, code):
+    # A catalog lookup is safe before D7; never query the absent receipt table.
+    if db.scalar(text("SELECT pg_catalog.to_regclass('preliminary_project_create_receipts')")) is None:
+        raise unresolved(request_id, code)
+
+
 def find_receipt(db, principal, request_id):
     return db.scalar(
         select(PreliminaryProjectCreateReceipt).where(
@@ -155,6 +161,7 @@ def create_preliminary_request(principal: Principal, payload: CreatePreliminaryR
                     {"lock_key": lock_key(principal, request_id)},
                 )
                 authorize(db, principal, "project:create")
+                require_receipt_schema(db, request_id, "CREATE_UNRESOLVED")
                 receipt = find_receipt(db, principal, request_id)
                 canonical = payload.canonical_bytes()
                 if receipt is not None:
@@ -174,7 +181,7 @@ def create_preliminary_request(principal: Principal, payload: CreatePreliminaryR
                         )
                     status = 200
                 else:
-                    if os.environ.get("VALORA_PRELIMINARY_CREATE_ENABLED", "true") != "true":
+                    if os.environ.get("VALORA_PRELIMINARY_CREATE_ENABLED", "false") != "true":
                         raise unresolved(request_id, "CREATE_UNRESOLVED")
                     project_id, receipt_id, audit_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
                     code = format(project_id.int, "039d")
@@ -252,6 +259,7 @@ def recover_preliminary_request(principal: Principal, request_id: uuid.UUID):
             with db.begin():
                 db.execute(text("SET LOCAL statement_timeout = '15s'"))
                 authorize(db, principal, "project:read")
+                require_receipt_schema(db, request_id, "RECOVERY_UNAVAILABLE")
                 receipt = find_receipt(db, principal, request_id)
                 if receipt is None:
                     raise unresolved(request_id, "UNRESOLVED", 404)

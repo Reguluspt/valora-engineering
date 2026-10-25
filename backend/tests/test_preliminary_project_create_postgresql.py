@@ -32,12 +32,13 @@ from tests.test_preliminary_project_create import command
 
 
 @pytest.fixture
-def principal():
+def principal(monkeypatch):
     assert engine.dialect.name == "postgresql", "Mandatory PostgreSQL proof cannot skip"
     assert os.environ.get("VALORA_ENV") == "test"
     assert os.environ.get("GITHUB_ACTIONS") == "true" or (
         engine.url.database.startswith("valora_issue217_disposable") and engine.url.port == 55417
     ), "Issue217 proof may only use the newly provisioned disposable developer PostgreSQL"
+    monkeypatch.setenv("VALORA_PRELIMINARY_CREATE_ENABLED", "true")
     now = datetime.now(timezone.utc)
     with SessionLocal() as db:
         org = OrganizationProfile(
@@ -435,8 +436,8 @@ def test_a13_database_constraint_failure_is_atomic(principal, bad):
     assert facts(principal) == (0, 0, 0)
 
 
-def test_a10_independent_tenants_same_nonce(principal):
-    other = globals()["principal"].__wrapped__()
+def test_a10_independent_tenants_same_nonce(principal, monkeypatch):
+    other = globals()["principal"].__wrapped__(monkeypatch)
     payload = command()
     a, _ = service.create_preliminary_request(principal, payload)
     with pytest.raises(HTTPException) as error:
@@ -446,15 +447,65 @@ def test_a10_independent_tenants_same_nonce(principal):
     assert a["project"] != b["project"]
 
 
-def test_a29_application_activation_rollback_keeps_recovery(principal, monkeypatch):
+@pytest.mark.parametrize("activation", [None, "false"])
+def test_a29_application_activation_rollback_keeps_recovery(principal, monkeypatch, activation):
     payload = command()
     result, _ = service.create_preliminary_request(principal, payload)
-    monkeypatch.setenv("VALORA_PRELIMINARY_CREATE_ENABLED", "false")
+    if activation is None:
+        monkeypatch.delenv("VALORA_PRELIMINARY_CREATE_ENABLED")
+    else:
+        monkeypatch.setenv("VALORA_PRELIMINARY_CREATE_ENABLED", activation)
     assert service.recover_preliminary_request(principal, uuid.UUID(payload.request_id)) == result
     assert service.create_preliminary_request(principal, payload) == (result, 200)
     with pytest.raises(HTTPException) as error:
         service.create_preliminary_request(principal, command())
     assert error.value.status_code == 503 and facts(principal) == (1, 1, 1)
+
+
+def test_d7_create_is_disabled_by_default_on_migrated_schema(principal, monkeypatch):
+    monkeypatch.delenv("VALORA_PRELIMINARY_CREATE_ENABLED")
+    with pytest.raises(HTTPException) as error:
+        service.create_preliminary_request(principal, command())
+    assert error.value.status_code == 503
+    assert error.value.detail["final"] is False
+    assert facts(principal) == (0, 0, 0)
+
+
+@pytest.mark.parametrize("activation", [None, "false", "true"])
+def test_d7_missing_receipt_schema_never_queries_absent_table(principal, monkeypatch, activation):
+    if activation is None:
+        monkeypatch.delenv("VALORA_PRELIMINARY_CREATE_ENABLED")
+    else:
+        monkeypatch.setenv("VALORA_PRELIMINARY_CREATE_ENABLED", activation)
+    payload = command()
+    hidden = "i217_unmigrated_receipts_" + uuid.uuid4().hex
+    statements = []
+
+    def record(_conn, _cursor, statement, *_):
+        statements.append(statement.lower())
+
+    # This suite owns a disposable database; restore the retained table even on failure.
+    with engine.begin() as db:
+        db.execute(text(f'ALTER TABLE preliminary_project_create_receipts RENAME TO "{hidden}"'))
+    event.listen(engine, "before_cursor_execute", record)
+    try:
+        for call, code in (
+            (lambda: service.create_preliminary_request(principal, payload), "CREATE_UNRESOLVED"),
+            (lambda: service.recover_preliminary_request(principal, uuid.UUID(payload.request_id)), "RECOVERY_UNAVAILABLE"),
+        ):
+            with pytest.raises(HTTPException) as error:
+                call()
+            assert error.value.status_code == 503
+            assert error.value.detail == {
+                "code": code, "status": "UNRESOLVED", "request_id": payload.request_id, "final": False,
+            }
+        assert not any("from preliminary_project_create_receipts" in sql for sql in statements)
+        assert not any(sql.lstrip().startswith("insert") for sql in statements)
+    finally:
+        event.remove(engine, "before_cursor_execute", record)
+        with engine.begin() as db:
+            db.execute(text(f'ALTER TABLE "{hidden}" RENAME TO preliminary_project_create_receipts'))
+    assert facts(principal) == (0, 0, 0)
 
 
 def test_a14_cancel_blocked_command_closes_transaction(principal):

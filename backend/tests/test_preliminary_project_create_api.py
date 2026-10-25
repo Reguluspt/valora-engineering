@@ -16,6 +16,29 @@ from tests.test_preliminary_project_create_postgresql import principal as princi
 principal = principal_fixture
 
 
+@pytest.mark.parametrize("activation", [None, "false"])
+def test_d7_disabled_create_keeps_committed_http_replay_and_recovery(client, principal, monkeypatch, activation):
+    body = command().model_dump()
+    response = client.post("/api/v1/projects/preliminary-create", json=body)
+    assert response.status_code == 201
+    committed = response.json()
+    if activation is None:
+        monkeypatch.delenv("VALORA_PRELIMINARY_CREATE_ENABLED")
+    else:
+        monkeypatch.setenv("VALORA_PRELIMINARY_CREATE_ENABLED", activation)
+    replay = client.post("/api/v1/projects/preliminary-create", json=body)
+    assert replay.status_code == 200 and replay.json() == committed
+    recovery = client.get(f"/api/v1/projects/preliminary-create-requests/{body['request_id']}")
+    assert recovery.status_code == 200 and recovery.json() == committed
+    new_body = command().model_dump()
+    blocked = client.post("/api/v1/projects/preliminary-create", json=new_body)
+    assert blocked.status_code == 503
+    assert blocked.json()["detail"] == {
+        "code": "CREATE_UNRESOLVED", "status": "UNRESOLVED", "request_id": new_body["request_id"], "final": False,
+    }
+    assert facts(principal) == (1, 1, 1)
+
+
 @pytest.fixture
 def client(principal):
     override = app.dependency_overrides.pop(get_current_user, None)

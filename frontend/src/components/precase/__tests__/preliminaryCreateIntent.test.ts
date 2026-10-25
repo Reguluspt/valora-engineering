@@ -38,6 +38,53 @@ describe("pending intent lifetime", () => {
     expect(api.post.mock.calls[1][0]).toBe(body);
     expect(store.markers[0].phase).toBe("UNCERTAIN");
   });
+  it("keeps the confirmed recovery message when replay GET finds COMMITTED without another POST", async () => {
+    api.post.mockRejectedValueOnce(new ApiError("network", 0));
+    const store = new PreliminaryCreateIntents(scope);
+    await store.submit("Original", "Body");
+    const id = store.markers[0].request_id;
+    api.get.mockResolvedValueOnce({ request_id: id, project: { id: scope.actor_user_id }, receipt: { id: scope.actor_user_id } });
+    await store.replay(id);
+    expect(store.markers[0].phase).toBe("COMMITTED");
+    expect(store.message).toBe("Đã tìm thấy hồ sơ của mã yêu cầu này. Chọn mở hồ sơ để tiếp tục.");
+    expect(store.original(id)).toBeUndefined();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+  it("checks COMMITTED without automatically posting", async () => {
+    api.post.mockRejectedValueOnce(new ApiError("network", 0));
+    const store = new PreliminaryCreateIntents(scope);
+    await store.submit("Original", "Body");
+    const id = store.markers[0].request_id;
+    api.get.mockResolvedValueOnce({ request_id: id, project: { id: scope.actor_user_id }, receipt: { id: scope.actor_user_id } });
+    await store.check(id);
+    expect(store.markers[0].phase).toBe("COMMITTED");
+    expect(store.message).toMatch(/^Đã tìm thấy hồ sơ/);
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+  it("keeps UNRESOLVED GET non-final without automatically posting", async () => {
+    api.post.mockRejectedValueOnce(new ApiError("network", 0));
+    const store = new PreliminaryCreateIntents(scope);
+    await store.submit("Original", "Body");
+    const id = store.markers[0].request_id;
+    api.get.mockRejectedValueOnce(unresolved(id));
+    await store.check(id);
+    expect(store.markers[0].phase).toBe("UNCERTAIN");
+    expect(store.message).toBe("Chưa xác định yêu cầu đã được tạo hay chưa.");
+    expect(store.original(id)).toBe(api.post.mock.calls[0][0]);
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+  it("retains uncertainty and original bytes when recovery GET fails on the network", async () => {
+    api.post.mockRejectedValueOnce(new ApiError("network", 0));
+    const store = new PreliminaryCreateIntents(scope);
+    await store.submit("Original", "Body");
+    const id = store.markers[0].request_id;
+    api.get.mockRejectedValueOnce(new ApiError("network", 0));
+    await store.replay(id);
+    expect(store.markers[0].phase).toBe("UNCERTAIN");
+    expect(store.message).toMatch(/^Chưa đủ điều kiện gửi lại/);
+    expect(store.original(id)).toBe(api.post.mock.calls[0][0]);
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
   it("A25 storage failure and unavailable CSPRNG block dispatch", async () => {
     vi.stubGlobal("sessionStorage", { getItem: () => null, setItem: () => { throw new Error("quota"); } });
     const store = new PreliminaryCreateIntents(scope);

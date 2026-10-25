@@ -43,8 +43,8 @@ principal = principal_fixture
         "audit_binding",
     ],
 )
-def test_a28_database_rejects_foreign_scope_and_duplicate_evidence(principal, violation):
-    other = principal_fixture.__wrapped__()
+def test_a28_database_rejects_foreign_scope_and_duplicate_evidence(principal, violation, monkeypatch):
+    other = principal_fixture.__wrapped__(monkeypatch)
     first, second, foreign = command(), command(), command()
     service.create_preliminary_request(principal, first)
     service.create_preliminary_request(principal, second)

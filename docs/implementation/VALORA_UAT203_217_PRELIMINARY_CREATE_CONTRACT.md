@@ -1,4 +1,66 @@
-# Issue217 preliminary-create implementation checkpoint
+# Preliminary-create contract and implementation evidence
+
+## Current governing status — 2026-10-25
+
+The [PM adjudication](https://github.com/Reguluspt/valora-engineering/pull/219#issuecomment-6394281774) governs this checkpoint: PR #219 remains **OPEN / DRAFT; INTEGRATION HOLD for F1; READY_FOR_MERGE=NO**. The reviewed candidate is `27635fc860b5c29b1c12555267201def24ca199e`, based on main `85adc2280b929381aa2f03dc0d915f3cc36e441b`, with exact-head CI #676 SUCCESS. [Both original reviewer reports](https://github.com/Reguluspt/valora-engineering/pull/219#issuecomment-6394240489) are received and adjudicated, with qualifications. They certify no later source revision.
+
+F1/F2/F5 correction is a separate bounded local assignment, `VALORA-219-REVIEW-FINDINGS-CLOSEOUT-01`. A changed candidate requires its own authorized freeze, exact-head CI and separately released review; this document does not grant any of those steps. Existing accepted A26/Local Saturation evidence retains the disposition recorded by PM; it is not replaced by the historical STOP statements below.
+
+Every checkpoint after the historical-record heading is an **as-of record**, including sentences that called their checkpoint “current” at that time. In particular, old `A26_OVERALL=PARTIAL`, `LOCAL_SATURATION=NOT_PASS` and `FIRST_PUSH=NOT_AUTHORIZED` values describe their dated checkpoints, not the current PR or a new candidate. Original wording, outcomes and failures remain retrievable in the [unchanged historical document at the reviewed SHA](https://github.com/Reguluspt/valora-engineering/blob/27635fc860b5c29b1c12555267201def24ca199e/docs/implementation/VALORA_UAT203_217_PRELIMINARY_CREATE_CONTRACT.md) and its linked original Issue #217 records. Relative private-evidence locators below identify retained developer artifacts, not public certification or portable machine paths.
+
+### Local correction verification (not a frozen-candidate certification)
+
+The F1/F2/F5 working-tree correction passed 134 focused/affected backend tests on disposable PostgreSQL 16.15 and 91 frontend tests across 11 files, plus Ruff, frontend typecheck/build and npm audit (zero findings). These local results do not replace exact-head CI or the new candidate's required independent reviews.
+
+The first native-PG regression run recorded three expired-session test failures with the server's local timezone. Repeating the affected suite with the existing UTC test convention (`PGOPTIONS=-c timezone=UTC`, process-local only) passed all 134 tests; no auth/login implementation was changed. The failed run remains retained evidence, not counted as PASS. Real ASGI/HTTP smoke verified both an actual pre-D7 database and a migrated database; the SQL preflight refused the former and passed the latter. New browser/native-tab acceptance was not claimed or rerun; the F2 regression and existing feature/component tests cover the changed confirmation branch, without changing visual composition or the previously adjudicated A26 gate.
+
+Raw logs and the exact local diff/hash manifest are retained in the task evidence set `VALORA-219-REVIEW-FINDINGS-CLOSEOUT-01`; the bounded closeout is delivered to PR #219 for PM assessment. No new freeze/push/reviewer call is inferred from these local checks.
+
+## F1 activation and recovery boundary
+
+New creation is opt-in: absent `VALORA_PRELIMINARY_CREATE_ENABLED` means disabled; only the exact value `true` enables creation of a new receipt. In both POST and GET, authorization precedes a read-only PostgreSQL catalog check. If the receipt relation is absent, POST returns typed non-final `503 CREATE_UNRESOLVED` and GET returns typed non-final `503 RECOVERY_UNAVAILABLE`, before querying that relation. No Project/audit/receipt write is attempted. A failed schema/query never causes legacy POST fallback or a new identity.
+
+On a migrated database, POST still checks committed receipt identity and canonical bytes before the new-create flag: matching replay returns the original COMMITTED identity with HTTP 200 even when the flag is absent/false; conflicting bytes retain HTTP 409. GET recovery remains available with its existing permission and scope. The catalog guard prevents absent-table reads; the unchanged receipt query and transaction still fail closed on unusable columns/SQL. It does not replace applying the full atomic D7 migration and its constraints.
+
+### Executable migration/activation verification
+
+Run the following preflight against the explicitly selected deployment database using its normal authorized SQL client with stop-on-error enabled (for psql, `-X -v ON_ERROR_STOP=1`). It is read-only and must complete successfully before enabling create or the browser entry. The expected revision is this candidate's migration head; a future descendant requires its own accepted rollout contract.
+
+```sql
+BEGIN READ ONLY;
+DO $$
+BEGIN
+  IF pg_catalog.to_regclass('preliminary_project_create_receipts') IS NULL THEN
+    RAISE EXCEPTION 'D7 receipt schema is absent; activation blocked';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM alembic_version WHERE version_num = '0a1b2c3d4e5f') THEN
+    RAISE EXCEPTION 'D7 migration head is not applied; activation blocked';
+  END IF;
+  IF 11 <> (
+    SELECT count(*) FROM pg_catalog.pg_constraint
+    WHERE conrelid = pg_catalog.to_regclass('preliminary_project_create_receipts')
+      AND conname = ANY (ARRAY[
+        'uq_pcreate_scope', 'uq_pcreate_project', 'uq_pcreate_audit',
+        'ck_pcreate_version', 'ck_pcreate_code', 'ck_pcreate_digest', 'ck_pcreate_payload_size',
+        'fk_pcreate_org', 'fk_pcreate_actor', 'fk_pcreate_project', 'fk_pcreate_audit'
+      ]) AND convalidated
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_constraint
+    WHERE conrelid = pg_catalog.to_regclass('audit_events')
+      AND conname = 'uq_pcreate_audit_binding' AND convalidated
+  ) THEN
+    RAISE EXCEPTION 'D7 constraints are incomplete; activation blocked';
+  END IF;
+END $$;
+ROLLBACK;
+```
+
+1. Keep create explicitly disabled while applying the unchanged additive migration through `0a1b2c3d4e5f`; do not downgrade or backfill retained receipts. Record target identity, applied revision and successful SQL preflight result.
+2. On an isolated synthetic acceptance target, verify the disabled state: a new valid POST is non-final 503 with no new Project/audit/receipt; an existing matching committed replay and GET retain HTTP 200 and the original identity. Never test writes against a protected or production target under this developer task.
+3. Enable `VALORA_PRELIMINARY_CREATE_ENABLED=true` explicitly only after that schema proof, then enable the compatible browser entry. On the authorized synthetic target, verify HTTP 201 once, matching replay HTTP 200, GET HTTP 200 and exactly one Project/audit/receipt binding. A prematurely enabled backend on absent schema remains non-final 503 without writes.
+4. For application rollback, set the flag false and keep the compatible backend/GET/pending UI available. Verify original committed recovery/replay again. Retain markers on typed 503, unavailable recovery or old-node untyped 404; never recreate an unknown request or fall back to legacy POST. Production activation remains a separate authorized gate.
+
+## Historical checkpoint records — as-of evidence only
 
 ## A26 Case U fixture diagnosis — STOP before activation
 
@@ -84,7 +146,7 @@ All 25 retained paths matched the prior security-continuation SHA256 manifest be
 | Backend/API/real PostgreSQL regression | **219 PASS**, zero failures/skips, 14 existing warnings, 126.70s, in the fresh safe environment. Includes focused create/API/PG/migration, affected project/Pre-case/auth suites and all three authorized historical PG/migration suites. Counts overlap earlier runs and are not additive. |
 | Source security/static checks | Backend `ruff check .`, `python tests/check_security.py`, and E2E-harness Ruff PASS. The private runtime/observer helper Ruff checks also pass. |
 
-Raw evidence is retained in `F:/Project Valora/private-evidence/issue217-t2-operator-20261021`: start/final manifests, exact changed-path inventory, clean-install/audit/tree reports, Python version/chain/provenance/installer reports, frontend test/lint/build logs, `backend-regression-pg.log`, read-only database snapshots and TASK_STATE. The pre-existing 45 historical migration tests are included in the fresh 219-test run. No mandatory skipped check is treated as PASS.
+Raw evidence is retained in `private-evidence/issue217-t2-operator-20261021`: start/final manifests, exact changed-path inventory, clean-install/audit/tree reports, Python version/chain/provenance/installer reports, frontend test/lint/build logs, `backend-regression-pg.log`, read-only database snapshots and TASK_STATE. The pre-existing 45 historical migration tests are included in the fresh 219-test run. No mandatory skipped check is treated as PASS.
 
 ### A26 preparation and genuine execution blocker
 
@@ -116,7 +178,7 @@ Before this evidence update, all **25/25** working-copy hashes matched the previ
 
 The Browser skill connected to **ChatGPT in-app browser**, browser ID `2`, selected for canonical `http://127.0.0.1:8017`. Its complete supported API exposes `Tab.close()`, `Tabs.new()`, `Tab.reload()` and navigation, but **no native restore/reopen-closed-tab operation**. Live `browser.capabilities.list()` advertises only `visibility` and `viewport`; `browser.tabs.list()` returns `[]`. The unavailable action is restoration of an actually closed tab through native browser session restoration, preserving or observably discarding that tab's browser-managed scoped sessionStorage. Creating another tab, navigating to its old URL, reloading or injecting markers cannot establish this lifecycle.
 
-Private evidence is retained under `F:/Project Valora/private-evidence/issue217-security-a26-final-20261021`: `browser-supported-api.txt`, `browser-capabilities.json`, preservation manifest, baseline/registry evidence and final TASK_STATE. No undocumented restore method, alternate browser automation, browser policy bypass or repeated shortcut attempt was used. The previous native-shortcut failure remains historical; the prior restored-marker fixture remains supplemental. There is no new before/after screenshot, request trace or database delta because actual native restoration could not be exercised. **A26 stays PARTIAL / INCOMPLETE, never PASS or N/A.**
+Private evidence is retained under `private-evidence/issue217-security-a26-final-20261021`: `browser-supported-api.txt`, `browser-capabilities.json`, preservation manifest, baseline/registry evidence and final TASK_STATE. No undocumented restore method, alternate browser automation, browser policy bypass or repeated shortcut attempt was used. The previous native-shortcut failure remains historical; the prior restored-marker fixture remains supplemental. There is no new before/after screenshot, request trace or database delta because actual native restoration could not be exercised. **A26 stays PARTIAL / INCOMPLETE, never PASS or N/A.**
 
 ### Dependency findings at the stop
 
@@ -183,7 +245,7 @@ READY_FOR_PM_REVIEW: YES for blocker/evidence disposition only; NO for candidate
 NEXT_AUTHORIZED_ACTION: PM/Gate Owner coordinates supported native restoration/operator evidence and resumption
 ```
 
-## Current checkpoint — F02 repaired; dependency security gate blocked
+## Historical checkpoint — F02 repaired; dependency security gate blocked
 
 Date: 2026-10-21, Asia/Saigon. **F02 RESOLVED; LOCAL SATURATION NOT PASS; NO FIRST PUSH.** This section supersedes the historical checkpoints below. All 25 task-owned paths and earlier raw evidence are preserved. No files are staged; no commit, push, PR, reviewer/provider call, manual CI, merge, deployment or PO UAT was performed.
 
@@ -203,7 +265,7 @@ The hypothesis was verified before mutation. The production DOM had no `.fui-Flu
 
 Final production-build browser observations: Fluent provider present; brand `#0f6cbd`; button padding `5px 12px`, border `1px solid`; 16px separation between retained entries. At 1280×800 and 960×800, both unresolved/parked and COMMITTED entries remained independently visible/actionable with no horizontal overflow, clipping or overlap; the form follows a separate panel. The page scrolls vertically when retained evidence exceeds the viewport. Keyboard Tab showed visible focus and status announcements use polite live feedback. No facts were removed to improve layout. Component regressions cover independent multi-intent actions and acknowledged COMMITTED identity surviving local persistence failure.
 
-Private sanitized artifacts are under `F:/Project Valora/private-evidence/issue217-f02-20261021`: `before-computed.json`, `before.dom.txt`, `before-1280.png`, `layout-1280.json`, `layout-960.json`, `keyboard-focus.json/png`, `final-1280.jpg`, `final-960.jpg`, A22/A23/A25/A26 screenshots/text, API logs and audit/test outputs. Earlier PG/F01/HTTP-loss proof remains under `private-evidence/issue217-resume-20261020`. These are local developer evidence, not published PO UAT artifacts.
+Private sanitized artifacts are under `private-evidence/issue217-f02-20261021`: `before-computed.json`, `before.dom.txt`, `before-1280.png`, `layout-1280.json`, `layout-960.json`, `keyboard-focus.json/png`, `final-1280.jpg`, `final-960.jpg`, A22/A23/A25/A26 screenshots/text, API logs and audit/test outputs. Earlier PG/F01/HTTP-loss proof remains under `private-evidence/issue217-resume-20261020`. These are local developer evidence, not published PO UAT artifacts.
 
 ### Current checks and security blocker
 
@@ -303,7 +365,7 @@ READY_FOR_PM_REVIEW: YES for blocker disposition only; NO for candidate certific
 NEXT_AUTHORIZED_ACTION: PM/Gate Owner bounded dependency amendment and A26 test-capability/evidence disposition
 ```
 
-## Current stop — F01 repaired; F02 visual acceptance failed
+## Historical stop — F01 repaired; F02 visual acceptance failed
 
 Date: 2026-10-21, Asia/Saigon. **STOPPED_BROWSER_T3_F02; LOCAL SATURATION NOT PASS.** This section supersedes every checkpoint below. The Product Owner's direct continuation instruction authorized resuming the previously reported F01 repair within the existing scope. No commit, stage, push, PR, reviewer/provider call, manual CI, deployment or PO UAT occurred. Task-created browser tabs were closed and the viewport reset; only the verified task API/preview processes and #217 disposable PostgreSQL container were stopped, retaining its data.
 
@@ -417,7 +479,7 @@ READY_FOR_PM_REVIEW: NO (blocker handoff only)
 NEXT_AUTHORIZED_ACTION: PM/Gate Owner disposition of F02 and bounded continuation, then remaining browser/matrix/static/diff gates before any push
 ```
 
-## Current continuation — Browser T3 recovery acknowledgment repair
+## Historical continuation — Browser T3 recovery acknowledgment repair
 
 Date: 2026-10-21, Asia/Saigon. **IN DEVELOPMENT; LOCAL SATURATION NOT PASS.** This section supersedes the historical checkpoints below. The Product Owner's direct instruction to continue follows the reported Browser T3 failure; remediation remains within the existing 25-path scope. No provider/reviewer, commit, push, PR, integration or UAT action has occurred.
 
@@ -448,7 +510,7 @@ READY_FOR_PM_REVIEW: NO
 NEXT_AUTHORIZED_ACTION: Consume each distinct-intent acknowledgment once; revalidate affected tests and browser matrix before delivery
 ```
 
-## Current resume checkpoint — D9-MIGRATION-TEST-SCOPE-FIX
+## Historical resume checkpoint — D9-MIGRATION-TEST-SCOPE-FIX
 
 Date: 2026-10-20, Asia/Saigon. **STOPPED_REQUIRED_BROWSER_UNAVAILABLE; LOCAL SATURATION INCOMPLETE.** The historical migration scope conflict below is resolved. This current checkpoint supersedes the earlier stop-state fields retained later in this document. No implementation/source certification is claimed.
 
@@ -487,7 +549,7 @@ The connected Browser capability rejected `browser.tabs.list()` with **`Local br
 
 Consequently remaining real-browser T3 scenarios from A22–A31, final matrix reconciliation and a full Local Saturation PASS cannot be completed in this run. Prior screenshots/partial browser observations below are retained as prior evidence only. No mandatory unavailable browser test is marked PASS or N/A. Follow the user-required STOP boundary; do not push to obtain this missing local evidence through CI.
 
-### Current TASK_STATE / final handoff
+### Historical TASK_STATE / final handoff
 
 ```text
 TASK_ID: VALORA-UAT203-217-PRELIMINARY-CREATE-IMPLEMENT
