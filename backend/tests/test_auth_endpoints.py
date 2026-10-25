@@ -39,9 +39,14 @@ from app.modules.project_master_data.models import (
     RefreshTokenRecord,
     AuditEvent
 )
-from app.api.auth import hash_token, get_cookie_keys
+from app.api.auth import expiry_as_utc, hash_token, get_cookie_keys
 
 settings = get_settings()
+
+
+def test_expiry_as_utc_preserves_existing_naive_utc_contract():
+    value = datetime(2026, 1, 15, 12, 34, 56, 123456)
+    assert expiry_as_utc(value) == datetime(2026, 1, 15, 12, 34, 56, 123456, tzinfo=timezone.utc)
 
 
 # ─────────────────────────────────────────────────

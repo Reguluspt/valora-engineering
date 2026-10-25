@@ -10,11 +10,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 from sqlalchemy import event, select, text
 from sqlalchemy.orm import Session
 
-from app.api.auth import hash_token
+from app.api.auth import get_cookie_keys, hash_token
 from app.db.session import engine, SessionLocal
+from app.main import app
 from app.modules.project_master_data.application import (
     preliminary_project_create_service as service,
 )
@@ -23,6 +25,7 @@ from app.modules.project_master_data.models import (
     OrganizationProfile,
     PreliminaryProjectCreateReceipt as Receipt,
     Project,
+    RefreshTokenRecord,
     Role,
     User,
     UserRole,
@@ -84,6 +87,148 @@ def facts(principal):
             )
             for model in (Project, AuditEvent, Receipt)
         )
+
+
+@pytest.fixture(params=[("UTC", 0), ("Etc/GMT-7", 7), ("Etc/GMT+5", -5)], ids=["UTC", "UTC+07", "UTC-05"])
+def session_timezone(request):
+    zone, offset = request.param
+
+    def configure(connection, *_):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('TimeZone', %s, false)", (zone,))
+        connection.commit()
+
+    engine.dispose()
+    event.listen(engine, "checkout", configure)
+    try:
+        with SessionLocal() as db:
+            assert db.scalar(text("SHOW TimeZone")) == zone
+            value = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
+            assert value.utcoffset() == timedelta(hours=offset)
+            # Relabelling a PG aware timestamp changes its instant by the offset.
+            assert value.replace(tzinfo=timezone.utc) - value.astimezone(timezone.utc) == timedelta(hours=offset)
+        yield zone
+    finally:
+        event.remove(engine, "checkout", configure)
+        engine.dispose()
+
+
+@pytest.mark.parametrize("field", ["access_expires_at", "idle_expires_at", "absolute_expires_at"])
+@pytest.mark.parametrize("expired", [False, True], ids=["valid", "expired"])
+def test_shared_session_expiry_timezone(principal, session_timezone, field, expired):
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        for name in ("access_expires_at", "idle_expires_at", "absolute_expires_at"):
+            setattr(session, name, now + timedelta(days=1))
+        setattr(session, field, now + timedelta(minutes=-1 if expired else 1))
+        refresh = RefreshTokenRecord(
+            user_session_id=session.id, token_hash=hash_token(uuid.uuid4().hex),
+            token_family_id=uuid.uuid4(), expires_at=now + timedelta(days=1),
+        )
+        db.add(refresh)
+        db.commit()
+        refresh_id = refresh.id
+    with TestClient(app) as client:
+        client.cookies.set(get_cookie_keys()[0], str(principal.session_id))
+        response = client.get("/api/v1/auth/me", headers={"X-Request-Id": "tz-expiry-regression"})
+    assert response.status_code == (401 if expired else 200), response.text
+    terminated = expired and field != "access_expires_at"
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        assert session.status == ("expired" if terminated else "active")
+        assert (session.revoked_at is not None) == terminated
+        assert db.get(RefreshTokenRecord, refresh_id).status == ("revoked" if terminated else "active")
+        audits = db.scalars(select(AuditEvent).where(AuditEvent.organization_id == principal.organization_id)).all()
+        assert len(audits) == int(terminated)
+        if terminated:
+            assert audits[0].event_name == "auth.session.revoked"
+            assert audits[0].correlation_id == "tz-expiry-regression"
+            assert audits[0].payload["session_id"] == str(principal.session_id)
+    assert facts(principal) == (0, int(terminated), 0)
+
+
+@pytest.mark.parametrize("field", ["access_expires_at", "idle_expires_at", "absolute_expires_at"])
+@pytest.mark.parametrize("expired", [False, True], ids=["valid", "expired"])
+def test_post_lock_session_expiry_timezone(principal, session_timezone, field, expired):
+    payload = command()
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        for name in ("access_expires_at", "idle_expires_at", "absolute_expires_at"):
+            setattr(session, name, datetime.now(timezone.utc) + timedelta(days=1))
+        db.commit()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        with engine.connect() as blocker:
+            blocker.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": service.lock_key(principal, uuid.UUID(payload.request_id))})
+            future = pool.submit(service.create_preliminary_request, principal, payload)
+            try:
+                with engine.connect() as observer:
+                    for _ in range(300):
+                        waiting = observer.scalar(text(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() "
+                            "AND wait_event='advisory' AND pid<>pg_backend_pid()"
+                        ))
+                        if waiting:
+                            break
+                        observer.commit()
+                        if future.done():
+                            future.result()
+                        threading.Event().wait(0.01)
+                    else:
+                        pytest.fail("Post-lock expiry proof did not observe an advisory-lock waiter")
+                with SessionLocal() as db:
+                    session = db.get(UserSession, principal.session_id)
+                    setattr(session, field, datetime.now(timezone.utc) + timedelta(minutes=-1 if expired else 1))
+                    db.commit()
+            finally:
+                blocker.rollback()
+        if expired:
+            with pytest.raises(HTTPException) as error:
+                future.result(timeout=8)
+            assert error.value.status_code == 401
+        else:
+            assert future.result(timeout=8)[1] == 201
+    assert facts(principal) == ((0, 0, 0) if expired else (1, 1, 1))
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        assert session.status == "active" and session.revoked_at is None
+
+
+@pytest.mark.parametrize("field", ["idle_expires_at", "absolute_expires_at", "refresh_expires_at"])
+@pytest.mark.parametrize("expired", [False, True], ids=["valid", "expired"])
+def test_refresh_session_expiry_timezone(principal, session_timezone, field, expired):
+    now = datetime.now(timezone.utc)
+    token = uuid.uuid4().hex
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        for name in ("access_expires_at", "idle_expires_at", "absolute_expires_at"):
+            setattr(session, name, now + timedelta(days=1))
+        refresh = RefreshTokenRecord(
+            user_session_id=session.id, token_hash=hash_token(token),
+            token_family_id=uuid.uuid4(), expires_at=now + timedelta(days=1),
+        )
+        target = refresh if field == "refresh_expires_at" else session
+        setattr(target, "expires_at" if field == "refresh_expires_at" else field, now + timedelta(minutes=-1 if expired else 1))
+        db.add(refresh)
+        db.commit()
+        refresh_id = refresh.id
+    with TestClient(app) as client:
+        client.cookies.set(get_cookie_keys()[0], str(principal.session_id))
+        client.cookies.set(get_cookie_keys()[1], token)
+        response = client.post("/api/v1/auth/refresh", headers={
+            "Origin": "http://localhost:5173", "X-CSRF-Token": "issue217-synthetic-csrf",
+        })
+    assert response.status_code == (401 if expired else 200), response.text
+    if expired:
+        assert all("Max-Age=0" in cookie for cookie in response.headers.get_list("set-cookie"))
+    with SessionLocal() as db:
+        session = db.get(UserSession, principal.session_id)
+        assert session.status == (("revoked" if field == "refresh_expires_at" else "expired") if expired else "active")
+        assert (session.revoked_at is not None) == expired
+        assert db.get(RefreshTokenRecord, refresh_id).status == ("revoked" if expired else "rotated")
+        audits = db.scalars(select(AuditEvent).where(AuditEvent.organization_id == principal.organization_id)).all()
+        assert [audit.event_name for audit in audits] == ["auth.session.revoked" if expired else "auth.session.refreshed"]
+    assert facts(principal) == (0, 1, 0)
 
 
 def test_a01_a04_a05_a19_atomic_replay_conflict_and_distinct_keys(principal):

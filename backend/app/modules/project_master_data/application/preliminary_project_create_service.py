@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
 
-from app.api.auth import raise_401
+from app.api.auth import expiry_as_utc, raise_401
 from app.core.audit import log_audit_event
 from app.core.rbac import derive_effective_permissions, require_permission
 from app.db.session import SessionLocal, engine
@@ -79,7 +79,7 @@ def authorize(db, principal, permission):
         or user.status != "active"
         or org.status != "active"
         or any(
-            t.replace(tzinfo=timezone.utc) < now
+            expiry_as_utc(t) < now
             for t in (
                 session.access_expires_at,
                 session.idle_expires_at,
