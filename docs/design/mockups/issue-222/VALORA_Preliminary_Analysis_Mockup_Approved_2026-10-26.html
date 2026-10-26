@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3f6fb">
+  <title>VALORA — Mockup Phân tích danh mục</title>
+  <meta name="description" content="Mockup tương tác, độc lập với hệ thống VALORA, cho luồng rà soát và phân tích danh mục tài sản.">
+  <style>
+:root{--blue:#1769c1;--blue-strong:#1056a4;--blue-pale:#ebf3ff;--ink:#18263c;--muted:#67778c;--line:#dce3ec;--page:#f3f6fa;--white:#fff;--teal:#047b68;--amber:#a66613;--amber-bg:#fffaf0;--shadow:0 8px 24px rgba(25,42,74,.05);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--page)}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #99c5ff;outline-offset:2px}a{color:var(--blue)}[hidden]{display:none!important}#app{min-height:100vh;display:flex}.sidebar{width:219px;min-width:219px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;display:flex;flex-direction:column}.brand{padding:22px 14px 25px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);white-space:nowrap}.brand-mark{height:34px;width:34px;background:linear-gradient(145deg,#1a80d4,#1060ad);border-radius:9px;display:grid;place-items:center;color:white;font-size:24px;box-shadow:0 4px 14px #0c62b544}.brand strong{display:block;color:#125fbb;font-size:15px;letter-spacing:.3px}.brand small{display:block;font-size:9px;color:#5a6b82;margin-top:3px}.sidebar-title{font-size:10px;font-weight:800;color:#64748b;letter-spacing:.6px;padding:25px 15px 9px}.nav-item{padding:11px 13px;margin:1px 8px;display:flex;gap:10px;align-items:center;font-size:12px;border-radius:7px;color:#3c4a5e;white-space:nowrap}.nav-icon{width:16px;text-align:center;font-size:15px;color:#5b6d84}.nav-item.selected{color:var(--blue);background:#e9f2fd;border-left:3px solid var(--blue);font-weight:700;padding-left:10px}.selected .nav-icon{color:var(--blue)}.sidebar-bottom{padding:19px 13px 24px;margin-top:auto;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;font-size:12px}.sidebar-bottom b{font-size:12px}.sidebar-bottom small{font-size:11px;color:#76849a}.owner{font-size:10px;color:#65758a;margin-top:3px}.mockup-mini{color:#9d671b;background:#fff4dc;padding:4px 7px;border-radius:5px;width:max-content;font-size:9px;font-weight:800;letter-spacing:.5px}.workspace{min-width:0;flex:1}.topbar{height:61px;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:0 27px;gap:14px}.crumb{font-size:12px;color:#8290a1;display:flex;align-items:center;gap:11px;white-space:nowrap}.crumb strong{color:#24364e;font-weight:700}.crumb span{font-size:16px;color:#a5b0be}.topbar-right{display:flex;align-items:center;gap:14px}.header-demo{font-size:10px;font-weight:850;color:#97671e;background:#fff5dc;border:1px solid #f0dfa6;letter-spacing:.8px;padding:6px 10px;border-radius:5px}.avatar{height:31px;width:31px;border-radius:50%;background:#ddeafe;color:#185da9;display:grid;place-items:center;font-weight:800;font-size:10px}.page{padding:24px 26px 40px;max-width:1920px;margin:auto}.page-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}.eyebrow{font-weight:800;letter-spacing:.8px;font-size:10px;color:#52708f}.dot{display:inline-block;width:7px;height:7px;background:#0fb595;border-radius:50%;margin-right:7px}.eyebrow-divider{margin:0 8px;color:#acb9c8}h1{font-size:26px;letter-spacing:-.5px;margin:7px 0 6px}.version-chip{font-size:10px;color:#3076bc;border:1px solid #b9d4f3;background:#eef6ff;padding:4px 8px;border-radius:99px;font-weight:800;vertical-align:middle;margin-left:6px;letter-spacing:0}.page-heading p{color:#69798c;font-size:12px;margin:0}.heading-actions{display:flex;gap:8px}.btn{border:1px solid #d5dfec;border-radius:7px;padding:9px 12px;background:#fff;color:#2d415a;font-size:12px;font-weight:700;white-space:nowrap;transition:background .12s,border .12s}.btn:hover{background:#f2f7ff;border-color:#a8c5e9}.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn-primary:hover{background:#0e5ead;color:#fff}.btn-danger{background:#fff1f2;border-color:#f0c6cb;color:#a43943}.btn-mini{font-size:11px;padding:6px 8px}.btn:disabled{opacity:.45;cursor:not-allowed}.notice{display:flex;align-items:flex-start;gap:12px;background:#edf5ff;border:1px solid #bed9fc;color:#315678;border-radius:8px;padding:11px 13px;font-size:11px;line-height:1.6;margin-bottom:17px}.notice strong{color:#174f87}.notice-icon{font-size:17px;line-height:17px;color:#237bc6}.icon-btn{border:0;background:none;color:#8190a3;font-size:20px;line-height:1;cursor:pointer}.notice .icon-btn{margin-left:auto}.metric-row{display:grid;grid-template-columns:.8fr .9fr 1.2fr 1.2fr;gap:13px;margin-bottom:15px}.metric{background:#fff;padding:16px 17px;border:1px solid #e0e7f0;border-radius:10px;box-shadow:var(--shadow);min-height:110px}.metric-label{display:flex;justify-content:space-between;color:#65758c;align-items:center;font-size:11px;font-weight:750}.metric-icon{height:23px;width:23px;display:grid;place-items:center;border-radius:6px;font-weight:900;font-size:14px}.indigo{background:#eef0ff;color:#6973ca}.teal{background:#e3f6f1;color:#14977d}.gray{background:#edf1f7;color:#77859b}.amber{background:#fff5de;color:#bb7a18}.metric-value{font-size:27px;font-weight:800;letter-spacing:-.9px;margin:10px 0 4px;font-variant-numeric:tabular-nums}.metric-value.money{font-size:22px;letter-spacing:-.5px}.metric-denom{font-size:13px;color:#8895a7;font-weight:600;margin-left:5px;letter-spacing:0}.metric-note{color:#8b9aac;font-size:10px}.metric-progress{height:5px;margin-top:13px;background:#ecf1f6;border-radius:6px;overflow:hidden}.metric-progress span{display:block;width:0;height:100%;background:#17a88e;transition:width .2s}.conditions{background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:16px;padding:10px 14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:11px}.conditions-label{font-size:10px;font-weight:800;letter-spacing:.6px;color:#8794a5}.condition-tag{padding:5px 8px;background:#f3f6fa;border-radius:5px;color:#465b74;font-weight:600}.conditions-hint{color:#8794a4;margin-left:auto}.orange-dot{color:#d99935}.analysis-card{border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:var(--shadow);overflow:hidden}.analysis-toolbar{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);flex-wrap:wrap}.toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.segmented{display:flex;padding:3px;background:#f0f4f9;border-radius:8px;gap:2px}.segment{border:0;background:transparent;color:#67778c;padding:8px 13px;font-size:11px;font-weight:750;border-radius:6px;white-space:nowrap}.segment.active{background:#fff;color:#1464b7;box-shadow:0 1px 5px #42546d1d}.entry-hint{font-size:10px;color:#8795a6}.editable-dot,.source-dot{display:inline-block;height:8px;width:8px;background:#e3ad45;border-radius:2px;margin-right:5px}.source-dot{background:#91b6d8}.search{height:35px;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;padding:0 10px;gap:5px;min-width:210px;background:white}.search span{font-size:21px;color:#98a5b6;line-height:1}.search input{border:0;outline:0;width:100%;font-size:11px;color:var(--ink);background:none}.toolbar-right select{height:35px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:0 8px;color:#465b74;font-size:11px;min-width:126px}.analysis-layout{display:flex;min-width:0;height:min(630px,calc(100vh - 350px));min-height:420px}.grid-section{min-width:0;flex:1;display:flex;flex-direction:column}.grid-meta{height:44px;min-height:44px;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#8b97a7;font-size:10px;padding:0 14px;border-bottom:1px solid #e7ebf2;white-space:nowrap}.grid-meta strong{color:#30506f;font-weight:750}.meta-split{padding:0 7px}.grid-meta>span{color:#99a6b6}.table-scroll{overflow:auto;flex:1;position:relative;scrollbar-color:#b7c6d8 #f1f4f8;scrollbar-width:thin}.asset-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;table-layout:fixed;font-size:11px;color:#3a4a5f}.asset-table th{font-size:10px;letter-spacing:.08px;font-weight:800;text-align:left;color:#607189;background:#f5f7fa;border-right:1px solid #e5eaf1;border-bottom:1px solid var(--line);padding:9px 10px;white-space:nowrap}.asset-table .header-groups th{position:sticky;top:0;z-index:5;background:#f6f8fb;height:32px}.asset-table .header-groups th.source-group{background:#eef5fc;color:#4c75a2;text-align:center;letter-spacing:.5px}.asset-table .header-groups th.work-group{background:#fff6e5;color:#967036;text-align:center;letter-spacing:.5px}.asset-table .header-groups th:last-child{text-align:center}.asset-table .header-fields th{position:sticky;top:32px;z-index:5;background:#f7f9fc;height:40px}.asset-table .header-fields .editable-header{background:#fff8e9;color:#99601e}.asset-table th.sticky-col{z-index:11!important;background:#f6f8fb}.asset-table th.index-col,.asset-table td.index-col{position:sticky;left:0;min-width:54px;width:54px;max-width:54px;text-align:center}.asset-table th.asset-col,.asset-table td.asset-col{position:sticky;left:54px;min-width:290px;width:290px;max-width:290px;box-shadow:5px 0 10px -9px #42526b80}.asset-table td{padding:9px 10px;border-bottom:1px solid #e5e9ef;border-right:1px solid #eef0f3;background:#fff;vertical-align:middle;min-height:57px}.asset-table tr:hover td{background:#f7fbff}.asset-table tbody tr{cursor:pointer}.asset-table tbody tr.selected-row td,.asset-table tbody tr.selected-row:hover td{background:#eaf4ff}.asset-table tr.selected-row td.index-col{color:#1268c0;font-weight:900;border-left:3px solid #1477d7}.asset-table td.sticky-col{z-index:2}.asset-table .unit-col{width:66px;min-width:66px}.asset-table .numeric-col{width:134px;min-width:134px}.asset-table .evidence-col{width:165px;min-width:165px}.asset-table .status-col{width:138px;min-width:138px}.asset-name{font-size:11px;font-weight:720;line-height:1.55;color:#2a3f57;white-space:normal;overflow-wrap:anywhere;max-height:72px;overflow:auto}.asset-sub{font-size:9px;margin-top:4px;color:#8798ab}.asset-table .number{text-align:right;font-variant-numeric:tabular-nums}.asset-table .read-only{color:#637489;background:#fbfcfe}.asset-table tr:hover .read-only{background:#f6faff}.asset-table tr.selected-row .read-only{background:#eaf4ff}.source-price{font-weight:650;color:#31516d}.editable-input{background:#fffbf1;width:112px;max-width:100%;height:34px;border:1px solid #ead29b;border-radius:5px;text-align:right;padding:6px 8px;font-size:11px;color:#27364e;font-variant-numeric:tabular-nums;transition:border-color .1s,box-shadow .1s}.editable-input:hover{border-color:#cfa456}.editable-input:focus{outline:0;border-color:#df9736;box-shadow:0 0 0 2px #efd9a8}.unit-note{color:#94a4b4;font-size:9px}.difference.negative{color:#b94f53}.difference.positive{color:#0d8c75}.difference.none{color:#9ba9b9}.evidence-link{border:0;background:#edf5fc;color:#246cab;border-radius:5px;padding:5px 7px;max-width:135px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}.evidence-link:hover{background:#dbeafa}.evidence-link.empty{background:#fff4ee;color:#b46c43}.tiny-pill{font-size:9px;font-weight:750;display:inline-block;padding:5px 7px;border-radius:99px;white-space:nowrap}.tiny-pill.pending{color:#846638;background:#fff3df}.tiny-pill.confirmed{color:#07856b;background:#e4f7ef}.tiny-pill.edited{color:#a35c16;background:#fff4df}.tiny-pill.missing{color:#b66a32;background:#fff2eb}.asset-table tr.empty-row td{height:90px;text-align:center;color:#8d9db0;background:white}.grid-foot{min-height:43px;padding:8px 14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:9px;font-size:9px;color:#8190a1}.foot-separator{color:#b1bccb;margin:0 6px}.inspector{flex:0 0 426px;border-left:1px solid var(--line);background:#fff;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#becddb #f9fafb;min-width:0}.analysis-layout.panel-hidden .inspector{display:none}.inspector-header{position:sticky;top:0;background:#fff;z-index:2;padding:16px 17px 12px;border-bottom:1px solid var(--line)}.inspector-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.inspect-label{letter-spacing:.7px;font-size:10px;font-weight:900;color:#8898aa}.inspect-id{font-size:10px;color:#56799d;font-weight:800;background:#eef5fd;border-radius:5px;padding:5px 7px}.inspector-title{font-size:15px;line-height:1.48;margin:0 0 10px;letter-spacing:-.2px}.inspector-tags{display:flex;gap:6px;flex-wrap:wrap}.meta-chip{font-size:10px;color:#66778b;background:#f3f6fa;padding:5px 8px;border-radius:6px}.inspect-tabs{display:flex;gap:0;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid var(--line)}.inspect-tab{padding:12px 10px;border:0;border-bottom:2px solid transparent;background:#fff;flex:1;color:#8090a3;font-weight:800;font-size:11px}.inspect-tab.active{border-color:var(--blue);color:var(--blue)}.inspect-content{padding:16px 17px 20px}.section-heading{font-size:11px;font-weight:900;margin:0 0 10px;color:#405670;letter-spacing:.1px}.subnote{font-size:10px;color:#8190a2;line-height:1.6;margin:2px 0 12px}.value-compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.compare-card{background:#f7f9fc;border:1px solid #e3eaf3;padding:10px;border-radius:8px}.compare-card .label{font-size:10px;color:#7b8a9e;margin-bottom:7px}.compare-card .val{font-size:15px;font-weight:850;color:#244462;letter-spacing:-.25px;font-variant-numeric:tabular-nums}.compare-card.highlight{background:#fff8eb;border-color:#f1ddad}.compare-card.highlight .val{color:#945f1c}.field{margin-bottom:12px}.field label{font-size:10px;font-weight:800;color:#53657b;display:block;margin-bottom:6px}.field input,.field textarea{display:block;width:100%;border:1px solid #d5dfeb;background:#fff;border-radius:7px;padding:9px 10px;font-size:12px;color:#243950;line-height:1.5}.field textarea{resize:vertical;min-height:89px}.field input:focus,.field textarea:focus{border-color:#77a7df;outline:2px solid #deedff}.input-tip{font-size:10px;color:#8292a5;line-height:1.45;margin-top:5px}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field-grid>.field{min-width:0}.evidence-list{display:flex;flex-direction:column;gap:9px;margin:10px 0 15px}.evidence-item{border:1px solid #dce5ef;border-radius:8px;padding:11px;background:#fff}.evidence-top{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;min-width:0}.file-icon{width:28px;height:28px;flex-shrink:0;display:grid;place-items:center;background:#e8f2fc;color:#3475b8;font-size:15px;border-radius:7px}.evidence-title{overflow-wrap:anywhere;flex:1}.evidence-title a{color:#236cb5;text-decoration:none}.evidence-title a:hover{text-decoration:underline}.evidence-source{font-size:10px;color:#8192a5;line-height:1.6;margin:7px 0 0 37px;overflow-wrap:anywhere}.evidence-preview{max-width:100%;max-height:150px;display:block;object-fit:contain;border-radius:6px;margin:8px auto}.source-tag{font-size:9px;color:#68829c;padding:4px 7px;background:#f2f6fa;border-radius:5px;white-space:nowrap}.evidence-controls{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.evidence-controls .btn{font-size:10px;padding:7px 9px}.fake-file{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0}.callout{display:flex;gap:8px;align-items:flex-start;padding:10px 11px;border:1px solid #d8e8fa;background:#f1f7ff;border-radius:7px;color:#577691;font-size:10px;line-height:1.6}.callout.warning{border-color:#f3dfb7;background:#fff8e9;color:#896b3c}.callout.success{border-color:#bee9dc;background:#eafbf6;color:#16715b}.review-footer{margin-top:18px;padding-top:14px;border-top:1px solid #e4eaf1;display:flex;gap:7px}.review-footer>.btn{flex:1}.mini-empty{border:1px dashed #d2dfea;border-radius:7px;text-align:center;padding:17px;color:#91a0b0;font-size:11px;line-height:1.65}.history-list{display:flex;flex-direction:column;gap:11px}.history-entry{padding-left:13px;border-left:2px solid #c3d8ea;font-size:11px;color:#55687e;line-height:1.6}.history-entry strong{display:block;color:#2b4b68}.history-entry small{display:block;color:#95a4b4;margin-top:3px}.after-note{font-size:11px;color:#71839a;margin-top:15px;text-align:center}.after-note span{color:var(--blue);font-size:14px;margin-right:5px}.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,25px);background:#21354c;color:white;box-shadow:0 12px 35px #182c4366;z-index:40;opacity:0;pointer-events:none;border-radius:9px;padding:12px 17px;font-size:12px;transition:opacity .2s,transform .2s;max-width:min(480px,90vw);text-align:center;line-height:1.5}.toast.visible{transform:translate(-50%,0);opacity:1}.toast.error{background:#9b4a40}.toast.success{background:#176f5f}.modal-backdrop{position:fixed;inset:0;background:#1126418a;z-index:25;display:grid;place-items:center;padding:20px}.modal{background:white;border-radius:13px;padding:21px;box-shadow:0 28px 100px #071a2e55;width:min(100%,510px)}.modal-heading{display:flex;justify-content:space-between;align-items:center}.modal h2{margin:0 0 16px;font-size:18px}.shortcut-grid{display:grid;grid-template-columns:45% 55%;gap:0;font-size:12px}.shortcut-grid>span{padding:11px 7px;border-bottom:1px solid #eef1f5;line-height:1.5}.shortcut-grid>span:nth-child(2n){color:#66768a}kbd{font:700 11px inherit;background:#f2f5f9;border:1px solid #dce3ed;padding:3px 6px;border-radius:4px}.modal-note{color:#7b8ea3;font-size:11px;line-height:1.6;margin:15px 0}.modal>.btn{margin-left:auto;display:block}
+@media (max-width:1440px){.sidebar{width:196px;min-width:196px}.page{padding:19px}.inspector{flex-basis:390px}.asset-table th.asset-col,.asset-table td.asset-col{min-width:260px;width:260px;max-width:260px}.entry-hint{display:none}.conditions-hint{margin-left:0}}
+@media (max-width:1150px){.metric-row{grid-template-columns:1fr 1fr}.analysis-layout{height:660px}.inspector{flex-basis:355px}.grid-meta>span{display:none}.sidebar{width:172px;min-width:172px}.brand small{display:none}.nav-item{font-size:11px}.topbar{padding:0 16px}.page{padding:17px}.toolbar-left,.toolbar-right{width:100%;justify-content:space-between}.toolbar-right .search{flex:1}}
+@media (max-width:810px){.sidebar{display:none}.topbar{height:54px}.header-demo{font-size:9px}.page-heading{align-items:flex-start;flex-direction:column}.page-heading h1{font-size:23px}.metric-row{gap:8px}.metric{padding:12px}.metric-value{font-size:23px}.metric-value.money{font-size:18px}.metric-label{font-size:10px}.analysis-layout{position:relative;height:600px}.inspector{position:absolute;right:0;top:0;bottom:0;width:min(420px,100%);box-shadow:-12px 0 22px #17325020;z-index:15}.analysis-layout.panel-hidden .inspector{display:none}.toolbar-left .segment{padding:8px 10px}.toolbar-right{gap:7px}.search{min-width:150px}.conditions{font-size:10px}}
+@media (max-width:490px){.topbar{padding:0 11px}.crumb{font-size:10px;gap:5px}.header-demo{display:none}.page{padding:12px}.metric-row{grid-template-columns:1fr 1fr}.metric{min-height:102px}.metric-value.money{font-size:16px;letter-spacing:-.45px}.version-chip{display:block;width:max-content;margin:6px 0}.toolbar-right select{width:calc(40% - 9px);min-width:0}.toolbar-right .search{width:100%;flex:auto}.toolbar-right #panelToggle{flex:1}.toolbar-left{gap:2px}.analysis-layout{height:580px}.inspector{width:100%}.asset-table th.asset-col,.asset-table td.asset-col{min-width:180px;width:180px;max-width:180px}.asset-name{font-size:10px}.notice{font-size:10px}.grid-foot{font-size:9px}.grid-foot span:last-child{display:none}.segment{font-size:10px!important}}
+/* Keep source quantity, working quantity and the two unit prices adjacent in the first viewport. */
+.asset-table .quick-col{width:112px;min-width:112px;max-width:112px}
+.asset-table .quick-col .editable-input{width:94px}
+@media (min-width:811px){.asset-table th.asset-col,.asset-table td.asset-col{min-width:235px;width:235px;max-width:235px}}
+
+/* V2: use the full desktop work area. Keep the UAT/mockup label in the top bar. */
+.workspace{display:flex;flex-direction:column;min-height:100dvh}
+.page{flex:1;display:flex;flex-direction:column;min-height:0;max-width:none;width:100%;padding:16px 18px 12px}
+.page-heading{margin-bottom:12px;flex-shrink:0}
+.metric-row{margin-bottom:12px;flex-shrink:0}
+.conditions{margin-bottom:12px;flex-shrink:0}
+.analysis-card{flex:1;display:flex;flex-direction:column;min-height:520px}
+.analysis-toolbar{flex-shrink:0}
+.analysis-layout{flex:1;height:auto;min-height:450px}
+.grid-section{min-height:0}
+.table-scroll{min-height:0}
+.inspector{min-height:0}
+.source-preserved-note{margin:-3px 0 12px;color:#6f86a1;background:#f2f7fd;border:1px solid #dce9f6;padding:8px 10px;border-radius:6px;font-size:10px;line-height:1.5}
+.source-preserved-note strong{color:#3a5876}
+.pricing-block{border-bottom:1px solid #e1e9f3;padding-bottom:15px;margin-bottom:17px}
+.pricing-heading{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:10px}
+.pricing-heading .section-heading{margin:0}
+.pricing-mode{font-size:9px;font-weight:800;padding:5px 7px;border-radius:5px;white-space:nowrap;background:#eef8f4;color:#16866a}
+.pricing-mode.manual{background:#fff3df;color:#ab7424}
+.readonly-input{background:#f6f8fb!important;color:#61758c!important}
+.price-formula{display:flex;justify-content:space-between;align-items:center;gap:9px;background:#f0f7ff;border:1px solid #cde0f6;border-radius:8px;padding:10px;margin:-1px 0 13px}
+.formula-caption{font-size:9px;font-weight:850;letter-spacing:.2px;color:#5d7a9a;margin-bottom:5px}
+.formula-values{font-size:13px;color:#37536f;font-variant-numeric:tabular-nums}
+.formula-values span{color:#99aabe;margin:0 3px}
+.formula-values strong{font-weight:850;color:#0f69b7}
+.price-formula .btn{flex-shrink:0;color:#1b69ad;border-color:#b3cce7}
+.proposed-price-field{margin-bottom:10px}
+.proposed-price-field input{border-color:#e6c68c;background:#fffbf2;font-size:14px;font-weight:750}
+.totals-compare{margin-top:12px}
+.transport-note{margin:10px 0 0}
+.conditions .condition-editor{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:800;color:#526782;background:#f3f7fc;padding:5px 7px;border:1px solid #e0eaf5;border-radius:6px;min-height:34px;min-width:0}
+.condition-editor input{font-size:11px;font-weight:600;color:#375b7c;background:#fff;border:1px solid #ccdaea;border-radius:5px;padding:5px 7px;min-width:0}
+.condition-editor input:hover{border-color:#87b6e3}
+.condition-editor input:focus{border-color:#277dce;outline:2px solid #e3f0ff}
+.vat-condition input{width:125px}
+.shipping-condition input{width:min(270px,36vw)}
+.price-formula{flex-wrap:wrap}
+.price-formula .btn{margin-left:auto}
+.formula-detail{font-size:10px;color:#6783a3;line-height:1.5;margin-top:5px}
+.formula-detail strong{color:#295e97}
+@media(max-width:490px){.conditions .condition-editor{width:100%;justify-content:space-between}.condition-editor input,.shipping-condition input,.vat-condition input{width:min(260px,65%)}.conditions-hint{margin-left:0}}
+.rich-basis-editor{min-height:170px;max-height:530px;overflow-y:auto;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.65;font-size:12px;color:#283d54;border:1px solid #cfddec;background:#fff;border-radius:8px;padding:11px 12px;outline:0;cursor:text}
+.rich-basis-editor:focus{border-color:#77a7df;box-shadow:0 0 0 2px #e2efff}
+.rich-basis-editor:empty:before{content:attr(data-placeholder);color:#94a3b8;pointer-events:none}
+.rich-basis-editor a{color:#146dc5;text-decoration:underline;overflow-wrap:anywhere}
+.rich-basis-editor .basis-inline-image{position:relative;display:block;max-width:100%;margin:10px 0;padding:9px;background:#f4f8fc;border:1px solid #d4e1ee;border-radius:8px;text-align:center;white-space:normal}
+.basis-inline-image img{display:block;max-width:100%;max-height:300px;object-fit:contain;margin:auto;border-radius:4px;background:#fff}
+.basis-inline-image figcaption{font-size:10px;color:#8395ab;line-height:1.4;margin-top:5px}
+.basis-image-remove{position:absolute;right:6px;top:6px;width:27px;height:27px;border:1px solid #d2dce6;background:#fff;color:#667d96;border-radius:6px;font-size:20px;line-height:20px;cursor:pointer}
+.basis-image-remove:hover{background:#fff0ed;color:#b44736;border-color:#ecc4bd}
+.evidence-section{padding-top:1px}
+.asset-table .header-groups th.work-group{background:#fff6e5}
+.asset-table .header-groups th.source-group{background:#eef5fc}
+.asset-table .unit-col{width:66px;min-width:66px;max-width:66px}
+
+/* A second, synchronized horizontal scrollbar remains at the table's top.
+   Even with hundreds of rows, users can navigate columns without reaching the last row. */
+.table-scroll-top{flex:0 0 20px;height:20px;overflow-x:auto;overflow-y:hidden;scrollbar-width:auto;scrollbar-color:#79a6d5 #e8f1fb;background:#eaf2fc;border-bottom:1px solid #d2e2f3;overscroll-behavior-x:contain}
+.table-scroll-top-content{height:1px;pointer-events:none}
+.table-scroll-top::-webkit-scrollbar{height:15px}
+.table-scroll-top::-webkit-scrollbar-track{background:#e1edf9;border-radius:9px}
+.table-scroll-top::-webkit-scrollbar-thumb{background:#77a5d5;border:2px solid #e1edf9;border-radius:9px}
+.table-scroll-top::-webkit-scrollbar-thumb:hover{background:#277ccc}
+.table-scroll-top:focus-visible{outline:2px solid #247bd1;outline-offset:-2px}
+.asset-table .evidence-col{width:180px;min-width:180px;max-width:180px}
+.asset-table .evidence-link{display:block;width:100%;max-width:100%;text-align:left;white-space:normal;overflow:hidden;padding:6px 7px;line-height:1.4}
+.evidence-primary{display:block;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.evidence-new-count{display:block;width:max-content;max-width:100%;background:#dcf6ed;color:#08735e;font-size:10px;font-weight:800;line-height:1.35;border-radius:4px;padding:3px 5px;margin-top:4px;white-space:normal}
+.evidence-link.has-new-evidence{background:#eef8f5;border:1px solid #b8e7d6}
+.evidence-link.has-new-evidence:hover{background:#e0f4ed}
+
+@media (max-width:810px){
+  .workspace{min-height:100vh}
+  .page{display:block;padding:12px}
+  .analysis-card{display:block;min-height:0}
+  .analysis-layout{height:620px;min-height:0;flex:none}
+}
+
+</style>
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar" aria-label="Điều hướng mô phỏng">
+      <div class="brand"><div class="brand-mark">✦</div><div><strong>VALORA</strong><small>Thẩm định giá Máy móc Thiết bị</small></div></div>
+      <div class="sidebar-title">YÊU CẦU SƠ BỘ</div>
+      <div class="nav-item"><span class="nav-icon">▤</span> Quản lý yêu cầu sơ bộ</div>
+      <div class="sidebar-title">HỒ SƠ THẨM ĐỊNH</div>
+      <div class="nav-item"><span class="nav-icon">▦</span> Bàn làm việc hồ sơ</div>
+      <div class="nav-item"><span class="nav-icon">◉</span> Tổng quan hồ sơ</div>
+      <div class="nav-item"><span class="nav-icon">▣</span> Không gian tài liệu</div>
+      <div class="sidebar-title">ĐANG THỰC HIỆN</div>
+      <div class="nav-item"><span class="nav-icon">⇧</span> Upload &amp; Mapping Excel</div>
+      <div class="nav-item selected"><span class="nav-icon">▥</span> Phân tích danh mục</div>
+      <div class="sidebar-bottom"><span class="mockup-mini">UI/UX CONCEPT</span><b>R2 — Bản đề xuất</b><small>Không kết nối hệ thống thật</small><span class="owner">TP&nbsp; · &nbsp;PO Review</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="crumb">Thẩm định giá <span>›</span> Hồ sơ <span>›</span> <strong>Phân tích danh mục</strong></div><div class="topbar-right"><span class="header-demo" title="Bản xem thử dùng dữ liệu mẫu; không kết nối hoặc ghi vào Valora">MOCKUP · KHÔNG GHI DỮ LIỆU</span><span class="avatar" title="Người xem thử">TP</span></div></header>
+      <main class="page">
+        <div class="page-heading"><div><div class="eyebrow"><span class="dot"></span> DỰ ÁN THỬ NGHIỆM ẨN DANH <span class="eyebrow-divider">/</span> HỒ SƠ MẪU</div><h1>Phân tích danh mục <span class="version-chip">Giao diện đề xuất</span></h1><p>Excel khách hàng chỉ có tên tài sản, ĐVT, số lượng và giá KH. Giá đề xuất và chứng cứ do thẩm định viên bổ sung sau khi phân tích.</p></div><div class="heading-actions"><button id="helpBtn" class="btn btn-quiet">⌨ &nbsp;Phím tắt</button><button id="resetBtn" class="btn btn-quiet">↺ &nbsp;Đặt lại mẫu</button></div></div>
+        <section class="metric-row" aria-label="Tổng quan danh mục">
+          <div class="metric"><div class="metric-label">Dòng tài sản <span class="metric-icon indigo">▦</span></div><div class="metric-value" id="countMetric">9</div><div class="metric-note">Từ tệp Excel mẫu</div></div>
+          <div class="metric"><div class="metric-label">Đã xác nhận <span class="metric-icon teal">✓</span></div><div class="metric-value"><span id="confirmedMetric">0</span><span class="metric-denom">/ 9 dòng</span></div><div class="metric-progress"><span id="progressFill"></span></div></div>
+          <div class="metric"><div class="metric-label">Tổng giá khách hàng <span class="metric-icon gray">₫</span></div><div class="metric-value money" id="customerMetric">394.417.336</div><div class="metric-note">Dữ liệu nguồn · VND</div></div>
+          <div class="metric"><div class="metric-label"><span id="proposalMetricLabel">Giá trị đề xuất đã nhập</span> <span class="metric-icon amber">▤</span></div><div class="metric-value money" id="appraisalMetric">Chưa có giá</div><div class="metric-note" id="differenceMetric">0/9 dòng · Thẩm định viên chưa nhập giá đề xuất</div></div>
+        </section>
+        <section class="conditions" aria-label="Điều kiện nguồn có thể chỉnh sửa"><span class="conditions-label">ĐIỀU KIỆN NGUỒN ✎</span><label class="condition-editor vat-condition">VAT <input id="vatCondition" list="vatOptions" value="Chưa bao gồm" aria-label="Điều kiện VAT, có thể sửa" title="Sửa nội dung điều kiện VAT"></label><datalist id="vatOptions"><option value="Chưa bao gồm"></option><option value="Đã bao gồm"></option><option value="Không áp dụng"></option><option value="Cần xác minh"></option></datalist><label class="condition-editor shipping-condition">Vận chuyển <input id="transportCondition" list="transportOptions" value="Đã bao gồm đến chân công trình" aria-label="Điều kiện vận chuyển, có thể sửa" title="Sửa nội dung điều kiện vận chuyển"></label><datalist id="transportOptions"><option value="Đã bao gồm đến chân công trình"></option><option value="Chưa bao gồm"></option><option value="Giao tại kho bên bán"></option><option value="Theo thỏa thuận riêng"></option></datalist><span class="conditions-hint">Nhấp vào ô để sửa · chỉ trong bản mô phỏng</span></section>
+        <section class="analysis-card" aria-label="Bảng phân tích tài sản">
+          <div class="analysis-toolbar"><div class="toolbar-left"><div class="segmented" role="tablist" aria-label="Chế độ làm việc"><button class="segment active" data-mode="entry" role="tab" aria-selected="true">Nhập nhanh</button><button class="segment" data-mode="compare" role="tab" aria-selected="false">Đối chiếu giá</button><button class="segment" data-mode="evidence" role="tab" aria-selected="false">Chứng cứ</button></div><span class="entry-hint"><span class="editable-dot"></span> Ô viền vàng có thể sửa</span></div><div class="toolbar-right"><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Tìm tài sản, STT, nguồn…" autocomplete="off"></label><select id="filterSelect" aria-label="Lọc trạng thái"><option value="all">Tất cả dòng</option><option value="unconfirmed">Chưa xác nhận</option><option value="changed">Chênh lệch giá</option><option value="missing">Chưa có chứng cứ</option><option value="qty">Đã đổi số lượng</option></select><button id="panelToggle" class="btn btn-primary" title="Ẩn hoặc hiện khung chi tiết">☷ &nbsp;Chi tiết</button></div></div>
+          <div class="analysis-layout" id="analysisLayout"><div class="grid-section"><div class="grid-meta"><div><strong id="visibleCount">9 dòng</strong><span class="meta-split">·</span><span id="modeCaption">Bấm vào một dòng để xem chứng cứ. Nhấp ô viền vàng để chỉnh sửa.</span></div><span>Cuộn ngang để xem thêm cột →</span></div><div class="table-scroll-top" id="tableScrollTop" tabindex="0" role="region" aria-label="Thanh cuộn ngang phía trên bảng, đồng bộ với thanh cuối bảng" title="Kéo tại đây để di chuyển ngang giữa các cột, không cần cuộn xuống cuối danh mục"><div id="tableScrollTopContent" class="table-scroll-top-content"></div></div><div class="table-scroll" id="tableScroll"><table class="asset-table" aria-label="Danh mục tài sản"><thead><tr class="header-groups"><th class="sticky-col index-col" rowspan="2">STT</th><th class="sticky-col asset-col" rowspan="2">Tên tài sản và đặc điểm</th><th class="work-group" colspan="2">KHỐI LƯỢNG · CÓ THỂ SỬA</th><th class="source-group" colspan="2">ĐƠN GIÁ · ĐỐI CHIẾU</th><th colspan="5">THÀNH TIỀN & RÀ SOÁT</th></tr><tr class="header-fields"><th class="numeric-col editable-header quick-col" title="Sửa số lượng tại đây; dữ liệu Excel ban đầu vẫn được giữ riêng">SL nguồn ✎</th><th class="unit-col">ĐVT</th><th class="numeric-col quick-col">Đơn giá KH</th><th class="numeric-col editable-header quick-col">Đơn giá đề xuất ✎</th><th class="numeric-col">Thành tiền KH</th><th class="numeric-col">Thành tiền đề xuất</th><th class="numeric-col">Chênh lệch</th><th class="evidence-col">Chứng cứ</th><th class="status-col">Trạng thái</th></tr></thead><tbody id="assetTbody"></tbody></table></div><div class="grid-foot"><span><span class="source-dot"></span> Giữ nguyên giá trị Excel ban đầu <span class="foot-separator">·</span> <span class="editable-dot"></span> SL nguồn và đơn giá đề xuất có thể sửa trực tiếp</span><span id="gridFootStatus">Chưa có thay đổi</span></div></div><aside id="inspector" class="inspector" aria-label="Chi tiết dòng tài sản"><div id="inspectorBody"></div></aside></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="helpModal" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><div class="modal-heading"><h2 id="helpTitle">Thao tác trong bảng</h2><button class="icon-btn" id="closeHelp" aria-label="Đóng">×</button></div><div class="shortcut-grid"><span><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></span><span>Đi qua các ô nhập liệu</span><span><kbd>Enter</kbd></span><span>Lưu ô hiện tại, chuyển xuống dòng</span><span><kbd>Ctrl</kbd> + <kbd>V</kbd></span><span>Trong ô diễn giải: dán text, link hoặc ảnh clipboard; tự nhận diện và hiển thị</span><span>Nhấp vào dòng</span><span>Mở chi tiết chứng cứ tương ứng</span><span>Ô SL nguồn ✎</span><span>Cho sửa trực tiếp; giữ giá trị Excel ban đầu để đối chiếu và yêu cầu lý do khi có thay đổi</span></div><p class="modal-note">Đây là bản mô phỏng giao diện; những tính năng Excel nâng cao như dán nhiều ô và undo nhiều bước thuộc đề xuất phát triển sau UAT.</p><button class="btn btn-primary" id="okHelp">Đã hiểu</button></div></div>
+  <script>
+"use strict";
+
+// Local UI mockup only. No backend calls, persistence, accounts, or valuation authority.
+const SOURCE = [
+  {id:1,name:"Tủ điện 1 pha mẫu (thiết bị và phụ kiện minh họa)",unit:"bộ",qty:12,price:1200000,amount:14400000},
+  {id:2,name:"Tủ điện 3 pha mẫu (thiết bị và phụ kiện minh họa)",unit:"bộ",qty:8,price:2400000,amount:19200000},
+  {id:3,name:"Cọc tiếp địa mẫu L=2,4 m, phụ kiện đồng bộ",unit:"bộ",qty:25,price:420000,amount:10500000},
+  {id:4,name:"Đầu cos đồng mẫu M10",unit:"cái",qty:160,price:12000,amount:1920000},
+  {id:5,name:"Đèn LED chiếu điểm mẫu 12W",unit:"bộ",qty:30,price:390000,amount:11700000},
+  {id:6,name:"Đèn LED đường phố mẫu 100W",unit:"bộ",qty:14,price:3200000,amount:44800000},
+  {id:7,name:"Thiết bị đóng cắt mẫu 1 pha",unit:"cái",qty:8,price:95000,amount:760000},
+  {id:8,name:"Ống bảo vệ cáp mẫu D30",unit:"m",qty:70,price:28000,amount:1960000},
+  {id:9,name:"Ống bảo vệ cáp mẫu D40",unit:"m",qty:90,price:36000,amount:3240000}
+];
+
+const DEFAULT_CONDITIONS = {vat:"Chưa bao gồm",transport:"Đã bao gồm đến chân công trình"};
+const state = {rows:[],selectedId:3,mode:"entry",filter:"all",search:"",tab:"evidence",panelOpen:true,changes:0,conditions:{...DEFAULT_CONDITIONS}};
+const $ = (selector,root=document)=>root.querySelector(selector);
+const $$ = (selector,root=document)=>Array.from(root.querySelectorAll(selector));
+const money = n=>new Intl.NumberFormat("vi-VN",{maximumFractionDigits:0}).format(n);
+const number = n=>new Intl.NumberFormat("vi-VN",{maximumFractionDigits:3}).format(n);
+const esc = x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const realQtyChanged = r=>Math.abs(r.workQty-r.qty)>0.0000001;
+const realPriceChanged = r=>r.appPrice!==null&&Math.abs(r.appPrice-r.price)>0.000001;
+const hasSource = r=>Boolean(r.source||r.evidence.length||r.basisProofs.length);
+const derivedTotal = r=>r.appPrice===null?null:r.workQty*r.appPrice;
+const transportAmount = r=>r.surveyPrice===null?null:r.surveyPrice*r.shippingPercent/100;
+const calculatedProposal = r=>r.surveyPrice===null?null:r.surveyPrice+transportAmount(r);
+const sum = (list,fn)=>list.reduce((acc,r)=>acc+fn(r),0);
+const formatDiff = n=>(n>0?"+":"")+money(n);
+const rowById = id=>state.rows.find(r=>r.id===Number(id));
+const sourceKind = src=>/^https?:\/\//i.test(src||"")?"url":src?"document":"none";
+const validUrl = str=>{try {const u=new URL(str);return u.protocol==="https:"||u.protocol==="http:";}catch{return false;}};
+const proofSummary = r=>({links:r.basisProofs.filter(p=>p.kind==="url").length,images:r.basisProofs.filter(p=>p.kind==="image").length,other:r.evidence.length});
+
+// Customer-provided Excel contains asset descriptions, units, quantities and customer prices.
+// Proposed appraisal prices and supporting evidence are produced later by the appraiser.
+function createRows(){return SOURCE.map(x=>({...x,source:"",note:"",workQty:x.qty,appPrice:null,surveyPrice:null,shippingPercent:0,autoCalc:true,basis:"",basisHtml:"",basisProofs:[],basisImages:[],evidence:[],reason:"",confirmed:false,history:[],edited:false}));}
+function notify(message,kind="normal"){
+  const el=$("#toast");el.textContent=message;el.className="toast visible "+(kind==="error"?"error":kind==="success"?"success":"");
+  clearTimeout(notify._timeout);notify._timeout=setTimeout(()=>el.classList.remove("visible"),3100);
+}
+function parseNumeric(raw){
+  let v=String(raw).trim().replace(/\s/g,"");
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(v)) v=v.replace(/\./g,"").replace(",",".");
+  else if(v.includes(",")&&!v.includes("."))v=v.replace(",",".");
+  const result=Number(v);
+  return v!==""&&Number.isFinite(result)&&result>=0?result:null;
+}
+
+// The editor accepts clipboard data as text, safe HTTP(S) links, or local bitmap URLs.
+// No pasted HTML is inserted verbatim; no image bytes are uploaded.
+let basisImageSerial=0;
+const URL_IN_TEXT=/https?:\/\/[^\s<>"']+/gi;
+function appendLinkifiedText(parent,value){
+  const str=String(value||"");let pos=0;URL_IN_TEXT.lastIndex=0;
+  for(const match of str.matchAll(URL_IN_TEXT)){
+    if(match.index>pos)parent.appendChild(document.createTextNode(str.slice(pos,match.index)));
+    const url=match[0].replace(/[),.;!?]+$/g,"");
+    if(validUrl(url)){
+      const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.textContent=url;parent.appendChild(a);
+      if(match[0].length>url.length)parent.appendChild(document.createTextNode(match[0].slice(url.length)));
+    }else parent.appendChild(document.createTextNode(match[0]));
+    pos=match.index+match[0].length;
+  }
+  if(pos<str.length)parent.appendChild(document.createTextNode(str.slice(pos)));
+}
+function clipboardTextFragment(data){
+  const html=data.getData("text/html"),plain=data.getData("text/plain");
+  const fragment=document.createDocumentFragment();
+  if(html){
+    const documentFromPaste=new DOMParser().parseFromString(html,"text/html");
+    const links=Array.from(documentFromPaste.querySelectorAll("a[href]")).filter(a=>validUrl(a.getAttribute("href")));
+    if(links.length){
+      const walk=(source,target)=>{
+        if(source.nodeType===Node.TEXT_NODE){appendLinkifiedText(target,source.nodeValue);return;}
+        if(source.nodeType!==Node.ELEMENT_NODE)return;
+        const tag=source.tagName;
+        if(tag==="A"&&validUrl(source.getAttribute("href"))){
+          const a=document.createElement("a");a.href=source.getAttribute("href");a.target="_blank";a.rel="noopener noreferrer";a.textContent=source.textContent||a.href;target.appendChild(a);return;
+        }
+        if(tag==="BR"){target.appendChild(document.createElement("br"));return;}
+        if(tag==="IMG"||tag==="SCRIPT"||tag==="STYLE")return;
+        for(const child of source.childNodes)walk(child,target);
+        if(["DIV","P","LI","TR"].includes(tag))target.appendChild(document.createElement("br"));
+      };
+      for(const child of documentFromPaste.body.childNodes)walk(child,fragment);
+      return fragment;
+    }
+  }
+  plain.split(/\r?\n/).forEach((line,i)=>{if(i)fragment.appendChild(document.createElement("br"));appendLinkifiedText(fragment,line);});
+  return fragment;
+}
+function insertEditorFragment(editor,fragment){
+  const selection=window.getSelection();
+  let range=selection.rangeCount?selection.getRangeAt(0):null;
+  if(!range||!editor.contains(range.commonAncestorContainer)){
+    range=document.createRange();range.selectNodeContents(editor);range.collapse(false);
+  }
+  // Pasting after a hyperlink must not wrap new text or an image inside that link.
+  const current=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
+  const enclosingLink=current?.closest?.("a");
+  if(enclosingLink&&editor.contains(enclosingLink)){range.setStartAfter(enclosingLink);range.collapse(true);}
+  const last=fragment.lastChild;
+  if(!last)return;
+  range.deleteContents();range.insertNode(fragment);range.setStartAfter(last);range.collapse(true);
+  selection.removeAllRanges();selection.addRange(range);
+}
+function basisImageFigure(file,row){
+  if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){
+    notify("Ảnh clipboard phải là PNG/JPEG/WebP, tối đa 8 MB.","error");return null;
+  }
+  const id="basis-img-"+(++basisImageSerial),url=URL.createObjectURL(file);
+  row.basisImages.push({id,url,name:file.name||"Ảnh chụp từ clipboard"});
+  return makeBasisImageNode(row.basisImages[row.basisImages.length-1]);
+}
+function makeBasisImageNode(image){
+  const figure=document.createElement("figure");figure.className="basis-inline-image";figure.contentEditable="false";
+  const img=document.createElement("img");img.src=image.url;img.dataset.basisImage=image.id;img.alt="Ảnh chứng cứ dán từ clipboard";
+  const caption=document.createElement("figcaption");caption.textContent="Ảnh chứng cứ dán trực tiếp";
+  const remove=document.createElement("button");remove.type="button";remove.className="basis-image-remove";remove.setAttribute("aria-label","Xóa ảnh đã dán");remove.title="Xóa ảnh";remove.textContent="×";
+  figure.append(img,remove,caption);return figure;
+}
+function safeBasisSnapshot(editor,row){
+  const output=document.createElement("div"),images=new Map(row.basisImages.map(i=>[i.id,i]));
+  const safeTags=new Set(["DIV","P","SPAN","BR","B","STRONG","I","EM","UL","OL","LI"]);
+  const copy=(source,target)=>{
+    if(source.nodeType===Node.TEXT_NODE){target.appendChild(document.createTextNode(source.nodeValue));return;}
+    if(source.nodeType!==Node.ELEMENT_NODE)return;
+    const tag=source.tagName;
+    if(tag==="FIGURE"){
+      const image=images.get(source.querySelector("img[data-basis-image]")?.dataset.basisImage);
+      if(image)target.appendChild(makeBasisImageNode(image));return;
+    }
+    if(tag==="A"){
+      const href=source.getAttribute("href");
+      if(validUrl(href)){
+        const link=document.createElement("a");link.href=href;link.target="_blank";link.rel="noopener noreferrer";
+        const textOnly=source.cloneNode(true);textOnly.querySelectorAll("figure,img").forEach(el=>el.remove());
+        link.textContent=textOnly.textContent;target.appendChild(link);
+      }else target.appendChild(document.createTextNode(source.textContent));
+      for(const figure of source.querySelectorAll("figure"))copy(figure,target);
+      return;
+    }
+    if(tag==="IMG")return;
+    const container=safeTags.has(tag)?document.createElement(tag.toLowerCase()):target;
+    if(container!==target)target.appendChild(container);
+    for(const child of source.childNodes)copy(child,container);
+  };
+  for(const child of editor.childNodes)copy(child,output);
+  const onlyText=output.cloneNode(true);onlyText.querySelectorAll("figure").forEach(el=>el.remove());
+  return {html:output.innerHTML,text:onlyText.textContent.trim(),proofs:[...output.querySelectorAll("a[href],img[data-basis-image]")].map(el=>el.tagName==="A"?{kind:"url",url:el.getAttribute("href")}:{kind:"image",id:el.dataset.basisImage})};
+}
+function linkifyEditorTypedUrls(editor){
+  const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);const nodes=[];
+  while(walker.nextNode()){
+    const node=walker.currentNode;
+    if(node.parentElement?.closest("a,figure"))continue;
+    if(/https?:\/\//i.test(node.nodeValue))nodes.push(node);
+  }
+  for(const node of nodes){const fragment=document.createDocumentFragment();appendLinkifiedText(fragment,node.nodeValue);node.replaceWith(fragment);}
+}
+function saveBasisEditor(editor,row){
+  const snapshot=safeBasisSnapshot(editor,row);
+  if(row.basisHtml===snapshot.html&&row.basis===snapshot.text)return;
+  row.basisHtml=snapshot.html;row.basis=snapshot.text;row.basisProofs=snapshot.proofs;row.confirmed=false;
+  if(!row.basisEditSession){row.basisEditSession=true;state.changes++;row.history.unshift({title:"Chỉnh sửa diễn giải và chứng cứ",description:"Đã cập nhật nội dung từ ô soạn thảo.",time:"Vừa xong · thao tác mockup"});}
+  const count=$(".evidence-count");if(count)count.textContent="("+(Number(Boolean(row.source))+row.evidence.length+row.basisProofs.length)+")";
+  renderTable();renderMetrics();
+}
+function handleBasisPaste(event,editor){
+  event.preventDefault();const row=rowById(state.selectedId);
+  const data=event.clipboardData;if(!data)return;
+  const images=Array.from(data.items||[]).filter(item=>item.kind==="file"&&item.type.startsWith("image/")).map(item=>item.getAsFile()).filter(Boolean);
+  const fragment=document.createDocumentFragment();
+  if(images.length){
+    for(const file of images){const figure=basisImageFigure(file,row);if(figure){fragment.appendChild(figure);fragment.appendChild(document.createElement("br"));}}
+  }else fragment.appendChild(clipboardTextFragment(data));
+  insertEditorFragment(editor,fragment);saveBasisEditor(editor,row);
+}
+function visibleRows(){
+  let rows=state.rows.filter(r=>{
+    const txt=(r.id+" "+r.name+" "+r.source+" "+r.note).toLowerCase();
+    if(state.search&&!txt.includes(state.search))return false;
+    switch(state.filter){case"unconfirmed":return !r.confirmed;case"changed":return realPriceChanged(r);case"missing":return !hasSource(r);case"qty":return realQtyChanged(r);default:return true;}
+  });
+  if(state.mode==="compare")rows.sort((a,b)=>Number(a.appPrice===null)-Number(b.appPrice===null)||Math.abs((derivedTotal(b)??b.amount)-b.amount)-Math.abs((derivedTotal(a)??a.amount)-a.amount));
+  if(state.mode==="evidence")rows.sort((a,b)=>Number(!hasSource(b))-Number(!hasSource(a))||a.id-b.id);
+  return rows;
+}
+function badge(r){
+  if(r.confirmed)return '<span class="tiny-pill confirmed">✓ Đã xác nhận</span>';
+  if(realQtyChanged(r))return '<span class="tiny-pill edited">● Đổi số lượng</span>';
+  if(r.appPrice===null)return '<span class="tiny-pill pending">○ Chưa đề xuất giá</span>';
+  if(!hasSource(r))return '<span class="tiny-pill missing">! Thiếu chứng cứ</span>';
+  return '<span class="tiny-pill pending">● Chưa xác nhận</span>';
+}
+function shortSource(r){
+  if(!hasSource(r))return '<button class="evidence-link empty" data-open-evidence="'+r.id+'">+ Thêm chứng cứ</button>';
+  const {links,images,other}=proofSummary(r);
+  const sourceLabel=r.source?(sourceKind(r.source)==="url"?"Website từ Excel":r.source.length>25?r.source.slice(0,22)+"…":r.source):"Chứng cứ bổ sung";
+  const fresh=[links?links+" link":"",images?images+" ảnh":"",other?other+" tệp":""].filter(Boolean).join(" · ");
+  const title=(r.source?"Nguồn Excel: "+r.source+" | ":"")+links+" liên kết, "+images+" ảnh và "+other+" tệp người dùng thêm. Bấm để xem và chỉnh sửa chứng cứ.";
+  return '<button class="evidence-link'+(fresh?' has-new-evidence':'')+'" data-open-evidence="'+r.id+'" title="'+esc(title)+'"><span class="evidence-primary">▣ '+esc(sourceLabel)+'</span>'+(fresh?'<span class="evidence-new-count">+ '+esc(fresh)+'</span>':'')+'</button>';
+}
+function syncUpperScrollbarWidth(){
+  const scroller=$("#tableScroll"),top=$("#tableScrollTop"),content=$("#tableScrollTopContent");
+  const table=scroller.querySelector("table");if(!table)return;
+  content.style.width=table.scrollWidth+"px";
+  const hasOverflow=table.scrollWidth>scroller.clientWidth+2;
+  top.hidden=!hasOverflow;
+  if(hasOverflow)top.scrollLeft=scroller.scrollLeft;
+}
+function renderTable(){
+  const rows=visibleRows();const scroller=$("#tableScroll");const sx=scroller.scrollLeft,sy=scroller.scrollTop;
+  $("#visibleCount").textContent=rows.length+" / "+state.rows.length+" dòng";
+  $("#modeCaption").textContent=state.mode==="compare"?"Sắp xếp theo chênh lệch thành tiền lớn nhất.":state.mode==="evidence"?"Ưu tiên tài sản chưa có nguồn tham khảo.":"Bấm một dòng để mở chứng cứ và giá đề xuất. Nhấp ô viền vàng để sửa.";
+  $("#assetTbody").innerHTML=rows.map(r=>{
+    const total=derivedTotal(r),diff=total===null?null:total-r.amount;const diffClass=diff===null||Math.abs(diff)<.0001?"none":diff>0?"positive":"negative";
+    return '<tr data-row="'+r.id+'" class="'+(r.id===state.selectedId?'selected-row':'')+'">'
+      +'<td class="sticky-col index-col">'+r.id+'</td>'
+      +'<td class="sticky-col asset-col"><div class="asset-name">'+esc(r.name)+'</div><div class="asset-sub">Nguồn: dòng '+(r.id+4)+(r.note?' <span style="color:#c3822c">● Có ghi chú riêng</span>':'')+'</div></td>'
+      +'<td class="numeric-col number quick-col"><input class="editable-input" inputmode="decimal" aria-label="SL nguồn tài sản '+r.id+' (có thể sửa, giữ giá trị Excel gốc)" title="Excel gốc: '+esc(number(r.qty))+' '+esc(r.unit)+'" data-id="'+r.id+'" data-field="workQty" value="'+esc(number(r.workQty))+'"></td>'
+      +'<td class="unit-col read-only">'+esc(r.unit)+'</td>'
+      +'<td class="numeric-col number read-only source-price quick-col">'+money(r.price)+'</td>'
+      +'<td class="numeric-col number quick-col"><input class="editable-input" inputmode="decimal" aria-label="Đơn giá đề xuất tài sản '+r.id+'" data-id="'+r.id+'" data-field="appPrice" placeholder="Nhập giá" value="'+(r.appPrice===null?'':esc(money(r.appPrice)))+'"></td>'
+      +'<td class="numeric-col number read-only">'+money(r.amount)+'</td>'
+      +'<td class="numeric-col number" style="font-weight:750;color:#273d54">'+(total===null?'<span class="unpriced">—</span>':money(total))+'</td>'
+      +'<td class="numeric-col number difference '+diffClass+'">'+(diff===null||Math.abs(diff)<.0001?'—':formatDiff(diff))+'</td>'
+      +'<td class="evidence-col">'+shortSource(r)+'</td>'
+      +'<td class="status-col">'+badge(r)+'</td></tr>';
+  }).join("") || '<tr class="empty-row"><td colspan="11">Không tìm thấy dòng phù hợp. Hãy thử bỏ bộ lọc hoặc tìm kiếm khác.</td></tr>';
+  scroller.scrollLeft=sx;scroller.scrollTop=sy;
+  syncUpperScrollbarWidth();
+  $("#gridFootStatus").textContent=state.changes+" lần thay đổi trong bản mô phỏng";
+}
+function renderMetrics(){
+  const confirmed=state.rows.filter(r=>r.confirmed).length;
+  const customer=sum(state.rows,r=>r.amount);const priced=state.rows.filter(r=>r.appPrice!==null);
+  const app=sum(priced,derivedTotal);const pairedCustomer=sum(priced,r=>r.amount);const delta=app-pairedCustomer;
+  $("#countMetric").textContent=state.rows.length;$("#confirmedMetric").textContent=confirmed;
+  $("#progressFill").style.width=100*confirmed/state.rows.length+"%";
+  $("#customerMetric").textContent=money(customer);
+  $("#proposalMetricLabel").textContent=priced.length===state.rows.length?"Tổng giá trị đề xuất":"Giá trị đề xuất đã nhập";
+  $("#appraisalMetric").textContent=priced.length?money(app):"Chưa có giá";
+  $("#differenceMetric").textContent=priced.length===0?"0/"+state.rows.length+" dòng · Thẩm định viên chưa nhập giá đề xuất":priced.length+"/"+state.rows.length+" dòng có giá · "+(Math.abs(delta)<.0001?"Bằng":delta>0?"Cao hơn":"Thấp hơn")+" giá KH tương ứng "+money(Math.abs(delta))+" đ";
+}
+function setSelected(id,tab=null){
+  const row=rowById(id);if(!row)return;
+  state.selectedId=row.id;if(tab)state.tab=tab;state.panelOpen=true;
+  $("#analysisLayout").classList.remove("panel-hidden");renderTable();renderInspector();
+}
+function updateField(row,field,raw){
+  const blankProposal=field==="appPrice"&&String(raw).trim()==="";
+  const next=blankProposal?null:parseNumeric(raw);
+  if(next===null&&!blankProposal){notify("Giá trị phải là số không âm. Ô đã được giữ nguyên.","error");renderTable();renderInspector();return false;}
+  if(next!==null&&(field==="workQty"&&next>10000000||field==="appPrice"&&next>1000000000000)){notify("Giá trị vượt giới hạn minh họa.","error");renderTable();renderInspector();return false;}
+  if(Object.is(row[field],next)||next!==null&&row[field]!==null&&Math.abs(row[field]-next)<.00000001){renderTable();return true;}
+  const old=row[field];row[field]=next;if(field==="appPrice")row.autoCalc=false;
+  row.confirmed=false;row.edited=true;state.changes++;
+  row.history.unshift({title:field==="workQty"?"Điều chỉnh SL nguồn trong bản phân tích":"Điều chỉnh đơn giá đề xuất thủ công",description:(old===null?"Chưa nhập":number(old))+" → "+(next===null?"Chưa nhập":number(next))+(field==="workQty"?" (giữ Excel gốc "+number(row.qty)+")":""),time:"Vừa xong · thao tác mockup"});
+  renderTable();renderMetrics();renderInspector();notify("Đã cập nhật số liệu trong bản mô phỏng.","success");return true;
+}
+function updateCostField(row,field,raw){
+  const trimmed=String(raw).trim();
+  const next=field==="surveyPrice"&&trimmed===""?null:parseNumeric(raw);
+  if(next===null&&!(field==="surveyPrice"&&trimmed==="")||next!==null&&(field==="shippingPercent"?next>100:next>1000000000000)){
+    notify("Đơn giá khảo sát hoặc tỷ lệ vận chuyển không hợp lệ (tỷ lệ từ 0–100%).","error");renderInspector();return false;
+  }
+  if(Object.is(row[field],next)){renderInspector();return true;}
+  const old=row[field];row[field]=next;
+  if(row.autoCalc)row.appPrice=calculatedProposal(row);
+  row.confirmed=false;row.edited=true;state.changes++;
+  const displayVal=v=>v===null?"Chưa nhập":field==="shippingPercent"?number(v)+"%":money(v)+" đ";
+  row.history.unshift({title:field==="surveyPrice"?"Cập nhật đơn giá khảo sát":"Cập nhật tỷ lệ vận chuyển",description:displayVal(old)+" → "+displayVal(next)+(row.autoCalc&&row.surveyPrice!==null?"; đã tính lại đơn giá đề xuất":"; giữ giá đề xuất nhập riêng"),time:"Vừa xong · thao tác mockup"});
+  render();notify(row.autoCalc&&row.surveyPrice!==null?"Đã tự tính đơn giá đề xuất từ giá khảo sát và vận chuyển.":"Đã lưu thông tin khảo sát, giữ nguyên đơn giá đề xuất.","success");return true;
+}
+function applyCalculatedPrice(){
+  const row=rowById(state.selectedId);
+  if(row.surveyPrice===null){notify("Nhập đơn giá khảo sát trước khi dùng công thức.","error");return;}
+  row.appPrice=calculatedProposal(row);row.autoCalc=true;row.confirmed=false;state.changes++;
+  row.history.unshift({title:"Áp dụng giá khảo sát và vận chuyển",description:money(row.surveyPrice)+" + ("+money(row.surveyPrice)+" × "+number(row.shippingPercent)+"%) = "+money(row.appPrice)+" đ/"+row.unit,time:"Vừa xong · thao tác mockup"});
+  render();notify("Đơn giá đề xuất đã liên kết trở lại với công thức.","success");
+}
+function inspectorHeader(row){return '<div class="inspector-header"><div class="inspector-top"><span class="inspect-label">CHI TIẾT TÀI SẢN</span><div><span class="inspect-id">STT '+row.id+'</span> <button type="button" class="icon-btn" id="closeInspector" aria-label="Đóng khung chi tiết">×</button></div></div><h2 class="inspector-title">'+esc(row.name)+'</h2><div class="inspector-tags"><span class="meta-chip">Dòng nguồn: '+(row.id+4)+'</span><span class="meta-chip">'+(row.confirmed?'Đã xác nhận':'Chờ người rà soát')+'</span></div></div><div class="inspect-tabs" role="tablist"><button class="inspect-tab '+(state.tab==="evidence"?'active':'')+'" data-tab="evidence" role="tab" aria-selected="'+(state.tab==="evidence")+'">Chứng cứ <span class="evidence-count" style="color:#8b99a8">('+(Number(Boolean(row.source))+row.evidence.length+row.basisProofs.length)+')</span></button><button class="inspect-tab '+(state.tab==="history"?'active':'')+'" data-tab="history" role="tab" aria-selected="'+(state.tab==="history")+'">Lịch sử</button></div>';}
+function pricingBody(row){
+  const hasSurvey=row.surveyPrice!==null;
+  const calculated=calculatedProposal(row);
+  const shippingValue=transportAmount(row);
+  const modeLabel=row.autoCalc?(hasSurvey?'Đang dùng giá tính':'Chưa có giá khảo sát'):'Đơn giá nhập thủ công';
+  return `<div class="pricing-block">
+    <div class="pricing-heading"><h3 class="section-heading">Giá khảo sát và vận chuyển</h3><span class="pricing-mode ${row.autoCalc?'auto':'manual'}">${modeLabel}</span></div>
+    <div class="field-grid"><div class="field"><label for="surveyPrice">Đơn giá khảo sát (đ/${esc(row.unit)})</label><input id="surveyPrice" data-cost-field="surveyPrice" inputmode="decimal" placeholder="Chưa có" value="${hasSurvey?money(row.surveyPrice):''}"></div><div class="field"><label for="shippingPercent">Chi phí vận chuyển (%)</label><input id="shippingPercent" data-cost-field="shippingPercent" inputmode="decimal" value="${number(row.shippingPercent)}" aria-label="Tỷ lệ chi phí vận chuyển trên đơn giá khảo sát, phần trăm"></div></div>
+    <div class="price-formula"><div><div class="formula-caption">GIÁ KHẢO SÁT + VẬN CHUYỂN THEO %</div><div class="formula-values">${hasSurvey?money(row.surveyPrice):'—'} <span>+</span> ${shippingValue!==null?money(shippingValue):'—'} <span>=</span> <strong>${calculated!==null?money(calculated)+' đ':'Chưa tính'}</strong></div><div class="formula-detail">Vận chuyển = ${hasSurvey?money(row.surveyPrice):'—'} × ${number(row.shippingPercent)}% = <strong>${shippingValue!==null?money(shippingValue)+' đ':'Chưa tính'}</strong></div></div><button id="applyCalculatedPrice" class="btn btn-mini" ${hasSurvey?'':'disabled'} title="Áp dụng giá tính vào cột Đơn giá đề xuất ở bảng danh mục">↳ Áp dụng vào bảng</button></div>
+    <div class="input-tip transport-note">${row.autoCalc?'Giá tính được cập nhật vào bảng khi có khảo sát. Có thể sửa giá đề xuất trực tiếp ở bảng để dùng mức giá riêng.':'Đang dùng giá nhập riêng tại bảng. Thay đổi khảo sát không ghi đè; bấm “Áp dụng vào bảng” nếu muốn dùng lại công thức.'} Chỉ cộng chi phí vận chuyển nếu giá khảo sát chưa bao gồm khoản này.</div>
+    ${realQtyChanged(row)?`<div class="callout warning" style="margin:11px 0">⚠ Số lượng trên bảng khác giá trị Excel gốc (${number(row.qty)} ${esc(row.unit)}). Cần giải trình trước khi xác nhận.</div>`:''}
+    ${realQtyChanged(row)||row.reason?`<div class="field"><label for="changeReason">Lý do thay đổi số lượng ${realQtyChanged(row)?'✱':'(nếu có)'}</label><textarea id="changeReason" data-text="reason" rows="2" placeholder="Ví dụ: Khách hàng thông báo thay đổi số lượng…">${esc(row.reason)}</textarea></div>`:''}
+    ${row.note?`<div class="callout warning" style="margin-top:11px">● Ghi chú từ Excel: ${esc(row.note)}</div>`:''}
+  </div>`;
+}
+function sourceEvidence(row){
+  if(!row.source)return row.basisProofs.length?'<div class="callout success">✓ Thẩm định viên đã bổ sung '+row.basisProofs.length+' liên kết / ảnh trong ô diễn giải phía trên; cột Chứng cứ trên bảng đã cập nhật.</div>':'<div class="mini-empty">File khách hàng ban đầu không có nguồn thông tin tham khảo. Hãy dán link hoặc ảnh và ghi diễn giải trong quá trình thẩm định.</div>';
+  const kind=sourceKind(row.source);const title=kind==="url"?'Liên kết website từ Excel':'Tài liệu / đơn vị tham khảo từ Excel';
+  return '<div class="evidence-item"><div class="evidence-top"><span class="file-icon">'+(kind==="url"?'↗':'▤')+'</span><div class="evidence-title">'+(kind==="url"?'<a href="'+esc(row.source)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+' ↗</a>':esc(title))+'</div><span class="source-tag">NGUỒN XLS</span></div><p class="evidence-source">'+esc(row.source)+'</p></div>';
+}
+function evidenceBody(row){
+  return '<section class="inspect-content">'+pricingBody(row)+'<div class="evidence-section"><h3 class="section-heading">Cơ sở lựa chọn giá</h3><div class="field"><label id="basisLabel" for="basisArea">Diễn giải cơ sở đề xuất ✱</label><div id="basisArea" class="rich-basis-editor" role="textbox" aria-label="Diễn giải cơ sở đề xuất, có thể dán ảnh hoặc liên kết" aria-multiline="true" contenteditable="true" spellcheck="true" data-placeholder="Nhập diễn giải; nhấn Ctrl+V để dán link, ảnh chụp màn hình hoặc văn bản…">'+row.basisHtml+'</div><div class="input-tip">Dán trực tiếp bằng Ctrl+V: link sẽ thành liên kết mở được, ảnh hiển thị ngay trong diễn giải. Có thể xóa ảnh như một nội dung bình thường. Chỉ lưu trong phiên xem thử.</div></div><h3 class="section-heading">Chứng cứ do thẩm định viên bổ sung</h3><div class="evidence-list">'+sourceEvidence(row)+'</div>'
+    +'<div class="callout" style="margin-top:15px"><span>✧</span><div><strong>Gợi ý chứng cứ bằng AI</strong><br>Thiết kế dự kiến: AI đề xuất nguồn có dẫn chứng, người thẩm định tự kiểm tra và chấp nhận. Chức năng AI chưa có trong mockup và cần cổng triển khai riêng sau UAT.</div></div><div class="review-footer"><button id="saveDraft" class="btn btn-quiet">Lưu bản nháp mô phỏng</button><button id="confirmRow" class="btn btn-primary">'+(row.confirmed?'✓ Đã xác nhận':'Xác nhận dòng này')+'</button></div></div></section>';
+}
+function historyBody(row){return '<section class="inspect-content"><h3 class="section-heading">Lịch sử thao tác mô phỏng</h3><p class="subnote">Minh họa cách hiển thị nhật ký sau này. Đây không phải audit trail của Valora.</p><div class="history-list">'+row.history.map(e=>'<div class="history-entry"><strong>'+esc(e.title)+'</strong>'+esc(e.description)+'<small>'+esc(e.time)+'</small></div>').join("")+'<div class="history-entry"><strong>Nhập danh mục khách hàng từ Excel</strong>Giữ dữ liệu hàng '+(row.id+4)+' của sheet “GIA TRI”: tên tài sản, ĐVT, số lượng, đơn giá KH và thành tiền KH. Chưa có đơn giá thẩm định hoặc chứng cứ giá.<small>Giá trị KH gốc · chỉ đọc</small></div></div></section>';}
+function renderInspector(){const r=rowById(state.selectedId);if(!r)return;$("#inspectorBody").innerHTML=inspectorHeader(r)+(state.tab==="evidence"?evidenceBody(r):historyBody(r));}
+function render(){renderTable();renderMetrics();renderInspector();}
+function confirmSelected(){
+  const r=rowById(state.selectedId);if(!r)return;
+  if(r.confirmed){notify("Dòng này đã được xác nhận trong bản mô phỏng.");return;}
+  if(r.appPrice===null){state.tab="evidence";renderInspector();notify("Cần nhập đơn giá đề xuất trước khi xác nhận dòng tài sản.","error");return;}
+  if(!r.basis.trim()||r.basis.trim().length<10){state.tab="evidence";renderInspector();notify("Cần có diễn giải cơ sở giá tối thiểu 10 ký tự trước khi xác nhận.","error");$("#basisArea")?.focus();return;}
+  if(!hasSource(r)){state.tab="evidence";renderInspector();notify("Cần có ít nhất một chứng cứ hoặc nguồn tham khảo.","error");return;}
+  if(realQtyChanged(r)&&r.reason.trim().length<8){state.tab="evidence";renderInspector();notify("Số lượng thay đổi: vui lòng ghi rõ lý do.","error");$("#changeReason")?.focus();return;}
+  r.confirmed=true;r.history.unshift({title:"Xác nhận dòng (mô phỏng)",description:"Người xem thử xác nhận dữ liệu đang hiển thị. Không có hiệu lực nghiệp vụ.",time:"Vừa xong"});state.changes++;
+  render();notify("Đã xác nhận thử tài sản STT "+r.id+". Không cập nhật hồ sơ thật.","success");
+}
+function resetAll(){if(!window.confirm("Đặt lại toàn bộ dữ liệu thử về trạng thái ban đầu?"))return;for(const r of state.rows)for(const img of r.basisImages)URL.revokeObjectURL(img.url);state.rows=createRows();state.selectedId=3;state.mode="entry";state.filter="all";state.search="";state.tab="evidence";state.changes=0;state.conditions={...DEFAULT_CONDITIONS};$("#searchInput").value="";$("#filterSelect").value="all";$("#vatCondition").value=state.conditions.vat;$("#transportCondition").value=state.conditions.transport;$$('.segment').forEach(b=>{const active=b.dataset.mode==="entry";b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});render();notify("Đã khôi phục danh mục khách hàng; giá đề xuất và chứng cứ đang để trống.","success");}
+
+function saveCondition(field,input){
+  const value=input.value.trim();
+  if(!value){input.value=state.conditions[field];notify("Điều kiện nguồn không được để trống.","error");return;}
+  if(value===state.conditions[field])return;
+  state.conditions[field]=value;state.changes++;
+  $("#gridFootStatus").textContent=state.changes+" lần thay đổi trong bản mô phỏng";
+  notify("Đã cập nhật điều kiện "+(field==="vat"?"VAT":"vận chuyển")+" trong bản mô phỏng.","success");
+}
+
+function bindEvents(){
+  const topScroller=$("#tableScrollTop"),bodyScroller=$("#tableScroll");
+  topScroller.addEventListener("scroll",()=>{if(bodyScroller.scrollLeft!==topScroller.scrollLeft)bodyScroller.scrollLeft=topScroller.scrollLeft;},{passive:true});
+  bodyScroller.addEventListener("scroll",()=>{if(topScroller.scrollLeft!==bodyScroller.scrollLeft)topScroller.scrollLeft=bodyScroller.scrollLeft;},{passive:true});
+  window.addEventListener("resize",syncUpperScrollbarWidth);
+  if("ResizeObserver" in window)new ResizeObserver(syncUpperScrollbarWidth).observe(bodyScroller);
+  [["#vatCondition","vat"],["#transportCondition","transport"]].forEach(([selector,field])=>{
+    const input=$(selector);
+    input.addEventListener("change",()=>saveCondition(field,input));
+    input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();input.blur();}});
+  });
+  $("#assetTbody").addEventListener("click",e=>{
+    const proof=e.target.closest("[data-open-evidence]");if(proof){setSelected(Number(proof.dataset.openEvidence),"evidence");return;}
+    if(e.target.closest("input"))return;const row=e.target.closest("tr[data-row]");if(row)setSelected(row.dataset.row);
+  });
+  $("#assetTbody").addEventListener("focusin",e=>{
+    if(e.target.matches("input[data-field]")){const r=rowById(e.target.dataset.id);if(r){const value=r[e.target.dataset.field];e.target.value=value===null?"":String(value);e.target.select();}}
+  });
+  $("#assetTbody").addEventListener("focusout",e=>{
+    if(e.target.matches("input[data-field]"))updateField(rowById(e.target.dataset.id),e.target.dataset.field,e.target.value);
+  });
+  $("#assetTbody").addEventListener("keydown",e=>{
+    if(e.key==="Enter"&&e.target.matches("input[data-field]")){
+      e.preventDefault();const row=Number(e.target.dataset.id),field=e.target.dataset.field;
+      const next=visibleRows().findIndex(r=>r.id===row)+1;
+      const nextId=visibleRows()[next]?.id;
+      e.target.blur();if(nextId)setTimeout(()=>$("#assetTbody input[data-id='"+nextId+"'][data-field='"+field+"']")?.focus(),0);
+    }
+  });
+  $("#inspector").addEventListener("click",e=>{
+    const removeImage=e.target.closest(".basis-image-remove");
+    if(removeImage){const editor=$("#basisArea");removeImage.closest("figure")?.remove();if(editor)saveBasisEditor(editor,rowById(state.selectedId));return;}
+    const tab=e.target.closest("[data-tab]");if(tab){state.tab=tab.dataset.tab;renderInspector();return;}
+    if(e.target.closest("#closeInspector")){state.panelOpen=false;$("#analysisLayout").classList.add("panel-hidden");return;}
+    if(e.target.closest("#applyCalculatedPrice")){applyCalculatedPrice();return;}
+    if(e.target.closest("#saveDraft")){notify("Bản nháp đã cập nhật trong bộ nhớ trang mockup. Tải lại trang sẽ mất thay đổi.","success");return;}
+    if(e.target.closest("#confirmRow")){confirmSelected();return;}
+  });
+  $("#inspector").addEventListener("focusin",e=>{
+    const input=e.target.closest("input[data-panel-field]");if(input){input.value=String(rowById(state.selectedId)[input.dataset.panelField]);input.select();}
+    const cost=e.target.closest("input[data-cost-field]");if(cost){const value=rowById(state.selectedId)[cost.dataset.costField];cost.value=value===null?"":String(value);cost.select();}
+  });
+  $("#inspector").addEventListener("focusout",e=>{
+    const input=e.target.closest("input[data-panel-field]");if(input)updateField(rowById(state.selectedId),input.dataset.panelField,input.value);
+    const cost=e.target.closest("input[data-cost-field]");if(cost)updateCostField(rowById(state.selectedId),cost.dataset.costField,cost.value);
+    const editor=e.target.closest("#basisArea");if(editor){linkifyEditorTypedUrls(editor);const row=rowById(state.selectedId);saveBasisEditor(editor,row);row.basisEditSession=false;}
+    const text=e.target.closest("textarea[data-text]");if(text){const row=rowById(state.selectedId),field=text.dataset.text,value=text.value;if(row[field]!==value){row[field]=value;row.confirmed=false;state.changes++;row.history.unshift({title:"Chỉnh sửa lý do thay đổi SL",description:"Thay đổi nội dung diễn giải.",time:"Vừa xong · thao tác mockup"});renderTable();renderMetrics();}}
+  });
+  $("#inspector").addEventListener("paste",e=>{const editor=e.target.closest("#basisArea");if(editor)handleBasisPaste(e,editor);});
+  $("#inspector").addEventListener("input",e=>{const editor=e.target.closest("#basisArea");if(editor)saveBasisEditor(editor,rowById(state.selectedId));});
+  $("#inspector").addEventListener("dragover",e=>{if(e.target.closest("#basisArea"))e.preventDefault();});
+  $("#inspector").addEventListener("drop",e=>{
+    const editor=e.target.closest("#basisArea");if(!editor)return;e.preventDefault();
+    const row=rowById(state.selectedId),fragment=document.createDocumentFragment();
+    const images=Array.from(e.dataTransfer?.files||[]).filter(file=>file.type.startsWith("image/"));
+    if(images.length){for(const file of images){const figure=basisImageFigure(file,row);if(figure){fragment.appendChild(figure);fragment.appendChild(document.createElement("br"));}}}
+    else appendLinkifiedText(fragment,e.dataTransfer?.getData("text/plain")||"");
+    insertEditorFragment(editor,fragment);saveBasisEditor(editor,row);
+  });
+  $("#searchInput").addEventListener("input",e=>{state.search=e.target.value.trim().toLowerCase();renderTable();});
+  $("#filterSelect").addEventListener("change",e=>{state.filter=e.target.value;renderTable();});
+  $$(".segment").forEach(btn=>btn.addEventListener("click",()=>{state.mode=btn.dataset.mode;$$(".segment").forEach(b=>{const active=b===btn;b.classList.toggle("active",active);b.setAttribute("aria-selected",String(active));});renderTable();}));
+  $("#panelToggle").addEventListener("click",()=>{state.panelOpen=!state.panelOpen;$("#analysisLayout").classList.toggle("panel-hidden",!state.panelOpen);if(state.panelOpen)renderInspector();});
+  $("#resetBtn").addEventListener("click",resetAll);
+  $("#helpBtn").addEventListener("click",()=>$("#helpModal").hidden=false);
+  $("#closeHelp").addEventListener("click",()=>$("#helpModal").hidden=true);
+  $("#okHelp").addEventListener("click",()=>$("#helpModal").hidden=true);
+  $("#helpModal").addEventListener("click",e=>{if(e.target.id==="helpModal")$("#helpModal").hidden=true;});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#helpModal").hidden=true;});
+}
+
+state.rows=createRows();bindEvents();render();
+
+</script>
+</body>
+</html>
