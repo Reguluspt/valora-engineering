@@ -4,7 +4,7 @@
 
 ## 1. Component design policy
 
-Use Microsoft [Fluent 2 web React components](https://fluent2.microsoft.design/) via existing \`@fluentui/react-components\` v9 when their behavior fits; compose VALORA-specific components over Fluent primitives/tokens. Native HTML is **not categorically prohibited**, but custom controls must demonstrate documented semantic and keyboard parity. Design direction:
+Use Microsoft [Fluent 2 web React components](https://fluent2.microsoft.design/) via existing `@fluentui/react-components` v9 when their behavior fits; compose VALORA-specific components over Fluent primitives/tokens. Native HTML is **not categorically prohibited**, but custom controls must demonstrate documented semantic and keyboard parity. Design direction:
 
 **Valora Design Tokens → Fluent 2 primitives → Valora shared UI → feature components → screens**.
 
@@ -14,16 +14,16 @@ Avoid independent per-screen dark/cyan/teal visual systems and CSS mimicking Mic
 
 | Surface | Current source evidence | Fluent v02 target / evaluation | Tests |
 |---|---|---|---|
-| App theme | \`frontend/src/main.tsx\` / \`App.tsx\` lack root provider; feature-specific \`FluentProvider(webLightTheme)\` exists | Define app-level provider/theme and bounded nested/portal contexts; map CSS variables to semantic tokens | Computed theme, nested overlays/portals, contrast, no style regressions |
-| Breadcrumb | \`frontend/src/components/layout/AppShell.tsx\` hand-builds spans/›/strong | \`Breadcrumb\`, \`BreadcrumbItem\`, \`BreadcrumbButton\`/links and current item as appropriate | Linked ancestors, current-page semantics, truncation/overflow, keyboard, screen reader |
-| Navigation | AppShell custom \`<nav>\`, anchors and glyph icons | Evaluate official Nav and Fluent icons; if custom, maintain correct navigation/active-state semantics and collapsed icon tooltips | Active route, keyboard navigation, collapse/expand, 200–400% zoom |
-| Inputs | Pre-case analysis native HTML; \`FormField.tsx\` already uses \`Field\`, \`Input\`, \`Textarea\`, \`Select\` | Prefer reusable Fluent field wrappers with localized labels, validation and disabled/error semantics | Label/description/error association, input precision, focus, keyboard |
-| Buttons | \`.valora-button\` CSS/native and Microsoft \`Button\` coexist | Standardize Microsoft \`Button\`/tokens through shared wrapper; only one primary CTA in local context | Disabled, busy, keyboard, focus ring, screenreader label |
-| Bulk grid | \`AssetGrid.tsx\`/preliminary analysis native table; some quote/import views use Fluent \`Table\` | Assess Fluent \`DataGrid\` or semantic custom virtualized grid with Fluent tokens; preserve pinned STT/name, dense rows, synchronized top/bottom horizontal scroll, keyboard grid behavior | Hundreds of assets, sticky columns, sorting/filter, row edit, wheel/scroll, accessibility |
-| Right panel | \`WorkbenchRightPanelShell.tsx\`: real \`TabList/Tab\`, custom outer drawer | Evaluate Fluent \`Drawer\` with **inline/non-modal** behavior, sticky prev/next, tab content, focus/escape and scroll | Focus restore, overlay containment, close, narrow width and long evidence |
-| Alerts | \`MessageBar.tsx\` custom, separate status classes | Evaluate Fluent \`MessageBar\` and \`Badge\` plus shared Valora semantics | Status live region, retry/error, colors not sole carrier |
-| Dialogs | Quote/evidence/import views already use real \`Dialog\` family | Reuse these patterns only where a genuine blocking dialog is needed; inline identity classification should not use dialog | Focus trap, dismiss, confirmation, semantic integrity |
-| Tabs | Drawer uses real \`TabList/Tab\` | Reuse with correct connected tabpanel and focus | Keyboard selection, labelled panel, no content loss |
+| App theme | `frontend/src/main.tsx` / `App.tsx` lack root provider; feature-specific `FluentProvider(webLightTheme)` exists | Define app-level provider/theme and bounded nested/portal contexts; map CSS variables to semantic tokens | Computed theme, nested overlays/portals, contrast, no style regressions |
+| Breadcrumb | `frontend/src/components/layout/AppShell.tsx` hand-builds spans/›/strong | `Breadcrumb`, `BreadcrumbItem`, `BreadcrumbButton`/links and current item as appropriate | Linked ancestors, current-page semantics, truncation/overflow, keyboard, screen reader |
+| Navigation | AppShell custom `<nav>`, anchors and glyph icons | Evaluate official Nav and Fluent icons; if custom, maintain correct navigation/active-state semantics and collapsed icon tooltips | Active route, keyboard navigation, collapse/expand, 200–400% zoom |
+| Inputs | Pre-case analysis native HTML; `FormField.tsx` already uses `Field`, `Input`, `Textarea`, `Select` | Prefer reusable Fluent field wrappers with localized labels, validation and disabled/error semantics | Label/description/error association, input precision, focus, keyboard |
+| Buttons | `.valora-button` CSS/native and Microsoft `Button` coexist | Standardize Microsoft `Button`/tokens through shared wrapper; only one primary CTA in local context | Disabled, busy, keyboard, focus ring, screenreader label |
+| Bulk grid | `AssetGrid.tsx`/preliminary analysis native table; some quote/import views use Fluent `Table` | Assess Fluent `DataGrid` or semantic custom virtualized grid with Fluent tokens; preserve pinned STT/name, dense rows, synchronized top/bottom horizontal scroll, keyboard grid behavior | Hundreds of assets, sticky columns, sorting/filter, row edit, wheel/scroll, accessibility |
+| Right panel | `WorkbenchRightPanelShell.tsx`: real `TabList/Tab`, custom outer drawer | Evaluate Fluent `Drawer` with **inline/non-modal** behavior, sticky prev/next, tab content, focus/escape and scroll | Focus restore, overlay containment, close, narrow width and long evidence |
+| Alerts | `MessageBar.tsx` custom, separate status classes | Evaluate Fluent `MessageBar` and `Badge` plus shared Valora semantics | Status live region, retry/error, colors not sole carrier |
+| Dialogs | Quote/evidence/import views already use real `Dialog` family | Reuse these patterns only where a genuine blocking dialog is needed; inline identity classification should not use dialog | Focus trap, dismiss, confirmation, semantic integrity |
+| Tabs | Drawer uses real `TabList/Tab` | Reuse with correct connected tabpanel and focus | Keyboard selection, labelled panel, no content loss |
 | Rich evidence | Archived 26-Oct mockup custom clipboard/paste behavior | Fluent fields + **domain custom** clipboard/link/image viewer with validation, attachment preview, evidence lineage | Paste URL/images, remove, counting, large attachments, errors, security |
 | Export & history | Preliminary completion native buttons and cards | Fluent command bar/summary/table/status elements; separate 'saved' vs 'exported' | No phantom success, version snapshot immutability, recovery states |
 
@@ -31,7 +31,7 @@ Important: Microsoft component names are **mapping candidates**, not a promise t
 
 ## 3. Fluent 2 v02 mockup structure
 
-**Prototype medium:** React + \`@fluentui/react-components\` v9 on \`webLightTheme\`, ideally same version as repo and VALORA token bridge. This should run locally with fictitious data; it is **not production code or an approved runtime dependency change**.
+**Prototype medium:** React + `@fluentui/react-components` v9 on `webLightTheme`, ideally same version as repo and VALORA token bridge. This should run locally with fictitious data; it is **not production code or an approved runtime dependency change**.
 
 Demonstrate three mandatory states within a realistic dense desktop layout:
 
