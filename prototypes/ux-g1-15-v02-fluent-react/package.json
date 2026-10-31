@@ -1,0 +1,25 @@
+{
+  "name": "valora-ux-g1-15-v02-fluent-react-prototype",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test:logic": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@fluentui/react-components": "9.74.9",
+    "@fluentui/react-icons": "^2.0.245",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.5.0",
+    "vite": "^6.4.5"
+  }
+}
