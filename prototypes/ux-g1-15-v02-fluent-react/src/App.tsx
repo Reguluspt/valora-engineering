@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { ClipboardEvent, KeyboardEvent } from 'react';
 import {
   Badge, Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem,
@@ -190,6 +190,7 @@ export default function App() {
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
   const [detailTab,setDetailTab] = useState<DetailTab>('price');
+  const detailTabsId=useId();
   const [similarSearch,setSimilarSearch] = useState('');
   const [draftNote,setDraftNote] = useState<string|null>(null);
   const [draftTransport,setDraftTransport] = useState<string|null>(null);
@@ -410,8 +411,8 @@ export default function App() {
               </DrawerHeaderTitle></DrawerHeader>
               <DrawerBody className="drawer-scroll">
                 <div className="panel-chips"><Status asset={selected}/>{selected.viewed&&<Badge appearance="outline" color="informative" size="small">Đã xem</Badge>}{selected.match==='high'&&<Badge appearance="outline" size="small">Khớp đủ tin cậy</Badge>}</div>
-                <TabList selectedValue={detailTab} onTabSelect={(_,d)=>setDetailTab(d.value as DetailTab)} size="small" aria-label="Nội dung tài sản" className="detail-tabs"><Tab value="price">Giá & chứng cứ</Tab><Tab value="specs">Đặc điểm & SL</Tab><Tab value="history">Lịch sử</Tab></TabList>
-                {detailTab==='price'&&<section className="panel-stack" aria-label="Giá và chứng cứ">
+                <TabList selectedValue={detailTab} onTabSelect={(_,d)=>setDetailTab(d.value as DetailTab)} size="small" aria-label="Nội dung tài sản" className="detail-tabs"><Tab id={`${detailTabsId}-price-tab`} aria-controls={`${detailTabsId}-price-panel`} value="price">Giá & chứng cứ</Tab><Tab id={`${detailTabsId}-specs-tab`} aria-controls={`${detailTabsId}-specs-panel`} value="specs">Đặc điểm & SL</Tab><Tab id={`${detailTabsId}-history-tab`} aria-controls={`${detailTabsId}-history-panel`} value="history">Lịch sử</Tab></TabList>
+                {detailTab==='price'&&<section id={`${detailTabsId}-price-panel`} role="tabpanel" aria-labelledby={`${detailTabsId}-price-tab`} tabIndex={0} className="panel-stack" aria-label="Giá và chứng cứ">
                   {selected.needsRecheck&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Cần kiểm tra lại nguồn</MessageBarTitle>Thông số/điều kiện nguồn chưa được xác nhận phù hợp. Không tự thay giá nhân viên.</MessageBarBody></MessageBar>}
                   {selected.id==='TS-001'&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Chênh lệch giữa các nguồn</MessageBarTitle>100 triệu và 145 triệu. Nhân viên xem xét trong bước rà soát này, không thêm bước phê duyệt giá.</MessageBarBody></MessageBar>}
                   {selected.sources.length===0?<div className="empty"><Database20Regular/><strong>Chưa có nguồn đủ tin cậy</strong><span>Tìm tài sản tương tự hoặc nhập thông tin khảo sát mới.</span></div>:<>
@@ -452,7 +453,7 @@ export default function App() {
                   <Textarea resize="vertical" aria-label="Diễn giải và dán chứng cứ" placeholder="Nhập diễn giải, dán URL hoặc Ctrl+V ảnh trực tiếp. Không cần đăng ký chứng cứ lại." value={draftNote??selected.note} onChange={(_,d)=>{setDraftNote(d.value);}} onPaste={pasteEvidence} onBlur={()=>{if(draftNote!==null&&draftNote!==selected.note){patch(selected.id,a=>({...a,note:draftNote}),'Đã cập nhật diễn giải');changeTextEvidence(draftNote);setDraftNote(null);}}}/>
                   <div className="tiny muted">Ảnh dán được xem trước trong thẻ nguồn và cột chứng cứ; chỉ lưu tạm trong trang, tối đa 2 MB/ảnh. URL minh họa không phải nguồn xác minh thực tế.</div>
                 </section>}
-                {detailTab==='specs'&&<section className="panel-stack" aria-label="Thông tin tài sản và nhận dạng">
+                {detailTab==='specs'&&<section id={`${detailTabsId}-specs-panel`} role="tabpanel" aria-labelledby={`${detailTabsId}-specs-tab`} tabIndex={0} className="panel-stack" aria-label="Thông tin tài sản và nhận dạng">
                   <div className="section-title">Thông tin tài sản</div>
                   <Field label="Tên gốc từ Excel"><Input value={selected.name} readOnly/></Field>
                   <Field label="Đặc điểm hiện tại"><Textarea resize="vertical" value={identityDraft??selected.specs} onChange={(_,d)=>setIdentityDraft(d.value)}/></Field>
@@ -470,7 +471,7 @@ export default function App() {
                   {selected.resolution&&<MessageBar intent="info"><MessageBarBody>{selected.resolution==='correct'?'Đề xuất sửa tri thức đã tạo trong bản mẫu; chưa duyệt.':selected.resolution==='new'?'Ứng viên biến thể mới trong bản mẫu; chưa tạo bản ghi thật.':'Chỉ chỉnh sửa hồ sơ, không cập nhật Kho tri thức.'}</MessageBarBody></MessageBar>}
                   {selected.needsRecheck&&<span className="tiny muted">Nguồn trước đây cần rà soát lại theo thuộc tính mới; giá đề xuất đã nhập được giữ.</span>}
                 </section>}
-                {detailTab==='history'&&<section className="panel-stack" aria-label="Lịch sử và nguồn gốc">
+                {detailTab==='history'&&<section id={`${detailTabsId}-history-panel`} role="tabpanel" aria-labelledby={`${detailTabsId}-history-tab`} tabIndex={0} className="panel-stack" aria-label="Lịch sử và nguồn gốc">
                   <div className="section-title">Xem nguồn gốc · Xem lịch sử</div>
                   <div className="history-list">{selected.activity.map((ev,i)=><div key={i}><span className="history-dot"/><span>{ev}</span></div>)}</div>
                   <p className="tiny muted">Lịch sử trong bản mẫu là dữ liệu minh họa. Hệ thống thật cần bản ghi actor, thời điểm, trước/sau và phiên bản tri thức.</p>
