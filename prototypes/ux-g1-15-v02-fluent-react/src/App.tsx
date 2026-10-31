@@ -20,13 +20,13 @@ import {
   amount, classifyIdentityChange, extractLinks, nextViewed,
   previewTotal, suggestedPrice, warnings,
 } from './logic.mjs';
+import type { EvidenceImage } from './logic.mjs';
 
 type Origin = 'auto' | 'similar' | 'manual' | 'none';
 type Route = 'workbench' | 'summary';
 type KnowledgeDecision = 'correct' | 'new' | 'case' | '';
 type DetailTab = 'price' | 'specs' | 'history';
 
-type EvidenceImage = { id: string; name: string; dataUrl: string };
 type Source = {
   id: string;
   name: string;
@@ -250,7 +250,7 @@ export default function App() {
   };
 
   const updateSpecs=()=>{
-    const next=identityDraft.trim();
+    const next=identityDraft?.trim();
     if(!next) return;
     patch(selected.id,a=>({...a,specs:next,needsRecheck:classifyIdentityChange(a.originalSpecs,next),resolution:'',activity:[`Đã sửa đặc điểm thành: ${next}`, ...a.activity]}),'Đã sửa đặc điểm; cần phân loại nếu có thay đổi nhận dạng');
     setIdentityClass('');
