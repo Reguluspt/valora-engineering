@@ -6,12 +6,13 @@ This package records the design discussion and the Product Owner's choices for a
 
 ## Reading order
 
-1. [Decision register](DECISION_REGISTER.md) — approved UX choices, changes and open questions.
-2. [Workflow and Workbench UX contract](WORKFLOW_AND_WORKBENCH.md) — canonical proposed operator journey, screen/field states, export and navigation.
-3. [Knowledge matching and governance](KNOWLEDGE_MATCHING_AND_GOVERNANCE.md) — identity matching, confidence gates, source selection, evidence, candidate proposals and review.
-4. [Authority reconciliation](AUTHORITY_RECONCILIATION.md) — mismatches with existing G1.1, Issue #222, single-user knowledge baseline, price-source authority and technical dependencies.
-5. [Fluent 2 mapping and mockup v02 acceptance](FLUENT2_COMPONENT_MAPPING.md) — component adoption and visual/interaction review checklist.
-6. [Fluent 2 static audit](../../audits/VALORA_FLUENT2_UIUX_STATIC_AUDIT_2026-10-31.md) — repository evidence for current uneven adoption.
+1. [Tóm tắt tiếng Việt](TOM_TAT_TIENG_VIET.md) — PO/Codex quick reference.
+2. [Decision register](DECISION_REGISTER.md) — approved UX choices, changes and open questions.
+3. [Workflow and Workbench UX contract](WORKFLOW_AND_WORKBENCH.md) — canonical proposed operator journey, screen/field states, export and navigation.
+4. [Knowledge matching and governance](KNOWLEDGE_MATCHING_AND_GOVERNANCE.md) — identity matching, confidence gates, source selection, evidence, candidate proposals and review.
+5. [Authority reconciliation](AUTHORITY_RECONCILIATION.md) — mismatches with existing G1.1, Issue #222, single-user knowledge baseline, price-source authority and technical dependencies.
+6. [Fluent 2 mapping and mockup v02 acceptance](FLUENT2_COMPONENT_MAPPING.md) — component adoption and visual/interaction review checklist.
+7. [Fluent 2 static audit](../../audits/VALORA_FLUENT2_UIUX_STATIC_AUDIT_2026-10-31.md) — repository evidence for current uneven adoption.
 
 ## Design authority & preservation
 
