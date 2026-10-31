@@ -1,4 +1,5 @@
-export interface SourceBrief { links: string[]; images: string[] }
+export type EvidenceImage = { id: string; name: string; dataUrl: string };
+export interface SourceBrief { links: string[]; images: EvidenceImage[] }
 export interface AssetBrief { id: string; viewed: boolean; proposed: number | null; qty: number; sources: SourceBrief[]; needsRecheck: boolean; match: 'high' | 'none' | 'similar' | 'manual' }
 export function amount(unitPrice: number | null | undefined | string, qty: number): number | null;
 export function suggestedPrice(surveyPrice: number | null | undefined | string, transportPercent: number | null | undefined | string, transportKnown?: boolean): number | null;
