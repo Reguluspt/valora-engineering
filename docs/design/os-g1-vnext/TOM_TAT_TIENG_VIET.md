@@ -21,7 +21,7 @@
 
 ## 2. Giao diện hướng tới
 
-- Microsoft Fluent 2 Light **thực chất**, ưu tiên dùng \`@fluentui/react-components\` v9.
+- Microsoft Fluent 2 Light **thực chất**, ưu tiên dùng `@fluentui/react-components` v9.
 - Workbench bảng dày với cột STT/tên tài sản cố định, thanh cuộn ngang trên/dưới đồng bộ, chuột cuộn tự nhiên, nội dung dài xuống dòng.
 - Cột **ĐVT → SL nguồn** được sửa trực tiếp; giữ số lượng Excel gốc và giải trình khi đổi.
 - Có Đơn giá/Thành tiền khách hàng khi có đầu vào; Đơn giá/Thành tiền đề xuất; cảnh báo trường còn trống.
