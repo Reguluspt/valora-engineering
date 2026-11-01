@@ -587,28 +587,47 @@ export default function App() {
           </div>
           <div className="demo-scenarios"><span className="tiny muted">TÌNH HUỐNG THỬ NHANH (CHỈ CÓ TRONG PROTOTYPE)</span><Button size="small" appearance="subtle" onClick={()=>gotoAsset('TS-001')}>01 · Đã tự điền</Button><Button size="small" appearance="subtle" onClick={()=>gotoAsset('TS-002')}>02 · Thiếu nguồn</Button><Button size="small" appearance="subtle" onClick={()=>{gotoAsset('TS-003');setDetailTab('specs');}}>03 · Sửa đặc điểm</Button></div>
         </>:<section className="summary-screen" aria-label="Tổng kết kết quả sơ bộ">
-          <div className="summary-head"><h2>Kiểm tra trước khi xuất</h2><p className="muted">Các nhóm cảnh báo có thể chồng lấp. Không tự coi tài sản chưa xem là đã được rà soát.</p></div>
-          <div className="summary-cards">
-            <div><span>Đã xem</span><strong>{assets.length-summary.unviewed}/{assets.length}</strong></div>
-            <div><span>Chưa xem</span><strong>{summary.unviewed}</strong></div>
-            <div><span>Thiếu đơn giá</span><strong>{summary.missingPrice}</strong></div>
-            <div><span>Thiếu chứng cứ</span><strong>{summary.missingEvidence}</strong></div>
-            <div><span>Cần kiểm tra lại</span><strong>{summary.recheck}</strong></div>
-          </div>
-          <div className="summary-columns"><section className="summary-panel"><h3>Các tài sản cần chú ý</h3>
-            {assets.filter(a=>!a.viewed||a.proposed===null||a.needsRecheck).map(a=><div className="summary-row" key={a.id}><div><strong>{a.name}</strong><small>{a.id} · {[!a.viewed?'Chưa xem':'',a.proposed===null?'Thiếu giá':'',a.needsRecheck?'Cần kiểm tra nguồn':''].filter(Boolean).join(' · ')}</small></div><Button size="small" appearance="secondary" onClick={()=>rowDisplayLink(a.id)}>Xử lý</Button></div>)}
+          <div className="summary-head"><p>Các nhóm cảnh báo có thể chồng lấp. Tài sản chưa xem chưa được coi là đã rà soát.</p></div>
+          <dl className="summary-cards" aria-label="Thống kê rà soát">
+            {[
+              {label:'Đã xem',value:`${assets.length-summary.unviewed}/${assets.length}`,tone:'progress'},
+              {label:'Chưa xem',value:summary.unviewed,tone:'neutral'},
+              {label:'Thiếu đơn giá',value:summary.missingPrice,tone:'warning'},
+              {label:'Thiếu chứng cứ',value:summary.missingEvidence,tone:'warning'},
+              {label:'Cần kiểm tra lại',value:summary.recheck,tone:'warning'},
+            ].map(kpi=><div key={kpi.label} data-tone={kpi.tone}><dt>{kpi.label}</dt><dd>{kpi.value}</dd></div>)}
+          </dl>
+          <div className="summary-columns"><section className="summary-panel summary-attention" aria-labelledby="summary-attention-title">
+            <div className="summary-section-head"><h2 id="summary-attention-title">Các tài sản cần chú ý</h2><p>Chọn Xử lý để quay về đúng tài sản trong danh mục.</p></div>
+            <div className="summary-attention-scroll" role="region" aria-label="Danh sách tài sản cần chú ý" tabIndex={0}>
+              <ul className="summary-list">
+                {assets.filter(a=>!a.viewed||a.proposed===null||a.needsRecheck).map(a=><li className="summary-row" key={a.id}>
+                  <div className="summary-asset"><span className="summary-asset-id">{a.id}</span><strong>{a.name}</strong><div className="summary-reasons">
+                    {a.proposed===null&&<span>Thiếu đơn giá</span>}{a.needsRecheck&&<span>Cần kiểm tra nguồn</span>}{!a.viewed&&<span>Chưa xem</span>}
+                  </div></div>
+                  <Button appearance="secondary" aria-label={`Xử lý ${a.id}`} onClick={()=>rowDisplayLink(a.id)}>Xử lý</Button>
+                </li>)}
+              </ul>
+              <div className="summary-empty"><CheckmarkCircle20Regular/><strong>Không có tài sản cần chú ý trong danh sách này</strong><p>Bạn vẫn cần xem các chỉ số cảnh báo trước khi xác nhận phiên bản minh họa.</p></div>
+            </div>
             <MessageBar intent="warning"><MessageBarBody>Đơn giá chưa xác định được để trống và không tính vào tổng giá trị đã xác định. Cảnh báo trong OS-G1 không đồng nghĩa quyết định thẩm định cuối.</MessageBarBody></MessageBar>
-          </section><section className="summary-panel"><h3>Xem trước kết quả</h3>
-            <div className="total-price"><span>Tổng thành tiền đề xuất đã xác định</span><strong>{vnd(total)} đ</strong><small>Chỉ cộng dòng có giá và số lượng xác định; không có dòng chứng cứ phụ.</small></div>
+          </section><section className="summary-panel summary-preview" aria-labelledby="summary-preview-title">
+            <div className="summary-section-head"><h2 id="summary-preview-title">Xem trước kết quả</h2><p>Kết quả sơ bộ · Dữ liệu minh họa</p></div>
+            <div className="total-price"><span>Tổng thành tiền đề xuất đã xác định</span><strong>{vnd(total)} <span>đ</span></strong><small>Chỉ cộng dòng có giá và số lượng xác định. Dòng thiếu đơn giá được loại khỏi tổng, không coi là giá 0; không cộng dòng chứng cứ phụ.</small></div>
             <div className="summary-meta"><span>Phiên bản đã xác nhận (mô phỏng)</span><strong>{exportedVersion?`v${String(exportedVersion).padStart(2,'0')}`:'Chưa có'}</strong></div>
-            {changedSinceExport&&<Badge appearance="tint" color="warning">Có thay đổi chưa xuất thành phiên bản mới</Badge>}
+            {changedSinceExport&&<MessageBar intent="warning"><MessageBarBody>Có thay đổi chưa xuất thành phiên bản mới</MessageBarBody></MessageBar>}
             <Divider/>
-            <Checkbox checked={ack} onChange={(_,d)=>setAck(d.checked===true)} label="Tôi đã xem cảnh báo và xác nhận sử dụng dữ liệu hiện tại cho kết quả sơ bộ (mô phỏng)."/>
-            <Button appearance="primary" disabled={!ack} onClick={finalizeVersion}>Xác nhận phiên bản minh họa</Button>
-            <span className="tiny muted">Không tạo tệp Excel thật. Bản triển khai sau này phải xuất một bảng Excel có URL và ảnh chứng cứ nhúng, lưu snapshot độc lập.</span>
+            <div className="summary-confirmation">
+              <Checkbox checked={ack} onChange={(_,d)=>setAck(d.checked===true)} label="Tôi đã xem cảnh báo và xác nhận sử dụng dữ liệu hiện tại cho kết quả sơ bộ (mô phỏng)."/>
+              <Button appearance="primary" disabled={!ack} onClick={finalizeVersion}>Xác nhận phiên bản minh họa</Button>
+              <p>Chỉ mô phỏng trong bộ nhớ trang, không lưu máy chủ. Đây không phải “Chấp nhận làm cơ sở thẩm định”.</p>
+              <p>Không tạo tệp Excel thật. Bản triển khai sau này phải xuất một bảng Excel có URL và ảnh chứng cứ nhúng, lưu snapshot độc lập.</p>
+            </div>
             <Divider/>
-            <h3>Lịch sử phiên bản (bộ nhớ trang)</h3>
-            {exportedVersion===0?<p className="muted">Chưa có phiên bản được tạo trong mô phỏng.</p>:Array.from({length:exportedVersion},(_,i)=><div className="summary-row" key={i}><strong>Phiên bản v{String(exportedVersion-i).padStart(2,'0')}</strong><Badge appearance="outline" color="informative">Bản chụp minh họa</Badge></div>)}
+            <section className="summary-history" aria-labelledby="summary-history-title">
+              <h3 id="summary-history-title">Lịch sử phiên bản (bộ nhớ trang)</h3>
+              {exportedVersion===0?<p>Chưa có phiên bản được tạo trong mô phỏng.</p>:<ol className="summary-history-list">{Array.from({length:exportedVersion},(_,i)=><li className="summary-row" key={i}><strong>Phiên bản v{String(exportedVersion-i).padStart(2,'0')}</strong><Badge appearance="outline" color="informative">Bản chụp minh họa</Badge></li>)}</ol>}
+            </section>
           </section></div>
         </section>}
         <footer className="page-footer"><span>VALORA UX-G1.15 v02 · Fluent UI React v9 · Dữ liệu hoàn toàn giả lập</span><span>Prototype duyệt giao diện, không phải UAT #203</span></footer>
