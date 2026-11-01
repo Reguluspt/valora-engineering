@@ -1,5 +1,5 @@
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent, KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ClipboardEvent, KeyboardEvent, PropsWithChildren } from 'react';
 import {
   Badge, Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem,
   Button, Checkbox, Divider, DrawerBody, DrawerFooter, DrawerHeader,
@@ -185,6 +185,109 @@ function SideNav({collapsed,onToggle,onShowSummary,onShowWorkbench,route}: {
   </aside>;
 }
 
+function AssetTableViewport({children}: PropsWithChildren) {
+  const viewportRef=useRef<HTMLDivElement>(null);
+  const instructionsId=useId();
+  const [hintVisible,setHintVisible]=useState(true);
+
+  useEffect(()=>{
+    const viewport=viewportRef.current!;
+    const excluded='input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="combobox"],[role="button"],[role="link"],[role="menu"],[role="dialog"],[data-editing="true"]';
+    let spaceHeld=false;
+    let pointerTarget: EventTarget|null=null;
+    let drag: {id:number;x:number;y:number}|null=null;
+    let pendingContextMenu=false;
+    const blocked=(target:EventTarget|null)=>target instanceof Element&&!!target.closest(excluded);
+    const editing=()=>blocked(document.activeElement)||!!document.querySelector('[popover]:popover-open,[role="menu"],[role="dialog"][aria-modal="true"]');
+    const eligible=(target:EventTarget|null)=>target instanceof Node&&viewport.contains(target)&&!blocked(target)&&!editing();
+    const updateCursor=()=>{
+      viewport.classList.toggle('pan-ready',spaceHeld&&eligible(pointerTarget));
+      viewport.classList.toggle('panning',drag!==null);
+    };
+    const release=()=>{
+      const active=drag;
+      drag=null;
+      if(active&&viewport.hasPointerCapture(active.id))viewport.releasePointerCapture(active.id);
+      updateCursor();
+    };
+    const reset=()=>{spaceHeld=false;release();};
+    const keydown=(event:globalThis.KeyboardEvent)=>{
+      if(event.key==='Escape'){reset();return;}
+      if(event.code!=='Space'||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+      spaceHeld=true;
+      if(!editing()&&!blocked(pointerTarget)&&(eligible(pointerTarget)||document.activeElement===viewport))event.preventDefault();
+      updateCursor();
+    };
+    const keyup=(event:globalThis.KeyboardEvent)=>{if(event.code==='Space')reset();};
+    const pointerdown=(event:PointerEvent)=>{
+      pendingContextMenu=false;
+      pointerTarget=event.target;
+      if(event.pointerType!=='mouse'||event.button!==2||!spaceHeld)return;
+      if(!eligible(event.target)){
+        if(blocked(document.activeElement))event.preventDefault();
+        updateCursor();return;
+      }
+      event.preventDefault();
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY};
+      pendingContextMenu=true;
+      viewport.setPointerCapture(event.pointerId);
+      updateCursor();
+    };
+    const pointermove=(event:PointerEvent)=>{
+      pointerTarget=event.target;
+      if(!drag){updateCursor();return;}
+      if(event.pointerId!==drag.id)return;
+      if(!spaceHeld||(event.buttons&2)===0||editing()){release();return;}
+      event.preventDefault();
+      viewport.scrollLeft-=event.clientX-drag.x;
+      viewport.scrollTop-=event.clientY-drag.y;
+      drag.x=event.clientX;drag.y=event.clientY;
+    };
+    const pointerend=(event:PointerEvent)=>{if(event.pointerId===drag?.id)release();};
+    const pointerleave=()=>{pointerTarget=null;updateCursor();};
+    const contextmenu=(event:MouseEvent)=>{
+      if(event.button===2&&pendingContextMenu){event.preventDefault();pendingContextMenu=false;}
+    };
+    const focusin=()=>{if(editing())reset();};
+    const visibility=()=>{if(document.hidden)reset();};
+    document.addEventListener('keydown',keydown);
+    document.addEventListener('keyup',keyup);
+    document.addEventListener('focusin',focusin);
+    document.addEventListener('visibilitychange',visibility);
+    window.addEventListener('blur',reset);
+    viewport.addEventListener('pointerdown',pointerdown);
+    viewport.addEventListener('pointermove',pointermove);
+    viewport.addEventListener('pointerleave',pointerleave);
+    viewport.addEventListener('pointerup',pointerend);
+    viewport.addEventListener('pointercancel',pointerend);
+    viewport.addEventListener('lostpointercapture',pointerend);
+    viewport.addEventListener('contextmenu',contextmenu);
+    return ()=>{
+      reset();
+      document.removeEventListener('keydown',keydown);
+      document.removeEventListener('keyup',keyup);
+      document.removeEventListener('focusin',focusin);
+      document.removeEventListener('visibilitychange',visibility);
+      window.removeEventListener('blur',reset);
+      viewport.removeEventListener('pointerdown',pointerdown);
+      viewport.removeEventListener('pointermove',pointermove);
+      viewport.removeEventListener('pointerleave',pointerleave);
+      viewport.removeEventListener('pointerup',pointerend);
+      viewport.removeEventListener('pointercancel',pointerend);
+      viewport.removeEventListener('lostpointercapture',pointerend);
+      viewport.removeEventListener('contextmenu',contextmenu);
+    };
+  },[]);
+
+  return <>
+    <div className="table-pan-hint">
+      <span id={instructionsId} className={hintVisible?'':'visually-hidden'}>Giữ Space + chuột phải để kéo bảng<span className="visually-hidden">. Dùng phím mũi tên, Page Up, Page Down, Home, End khi bảng được chọn.</span></span>
+      {hintVisible&&<Button size="small" appearance="subtle" icon={<Dismiss20Regular/>} aria-label="Ẩn hướng dẫn kéo bảng" onClick={()=>setHintVisible(false)}/>}
+    </div>
+    <div className="table-scroll" ref={viewportRef} role="region" aria-label="Cuộn bảng tài sản" aria-describedby={instructionsId} tabIndex={0}>{children}</div>
+  </>;
+}
+
 export default function App() {
   const [assets,setAssets] = useState<Asset[]>(initial);
   const [selectedId,setSelectedId] = useState('TS-001');
@@ -207,9 +310,6 @@ export default function App() {
   const [ack,setAck] = useState(false);
   const [workRevision,setWorkRevision] = useState(0);
   const [notice,setNotice] = useState('Dữ liệu minh họa; không kết nối máy chủ VALORA.');
-  const topScrollbar=useRef<HTMLDivElement>(null);
-  const tableScrollbar=useRef<HTMLDivElement>(null);
-  const syncing=useRef(false);
   const titleRef=useRef<HTMLHeadingElement>(null);
 
   const selected=assets.find(a=>a.id===selectedId) ?? assets[0];
@@ -312,13 +412,6 @@ export default function App() {
         proposed:a.manualPrice?a.proposed:suggestedPrice(survey,transport,transport!==null)};
     },field==='proposed'?'Đã sửa giá đề xuất':'Đã cập nhật dữ liệu khảo sát/gợi ý');
   };
-  const syncScroll=(from:'top'|'table')=>{
-    if(syncing.current)return; syncing.current=true;
-    const source=from==='top'?topScrollbar.current:tableScrollbar.current;
-    const target=from==='top'?tableScrollbar.current:topScrollbar.current;
-    if(source&&target)target.scrollLeft=source.scrollLeft;
-    requestAnimationFrame(()=>{syncing.current=false;});
-  };
   const moveFocusNext=(e:KeyboardEvent<HTMLButtonElement>,id:string)=>{
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
       e.preventDefault();const index=visible.findIndex(a=>a.id===id);
@@ -372,9 +465,9 @@ export default function App() {
                 <Select aria-label="Lọc tài sản" value={filter} onChange={(_,d)=>setFilter(d.value)}><option value="all">Tất cả</option><option value="unviewed">Chưa xem</option><option value="missing">Thiếu giá</option><option value="recheck">Cần kiểm tra lại</option></Select>
                 <span className="muted tiny">{visible.length} / {assets.length} dòng</span>
               </div>
-              <div className="top-scroll" ref={topScrollbar} onScroll={()=>syncScroll('top')} aria-label="Thanh cuộn ngang phía trên bảng" tabIndex={0}><div className="top-scroll-inner"/></div>
-              <div className="table-scroll" ref={tableScrollbar} onScroll={()=>syncScroll('table')}>
+              <AssetTableViewport>
                 <Table aria-label="Danh mục tài sản sơ bộ" size="small" className="asset-table">
+                  <colgroup>{['stt','name','specs','unit','quantity','customer-price','customer-amount','survey','proposed-price','proposed-amount','source','evidence','status'].map(column=><col key={column} className={`column-${column}`}/>)}</colgroup>
                   <TableHeader><TableRow>
                     <TableHeaderCell className="pin-stt">STT</TableHeaderCell>
                     <TableHeaderCell className="pin-name">Tài sản</TableHeaderCell>
@@ -395,7 +488,7 @@ export default function App() {
                     const count=a.sources.reduce((n,s)=>n+s.links.length+s.images.length,0);
                     return <TableRow className={`${a.id===selected.id?'selected-row':''}`} key={a.id}>
                       <TableCell className="pin-stt">{idx+1}</TableCell>
-                      <TableCell className="pin-name"><Button appearance="transparent" size="small" className="asset-link" onKeyDown={e=>moveFocusNext(e,a.id)} onClick={()=>gotoAsset(a.id)}><span>{a.name}</span><small>{a.id}</small></Button></TableCell>
+                      <TableCell className="pin-name"><Tooltip content={a.name} relationship="description"><Button appearance="transparent" size="small" className="asset-link" aria-label={`${a.name} · ${a.id}`} onKeyDown={e=>moveFocusNext(e,a.id)} onClick={()=>gotoAsset(a.id)}><span className="asset-name">{a.name}</span><small>{a.id}</small></Button></Tooltip></TableCell>
                       <TableCell className="spec-cell">{a.specs}</TableCell>
                       <TableCell>{a.unit}</TableCell><TableCell className="num">{a.qty}{a.qty!==a.originalQty&&<span title={`Excel gốc: ${a.originalQty}`} className="qty-mark">*</span>}</TableCell>
                       <TableCell className="num">{vnd(a.customerPrice)}</TableCell><TableCell className="num">{vnd(amount(a.customerPrice,a.qty))}</TableCell>
@@ -406,8 +499,8 @@ export default function App() {
                     </TableRow>;
                   })}</TableBody>
                 </Table>
-              </div>
-              <div className="grid-bottom"><span className="muted tiny">* SL nguồn khác giá trị Excel gốc · Cuộn ngang bảng bằng thanh trên hoặc dưới</span><span className="tiny muted">Giữ STT và tên tài sản khi cuộn</span></div>
+              </AssetTableViewport>
+              <div className="grid-bottom"><span className="muted tiny">* SL nguồn khác giá trị Excel gốc</span><span className="tiny muted">Giữ STT và tên tài sản khi cuộn</span></div>
             </section>
             {isDrawerOpen&&<InlineDrawer open={isDrawerOpen} position="end" size="large" className="asset-drawer">
               <DrawerHeader><DrawerHeaderTitle action={<Button appearance="subtle" size="small" icon={<Dismiss20Regular/>} onClick={()=>setDrawerOpen(false)} aria-label="Đóng chi tiết tài sản"/>}>
