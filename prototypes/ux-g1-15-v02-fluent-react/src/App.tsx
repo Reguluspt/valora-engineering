@@ -164,19 +164,23 @@ function SourceCard({source,onPrefer}: {source: Source; onPrefer?:()=>void}) {
 function SideNav({collapsed,onToggle,onShowSummary,onShowWorkbench,route}: {
   collapsed:boolean;onToggle:()=>void;onShowSummary:()=>void;onShowWorkbench:()=>void;route:Route;
 }) {
+  const navId=useId();
+  const toggleLabel=collapsed?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng';
   return <aside className={`sidebar ${collapsed?'collapsed':''}`} aria-label="Điều hướng VALORA">
+    <div className="sidebar-card">
     <div className="brand"><span className="brand-symbol">V</span>{!collapsed&&<span><strong>VALORA</strong><small>Thẩm định máy móc thiết bị</small></span>}</div>
-    <nav className="nav-block" aria-label="Điều hướng chính">
+    <nav id={navId} className="nav-block" aria-label="Điều hướng chính">
       {!collapsed&&<div className="nav-heading">KHÔNG GIAN LÀM VIỆC</div>}
-      <Tooltip content="Trang chủ (minh họa)" relationship="label"><Button appearance="subtle" icon={<Home20Regular/>} className="side-btn" disabled={!collapsed}>{!collapsed?'Trang chủ':''}</Button></Tooltip>
-      <Tooltip content="Phân tích danh mục" relationship="label"><Button appearance={route==='workbench'?'secondary':'subtle'} icon={<DocumentTable20Regular/>} className={`side-btn ${route==='workbench'?'nav-selected':''}`} onClick={onShowWorkbench}>{collapsed?'':'Phân tích danh mục'}</Button></Tooltip>
-      <Tooltip content="Tổng kết & phiên bản" relationship="label"><Button appearance={route==='summary'?'secondary':'subtle'} icon={<CheckmarkCircle20Regular/>} className={`side-btn ${route==='summary'?'nav-selected':''}`} onClick={onShowSummary}>{collapsed?'':'Tổng kết & phiên bản'}</Button></Tooltip>
+      <Tooltip content="Trang chủ (minh họa)" relationship="label" positioning="after"><Button appearance="subtle" icon={<Home20Regular/>} className="side-btn" disabled disabledFocusable>{!collapsed?'Trang chủ':''}</Button></Tooltip>
+      <Tooltip content="Phân tích danh mục" relationship="label" positioning="after"><Button appearance={route==='workbench'?'secondary':'subtle'} icon={<DocumentTable20Regular/>} className={`side-btn ${route==='workbench'?'nav-selected':''}`} aria-current={route==='workbench'?'page':undefined} onClick={onShowWorkbench}>{collapsed?'':'Phân tích danh mục'}</Button></Tooltip>
+      <Tooltip content="Tổng kết & phiên bản" relationship="label" positioning="after"><Button appearance={route==='summary'?'secondary':'subtle'} icon={<CheckmarkCircle20Regular/>} className={`side-btn ${route==='summary'?'nav-selected':''}`} aria-current={route==='summary'?'page':undefined} onClick={onShowSummary}>{collapsed?'':'Tổng kết & phiên bản'}</Button></Tooltip>
       {!collapsed&&<div className="nav-heading second">DỮ LIỆU THAM KHẢO</div>}
-      <Tooltip content="Kho tri thức: minh họa" relationship="label"><Button appearance="subtle" icon={<Database20Regular/>} className="side-btn" disabled>{collapsed?'':'Quản lý Kho tri thức'}</Button></Tooltip>
+      <Tooltip content="Kho tri thức: minh họa" relationship="label" positioning="after"><Button appearance="subtle" icon={<Database20Regular/>} className="side-btn" disabled disabledFocusable>{collapsed?'':'Quản lý Kho tri thức'}</Button></Tooltip>
     </nav>
     <div className="sidebar-bottom">
-      <Tooltip content={collapsed?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng'} relationship="label"><Button size="small" appearance="subtle" icon={<PanelRight20Regular/>} onClick={onToggle}>{collapsed?'':'Thu gọn'}</Button></Tooltip>
+      <Tooltip content={toggleLabel} relationship="label" positioning="after"><Button className="side-btn" appearance="subtle" aria-label={toggleLabel} aria-expanded={!collapsed} aria-controls={navId} icon={<PanelRight20Regular/>} onClick={onToggle}>{collapsed?'':'Thu gọn'}</Button></Tooltip>
       {!collapsed&&<span className="tiny muted">Prototype Fluent UI v9 · v02</span>}
+    </div>
     </div>
   </aside>;
 }
