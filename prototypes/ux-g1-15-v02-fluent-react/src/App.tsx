@@ -505,15 +505,30 @@ export default function App() {
             {isDrawerOpen&&<InlineDrawer open={isDrawerOpen} position="end" size="large" className="asset-drawer">
               <DrawerHeader><DrawerHeaderTitle action={<Button appearance="subtle" size="small" icon={<Dismiss20Regular/>} onClick={()=>setDrawerOpen(false)} aria-label="Đóng chi tiết tài sản"/>}>
                 <span className="drawer-eyebrow">Tài sản {selectedIndex+1}/{assets.length} · {selected.id}</span><span className="drawer-name">{selected.name}</span>
-              </DrawerHeaderTitle></DrawerHeader>
-              <DrawerBody className="drawer-scroll">
+              </DrawerHeaderTitle>
                 <div className="panel-chips"><Status asset={selected}/>{selected.viewed&&<Badge appearance="outline" color="informative" size="small">Đã xem</Badge>}{selected.match==='high'&&<Badge appearance="outline" size="small">Khớp đủ tin cậy</Badge>}</div>
                 <TabList selectedValue={detailTab} onTabSelect={(_,d)=>setDetailTab(d.value as DetailTab)} size="small" aria-label="Nội dung tài sản" className="detail-tabs"><Tab id={`${detailTabsId}-price-tab`} aria-controls={`${detailTabsId}-price-panel`} value="price">Giá & chứng cứ</Tab><Tab id={`${detailTabsId}-specs-tab`} aria-controls={`${detailTabsId}-specs-panel`} value="specs">Đặc điểm & SL</Tab><Tab id={`${detailTabsId}-history-tab`} aria-controls={`${detailTabsId}-history-panel`} value="history">Lịch sử</Tab></TabList>
+              </DrawerHeader>
+              <DrawerBody className="drawer-scroll">
                 {detailTab==='price'&&<section id={`${detailTabsId}-price-panel`} role="tabpanel" aria-labelledby={`${detailTabsId}-price-tab`} tabIndex={0} className="panel-stack" aria-label="Giá và chứng cứ">
+                  <section className="proposed-price" aria-label="Đơn giá đề xuất">
+                    <div className="proposed-value"><strong>{draftProposed!==null?(draftProposed.trim()===''?'—':draftProposed):vnd(selected.proposed)}</strong><span>đ / {selected.unit}</span></div>
+                    <div className="tiny muted">Số lượng: {selected.qty} {selected.unit}{draftProposed!==null?' · Đang nhập':''}</div>
+                    <Field label="Đơn giá đề xuất — nhân viên quyết định" hint={selected.manualPrice?'Giá đã được người dùng chỉnh; không tự ghi đè':'Có thể sửa độc lập với công thức gợi ý'}>
+                      <Input type="number" min={0} value={draftProposed??String(selected.proposed??'')} onChange={(_,d)=>setDraftProposed(d.value)} onBlur={()=>{if(draftProposed!==null){setOrCreateSource('proposed',draftProposed);setDraftProposed(null);}}}/>
+                    </Field>
+                  </section>
+                  <section className="price-basis" aria-label="Cơ sở gợi ý">
+                    <div className="two-fields">
+                      <Field label="Đơn giá khảo sát"><Input type="number" min={0} value={draftSurvey??String(selected.survey??'')} onChange={(_,d)=>{setDraftSurvey(d.value);}} onBlur={()=>{if(draftSurvey!==null){setOrCreateSource('survey',draftSurvey);setDraftSurvey(null);}}}/></Field>
+                      <Field label="Vận chuyển (%)" hint="Để trống nếu chưa rõ"><Input type="number" min={0} value={draftTransport??String(selected.transportPercent??'')} onChange={(_,d)=>setDraftTransport(d.value)} onBlur={()=>{if(draftTransport!==null){setOrCreateSource('transport',draftTransport);setDraftTransport(null);}}}/></Field>
+                    </div>
+                    <div className="suggestion">Gợi ý từ khảo sát + vận chuyển: <strong>{vnd(suggestedPrice(selected.survey,selected.transportPercent,selected.transportPercent!==null))} đ</strong></div>
+                  </section>
                   {selected.needsRecheck&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Cần kiểm tra lại nguồn</MessageBarTitle>Thông số/điều kiện nguồn chưa được xác nhận phù hợp. Không tự thay giá nhân viên.</MessageBarBody></MessageBar>}
                   {selected.id==='TS-001'&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Chênh lệch giữa các nguồn</MessageBarTitle>100 triệu và 145 triệu. Nhân viên xem xét trong bước rà soát này, không thêm bước phê duyệt giá.</MessageBarBody></MessageBar>}
                   {selected.sources.length===0?<div className="empty"><Database20Regular/><strong>Chưa có nguồn đủ tin cậy</strong><span>Tìm tài sản tương tự hoặc nhập thông tin khảo sát mới.</span></div>:<>
-                    <div className="section-title">Nguồn giá và chứng cứ</div>
+                    <div className="section-title">Nguồn giá và chứng cứ <span className="evidence-count">{selected.sources.length} nguồn · {selected.sources.reduce((n,s)=>n+s.links.length+s.images.length,0)} chứng cứ</span></div>
                     {selected.sources.map(s=><SourceCard source={s} key={s.id} onPrefer={()=>patch(selected.id,a=>({
                       ...a,survey:s.price,proposed:a.manualPrice?a.proposed:suggestedPrice(s.price,a.transportPercent,a.transportPercent!==null),
                       sources:a.sources.map(src=>({...src,isPrimary:src.id===s.id})),
@@ -536,16 +551,6 @@ export default function App() {
                       <option value="Chưa bao gồm vận chuyển">Chưa bao gồm</option><option value="Đã bao gồm vận chuyển">Đã bao gồm</option><option value="Chưa rõ vận chuyển">Chưa xác định</option>
                     </Select></Field>
                   </div>}
-                  <Divider/>
-                  <div className="section-title">Giá làm việc (VNĐ)</div>
-                  <div className="two-fields">
-                    <Field label="Đơn giá khảo sát"><Input type="number" min={0} value={draftSurvey??String(selected.survey??'')} onChange={(_,d)=>{setDraftSurvey(d.value);}} onBlur={()=>{if(draftSurvey!==null){setOrCreateSource('survey',draftSurvey);setDraftSurvey(null);}}}/></Field>
-                    <Field label="Vận chuyển (%)" hint="Để trống nếu chưa rõ"><Input type="number" min={0} value={draftTransport??String(selected.transportPercent??'')} onChange={(_,d)=>setDraftTransport(d.value)} onBlur={()=>{if(draftTransport!==null){setOrCreateSource('transport',draftTransport);setDraftTransport(null);}}}/></Field>
-                  </div>
-                  <div className="suggestion">Giá đề xuất gợi ý: <strong>{vnd(suggestedPrice(selected.survey,selected.transportPercent,selected.transportPercent!==null))} đ</strong></div>
-                  <Field label="Đơn giá đề xuất — người dùng quyết định" hint={selected.manualPrice?'Giá đã được người dùng chỉnh; không tự ghi đè':'Có thể sửa độc lập với công thức gợi ý'}>
-                    <Input type="number" min={0} value={draftProposed??String(selected.proposed??'')} onChange={(_,d)=>setDraftProposed(d.value)} onBlur={()=>{if(draftProposed!==null){setOrCreateSource('proposed',draftProposed);setDraftProposed(null);}}}/>
-                  </Field>
                   <div className="section-title">Diễn giải, liên kết và ảnh</div>
                   <Textarea resize="vertical" aria-label="Diễn giải và dán chứng cứ" placeholder="Nhập diễn giải, dán URL hoặc Ctrl+V ảnh trực tiếp. Không cần đăng ký chứng cứ lại." value={draftNote??selected.note} onChange={(_,d)=>{setDraftNote(d.value);}} onPaste={pasteEvidence} onBlur={()=>{if(draftNote!==null&&draftNote!==selected.note){patch(selected.id,a=>({...a,note:draftNote}),'Đã cập nhật diễn giải');changeTextEvidence(draftNote);setDraftNote(null);}}}/>
                   <div className="tiny muted">Ảnh dán được xem trước trong thẻ nguồn và cột chứng cứ; chỉ lưu tạm trong trang, tối đa 2 MB/ảnh. URL minh họa không phải nguồn xác minh thực tế.</div>
