@@ -219,3 +219,21 @@ button, input, select, textarea {font:inherit}
  .grid-toolbar .fui-Field {min-width:140px}
  .two-fields {grid-template-columns:1fr}
 }
+@media (max-width:767px) {
+ .app-layout {flex-direction:column}
+ .sidebar,.sidebar.collapsed {width:calc(100% - 2 * var(--spacingHorizontalM));flex:none;margin:var(--spacingVerticalM) var(--spacingHorizontalM)}
+ .sidebar .nav-block {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--spacingVerticalS) var(--spacingHorizontalS)}
+ .sidebar .nav-heading {grid-column:1 / -1;margin:var(--spacingVerticalS) var(--spacingHorizontalS)}
+ .sidebar .nav-heading.second {margin-top:var(--spacingVerticalS)}
+ .sidebar.collapsed .sidebar-card {flex-direction:row;justify-content:center;flex-wrap:wrap}
+ .sidebar.collapsed .brand {display:none}
+ .sidebar.collapsed .nav-block {display:flex;flex-direction:row}
+ .sidebar.collapsed .sidebar-bottom {flex-direction:row;padding:var(--spacingVerticalS) var(--spacingHorizontalS);border-top:0}
+ .app-main {overflow:visible}
+ .topbar {height:auto;min-height:var(--shell-topbar-height);flex-basis:auto;align-items:flex-start;gap:var(--spacingHorizontalS);padding:var(--spacingVerticalS) var(--spacingHorizontalM)}
+ .topbar .fui-Breadcrumb {flex:1;min-width:0;max-width:none}
+ .topbar ol {flex-wrap:wrap;row-gap:var(--spacingVerticalXS)}
+ .topbar-right {flex:none}
+ .demo-indicator {display:none}
+ .page-header {align-items:flex-start;flex-direction:column}
+}
