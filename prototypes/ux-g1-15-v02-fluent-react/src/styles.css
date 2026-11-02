@@ -219,7 +219,7 @@ button, input, select, textarea {font:inherit}
  .grid-toolbar .fui-Field {min-width:140px}
  .two-fields {grid-template-columns:1fr}
 }
-@media (max-width:767px) {
+@media (max-width:767px), (max-width:900px) and (pointer:coarse) {
  .app-layout {flex-direction:column}
  .sidebar,.sidebar.collapsed {width:calc(100% - 2 * var(--spacingHorizontalM));flex:none;margin:var(--spacingVerticalM) var(--spacingHorizontalM)}
  .sidebar .nav-block {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--spacingVerticalS) var(--spacingHorizontalS)}
@@ -236,4 +236,7 @@ button, input, select, textarea {font:inherit}
  .topbar-right {flex:none}
  .demo-indicator {display:none}
  .page-header {align-items:flex-start;flex-direction:column}
+}
+@media (max-width:900px) and (pointer:coarse) {
+ .topbar button,.header-actions button {min-height:var(--sidebar-target-size);min-width:var(--sidebar-target-size)}
 }
