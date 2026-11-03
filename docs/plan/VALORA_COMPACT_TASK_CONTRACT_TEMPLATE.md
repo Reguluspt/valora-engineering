@@ -23,6 +23,11 @@ Supporting template for the [current Agent Operating Protocol v2](VALORA_AGENT_O
 ## TASK-SPECIFIC REFERENCES
 `<Exact document sections, code paths and tests needed for this task>`
 
+## SELECTED SKILLS / AVAILABILITY
+`NONE | <skill name> — <purpose> — <source/commit> — <OPTIONAL/REQUIRED> — <FILES_INSTALLED_ONLY/DISCOVERED/CONTENT_LOADED/UNAVAILABLE/POLICY_BLOCKED> — <fallback>`
+
+Gate Owner selects only skills relevant to this task using [Task-scoped Codex skill routing](VALORA_AGENT_OPERATING_PROTOCOL_V2.md#task-scoped-codex-skill-routing-po-decision-2026-11-03). Codex records what was **actually discovered/used**; file installation is not activation proof. Missing an optional skill never waives the normal checks or blocks otherwise authorized implementation. A required skill absent at execution needs Gate Owner disposition. Do not bypass tool execution policy, install or update more skills, or modify product design based on an external skill.
+
 ## FRONTEND ARCHITECTURE APPLICABILITY
 `N/A | APPLIES` — `<scope-based reason>`
 
@@ -69,4 +74,6 @@ Record at interruption in task evidence, targeting approximately 150–250 token
 ```
 
 ## CLOSEOUT
+Report selected/used skills and availability (including `NOT VERIFIED` and fallback), without treating them as product test PASS. 
+
 Target approximately 300–500 tokens for Low/Medium and 500–800 for High/Security: task ID, baseline, files changed, policy/behavior changed, raw checks, limitations, local/remote HEAD, Draft PR/CI and `READY FOR GATE REVIEW: YES/NO`. Freeze one clean HEAD after the pre-freeze checks; required reviews and exact-head CI must certify that SHA. Gate Owner owns authorized Ready/expected-head guarded squash and exact-main certification. Ideal one final exact-head PR CI + one exact-main CI is a target; material findings justify renewed evidence.
