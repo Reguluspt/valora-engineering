@@ -74,6 +74,6 @@ Record at interruption in task evidence, targeting approximately 150–250 token
 ```
 
 ## CLOSEOUT
-Report selected/used skills and availability (including `NOT VERIFIED` and fallback), without treating them as product test PASS. 
+Report selected/used skills and availability (including `NOT VERIFIED` and fallback), without treating them as product test PASS.
 
 Target approximately 300–500 tokens for Low/Medium and 500–800 for High/Security: task ID, baseline, files changed, policy/behavior changed, raw checks, limitations, local/remote HEAD, Draft PR/CI and `READY FOR GATE REVIEW: YES/NO`. Freeze one clean HEAD after the pre-freeze checks; required reviews and exact-head CI must certify that SHA. Gate Owner owns authorized Ready/expected-head guarded squash and exact-main certification. Ideal one final exact-head PR CI + one exact-main CI is a target; material findings justify renewed evidence.
