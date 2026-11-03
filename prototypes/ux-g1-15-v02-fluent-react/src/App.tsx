@@ -1,5 +1,5 @@
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent, KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ClipboardEvent, KeyboardEvent, PropsWithChildren } from 'react';
 import {
   Badge, Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem,
   Button, Checkbox, Divider, DrawerBody, DrawerFooter, DrawerHeader,
@@ -161,24 +161,142 @@ function SourceCard({source,onPrefer}: {source: Source; onPrefer?:()=>void}) {
   </article>;
 }
 
-function SideNav({collapsed,onToggle,onShowSummary,onShowWorkbench,route}: {
+function SideNav({collapsed:desktopCollapsed,onToggle:toggleDesktop,onShowSummary,onShowWorkbench,route}: {
   collapsed:boolean;onToggle:()=>void;onShowSummary:()=>void;onShowWorkbench:()=>void;route:Route;
 }) {
-  return <aside className={`sidebar ${collapsed?'collapsed':''}`} aria-label="Điều hướng VALORA">
+  const navId=useId();
+  const mobileQuery=useMemo(()=>window.matchMedia('(max-width:900px) and (pointer:coarse)'),[]);
+  const [mobile,setMobile]=useState(mobileQuery.matches);
+  const [mobileExpanded,setMobileExpanded]=useState(false);
+  const toggleRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{
+    const update=()=>setMobile(mobileQuery.matches);
+    mobileQuery.addEventListener('change',update);
+    return ()=>mobileQuery.removeEventListener('change',update);
+  },[mobileQuery]);
+  const collapsed=mobile?!mobileExpanded:desktopCollapsed;
+  const onToggle=()=>mobile?setMobileExpanded(value=>!value):toggleDesktop();
+  const toggleLabel=collapsed?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng';
+  return <aside className={`sidebar ${collapsed?'collapsed':''}`} aria-label="Điều hướng VALORA" onKeyDown={event=>{if(event.key==='Escape'&&mobile&&mobileExpanded){setMobileExpanded(false);toggleRef.current?.focus();}}}>
+    <div className="sidebar-card">
     <div className="brand"><span className="brand-symbol">V</span>{!collapsed&&<span><strong>VALORA</strong><small>Thẩm định máy móc thiết bị</small></span>}</div>
-    <nav className="nav-block" aria-label="Điều hướng chính">
+    <nav id={navId} className="nav-block" aria-label="Điều hướng chính">
       {!collapsed&&<div className="nav-heading">KHÔNG GIAN LÀM VIỆC</div>}
-      <Tooltip content="Trang chủ (minh họa)" relationship="label"><Button appearance="subtle" icon={<Home20Regular/>} className="side-btn" disabled={!collapsed}>{!collapsed?'Trang chủ':''}</Button></Tooltip>
-      <Tooltip content="Phân tích danh mục" relationship="label"><Button appearance={route==='workbench'?'secondary':'subtle'} icon={<DocumentTable20Regular/>} className={`side-btn ${route==='workbench'?'nav-selected':''}`} onClick={onShowWorkbench}>{collapsed?'':'Phân tích danh mục'}</Button></Tooltip>
-      <Tooltip content="Tổng kết & phiên bản" relationship="label"><Button appearance={route==='summary'?'secondary':'subtle'} icon={<CheckmarkCircle20Regular/>} className={`side-btn ${route==='summary'?'nav-selected':''}`} onClick={onShowSummary}>{collapsed?'':'Tổng kết & phiên bản'}</Button></Tooltip>
+      <Tooltip content="Trang chủ (minh họa)" relationship="label" positioning={mobile?'above':'after'}><Button appearance="subtle" icon={<Home20Regular/>} className="side-btn" disabled disabledFocusable>{!collapsed?'Trang chủ':''}</Button></Tooltip>
+      <Tooltip content="Phân tích danh mục" relationship="label" positioning={mobile?'above':'after'}><Button appearance={route==='workbench'?'secondary':'subtle'} icon={<DocumentTable20Regular/>} className={`side-btn ${route==='workbench'?'nav-selected':''}`} aria-current={route==='workbench'?'page':undefined} onClick={onShowWorkbench}>{collapsed?'':'Phân tích danh mục'}</Button></Tooltip>
+      <Tooltip content="Tổng kết & phiên bản" relationship="label" positioning={mobile?'above':'after'}><Button appearance={route==='summary'?'secondary':'subtle'} icon={<CheckmarkCircle20Regular/>} className={`side-btn ${route==='summary'?'nav-selected':''}`} aria-current={route==='summary'?'page':undefined} onClick={onShowSummary}>{collapsed?'':'Tổng kết & phiên bản'}</Button></Tooltip>
       {!collapsed&&<div className="nav-heading second">DỮ LIỆU THAM KHẢO</div>}
-      <Tooltip content="Kho tri thức: minh họa" relationship="label"><Button appearance="subtle" icon={<Database20Regular/>} className="side-btn" disabled>{collapsed?'':'Quản lý Kho tri thức'}</Button></Tooltip>
+      <Tooltip content="Kho tri thức: minh họa" relationship="label" positioning={mobile?'above':'after'}><Button appearance="subtle" icon={<Database20Regular/>} className="side-btn" disabled disabledFocusable>{collapsed?'':'Quản lý Kho tri thức'}</Button></Tooltip>
     </nav>
     <div className="sidebar-bottom">
-      <Tooltip content={collapsed?'Mở rộng thanh điều hướng':'Thu gọn thanh điều hướng'} relationship="label"><Button size="small" appearance="subtle" icon={<PanelRight20Regular/>} onClick={onToggle}>{collapsed?'':'Thu gọn'}</Button></Tooltip>
+      <Tooltip content={toggleLabel} relationship="label" positioning={mobile?'above':'after'}><Button ref={toggleRef} className="side-btn" appearance="subtle" aria-label={toggleLabel} aria-expanded={!collapsed} aria-controls={navId} icon={<PanelRight20Regular/>} onPointerDown={event=>{if(mobile&&event.pointerType==='touch')event.preventDefault();}} onClick={onToggle}>{collapsed?'':'Thu gọn'}</Button></Tooltip>
       {!collapsed&&<span className="tiny muted">Prototype Fluent UI v9 · v02</span>}
     </div>
+    </div>
   </aside>;
+}
+
+function AssetTableViewport({children}: PropsWithChildren) {
+  const viewportRef=useRef<HTMLDivElement>(null);
+  const instructionsId=useId();
+  const [hintVisible,setHintVisible]=useState(true);
+
+  useEffect(()=>{
+    const viewport=viewportRef.current!;
+    const excluded='input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="combobox"],[role="button"],[role="link"],[role="menu"],[role="dialog"],[data-editing="true"]';
+    let spaceHeld=false;
+    let pointerTarget: EventTarget|null=null;
+    let drag: {id:number;x:number;y:number}|null=null;
+    let pendingContextMenu=false;
+    const blocked=(target:EventTarget|null)=>target instanceof Element&&!!target.closest(excluded);
+    const editing=()=>blocked(document.activeElement)||!!document.querySelector('[popover]:popover-open,[role="menu"],[role="dialog"][aria-modal="true"]');
+    const eligible=(target:EventTarget|null)=>target instanceof Node&&viewport.contains(target)&&!blocked(target)&&!editing();
+    const updateCursor=()=>{
+      viewport.classList.toggle('pan-ready',spaceHeld&&eligible(pointerTarget));
+      viewport.classList.toggle('panning',drag!==null);
+    };
+    const release=()=>{
+      const active=drag;
+      drag=null;
+      if(active&&viewport.hasPointerCapture(active.id))viewport.releasePointerCapture(active.id);
+      updateCursor();
+    };
+    const reset=()=>{spaceHeld=false;release();};
+    const keydown=(event:globalThis.KeyboardEvent)=>{
+      if(event.key==='Escape'){reset();return;}
+      if(event.code!=='Space'||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+      spaceHeld=true;
+      if(!editing()&&!blocked(pointerTarget)&&(eligible(pointerTarget)||document.activeElement===viewport))event.preventDefault();
+      updateCursor();
+    };
+    const keyup=(event:globalThis.KeyboardEvent)=>{if(event.code==='Space')reset();};
+    const pointerdown=(event:PointerEvent)=>{
+      pendingContextMenu=false;
+      pointerTarget=event.target;
+      if(event.pointerType!=='mouse'||event.button!==2||!spaceHeld)return;
+      if(!eligible(event.target)){
+        if(blocked(document.activeElement))event.preventDefault();
+        updateCursor();return;
+      }
+      event.preventDefault();
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY};
+      pendingContextMenu=true;
+      viewport.setPointerCapture(event.pointerId);
+      updateCursor();
+    };
+    const pointermove=(event:PointerEvent)=>{
+      pointerTarget=event.target;
+      if(!drag){updateCursor();return;}
+      if(event.pointerId!==drag.id)return;
+      if(!spaceHeld||(event.buttons&2)===0||editing()){release();return;}
+      event.preventDefault();
+      viewport.scrollLeft-=event.clientX-drag.x;
+      viewport.scrollTop-=event.clientY-drag.y;
+      drag.x=event.clientX;drag.y=event.clientY;
+    };
+    const pointerend=(event:PointerEvent)=>{if(event.pointerId===drag?.id)release();};
+    const pointerleave=()=>{pointerTarget=null;updateCursor();};
+    const contextmenu=(event:MouseEvent)=>{
+      if(event.button===2&&pendingContextMenu){event.preventDefault();pendingContextMenu=false;}
+    };
+    const focusin=()=>{if(editing())reset();};
+    const visibility=()=>{if(document.hidden)reset();};
+    document.addEventListener('keydown',keydown);
+    document.addEventListener('keyup',keyup);
+    document.addEventListener('focusin',focusin);
+    document.addEventListener('visibilitychange',visibility);
+    window.addEventListener('blur',reset);
+    viewport.addEventListener('pointerdown',pointerdown);
+    viewport.addEventListener('pointermove',pointermove);
+    viewport.addEventListener('pointerleave',pointerleave);
+    viewport.addEventListener('pointerup',pointerend);
+    viewport.addEventListener('pointercancel',pointerend);
+    viewport.addEventListener('lostpointercapture',pointerend);
+    viewport.addEventListener('contextmenu',contextmenu);
+    return ()=>{
+      reset();
+      document.removeEventListener('keydown',keydown);
+      document.removeEventListener('keyup',keyup);
+      document.removeEventListener('focusin',focusin);
+      document.removeEventListener('visibilitychange',visibility);
+      window.removeEventListener('blur',reset);
+      viewport.removeEventListener('pointerdown',pointerdown);
+      viewport.removeEventListener('pointermove',pointermove);
+      viewport.removeEventListener('pointerleave',pointerleave);
+      viewport.removeEventListener('pointerup',pointerend);
+      viewport.removeEventListener('pointercancel',pointerend);
+      viewport.removeEventListener('lostpointercapture',pointerend);
+      viewport.removeEventListener('contextmenu',contextmenu);
+    };
+  },[]);
+
+  return <>
+    <div className="table-pan-hint">
+      <span id={instructionsId} className={hintVisible?'':'visually-hidden'}>Giữ Space + chuột phải để kéo bảng<span className="visually-hidden">. Dùng phím mũi tên, Page Up, Page Down, Home, End khi bảng được chọn.</span></span>
+      {hintVisible&&<Button size="small" appearance="subtle" icon={<Dismiss20Regular/>} aria-label="Ẩn hướng dẫn kéo bảng" onClick={()=>setHintVisible(false)}/>}
+    </div>
+    <div className="table-scroll" ref={viewportRef} role="region" aria-label="Cuộn bảng tài sản" aria-describedby={instructionsId} tabIndex={0}>{children}</div>
+  </>;
 }
 
 export default function App() {
@@ -203,9 +321,6 @@ export default function App() {
   const [ack,setAck] = useState(false);
   const [workRevision,setWorkRevision] = useState(0);
   const [notice,setNotice] = useState('Dữ liệu minh họa; không kết nối máy chủ VALORA.');
-  const topScrollbar=useRef<HTMLDivElement>(null);
-  const tableScrollbar=useRef<HTMLDivElement>(null);
-  const syncing=useRef(false);
   const titleRef=useRef<HTMLHeadingElement>(null);
 
   const selected=assets.find(a=>a.id===selectedId) ?? assets[0];
@@ -308,13 +423,6 @@ export default function App() {
         proposed:a.manualPrice?a.proposed:suggestedPrice(survey,transport,transport!==null)};
     },field==='proposed'?'Đã sửa giá đề xuất':'Đã cập nhật dữ liệu khảo sát/gợi ý');
   };
-  const syncScroll=(from:'top'|'table')=>{
-    if(syncing.current)return; syncing.current=true;
-    const source=from==='top'?topScrollbar.current:tableScrollbar.current;
-    const target=from==='top'?tableScrollbar.current:topScrollbar.current;
-    if(source&&target)target.scrollLeft=source.scrollLeft;
-    requestAnimationFrame(()=>{syncing.current=false;});
-  };
   const moveFocusNext=(e:KeyboardEvent<HTMLButtonElement>,id:string)=>{
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
       e.preventDefault();const index=visible.findIndex(a=>a.id===id);
@@ -368,9 +476,9 @@ export default function App() {
                 <Select aria-label="Lọc tài sản" value={filter} onChange={(_,d)=>setFilter(d.value)}><option value="all">Tất cả</option><option value="unviewed">Chưa xem</option><option value="missing">Thiếu giá</option><option value="recheck">Cần kiểm tra lại</option></Select>
                 <span className="muted tiny">{visible.length} / {assets.length} dòng</span>
               </div>
-              <div className="top-scroll" ref={topScrollbar} onScroll={()=>syncScroll('top')} aria-label="Thanh cuộn ngang phía trên bảng" tabIndex={0}><div className="top-scroll-inner"/></div>
-              <div className="table-scroll" ref={tableScrollbar} onScroll={()=>syncScroll('table')}>
+              <AssetTableViewport>
                 <Table aria-label="Danh mục tài sản sơ bộ" size="small" className="asset-table">
+                  <colgroup>{['stt','name','specs','unit','quantity','customer-price','customer-amount','survey','proposed-price','proposed-amount','source','evidence','status'].map(column=><col key={column} className={`column-${column}`}/>)}</colgroup>
                   <TableHeader><TableRow>
                     <TableHeaderCell className="pin-stt">STT</TableHeaderCell>
                     <TableHeaderCell className="pin-name">Tài sản</TableHeaderCell>
@@ -391,7 +499,7 @@ export default function App() {
                     const count=a.sources.reduce((n,s)=>n+s.links.length+s.images.length,0);
                     return <TableRow className={`${a.id===selected.id?'selected-row':''}`} key={a.id}>
                       <TableCell className="pin-stt">{idx+1}</TableCell>
-                      <TableCell className="pin-name"><Button appearance="transparent" size="small" className="asset-link" onKeyDown={e=>moveFocusNext(e,a.id)} onClick={()=>gotoAsset(a.id)}><span>{a.name}</span><small>{a.id}</small></Button></TableCell>
+                      <TableCell className="pin-name"><Tooltip content={a.name} relationship="description"><Button appearance="transparent" size="small" className="asset-link" aria-label={`${a.name} · ${a.id}`} onKeyDown={e=>moveFocusNext(e,a.id)} onClick={()=>gotoAsset(a.id)}><span className="asset-name">{a.name}</span><small>{a.id}</small></Button></Tooltip></TableCell>
                       <TableCell className="spec-cell">{a.specs}</TableCell>
                       <TableCell>{a.unit}</TableCell><TableCell className="num">{a.qty}{a.qty!==a.originalQty&&<span title={`Excel gốc: ${a.originalQty}`} className="qty-mark">*</span>}</TableCell>
                       <TableCell className="num">{vnd(a.customerPrice)}</TableCell><TableCell className="num">{vnd(amount(a.customerPrice,a.qty))}</TableCell>
@@ -402,21 +510,36 @@ export default function App() {
                     </TableRow>;
                   })}</TableBody>
                 </Table>
-              </div>
-              <div className="grid-bottom"><span className="muted tiny">* SL nguồn khác giá trị Excel gốc · Cuộn ngang bảng bằng thanh trên hoặc dưới</span><span className="tiny muted">Giữ STT và tên tài sản khi cuộn</span></div>
+              </AssetTableViewport>
+              <div className="grid-bottom"><span className="muted tiny">* SL nguồn khác giá trị Excel gốc</span><span className="tiny muted">Giữ STT và tên tài sản khi cuộn</span></div>
             </section>
             {isDrawerOpen&&<InlineDrawer open={isDrawerOpen} position="end" size="large" className="asset-drawer">
               <DrawerHeader><DrawerHeaderTitle action={<Button appearance="subtle" size="small" icon={<Dismiss20Regular/>} onClick={()=>setDrawerOpen(false)} aria-label="Đóng chi tiết tài sản"/>}>
                 <span className="drawer-eyebrow">Tài sản {selectedIndex+1}/{assets.length} · {selected.id}</span><span className="drawer-name">{selected.name}</span>
-              </DrawerHeaderTitle></DrawerHeader>
-              <DrawerBody className="drawer-scroll">
+              </DrawerHeaderTitle>
                 <div className="panel-chips"><Status asset={selected}/>{selected.viewed&&<Badge appearance="outline" color="informative" size="small">Đã xem</Badge>}{selected.match==='high'&&<Badge appearance="outline" size="small">Khớp đủ tin cậy</Badge>}</div>
                 <TabList selectedValue={detailTab} onTabSelect={(_,d)=>setDetailTab(d.value as DetailTab)} size="small" aria-label="Nội dung tài sản" className="detail-tabs"><Tab id={`${detailTabsId}-price-tab`} aria-controls={`${detailTabsId}-price-panel`} value="price">Giá & chứng cứ</Tab><Tab id={`${detailTabsId}-specs-tab`} aria-controls={`${detailTabsId}-specs-panel`} value="specs">Đặc điểm & SL</Tab><Tab id={`${detailTabsId}-history-tab`} aria-controls={`${detailTabsId}-history-panel`} value="history">Lịch sử</Tab></TabList>
+              </DrawerHeader>
+              <DrawerBody className="drawer-scroll">
                 {detailTab==='price'&&<section id={`${detailTabsId}-price-panel`} role="tabpanel" aria-labelledby={`${detailTabsId}-price-tab`} tabIndex={0} className="panel-stack" aria-label="Giá và chứng cứ">
+                  <section className="proposed-price" aria-label="Đơn giá đề xuất">
+                    <div className="proposed-value"><strong>{draftProposed!==null?(draftProposed.trim()===''?'—':draftProposed):vnd(selected.proposed)}</strong><span>đ / {selected.unit}</span></div>
+                    <div className="tiny muted">Số lượng: {selected.qty} {selected.unit}{draftProposed!==null?' · Đang nhập':''}</div>
+                    <Field label="Đơn giá đề xuất — nhân viên quyết định" hint={selected.manualPrice?'Giá đã được người dùng chỉnh; không tự ghi đè':'Có thể sửa độc lập với công thức gợi ý'}>
+                      <Input type="number" min={0} value={draftProposed??String(selected.proposed??'')} onChange={(_,d)=>setDraftProposed(d.value)} onBlur={()=>{if(draftProposed!==null){setOrCreateSource('proposed',draftProposed);setDraftProposed(null);}}}/>
+                    </Field>
+                  </section>
+                  <section className="price-basis" aria-label="Cơ sở gợi ý">
+                    <div className="two-fields">
+                      <Field label="Đơn giá khảo sát"><Input type="number" min={0} value={draftSurvey??String(selected.survey??'')} onChange={(_,d)=>{setDraftSurvey(d.value);}} onBlur={()=>{if(draftSurvey!==null){setOrCreateSource('survey',draftSurvey);setDraftSurvey(null);}}}/></Field>
+                      <Field label="Vận chuyển (%)" hint="Để trống nếu chưa rõ"><Input type="number" min={0} value={draftTransport??String(selected.transportPercent??'')} onChange={(_,d)=>setDraftTransport(d.value)} onBlur={()=>{if(draftTransport!==null){setOrCreateSource('transport',draftTransport);setDraftTransport(null);}}}/></Field>
+                    </div>
+                    <div className="suggestion">Gợi ý từ khảo sát + vận chuyển: <strong>{vnd(suggestedPrice(selected.survey,selected.transportPercent,selected.transportPercent!==null))} đ</strong></div>
+                  </section>
                   {selected.needsRecheck&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Cần kiểm tra lại nguồn</MessageBarTitle>Thông số/điều kiện nguồn chưa được xác nhận phù hợp. Không tự thay giá nhân viên.</MessageBarBody></MessageBar>}
                   {selected.id==='TS-001'&&<MessageBar intent="warning"><MessageBarBody><MessageBarTitle>Chênh lệch giữa các nguồn</MessageBarTitle>100 triệu và 145 triệu. Nhân viên xem xét trong bước rà soát này, không thêm bước phê duyệt giá.</MessageBarBody></MessageBar>}
                   {selected.sources.length===0?<div className="empty"><Database20Regular/><strong>Chưa có nguồn đủ tin cậy</strong><span>Tìm tài sản tương tự hoặc nhập thông tin khảo sát mới.</span></div>:<>
-                    <div className="section-title">Nguồn giá và chứng cứ</div>
+                    <div className="section-title">Nguồn giá và chứng cứ <span className="evidence-count">{selected.sources.length} nguồn · {selected.sources.reduce((n,s)=>n+s.links.length+s.images.length,0)} chứng cứ</span></div>
                     {selected.sources.map(s=><SourceCard source={s} key={s.id} onPrefer={()=>patch(selected.id,a=>({
                       ...a,survey:s.price,proposed:a.manualPrice?a.proposed:suggestedPrice(s.price,a.transportPercent,a.transportPercent!==null),
                       sources:a.sources.map(src=>({...src,isPrimary:src.id===s.id})),
@@ -439,16 +562,6 @@ export default function App() {
                       <option value="Chưa bao gồm vận chuyển">Chưa bao gồm</option><option value="Đã bao gồm vận chuyển">Đã bao gồm</option><option value="Chưa rõ vận chuyển">Chưa xác định</option>
                     </Select></Field>
                   </div>}
-                  <Divider/>
-                  <div className="section-title">Giá làm việc (VNĐ)</div>
-                  <div className="two-fields">
-                    <Field label="Đơn giá khảo sát"><Input type="number" min={0} value={draftSurvey??String(selected.survey??'')} onChange={(_,d)=>{setDraftSurvey(d.value);}} onBlur={()=>{if(draftSurvey!==null){setOrCreateSource('survey',draftSurvey);setDraftSurvey(null);}}}/></Field>
-                    <Field label="Vận chuyển (%)" hint="Để trống nếu chưa rõ"><Input type="number" min={0} value={draftTransport??String(selected.transportPercent??'')} onChange={(_,d)=>setDraftTransport(d.value)} onBlur={()=>{if(draftTransport!==null){setOrCreateSource('transport',draftTransport);setDraftTransport(null);}}}/></Field>
-                  </div>
-                  <div className="suggestion">Giá đề xuất gợi ý: <strong>{vnd(suggestedPrice(selected.survey,selected.transportPercent,selected.transportPercent!==null))} đ</strong></div>
-                  <Field label="Đơn giá đề xuất — người dùng quyết định" hint={selected.manualPrice?'Giá đã được người dùng chỉnh; không tự ghi đè':'Có thể sửa độc lập với công thức gợi ý'}>
-                    <Input type="number" min={0} value={draftProposed??String(selected.proposed??'')} onChange={(_,d)=>setDraftProposed(d.value)} onBlur={()=>{if(draftProposed!==null){setOrCreateSource('proposed',draftProposed);setDraftProposed(null);}}}/>
-                  </Field>
                   <div className="section-title">Diễn giải, liên kết và ảnh</div>
                   <Textarea resize="vertical" aria-label="Diễn giải và dán chứng cứ" placeholder="Nhập diễn giải, dán URL hoặc Ctrl+V ảnh trực tiếp. Không cần đăng ký chứng cứ lại." value={draftNote??selected.note} onChange={(_,d)=>{setDraftNote(d.value);}} onPaste={pasteEvidence} onBlur={()=>{if(draftNote!==null&&draftNote!==selected.note){patch(selected.id,a=>({...a,note:draftNote}),'Đã cập nhật diễn giải');changeTextEvidence(draftNote);setDraftNote(null);}}}/>
                   <div className="tiny muted">Ảnh dán được xem trước trong thẻ nguồn và cột chứng cứ; chỉ lưu tạm trong trang, tối đa 2 MB/ảnh. URL minh họa không phải nguồn xác minh thực tế.</div>
@@ -485,28 +598,47 @@ export default function App() {
           </div>
           <div className="demo-scenarios"><span className="tiny muted">TÌNH HUỐNG THỬ NHANH (CHỈ CÓ TRONG PROTOTYPE)</span><Button size="small" appearance="subtle" onClick={()=>gotoAsset('TS-001')}>01 · Đã tự điền</Button><Button size="small" appearance="subtle" onClick={()=>gotoAsset('TS-002')}>02 · Thiếu nguồn</Button><Button size="small" appearance="subtle" onClick={()=>{gotoAsset('TS-003');setDetailTab('specs');}}>03 · Sửa đặc điểm</Button></div>
         </>:<section className="summary-screen" aria-label="Tổng kết kết quả sơ bộ">
-          <div className="summary-head"><h2>Kiểm tra trước khi xuất</h2><p className="muted">Các nhóm cảnh báo có thể chồng lấp. Không tự coi tài sản chưa xem là đã được rà soát.</p></div>
-          <div className="summary-cards">
-            <div><span>Đã xem</span><strong>{assets.length-summary.unviewed}/{assets.length}</strong></div>
-            <div><span>Chưa xem</span><strong>{summary.unviewed}</strong></div>
-            <div><span>Thiếu đơn giá</span><strong>{summary.missingPrice}</strong></div>
-            <div><span>Thiếu chứng cứ</span><strong>{summary.missingEvidence}</strong></div>
-            <div><span>Cần kiểm tra lại</span><strong>{summary.recheck}</strong></div>
-          </div>
-          <div className="summary-columns"><section className="summary-panel"><h3>Các tài sản cần chú ý</h3>
-            {assets.filter(a=>!a.viewed||a.proposed===null||a.needsRecheck).map(a=><div className="summary-row" key={a.id}><div><strong>{a.name}</strong><small>{a.id} · {[!a.viewed?'Chưa xem':'',a.proposed===null?'Thiếu giá':'',a.needsRecheck?'Cần kiểm tra nguồn':''].filter(Boolean).join(' · ')}</small></div><Button size="small" appearance="secondary" onClick={()=>rowDisplayLink(a.id)}>Xử lý</Button></div>)}
+          <div className="summary-head"><p>Các nhóm cảnh báo có thể chồng lấp. Tài sản chưa xem chưa được coi là đã rà soát.</p></div>
+          <dl className="summary-cards" aria-label="Thống kê rà soát">
+            {[
+              {label:'Đã xem',value:`${assets.length-summary.unviewed}/${assets.length}`,tone:'progress'},
+              {label:'Chưa xem',value:summary.unviewed,tone:'neutral'},
+              {label:'Thiếu đơn giá',value:summary.missingPrice,tone:'warning'},
+              {label:'Thiếu chứng cứ',value:summary.missingEvidence,tone:'warning'},
+              {label:'Cần kiểm tra lại',value:summary.recheck,tone:'warning'},
+            ].map(kpi=><div key={kpi.label} data-tone={kpi.tone}><dt>{kpi.label}</dt><dd>{kpi.value}</dd></div>)}
+          </dl>
+          <div className="summary-columns"><section className="summary-panel summary-attention" aria-labelledby="summary-attention-title">
+            <div className="summary-section-head"><h2 id="summary-attention-title">Các tài sản cần chú ý</h2><p>Chọn Xử lý để quay về đúng tài sản trong danh mục.</p></div>
+            <div className="summary-attention-scroll" role="region" aria-label="Danh sách tài sản cần chú ý" tabIndex={0}>
+              <ul className="summary-list">
+                {assets.filter(a=>!a.viewed||a.proposed===null||a.needsRecheck).map(a=><li className="summary-row" key={a.id}>
+                  <div className="summary-asset"><span className="summary-asset-id">{a.id}</span><strong>{a.name}</strong><div className="summary-reasons">
+                    {a.proposed===null&&<span>Thiếu đơn giá</span>}{a.needsRecheck&&<span>Cần kiểm tra nguồn</span>}{!a.viewed&&<span>Chưa xem</span>}
+                  </div></div>
+                  <Button appearance="secondary" aria-label={`Xử lý ${a.id}`} onClick={()=>rowDisplayLink(a.id)}>Xử lý</Button>
+                </li>)}
+              </ul>
+              <div className="summary-empty"><CheckmarkCircle20Regular/><strong>Không có tài sản cần chú ý trong danh sách này</strong><p>Bạn vẫn cần xem các chỉ số cảnh báo trước khi xác nhận phiên bản minh họa.</p></div>
+            </div>
             <MessageBar intent="warning"><MessageBarBody>Đơn giá chưa xác định được để trống và không tính vào tổng giá trị đã xác định. Cảnh báo trong OS-G1 không đồng nghĩa quyết định thẩm định cuối.</MessageBarBody></MessageBar>
-          </section><section className="summary-panel"><h3>Xem trước kết quả</h3>
-            <div className="total-price"><span>Tổng thành tiền đề xuất đã xác định</span><strong>{vnd(total)} đ</strong><small>Chỉ cộng dòng có giá và số lượng xác định; không có dòng chứng cứ phụ.</small></div>
+          </section><section className="summary-panel summary-preview" aria-labelledby="summary-preview-title">
+            <div className="summary-section-head"><h2 id="summary-preview-title">Xem trước kết quả</h2><p>Kết quả sơ bộ · Dữ liệu minh họa</p></div>
+            <div className="total-price"><span>Tổng thành tiền đề xuất đã xác định</span><strong>{vnd(total)} <span>đ</span></strong><small>Chỉ cộng dòng có giá và số lượng xác định. Dòng thiếu đơn giá được loại khỏi tổng, không coi là giá 0; không cộng dòng chứng cứ phụ.</small></div>
             <div className="summary-meta"><span>Phiên bản đã xác nhận (mô phỏng)</span><strong>{exportedVersion?`v${String(exportedVersion).padStart(2,'0')}`:'Chưa có'}</strong></div>
-            {changedSinceExport&&<Badge appearance="tint" color="warning">Có thay đổi chưa xuất thành phiên bản mới</Badge>}
+            {changedSinceExport&&<MessageBar intent="warning"><MessageBarBody>Có thay đổi chưa xuất thành phiên bản mới</MessageBarBody></MessageBar>}
             <Divider/>
-            <Checkbox checked={ack} onChange={(_,d)=>setAck(d.checked===true)} label="Tôi đã xem cảnh báo và xác nhận sử dụng dữ liệu hiện tại cho kết quả sơ bộ (mô phỏng)."/>
-            <Button appearance="primary" disabled={!ack} onClick={finalizeVersion}>Xác nhận phiên bản minh họa</Button>
-            <span className="tiny muted">Không tạo tệp Excel thật. Bản triển khai sau này phải xuất một bảng Excel có URL và ảnh chứng cứ nhúng, lưu snapshot độc lập.</span>
+            <div className="summary-confirmation">
+              <Checkbox checked={ack} onChange={(_,d)=>setAck(d.checked===true)} label="Tôi đã xem cảnh báo và xác nhận sử dụng dữ liệu hiện tại cho kết quả sơ bộ (mô phỏng)."/>
+              <Button appearance="primary" disabled={!ack} onClick={finalizeVersion}>Xác nhận phiên bản minh họa</Button>
+              <p>Chỉ mô phỏng trong bộ nhớ trang, không lưu máy chủ. Đây không phải “Chấp nhận làm cơ sở thẩm định”.</p>
+              <p>Không tạo tệp Excel thật. Bản triển khai sau này phải xuất một bảng Excel có URL và ảnh chứng cứ nhúng, lưu snapshot độc lập.</p>
+            </div>
             <Divider/>
-            <h3>Lịch sử phiên bản (bộ nhớ trang)</h3>
-            {exportedVersion===0?<p className="muted">Chưa có phiên bản được tạo trong mô phỏng.</p>:Array.from({length:exportedVersion},(_,i)=><div className="summary-row" key={i}><strong>Phiên bản v{String(exportedVersion-i).padStart(2,'0')}</strong><Badge appearance="outline" color="informative">Bản chụp minh họa</Badge></div>)}
+            <section className="summary-history" aria-labelledby="summary-history-title">
+              <h3 id="summary-history-title">Lịch sử phiên bản (bộ nhớ trang)</h3>
+              {exportedVersion===0?<p>Chưa có phiên bản được tạo trong mô phỏng.</p>:<ol className="summary-history-list">{Array.from({length:exportedVersion},(_,i)=><li className="summary-row" key={i}><strong>Phiên bản v{String(exportedVersion-i).padStart(2,'0')}</strong><Badge appearance="outline" color="informative">Bản chụp minh họa</Badge></li>)}</ol>}
+            </section>
           </section></div>
         </section>}
         <footer className="page-footer"><span>VALORA UX-G1.15 v02 · Fluent UI React v9 · Dữ liệu hoàn toàn giả lập</span><span>Prototype duyệt giao diện, không phải UAT #203</span></footer>
