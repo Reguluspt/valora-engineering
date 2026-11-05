@@ -3,7 +3,7 @@ import { act, create } from "react-test-renderer";
 import { expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ session: {} as any, page: vi.fn() }));
 vi.mock("../auth/SessionProvider", () => ({ SessionProvider: ({ children }: any) => children, useSession: () => mocks.session }));
-vi.mock("../components/layout/AppShell", () => ({ AppShell: ({ children }: any) => <main>{children}</main> }));
+vi.mock("../components/layout/AppShell", () => ({ AppShell: ({ children, utilityActions }: any) => <main>{utilityActions}{children}</main> }));
 vi.mock("../components/case-overview/useStageNavigation", () => ({ useStageNavigation: () => false }));
 vi.mock("../components/precase/PreliminaryRequestCreatePage", () => ({ PreliminaryRequestCreatePage: (props: any) => { mocks.page(props); return <p>Create</p>; } }));
 import { APP_ROUTES } from "../contracts/valoraV23";

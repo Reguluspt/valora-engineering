@@ -1,4 +1,38 @@
+.app-container.fui-FluentProvider,
+.app-container .fui-FluentProvider {
+  --fontFamilyBase: var(--valora-font-family-base);
+  --fontSizeBase300: var(--valora-font-size-body);
+  --lineHeightBase300: var(--valora-line-height-body);
+  --colorNeutralForeground1: var(--valora-color-text-primary);
+  --colorNeutralForeground2: var(--valora-color-text-secondary);
+  --colorNeutralForeground3: var(--valora-color-text-subtle);
+  --colorNeutralForegroundDisabled: var(--valora-color-text-disabled);
+  --colorNeutralBackground1: var(--valora-color-surface-primary);
+  --colorNeutralBackground2: var(--valora-color-surface-secondary);
+  --colorNeutralBackground3: var(--valora-color-surface-subtle);
+  --colorNeutralStroke1: var(--valora-color-border-default);
+  --colorNeutralStroke2: var(--valora-color-border-subtle);
+  --colorBrandBackground: var(--valora-color-action-primary-background);
+  --colorBrandBackgroundHover: var(--valora-color-action-primary-hover);
+  --colorBrandBackgroundPressed: var(--valora-color-action-primary-pressed);
+  --colorBrandBackgroundSelected: var(--valora-color-action-primary-pressed);
+  --colorBrandBackground2: var(--valora-color-surface-selected);
+  --colorBrandForeground1: var(--valora-color-brand-foreground);
+  --colorBrandForeground2: var(--valora-color-brand-foreground);
+  --colorBrandStroke1: var(--valora-color-brand-background);
+  --colorCompoundBrandBackground: var(--valora-color-brand-background);
+  --colorCompoundBrandBackgroundHover: var(--valora-color-brand-hover);
+  --colorCompoundBrandBackgroundPressed: var(--valora-color-brand-pressed);
+  --borderRadiusMedium: var(--valora-radius-control);
+  --borderRadiusLarge: var(--valora-radius-surface);
+  --borderRadiusXLarge: var(--valora-radius-large);
+}
+
 .valora-button {
+  display: inline-flex;
+  gap: var(--valora-space-sm);
+  align-items: center;
+  justify-content: center;
   min-height: var(--valora-control-height);
   padding: 0 var(--valora-space-md);
   border: 1px solid transparent;
@@ -6,21 +40,22 @@
   background: var(--valora-color-surface-primary);
   color: var(--valora-color-text-primary);
   cursor: pointer;
+  text-decoration: none;
   font: var(--valora-font-weight-semibold) var(--valora-font-size-body) / var(--valora-line-height-body) var(--valora-font-family-base);
   transition: background-color var(--valora-transition-fast), border-color var(--valora-transition-fast), color var(--valora-transition-fast);
 }
 
 .valora-button--primary {
-  background: var(--valora-color-brand-background);
+  background: var(--valora-color-action-primary-background);
   color: var(--valora-color-text-inverse);
 }
 
 .valora-button--primary:hover {
-  background: var(--valora-color-brand-hover);
+  background: var(--valora-color-action-primary-hover);
 }
 
 .valora-button--primary:active {
-  background: var(--valora-color-brand-pressed);
+  background: var(--valora-color-action-primary-pressed);
 }
 
 .valora-button--secondary {
@@ -181,10 +216,15 @@
 }
 
 .valora-table-shell {
+  min-width: 0;
+  max-width: 100%;
   overflow: auto;
   border: 1px solid var(--valora-color-border-subtle);
   border-radius: var(--valora-radius-surface);
   background: var(--valora-color-surface-primary);
+  box-shadow: var(--valora-shadow-rest);
+  scrollbar-width: thin;
+  scrollbar-color: var(--valora-color-border-default) var(--valora-color-surface-secondary);
 }
 
 .valora-table {
@@ -192,6 +232,7 @@
   border-collapse: collapse;
   color: var(--valora-color-text-primary);
   font-size: var(--valora-font-size-data);
+  font-variant-numeric: tabular-nums;
 }
 
 .valora-table th {
@@ -221,6 +262,7 @@
 .valora-panel,
 .valora-drawer {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   border: 1px solid var(--valora-color-border-subtle);
   background: var(--valora-color-surface-elevated);
@@ -247,6 +289,7 @@
 .valora-panel__body,
 .valora-drawer__body {
   flex: 1;
+  min-width: 0;
   padding: var(--valora-space-lg);
 }
 
@@ -331,9 +374,11 @@
 
 .valora-form fieldset {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--valora-space-sm);
   border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-control);
   padding: var(--valora-space-md);
 }
 .valora-form-grid {

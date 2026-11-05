@@ -160,10 +160,28 @@ export function CaseOverviewContent({
             <div className="case-overview-section-heading">
               <div>
                 <p>Luồng hồ sơ</p>
-                <h2 id="case-progress-title">Tiến độ các bước bắt buộc</h2>
+                <h2 id="case-progress-title">Hành trình hồ sơ</h2>
               </div>
               <span>{projection.stages.length} bước theo thứ tự hệ thống</span>
             </div>
+            <div className="case-journey" aria-label="Tiến độ chi tiết theo nhóm">
+              {PROGRESS_GROUPS.map((group) => {
+                const stages = projection.stages.filter((stage) => group.stageKeys.includes(stage.stage));
+                const complete = stages.filter((stage) => stage.result === "COMPLETE").length;
+                const isCurrent = group.stageKeys.includes(projection.current_stage);
+                const unavailable = stages.length === group.stageKeys.length && stages.every((stage) => stage.result === "NOT_AVAILABLE");
+                return <div className="case-journey-step" data-current={isCurrent || undefined} key={group.label}>
+                  <div className="case-group-track" role="progressbar" aria-label={group.label}
+                    aria-valuemin={0} aria-valuemax={group.stageKeys.length} aria-valuenow={complete}>
+                    <span style={{ width: `${Math.round((complete / group.stageKeys.length) * 100) || 0}%` }} />
+                  </div>
+                  <strong>{group.label}</strong>
+                  <span>{unavailable ? "Chưa khả dụng" : `${complete}/${group.stageKeys.length} hoàn tất`}{isCurrent ? " · Bước hiện tại" : ""}</span>
+                </div>;
+              })}
+            </div>
+            <details className="case-stage-details">
+            <summary>Xem {projection.stages.length} bước và trạng thái chi tiết</summary>
             <div className="case-stage-list">
               {projection.stages.map((stage, index) => {
                 const capability = projection.capabilities.find((item) => item.stage === stage.stage);
@@ -190,26 +208,10 @@ export function CaseOverviewContent({
                 <span className={`case-stage-legend-item case-stage-legend-item--${result.toLowerCase().replace(/_/g, "-")}`} key={result}>{CASE_RESULT_LABELS[result]}</span>
               ))}
             </div>
+            </details>
           </section>
 
           <div className="case-overview-detail-grid">
-          <section className="case-overview-section case-group-progress" aria-labelledby="case-group-progress-title">
-            <div className="case-overview-section-heading"><h2 id="case-group-progress-title">Tiến độ chi tiết theo nhóm</h2></div>
-            <div className="case-group-list">
-              {PROGRESS_GROUPS.map((group) => {
-                const stages = projection.stages.filter((stage) => group.stageKeys.includes(stage.stage));
-                const complete = stages.filter((stage) => stage.result === "COMPLETE").length;
-                return <div className="case-group-row" key={group.label}>
-                  <span>{group.label}</span>
-                  <div className="case-group-track" role="progressbar" aria-label={group.label} aria-valuemin={0} aria-valuemax={group.stageKeys.length} aria-valuenow={complete}>
-                    <span style={{ width: `${Math.round((complete / group.stageKeys.length) * 100) || 0}%` }} />
-                  </div>
-                  <strong>{complete}/{group.stageKeys.length}</strong>
-                </div>;
-              })}
-            </div>
-          </section>
-
           <div className="case-issue-grid">
             <IssueSection
               kind="blocking"
@@ -223,7 +225,7 @@ export function CaseOverviewContent({
               emptyText="Không có cảnh báo đang mở."
               issues={projection.warnings}
             />
-            <section className="case-issue-section case-issue-section--stale">
+            <section className={`case-issue-section case-issue-section--stale${projection.stale.length ? "" : " case-issue-section--empty"}`}>
               <div className="case-issue-heading">
                 <h2>Dữ liệu cần xem lại</h2>
                 <span>{projection.stale.length}</span>
@@ -316,7 +318,7 @@ function IssueSection({
   issues: CaseStateIssue[];
 }) {
   return (
-    <section className={`case-issue-section case-issue-section--${kind}`}>
+    <section className={`case-issue-section case-issue-section--${kind}${issues.length ? "" : " case-issue-section--empty"}`}>
       <div className="case-issue-heading">
         <h2>{title}</h2>
         <span>{issues.length}</span>

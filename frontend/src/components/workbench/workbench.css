@@ -1,3 +1,25 @@
+.workbench-container {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workbench-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workbench-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--valora-color-border-subtle);
+  background: var(--valora-color-surface-primary);
+}
+
 .workbench-page-state {
   padding: var(--valora-space-3xl);
   color: var(--valora-color-text-secondary);
@@ -17,7 +39,9 @@
 .workbench-summary {
   display: flex;
   min-height: 54px;
-  border-bottom: 1px solid var(--valora-color-border-subtle);
+  border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-surface);
+  margin: 0 var(--valora-space-xl) var(--valora-space-md);
   background: var(--valora-color-surface-primary);
 }
 
@@ -284,6 +308,17 @@
 .workbench-body {
   position: relative;
   min-height: min(280px, 40vh);
+  height: auto;
+  display: grid;
+  flex: 1;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--valora-space-lg);
+  padding: var(--valora-space-md) var(--valora-space-xl);
+}
+
+.workbench-body--with-detail {
+  grid-template-columns: minmax(0, 1fr) var(--valora-workspace-detail-width);
 }
 
 .grid-toolbar, .workbench-load-more {
@@ -313,8 +348,12 @@
 .workbench-grid-pane {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
-  border-right: 0;
+  padding: var(--valora-space-lg);
+  border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-surface);
+  background: var(--valora-color-surface-primary);
   overflow: hidden;
 }
 
@@ -329,17 +368,58 @@
 }
 
 .workbench-drawer-layer {
-  position: absolute;
-  inset: 0 0 0 auto;
-  z-index: 20;
-  width: min(440px, 100%);
-  box-shadow: var(--valora-shadow-overlay);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--valora-color-border-subtle);
+  border-radius: var(--valora-radius-surface);
+  background: var(--valora-color-surface-primary);
 }
 
 .asset-context-drawer {
   height: 100%;
   border-right: 0;
   overflow: hidden;
+}
+
+
+.workbench-container .workbench-header {
+  height: auto;
+  min-height: 76px;
+  flex-shrink: 0;
+  gap: var(--valora-space-md);
+  padding: var(--valora-space-lg) var(--valora-space-xl);
+  border-bottom: 0;
+  background: var(--valora-color-canvas);
+}
+
+.workbench-header .project-title {
+  color: var(--valora-color-text-primary);
+  font-size: var(--valora-font-size-page-title);
+  line-height: var(--valora-line-height-page-title);
+}
+
+.workbench-header .project-status-bar { flex-wrap: wrap; justify-content: flex-end; gap: var(--valora-space-sm); }
+.workbench-container .workbench-footer { height: auto; min-height: 48px; flex-shrink: 0; gap: var(--valora-space-sm); flex-wrap: wrap; padding: var(--valora-space-sm) var(--valora-space-xl); }
+
+@media (max-width: 1180px) {
+  .workbench-body--with-detail { grid-template-columns: minmax(0, 1fr); }
+  .workbench-body--with-detail .workbench-grid-pane { display: none; }
+  .workbench-drawer-layer { width: auto; }
+}
+
+@media (max-width: 680px) {
+  .workbench-container { overflow-y: auto; }
+  .workbench-container .workbench-header { align-items: flex-start; flex-direction: column; padding: var(--valora-space-md); }
+  .workbench-header .project-status-bar { justify-content: flex-start; font-size: var(--valora-font-size-caption); }
+  .workbench-summary { margin-right: var(--valora-space-md); margin-left: var(--valora-space-md); flex-wrap: wrap; }
+  .workbench-summary > div { min-width: 0; flex: 1; flex-direction: column; align-items: flex-start; padding: var(--valora-space-sm); }
+  .workbench-command-bar { padding: var(--valora-space-sm) var(--valora-space-md); }
+  .workbench-body { padding: var(--valora-space-sm) var(--valora-space-md); flex: none; min-height: 60vh; }
+  .workbench-grid-pane { padding: var(--valora-space-sm); }
+  .workbench-stage-regions { flex: none; max-height: 36vh; }
+  .grid-toolbar .valora-select { min-width: 0; width: 100%; }
+  .grid-scroll-hint { white-space: normal; }
 }
 
 .asset-context-provider {

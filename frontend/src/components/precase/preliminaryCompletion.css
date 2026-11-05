@@ -11,7 +11,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--valora-space-xl);
-  margin-bottom: var(--valora-space-md);
+  margin-bottom: var(--valora-space-lg);
 }
 
 .precase-completion-header p {
@@ -45,17 +45,17 @@
 
 .precase-completion-strip > div {
   min-width: 0;
-  padding: var(--valora-space-sm) var(--valora-space-md);
+  padding: var(--valora-space-lg);
 }
 
 .precase-completion-strip > div + div { border-left: 1px solid var(--valora-color-border-subtle); }
 .precase-completion-strip span { display: block; color: var(--valora-color-text-subtle); font-size: var(--valora-font-size-caption); }
-.precase-completion-strip strong { display: block; margin-top: var(--valora-space-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--valora-font-size-body); }
+.precase-completion-strip strong { display: block; margin-top: var(--valora-space-xs); overflow-wrap: anywhere; font-size: var(--valora-font-size-body); }
 
 .precase-completion-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 19rem;
-  gap: var(--valora-space-md);
+  gap: var(--valora-space-lg);
   align-items: start;
 }
 

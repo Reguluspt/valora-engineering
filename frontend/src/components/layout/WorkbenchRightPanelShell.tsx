@@ -34,6 +34,16 @@ export function WorkbenchRightPanelShell({ asset, contextData, loading, error, o
   const currentContext = contextData?.project_asset_line_id === asset.project_asset_line_id ? contextData : undefined;
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(max-width: 1180px)");
+    const keepFocusVisible = () => {
+      if (media.matches && document.activeElement?.closest(".workbench-grid-pane")) closeRef.current?.focus();
+    };
+    media.addEventListener("change", keepFocusVisible);
+    return () => media.removeEventListener("change", keepFocusVisible);
+  }, []);
+
+  useEffect(() => {
     setSection(focusPrice ? "price" : "information");
     if (focusPrice) priceRef.current?.focus(); else closeRef.current?.focus();
   }, [asset.project_asset_line_id, focusPrice]);
@@ -68,7 +78,7 @@ export function WorkbenchRightPanelShell({ asset, contextData, loading, error, o
 
   return (
     <FluentProvider theme={webLightTheme} className="asset-context-provider"><aside className="valora-drawer asset-context-drawer" aria-labelledby="asset-context-title"
-      onKeyDown={event => { if (event.key === "Escape" && !(event.target as HTMLElement).closest('[role="dialog"]')) onClose(); }}>
+      onKeyDown={event => { if (event.key === "Escape" && !(event.target as HTMLElement).closest('[role="dialog"]')) { event.preventDefault(); onClose(); } }}>
       <div className="valora-drawer__header asset-context-drawer__header">
         <div>
           <span className="asset-context-drawer__eyebrow">Ngữ cảnh tài sản · Dòng {asset.line_no}</span>
