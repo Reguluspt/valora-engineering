@@ -50,6 +50,21 @@ function buildProjection(): CaseStateResponse {
 }
 
 describe("CaseOverviewContent", () => {
+  it("keeps unavailable stages truthful in the compact journey without calling the current stage in progress", () => {
+    const projection = buildProjection();
+    projection.current_stage = "ASSET_REVIEW";
+    let root: ReturnType<typeof create>;
+    act(() => {
+      root = create(<CaseOverviewContent projectName="Hồ sơ kiểm thử" projection={projection}
+        projectRef="project-1" onNavigate={vi.fn()} />);
+    });
+    const current = root!.root.findByProps({ "data-current": true });
+    const content = JSON.stringify(current.findAllByType("span").map(node => node.children));
+    expect(content).toContain("Chưa khả dụng");
+    expect(content).toContain("Bước hiện tại");
+    expect(content).not.toContain("Đang thực hiện");
+    expect(root!.root.findAll(node => Boolean(node.props["data-case-stage"]))).toHaveLength(16);
+  });
   it.each(["validate", "apply"] as const)("focuses the same-screen %s feature without navigation or command", kind => {
     const p = importProjection(kind), open = vi.fn(), navigate = vi.fn();
     let root: ReturnType<typeof create>;

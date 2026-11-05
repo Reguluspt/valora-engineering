@@ -153,8 +153,8 @@ export function AuthenticatedApp() {
       supplierSelectionAvailable={supplierSelectionAvailable}
       onLogout={() => { clearCreatePayloads(); void logout(); }}
       onNavigate={handleNavigate}
+      utilityActions={<button className="valora-button valora-button--subtle" onClick={() => handleNavigate(APP_ROUTES.preliminaryRequestCreate)} type="button">Khôi phục yêu cầu sơ bộ</button>}
     >
-      <button className="valora-button valora-button--secondary" onClick={() => handleNavigate(APP_ROUTES.preliminaryRequestCreate)}>Khôi phục yêu cầu sơ bộ</button>
       {renderRoute()}
     </AppShell>
   );

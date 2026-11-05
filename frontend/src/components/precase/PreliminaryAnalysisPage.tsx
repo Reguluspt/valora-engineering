@@ -13,6 +13,7 @@ import { ErrorState } from "../common/ErrorState";
 import { LoadingState } from "../common/LoadingState";
 import { useResolvedProject } from "../workbench/project-context";
 import { analysisContextReady, buildAnalysisManifest, draftFromStaging, sourceQuantityValid, type AnalysisDraft } from "./analysisReviewModel";
+import { PreliminaryAnalysisWorkspace } from "./PreliminaryAnalysisWorkspace";
 import "./precase.css";
 
 interface AnalysisData {
@@ -120,7 +121,6 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmDialogRef = useRef<HTMLDialogElement>(null);
-  const [pageIndex, setPageIndex] = useState(0);
   const pendingRef = useRef<PendingAttempt | null>(readPending(projectId));
   const [uncertain, setUncertain] = useState(Boolean(pendingRef.current));
 
@@ -145,7 +145,6 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
         const completed = { caseState: state, recovery: null, rows: [], snapshot, blockedReason: null };
         setData(completed);
         setDrafts([]);
-        setPageIndex(0);
         clearPending();
         setLoadState("ready");
         return completed;
@@ -193,7 +192,6 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
       const next = { caseState: state, recovery: mapping, rows, snapshot: null, blockedReason };
       setData(next);
       setDrafts(blockedReason ? [] : rows.map(draftFromStaging));
-      setPageIndex(0);
       setLoadState("ready");
       return next;
     } catch (error) {
@@ -212,6 +210,7 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
   }, [confirmOpen]);
 
   const updateDraft = (index: number, patch: Partial<AnalysisDraft>) => {
+    if (busy || uncertain || loadState !== "ready" || confirmOpen) return;
     setDrafts((current) => current.map((row, position) => position === index
       ? { ...row, ...patch, human_line_confirmed: patch.human_line_confirmed ?? false }
       : row));
@@ -283,8 +282,6 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
   if (!data) return null;
 
   const completed = data.snapshot;
-  const visibleDrafts = drafts.slice(pageIndex * 50, (pageIndex + 1) * 50);
-  const pageCount = Math.max(1, Math.ceil((completed?.line_manifest.length ?? drafts.length) / 50));
   return (
     <div className="precase-analysis-page">
       <header className="precase-intake-header">
@@ -302,24 +299,14 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
       {loadState === "loading" && <p role="status">Đang kiểm tra dữ liệu hiện hành…</p>}
       {loadState === "error" && <ErrorState title="Chưa thể cập nhật phân tích" message="Không thể đọc trạng thái hiện hành. Dữ liệu đang hiển thị chưa được xác minh lại." onRetry={() => void load()} />}
       {completed ? (
-        <section className="valora-panel" data-analysis-state="completed">
-          <div className="valora-panel__header">Đã chốt phân tích sơ bộ · phiên bản {completed.version}</div>
-          <div className="valora-panel__body">
-            <p>Bản phân tích bất biến đã được chọn từ trạng thái hồ sơ hiện hành. {completed.line_manifest.length} dòng đã được xác nhận.</p>
-            <div className="valora-table-shell precase-analysis-table"><table className="valora-table">
-              <thead><tr><th scope="col">Dòng nguồn</th><th scope="col">Nhận diện</th><th scope="col">Số lượng</th><th scope="col">Cơ sở giá</th><th scope="col">Giá tham chiếu</th><th scope="col">Vận chuyển</th><th scope="col">Đơn giá đề xuất</th></tr></thead>
-              <tbody>{completed.line_manifest.slice(pageIndex * 50, (pageIndex + 1) * 50).map((line) => <tr key={line.source_row_number}>
-                <td>{line.source_row_number}</td><td>{line.identity}</td><td>{line.quantity}</td><td>{line.accepted_price_basis}</td>
-                <td>{line.confirmed_reference_price}</td><td>{line.transport_percentage}%</td><td>{line.proposed_unit_price}</td>
-              </tr>)}</tbody>
-            </table></div>
-            {pageCount > 1 && <div className="precase-intake-actions">
-              <button className="valora-button valora-button--secondary" disabled={pageIndex === 0} onClick={() => setPageIndex(pageIndex - 1)} type="button">Trang trước</button>
-              <span>Trang {pageIndex + 1}/{pageCount}</span>
-              <button className="valora-button valora-button--secondary" disabled={pageIndex + 1 === pageCount} onClick={() => setPageIndex(pageIndex + 1)} type="button">Trang sau</button>
-            </div>}
+        <>
+          <div className="valora-message valora-message--success precase-analysis-completed" data-analysis-state="completed">
+            <strong>Đã chốt phân tích sơ bộ · phiên bản {completed.version}</strong>
+            <span>Bản phân tích bất biến hiện hành · {completed.line_manifest.length} dòng đã được xác nhận.</span>
           </div>
-        </section>
+          <PreliminaryAnalysisWorkspace key={completed.id} drafts={[]} sourceRows={[]} snapshot={completed}
+            disabled onUpdateDraft={updateDraft} />
+        </>
       ) : data.blockedReason ? (
         <section className="valora-panel" role="alert">
           <div className="valora-panel__header">Chưa thể chốt phân tích</div>
@@ -330,35 +317,13 @@ function ResolvedPreliminaryAnalysis({ projectId, projectRef, onNavigate, onSess
         </section>
       ) : (
         <>
-          <section className="valora-panel">
-            <div className="valora-panel__header">Dữ liệu phân tích · {reviewedCount}/{drafts.length} dòng đã xác nhận</div>
-            <div className="valora-panel__body">
-              <p>Đơn giá và cơ sở giá cần người dùng nhập, kiểm tra và xác nhận. Số lượng và vị trí dòng lấy từ dữ liệu tạm hiện hành.</p>
-              {drafts.some((line) => !sourceQuantityValid(line.quantity)) && <p className="precase-intake-warning" role="alert">Có dòng thiếu số lượng nguồn hoặc số lượng không hợp lệ. Hãy sửa ánh xạ hoặc tệp nguồn trước khi chốt.</p>}
-              <div className="valora-table-shell precase-analysis-table"><table className="valora-table">
-                <thead><tr><th scope="col">Dòng nguồn</th><th scope="col">Nhận diện</th><th scope="col">Số lượng nguồn</th><th scope="col">Cơ sở giá được chấp nhận</th><th scope="col">Giá tham chiếu đã xác nhận</th><th scope="col">Vận chuyển %</th><th scope="col">Đơn giá đề xuất</th><th scope="col">Còn vướng mắc</th><th scope="col">Đã rà soát</th></tr></thead>
-                <tbody>{visibleDrafts.map((line, position) => {
-                  const index = pageIndex * 50 + position;
-                  return <tr key={line.source_row_number} data-row-source={line.source_row_number}>
-                    <td>{line.source_row_number}</td>
-                    <td><input aria-label={"Nhận diện dòng " + line.source_row_number} className="valora-field" maxLength={255} name="identity" onChange={(event) => updateDraft(index, { identity: event.target.value })} value={line.identity} /></td>
-                    <td>{line.quantity || "Thiếu"}</td>
-                    <td><input aria-label={"Cơ sở giá dòng " + line.source_row_number} className="valora-field" maxLength={64} name="accepted_price_basis" onChange={(event) => updateDraft(index, { accepted_price_basis: event.target.value })} value={line.accepted_price_basis} /></td>
-                    <td><input aria-label={"Giá tham chiếu dòng " + line.source_row_number} className="valora-field" inputMode="decimal" name="confirmed_reference_price" onChange={(event) => updateDraft(index, { confirmed_reference_price: event.target.value })} value={line.confirmed_reference_price} /></td>
-                    <td><input aria-label={"Vận chuyển dòng " + line.source_row_number} className="valora-field" inputMode="decimal" name="transport_percentage" onChange={(event) => updateDraft(index, { transport_percentage: event.target.value })} value={line.transport_percentage} /></td>
-                    <td><input aria-label={"Đơn giá đề xuất dòng " + line.source_row_number} className="valora-field" inputMode="decimal" name="proposed_unit_price" onChange={(event) => updateDraft(index, { proposed_unit_price: event.target.value })} value={line.proposed_unit_price} /></td>
-                    <td><input aria-label={"Vướng mắc dòng " + line.source_row_number} checked={line.has_unresolved_blocking_line} name="has_unresolved_blocking_line" onChange={(event) => updateDraft(index, { has_unresolved_blocking_line: event.target.checked })} type="checkbox" /></td>
-                    <td><input aria-label={"Xác nhận rà soát dòng " + line.source_row_number} checked={line.human_line_confirmed} disabled={line.has_unresolved_blocking_line} name="human_line_confirmed" onChange={(event) => updateDraft(index, { human_line_confirmed: event.target.checked })} type="checkbox" /></td>
-                  </tr>;
-                })}</tbody>
-              </table></div>
-              {pageCount > 1 && <div className="precase-intake-actions">
-                <button className="valora-button valora-button--secondary" disabled={pageIndex === 0} onClick={() => setPageIndex(pageIndex - 1)} type="button">Trang trước</button>
-                <span>Trang {pageIndex + 1}/{pageCount}</span>
-                <button className="valora-button valora-button--secondary" disabled={pageIndex + 1 === pageCount} onClick={() => setPageIndex(pageIndex + 1)} type="button">Trang sau</button>
-              </div>}
-            </div>
-          </section>
+          <div className="precase-analysis-review-heading">
+            <h2>Dữ liệu phân tích · {reviewedCount}/{drafts.length} dòng đã xác nhận</h2>
+            <p>Đơn giá và cơ sở giá cần người dùng nhập, kiểm tra và xác nhận. Số lượng và vị trí dòng lấy từ dữ liệu tạm hiện hành.</p>
+          </div>
+          {drafts.some((line) => !sourceQuantityValid(line.quantity)) && <p className="precase-intake-warning" role="alert">Có dòng thiếu số lượng nguồn hoặc số lượng không hợp lệ. Hãy sửa ánh xạ hoặc tệp nguồn trước khi chốt.</p>}
+          <PreliminaryAnalysisWorkspace drafts={drafts} sourceRows={data.rows} disabled={busy || uncertain || loadState !== "ready" || confirmOpen}
+            onUpdateDraft={updateDraft} />
           {uncertain && <section className="valora-panel" role="alert">
             <div className="valora-panel__header">Chưa rõ kết quả chốt phân tích</div>
             <div className="valora-panel__body"><p>Kiểm tra trạng thái máy chủ trước khi gửi lại. Lần thử lại dùng đúng mã lệnh cũ.</p>

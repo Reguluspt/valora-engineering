@@ -5,6 +5,11 @@ import { AppShell } from "../../layout/AppShell";
 import { APP_ROUTES, projectListVerificationPath } from "../../../contracts/valoraV23";
 
 vi.mock("../../../i18n", () => ({ t: (k: string) => k }));
+vi.mock("@fluentui/react-components", () => ({
+  webLightTheme: {},
+  FluentProvider: ({ children, theme, ...props }: any) => React.createElement("div", props, children),
+  Button: ({ children, icon, appearance, ...props }: any) => React.createElement("button", props, icon, children),
+}));
 
 describe("AppShell routing", () => {
   const account = {
@@ -19,7 +24,7 @@ describe("AppShell routing", () => {
   };
 
   const findLink = (root: any, label: string) =>
-    root.root.findAllByType("a").find((link: any) => link.props.children === label);
+    root.root.findAllByType("a").find((link: any) => link.props["aria-label"] === label);
 
   it("holds supplier selection navigation unless the server authorizes it", () => {
     let root: any;
@@ -152,7 +157,7 @@ describe("AppShell routing", () => {
       );
     });
 
-    const labels = root!.root.findAllByType("a").map((link: any) => link.props.children);
+    const labels = root!.root.findAllByType("a").map((link: any) => link.props["aria-label"]);
     expect(labels).not.toContain("review.queue");
     expect(labels).not.toContain("review.submitQc");
     expect(labels).not.toContain("nav.validate");
@@ -169,7 +174,7 @@ describe("AppShell routing", () => {
       );
     });
 
-    const button = root!.root.findByProps({ "aria-label": "Đăng xuất tài khoản operator@example.com" });
+    const button = root!.root.findAllByType("button").find((node: any) => node.props["aria-label"] === "Đăng xuất tài khoản operator@example.com");
     act(() => { button.props.onClick(); });
     expect(logout).toHaveBeenCalledOnce();
   });

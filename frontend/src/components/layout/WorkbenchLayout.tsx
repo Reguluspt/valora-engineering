@@ -366,7 +366,7 @@ function WorkbenchLayoutInner({
           onClose={() => { setQuotesOpen(false); quoteTrigger.current?.focus(); }} />
       </div>
 
-      <div className="workbench-body">
+      <div className={`workbench-body${activeRow && drawerOpen ? " workbench-body--with-detail" : ""}`}>
         <div className="workbench-grid-pane">
           {children || (
             gridLoading ? (

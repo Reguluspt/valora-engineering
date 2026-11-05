@@ -91,9 +91,14 @@ describe("PreliminaryAnalysisPage", () => {
       transport_percentage: "0",
       proposed_unit_price: "110",
     })) {
-      act(() => root.root.findByProps({ name }).props.onChange({ target: { value } }));
+      act(() => root.root.findAllByType("input").find((node) => node.props.name === name)!.props.onChange({ target: { value } }));
     }
-    act(() => root.root.findByProps({ name: "human_line_confirmed" }).props.onChange({ target: { checked: true } }));
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
+  }
+
+  function tableField(root: ReturnType<typeof create>, rowNumber: number, name: string) {
+    const tag = name === "accepted_price_basis" ? "textarea" : "input";
+    return root.root.findAllByType(tag).find((node) => node.props.name === `${name}_row_${rowNumber}`)!;
   }
 
   it("loads current materialized staging provenance and requires line review", async () => {
@@ -159,6 +164,58 @@ describe("PreliminaryAnalysisPage", () => {
     expect(api.getPreliminaryAnalysis).toHaveBeenCalledWith("project-1", "analysis-1");
     expect(JSON.stringify(root.toJSON())).toContain("Đã chốt phân tích sơ bộ");
     expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+  });
+
+  it("mirrors inline and detail edits while preserving manual prices and the complete filtered manifest", async () => {
+    const second = { ...row, id: "row-2", source_row_number: 42, proposed_asset_name: "Máy nén khí", proposed_quantity: "3" };
+    api.getMappingRecovery.mockResolvedValue({ ...recovery, materialized_asset_row_count: 2 });
+    api.fetchAssetImportRows.mockResolvedValue({
+      project_id: "project-1", import_batch_id: "batch-1", total: 2, limit: 100, offset: 0, items: [row, second],
+    });
+    const root = await mount();
+    await reviewLine(root);
+    act(() => root.root.findAllByType("input").find((node) => node.props.type === "search")!.props.onChange({ target: { value: "Máy nén" } }));
+    for (const [name, value] of Object.entries({ accepted_price_basis: "Báo giá đã đối chiếu", confirmed_reference_price: "100", transport_percentage: "0", proposed_unit_price: "110" })) {
+      act(() => tableField(root, 42, name).props.onChange({ target: { value } }));
+      expect(root.root.findAllByType("input").find((node) => node.props.name === name)!.props.value).toBe(value);
+    }
+    expect(root.root.findByType("aside").findByType("h2").children).toEqual(["Máy nén khí"]);
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
+    for (const [name, value] of [["proposed_unit_price", "175"], ["confirmed_reference_price", "200"], ["transport_percentage", "5"]]) {
+      act(() => tableField(root, 42, name).props.onChange({ target: { value } }));
+    }
+    expect(tableField(root, 42, "proposed_unit_price").props.value).toBe("175");
+    expect(root.root.findAllByType("input").find((node) => node.props.name === "proposed_unit_price")!.props.value).toBe("175");
+    expect(root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.checked).toBe(false);
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "accepted_price_basis")!.props.onChange({ target: { value: "Giá tham chiếu đã kiểm tra" } }));
+    expect(tableField(root, 42, "accepted_price_basis").props.value).toBe("Giá tham chiếu đã kiểm tra");
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
+    expect(root.root.findAllByProps({ "data-row-source": 17 })).toHaveLength(0);
+    expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(false);
+    act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
+    api.finalizePreliminaryAnalysis.mockResolvedValueOnce({ id: "analysis-1", version: 1 });
+    await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
+    const payload = api.finalizePreliminaryAnalysis.mock.calls[0][1];
+    expect(payload.expected_project_version).toBe(6);
+    expect(payload.mapping_profile_usage_id).toBe("usage-1");
+    expect(payload.line_manifest).toEqual([
+      expect.objectContaining({ source_row_number: 17, quantity: 2, proposed_unit_price: 110, confirmed_reference_price: 100 }),
+      expect.objectContaining({ source_row_number: 42, quantity: 3, proposed_unit_price: 175, confirmed_reference_price: 200, transport_percentage: 5 }),
+    ]);
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a row while inline editing changes its filter match, then releases it on leaving the row", async () => {
+    const root = await mount();
+    act(() => root.root.findByType("select").props.onChange({ target: { value: "missing-price" } }));
+    act(() => tableField(root, 17, "proposed_unit_price").props.onChange({ target: { value: "175" } }));
+    expect(root.root.findAllByProps({ "data-row-source": 17 })).toHaveLength(1);
+    expect(tableField(root, 17, "proposed_unit_price").props.value).toBe("175");
+    expect(JSON.stringify(root.toJSON())).toContain("giữ dòng đang sửa");
+    act(() => root.root.findByProps({ "data-row-source": 17 }).props.onBlur({ currentTarget: { contains: () => false }, relatedTarget: null }));
+    expect(root.root.findAllByProps({ "data-row-source": 17 })).toHaveLength(0);
+    expect(root.root.findAllByType("input").find((node) => node.props.name === "proposed_unit_price")!.props.value).toBe("175");
+    expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
   });
 
   it("keeps the same command key after an unknown uncommitted result", async () => {

@@ -2,61 +2,66 @@
   color-scheme: light;
 
   /* Color: canvas, surfaces, and text */
-  --valora-color-canvas: #f5f5f5;
+  --valora-color-canvas: #f0f2f4;
   --valora-color-surface-primary: #ffffff;
-  --valora-color-surface-secondary: #fafafa;
-  --valora-color-surface-subtle: #f0f0f0;
+  --valora-color-surface-secondary: #f7f9fb;
+  --valora-color-surface-subtle: #eef2f6;
   --valora-color-surface-elevated: #ffffff;
-  --valora-color-surface-interactive: #f5f5f5;
-  --valora-color-surface-selected: #ebf3fc;
-  --valora-color-text-primary: #242424;
-  --valora-color-text-secondary: #424242;
-  --valora-color-text-subtle: #616161;
-  --valora-color-text-disabled: #a0a0a0;
+  --valora-color-surface-interactive: #f4f7fa;
+  --valora-color-surface-selected: #eaf4fe;
+  --valora-color-text-primary: #182838;
+  --valora-color-text-secondary: #40576b;
+  --valora-color-text-subtle: #596d7f;
+  --valora-color-text-disabled: #8b99a6;
   --valora-color-text-inverse: #ffffff;
 
   /* Color: borders and brand */
-  --valora-color-border-subtle: #e0e0e0;
-  --valora-color-border-default: #d1d1d1;
-  --valora-color-border-strong: #8a8886;
-  --valora-color-border-focus: #0f6cbd;
-  --valora-color-brand-foreground: #0f6cbd;
-  --valora-color-brand-background: #0f6cbd;
-  --valora-color-brand-hover: #115ea3;
-  --valora-color-brand-pressed: #0c3b5e;
-  --valora-color-brand-selected: #ebf3fc;
+  --valora-color-border-subtle: #e4eaf0;
+  --valora-color-border-default: #d3dce5;
+  --valora-color-border-strong: #7c8fa0;
+  --valora-color-border-focus: #0d69ad;
+  --valora-color-brand-foreground: #0d69ad;
+  --valora-color-brand-background: #087bdc;
+  --valora-color-brand-hover: #096fbe;
+  --valora-color-brand-pressed: #075b9f;
+  --valora-color-brand-selected: #eaf4fe;
+
+  /* Primary actions are navy; blue identifies navigation and selection. */
+  --valora-color-action-primary-background: #142a40;
+  --valora-color-action-primary-hover: #203f5a;
+  --valora-color-action-primary-pressed: #0e2234;
 
   /* Color: status roles */
-  --valora-color-status-success-foreground: #107c10;
-  --valora-color-status-success-background: #f1faf1;
-  --valora-color-status-success-border: #9fd89f;
-  --valora-color-status-warning-foreground: #8a3707;
-  --valora-color-status-warning-background: #fff4ce;
-  --valora-color-status-warning-border: #fce100;
-  --valora-color-status-error-foreground: #b10e1c;
-  --valora-color-status-error-background: #fdf3f4;
-  --valora-color-status-error-border: #eeacb2;
-  --valora-color-status-info-foreground: #0f548c;
-  --valora-color-status-info-background: #f0f6fc;
-  --valora-color-status-info-border: #9ccbee;
-  --valora-color-status-neutral-foreground: #424242;
-  --valora-color-status-neutral-background: #f5f5f5;
-  --valora-color-status-neutral-border: #d1d1d1;
+  --valora-color-status-success-foreground: #247467;
+  --valora-color-status-success-background: #edf8f4;
+  --valora-color-status-success-border: #c3e1d7;
+  --valora-color-status-warning-foreground: #8b601a;
+  --valora-color-status-warning-background: #fff7e6;
+  --valora-color-status-warning-border: #e9d5a9;
+  --valora-color-status-error-foreground: #aa3e4a;
+  --valora-color-status-error-background: #fff0f2;
+  --valora-color-status-error-border: #e8bdc4;
+  --valora-color-status-info-foreground: #176b9c;
+  --valora-color-status-info-background: #eef7ff;
+  --valora-color-status-info-border: #c9dff0;
+  --valora-color-status-neutral-foreground: #40576b;
+  --valora-color-status-neutral-background: #f4f7fa;
+  --valora-color-status-neutral-border: #d3dce5;
 
   /* Interaction */
-  --valora-color-interactive-hover: #f5f5f5;
-  --valora-color-interactive-pressed: #e0e0e0;
-  --valora-color-interactive-selected: #ebf3fc;
-  --valora-color-interactive-disabled: #f0f0f0;
-  --valora-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0f6cbd;
+  --valora-color-interactive-hover: #f4f7fa;
+  --valora-color-interactive-pressed: #e4edf5;
+  --valora-color-interactive-selected: #eaf4fe;
+  --valora-color-interactive-disabled: #eef2f6;
+  --valora-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0d69ad;
   --valora-transition-fast: 100ms cubic-bezier(0.33, 0, 0.67, 1);
-  --valora-transition-normal: 200ms cubic-bezier(0.33, 0, 0.67, 1);
+  --valora-transition-normal: 240ms cubic-bezier(0.2, 0, 0, 1);
 
   /* Typography */
   --valora-font-family-base: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --valora-font-family-mono: "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
   --valora-font-size-page-title: 28px;
-  --valora-font-size-section-heading: 20px;
+  --valora-font-size-section-heading: 18px;
   --valora-font-size-body: 14px;
   --valora-font-size-body-secondary: 13px;
   --valora-font-size-label: 12px;
@@ -79,27 +84,42 @@
   --valora-space-xl: 20px;
   --valora-space-2xl: 24px;
   --valora-space-3xl: 32px;
-  --valora-space-page: 24px;
+  --valora-space-page: 20px;
   --valora-space-section: 20px;
-  --valora-control-height: 32px;
+  --valora-control-height: 36px;
   --valora-control-height-compact: 28px;
-  --valora-control-height-large: 36px;
+  --valora-control-height-large: 40px;
+  --valora-touch-target-size: 44px;
+  --valora-icon-size: 20px;
   --valora-table-header-height: 34px;
   --valora-table-row-height: 36px;
   --valora-shell-sidebar-width: 216px;
+  --valora-shell-sidebar-compact-width: 76px;
+  --valora-shell-sidebar-phone-width: 56px;
+  --valora-shell-brand-mark-size: 32px;
+  --valora-shell-phone-gap: 10px;
   --valora-shell-topbar-height: 44px;
   --valora-form-column-min-width: 16rem;
   --valora-dialog-wide-max-width: 70rem;
   --valora-workspace-max-height: 60vh;
   --valora-workspace-grid-min-height: 160px;
+  --valora-workspace-detail-width: 376px;
+  --valora-workspace-detail-width-wide: 402px;
 
   /* Shape and elevation */
-  --valora-radius-small: 2px;
-  --valora-radius-control: 4px;
-  --valora-radius-surface: 8px;
-  --valora-radius-large: 12px;
+  --valora-radius-small: 6px;
+  --valora-radius-control: 10px;
+  --valora-radius-surface: 18px;
+  --valora-radius-large: 22px;
   --valora-radius-pill: 9999px;
-  --valora-shadow-rest: 0 1px 2px rgb(0 0 0 / 14%);
-  --valora-shadow-elevated: 0 4px 8px rgb(0 0 0 / 14%);
-  --valora-shadow-overlay: 0 8px 24px rgb(0 0 0 / 18%);
+  --valora-shadow-rest: 0 2px 12px rgb(24 52 74 / 3%);
+  --valora-shadow-elevated: 0 4px 20px rgb(24 52 74 / 5%);
+  --valora-shadow-overlay: 0 16px 48px rgb(24 52 74 / 16%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --valora-transition-fast: 0ms;
+    --valora-transition-normal: 0ms;
+  }
 }

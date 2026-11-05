@@ -13,7 +13,6 @@
   align-items: end;
   padding-bottom: var(--valora-space-xl);
   margin-bottom: var(--valora-space-lg);
-  border-bottom: 1px solid var(--valora-color-border-subtle);
 }
 
 .project-list-header p {
@@ -34,6 +33,7 @@
 .project-table th:nth-child(2) { width: 34%; }
 .project-table th:last-child { text-align: right; }
 .project-table td { padding-top: var(--valora-space-sm); padding-bottom: var(--valora-space-sm); }
+.project-table td { white-space: normal; overflow-wrap: anywhere; }
 .project-table td:last-child { text-align: right; }
 
 .project-identity span,
