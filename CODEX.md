@@ -422,13 +422,20 @@ audit, idempotency, human-approval or exact-SHA requirements.
 when invoking an authorized provider; do not infer aliases or substitute models. An unavailable
 required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner.
 
-Prefer Reviewer B no-tools review: supply the complete unchanged frozen source packet directly
-as model input, with exact HEAD, changed-file/hash evidence and scoped authority; no shell or
-`command` permission is needed. Preserve strict isolation. If the route cannot accept the complete
-packet without tools, or required read permissions are missing, STOP and escalate the precise
-capability or permission gap to PM / Gate Owner for approval of the narrowest verified read-only
-alternative. Never automatically bypass permissions, grant broad command access, change global
-AGY settings or retry automatically.
+Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
+for each required reviewer. Provide one whole-candidate assignment with the exact HEAD,
+changed-file/hash evidence, diff and complete relevant frozen source, authority and test evidence.
+Use an inline packet or an indexed immutable snapshot. Enforce read-only isolation technically for
+either transport. Reviewers choose their inspection paths and available analysis tools within that
+verified boundary. Codex dispatches once and waits for the native final assessment.
+
+Keep access default-deny. Protect the original worktree and credentials and deny out-of-scope
+access and writes, shell, web, MCP and other external side effects on the scoped read route.
+If required evidence or safe capabilities are missing, STOP with REVIEW_INCOMPLETE and report the
+precise gap to PM / Gate Owner. Never bypass permissions, broaden access automatically, change
+global AGY settings, silently substitute a model or retry automatically. Follow the
+[PM playbook's Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch)
+for the AGY route and its per-candidate isolation checks.
 
 ### 10.2 Task-scoped context and resume
 
