@@ -198,7 +198,7 @@ Skips are skips, never passes. A parent/earlier green run does not certify a cha
 | Medium | One independent reviewer only when materially useful and named in the contract. |
 | High / Product / Security | Frozen snapshot, two independent reviewers, Gate Owner and applicable E2E/CI, as required by current CODEX/task authority. |
 
-Reviewer packets are reference-first: exact base/HEAD, changed-file/hash manifest, authority references, review focus and evidence links. Reviewers read exact Git blobs where possible; all required reviewers inspect the same HEAD. Reviewer absence leaves review INCOMPLETE. Codex adjudicates findings as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY. Fix material valid findings, then renew the candidate and required review/CI. Prior evidence stays historical.
+Use [Direct Independent Review under CODEX §10.1](../../CODEX.md#101-responsibilities) and the [PM playbook's Reviewer B checklist](VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch) when that route is required. Reviewer packets are reference-first, with exact base/HEAD, a changed-file/hash manifest, authority references, review focus and evidence links. All required reviewers inspect the same frozen HEAD. Reviewer absence or a missing native final leaves review INCOMPLETE. Codex classifies findings as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY for [PM Gate adjudication](VALORA_PM_OPERATING_PLAYBOOK_V1.md#8-gate-review). Fix material valid findings, then renew the candidate and required review/CI. Prior evidence stays historical.
 
 ## Dual-track delivery and serialized evidence
 
