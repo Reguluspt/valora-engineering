@@ -3794,7 +3794,7 @@ class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
         nullable=False
     )
     document_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     current_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
@@ -3818,6 +3818,10 @@ class DocumentTemplate(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
         "DocumentTemplate",
         remote_side="DocumentTemplate.id",
         foreign_keys=[replacement_template_id]
+    )
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_document_templates_org_code"),
     )
 
 
@@ -3870,6 +3874,15 @@ class TemplateVersion(Base, UUIDMixin, TimestampMixin, OptimisticLockingMixin):
 class ComputedPlaceholderExpression(Base, UUIDMixin):
     __tablename__ = "computed_placeholder_expressions"
 
+    template_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey(
+            "template_versions.id",
+            name="fk_computed_placeholder_expressions_template_version",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+    )
+
     placeholder_key: Mapped[str] = mapped_column(String(255), nullable=False)
     expression_type: Mapped[ComputedExpressionType] = mapped_column(
         String(50),
@@ -3899,6 +3912,10 @@ class ComputedPlaceholderExpression(Base, UUIDMixin):
     )
 
     creator: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        Index("ix_computed_placeholder_expressions_template_version_id", "template_version_id"),
+    )
 
 
 class TemplatePlaceholder(Base, UUIDMixin):
