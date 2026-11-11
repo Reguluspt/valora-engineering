@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db import engine as app_engine
-from app.modules.project_master_data.models import AuditEvent, OrganizationProfile, User, UserActionLog
+from app.modules.project_master_data.models import (
+    AuditEvent, ComputedPlaceholderExpression, OrganizationProfile, User, UserActionLog,
+)
 
 _BASE = "0a1b2c3d4e5f"
 _REVISION = "84bf42a19d31"
@@ -23,13 +25,15 @@ _SCHEMA_TABLES = (
 
 
 @pytest.fixture
-def migration_database(monkeypatch):
+def migration_database(monkeypatch, request):
     if os.environ.get("VALORA_SEC001_DISPOSABLE_PG") != "1":
         pytest.skip("requires the explicitly selected SEC-001 disposable PostgreSQL instance")
+    database = getattr(request, "param", _DATABASE)
+    assert database in {_DATABASE, "valora_sec001_migration_owner"}
     password = os.environ["VALORA_SEC001_MIGRATOR_PASSWORD"]
-    url = app_engine.url.set(database=_DATABASE, username="sec001_migrator", password=password)
+    url = app_engine.url.set(database=database, username="sec001_migrator", password=password)
     assert (url.drivername, url.host, url.database, url.username) == (
-        "postgresql+psycopg", "127.0.0.1", _DATABASE, "sec001_migrator",
+        "postgresql+psycopg", "127.0.0.1", database, "sec001_migrator",
     )
     assert url.port and url.port != 5432 and not url.query
 
@@ -41,7 +45,7 @@ def migration_database(monkeypatch):
                        shobj_description(oid, 'pg_database'), pg_get_userbyid(datdba)
                 FROM pg_database WHERE datname = current_database()
             """)).one()
-        assert identity[:2] == (_DATABASE, "sec001_migrator")
+        assert identity[:2] == (database, "sec001_migrator")
         assert 160000 <= identity[2] < 170000
         assert identity[3:] == ("VALORA SEC-001 disposable synthetic", "sec001_migrator")
 
@@ -203,3 +207,38 @@ def test_upgrade_preserves_legacy_rows_and_downgrade_rejects_code_collision(migr
     assert _revision(engine) == _REVISION
     assert _uniques(engine) == {"uq_document_templates_org_code": ["organization_id", "code"]}
     assert _historical_rows(engine) == collision
+
+
+@pytest.mark.parametrize("migration_database", ["valora_sec001_migration_owner"], indirect=True)
+def test_downgrade_preserves_owned_expression_without_code_collision(migration_database):
+    engine, config = migration_database
+    command.upgrade(config, _BASE)
+    _seed_legacy(engine)
+    command.upgrade(config, _REVISION)
+
+    with Session(engine) as db, db.begin():
+        version_id, actor_id = db.execute(text("""
+            SELECT v.id, t.created_by
+            FROM template_versions v JOIN document_templates t ON t.id = v.document_template_id
+            ORDER BY v.id LIMIT 1
+        """)).one()
+        expression = ComputedPlaceholderExpression(
+            template_version_id=version_id, created_by=actor_id, placeholder_key="synthetic-owned",
+            expression="1 + 1", output_data_type="scalar",
+        )
+        db.add(expression)
+        db.flush()
+        expression_id = expression.id
+        assert db.execute(text("""
+            SELECT 1 FROM document_templates GROUP BY code HAVING count(*) > 1 LIMIT 1
+        """)).scalar() is None
+    before = _historical_rows(engine)
+
+    with pytest.raises(RuntimeError, match="owned computed expressions"):
+        command.downgrade(config, _BASE)
+
+    assert _revision(engine) == _REVISION
+    assert _uniques(engine) == {"uq_document_templates_org_code": ["organization_id", "code"]}
+    assert _historical_rows(engine) == before
+    with Session(engine) as db:
+        assert db.get(ComputedPlaceholderExpression, expression_id).template_version_id == version_id

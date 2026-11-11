@@ -33,12 +33,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("LOCK TABLE document_templates IN ACCESS EXCLUSIVE MODE")
-    duplicate = op.get_bind().execute(sa.text(
+    op.execute("LOCK TABLE document_templates, computed_placeholder_expressions IN ACCESS EXCLUSIVE MODE")
+    connection = op.get_bind()
+    duplicate = connection.execute(sa.text(
         "SELECT 1 FROM document_templates GROUP BY code HAVING count(*) > 1 LIMIT 1"
     )).scalar()
     if duplicate:
         raise RuntimeError("Cannot restore global template code uniqueness: codes are shared by multiple organizations.")
+
+    owned_expression = connection.execute(sa.text(
+        "SELECT 1 FROM computed_placeholder_expressions WHERE template_version_id IS NOT NULL LIMIT 1"
+    )).scalar()
+    if owned_expression:
+        raise RuntimeError("Cannot downgrade Document Engine: owned computed expressions would lose template version ownership.")
 
     op.create_unique_constraint(_GLOBAL_CODE, "document_templates", ["code"])
     op.drop_constraint(_TENANT_CODE, "document_templates", type_="unique")
