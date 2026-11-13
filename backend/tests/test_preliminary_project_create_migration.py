@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -123,6 +125,7 @@ def test_a28_nullable_historical_audit_and_restricted_deletion(principal):
 
 @pytest.mark.parametrize("populated", [False, True])
 def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch, populated):
+    migration_head = ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
     name = "valora_issue217_disposable_migration_" + uuid.uuid4().hex
     assert name.startswith("valora_issue217_disposable_migration_") and name.isidentifier()
     admin = create_engine(engine.url, isolation_level="AUTOCOMMIT")
@@ -165,6 +168,10 @@ def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch
             before = (project.id, project.code, project.name)
             before_audits = db.query(AuditEvent).count()
             db.commit()
+        result = migrate("0a1b2c3d4e5f")
+        assert result.returncode == 0, result.stderr
+        with target.connect() as db:
+            assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0a1b2c3d4e5f"
         result = migrate("head")
         assert result.returncode == 0, result.stderr
         with Session(target) as db:
@@ -209,7 +216,7 @@ def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch
             }
             assert len(before_rows[tables[2]]) == int(populated)
             version = db.scalar(text("SELECT version_num FROM alembic_version"))
-            assert version == "0a1b2c3d4e5f"
+            assert version == migration_head
         result = migrate("f9a0b1c2d3e4", "downgrade")
         assert result.returncode != 0 and "must be retained" in result.stderr
         assert inspect(target).has_table(Receipt.__tablename__)
