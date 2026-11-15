@@ -9,11 +9,20 @@ on:
       - "s13-*"
       - "codex/win-0-windows-client-foundation"
 
+env:
+  VALORA_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   server-foundation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VALORA_EXPECTED_SOURCE_SHA }}
+      - name: Verify exact source commit
+        run: |
+          test "$(git rev-parse HEAD)" = "$VALORA_EXPECTED_SOURCE_SHA"
+          git show --no-patch --format="source_sha=%H tree=%T"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -33,7 +42,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.VALORA_EXPECTED_SOURCE_SHA }}
           fetch-depth: 0
+      - name: Verify exact source commit
+        run: |
+          test "$(git rev-parse HEAD)" = "$VALORA_EXPECTED_SOURCE_SHA"
+          git show --no-patch --format="source_sha=%H tree=%T"
       - name: Verify committed whitespace hygiene
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -71,8 +85,28 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      sec001-postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: sec001_bootstrap
+          POSTGRES_PASSWORD: sec001_synthetic_bootstrap
+        ports:
+          - 127.0.0.1:55432:5432
+        options: >-
+          --label valora.sec001.fixture=true
+          --health-cmd "pg_isready -U sec001_bootstrap"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VALORA_EXPECTED_SOURCE_SHA }}
+      - name: Verify exact source commit
+        run: |
+          test "$(git rev-parse HEAD)" = "$VALORA_EXPECTED_SOURCE_SHA"
+          git show --no-patch --format="source_sha=%H tree=%T"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -125,7 +159,7 @@ jobs:
           PY
       - name: Run static checks and linting
         run: |
-          ruff check .
+          ruff check . ../.github/scripts/sec001_pg_fixture.py
       - name: Run Alembic migration smoke tests
         env:
           VALORA_ENV: test
@@ -181,7 +215,13 @@ jobs:
           S3_SECRET_ACCESS_KEY: valora_local_password
           S3_BUCKET: valora-local
           S3_REGION: us-east-1
-        run: pytest -rs
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: python ../.github/scripts/sec001_pg_fixture.py regression
+      - name: Run mandatory SEC-001 PostgreSQL16 tenant and migration tests
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+          VALORA_SEC001_FIXTURE_CONTAINER: ${{ job.services.sec001-postgres.id }}
+        run: python ../.github/scripts/sec001_pg_fixture.py security
       - name: Run Python dependency vulnerability scan
         run: |
           pip install pip-audit
@@ -196,6 +236,12 @@ jobs:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VALORA_EXPECTED_SOURCE_SHA }}
+      - name: Verify exact source commit
+        run: |
+          test "$(git rev-parse HEAD)" = "$VALORA_EXPECTED_SOURCE_SHA"
+          git show --no-patch --format="source_sha=%H tree=%T"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -220,6 +266,12 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VALORA_EXPECTED_SOURCE_SHA }}
+      - name: Verify exact source commit
+        run: |
+          test "$(git rev-parse HEAD)" = "$VALORA_EXPECTED_SOURCE_SHA"
+          git show --no-patch --format="source_sha=%H tree=%T"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

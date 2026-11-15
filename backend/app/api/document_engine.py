@@ -4,7 +4,10 @@ import hashlib
 from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.db import get_db
 from app.core.rbac import require_permission
@@ -14,7 +17,7 @@ from app.modules.project_master_data.models import (
     TemplateVersionStatus, TemplatePlaceholder, PlaceholderBinding,
     ComputedPlaceholderExpression, RenderJob, RenderJobStatus,
     GeneratedDocument, GeneratedDocumentStatus, DocumentPackage,
-    DocumentPackageItem, Project, UserActionLog
+    DocumentPackageItem, Project, UserActionLog, EvidenceFile, EvidenceFileStatus
 )
 from app.api.document_schemas import (
     DocumentTemplateCreate, DocumentTemplateUpdate, DocumentTemplateSchema,
@@ -45,6 +48,157 @@ def log_action(db: Session, user_id: uuid.UUID, action_type: str, target_type: s
     )
     db.add(log)
 
+
+def _tenant_templates(db: Session, organization_id: uuid.UUID):
+    return db.query(DocumentTemplate).filter(DocumentTemplate.organization_id == organization_id)
+
+
+def _get_template(db: Session, organization_id: uuid.UUID, template_id: uuid.UUID) -> DocumentTemplate:
+    template = _tenant_templates(db, organization_id).filter(DocumentTemplate.id == template_id).first()
+    if template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+
+def _get_version(db: Session, organization_id: uuid.UUID, version_id: uuid.UUID) -> TemplateVersion:
+    version = (
+        db.query(TemplateVersion)
+        .join(TemplateVersion.document_template)
+        .filter(TemplateVersion.id == version_id, DocumentTemplate.organization_id == organization_id)
+        .first()
+    )
+    if version is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return version
+
+
+def _get_version_in_template(db: Session, template_id: uuid.UUID, version_id: uuid.UUID) -> TemplateVersion:
+    version = db.query(TemplateVersion).filter(
+        TemplateVersion.id == version_id,
+        TemplateVersion.document_template_id == template_id,
+    ).first()
+    if version is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return version
+
+
+def _get_project(db: Session, organization_id: uuid.UUID, project_id: uuid.UUID) -> Project:
+    project = db.query(Project).filter(Project.id == project_id, Project.organization_id == organization_id).first()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _get_package(db: Session, organization_id: uuid.UUID, package_id: uuid.UUID) -> DocumentPackage:
+    package = (
+        db.query(DocumentPackage)
+        .join(DocumentPackage.project)
+        .filter(DocumentPackage.id == package_id, Project.organization_id == organization_id)
+        .first()
+    )
+    if package is None:
+        raise HTTPException(status_code=404, detail="Package not found")
+    return package
+
+
+def _get_generated_document(
+    db: Session, organization_id: uuid.UUID, document_id: uuid.UUID, *, project_id: uuid.UUID | None = None
+) -> GeneratedDocument:
+    query = (
+        db.query(GeneratedDocument)
+        .join(RenderJob, and_(
+            RenderJob.id == GeneratedDocument.render_job_id,
+            RenderJob.project_id == GeneratedDocument.project_id,
+            RenderJob.template_version_id == GeneratedDocument.template_version_id,
+        ))
+        .join(RenderJob.project)
+        .join(RenderJob.creator)
+        .join(RenderJob.template_version)
+        .join(TemplateVersion.document_template)
+        .filter(
+            GeneratedDocument.id == document_id,
+            Project.organization_id == organization_id,
+            User.organization_id == organization_id,
+            DocumentTemplate.organization_id == organization_id,
+        )
+    )
+    if project_id is not None:
+        query = query.filter(GeneratedDocument.project_id == project_id)
+    document = query.first()
+    if document is None:
+        raise HTTPException(status_code=404, detail="Generated document not found")
+    return document
+
+
+def _template_views(templates):
+    replacement = aliased(DocumentTemplate)
+    rows = (
+        templates.outerjoin(TemplateVersion, and_(
+            TemplateVersion.id == DocumentTemplate.current_version_id,
+            TemplateVersion.document_template_id == DocumentTemplate.id,
+        ))
+        .outerjoin(replacement, and_(
+            replacement.id == DocumentTemplate.replacement_template_id,
+            replacement.organization_id == DocumentTemplate.organization_id,
+        ))
+        .with_entities(DocumentTemplate, TemplateVersion.id, replacement.id)
+        .all()
+    )
+    return [
+        DocumentTemplateSchema.model_validate(template).model_copy(update={
+            "current_version_id": current_id, "replacement_template_id": replacement_id,
+        })
+        for template, current_id, replacement_id in rows
+    ]
+
+
+def _version_view(db: Session, version: TemplateVersion, organization_id: uuid.UUID) -> TemplateVersionSchema:
+    view = TemplateVersionSchema.model_validate(version)
+    if view.source_file_id is not None:
+        source = db.query(EvidenceFile.id).join(EvidenceFile.uploader).filter(
+            EvidenceFile.id == view.source_file_id, User.organization_id == organization_id,
+        ).first()
+        if source is None:
+            view.source_file_id = None
+    if view.replacement_version_id is not None:
+        replacement = db.query(TemplateVersion.id).filter(
+            TemplateVersion.id == view.replacement_version_id,
+            TemplateVersion.document_template_id == version.document_template_id,
+        ).first()
+        if replacement is None:
+            view.replacement_version_id = None
+    return view
+
+
+def _placeholder_expressions(db: Session, version_id: uuid.UUID):
+    return (
+        db.query(TemplatePlaceholder, ComputedPlaceholderExpression.id)
+        .outerjoin(ComputedPlaceholderExpression, and_(
+            ComputedPlaceholderExpression.id == TemplatePlaceholder.computed_expression_id,
+            ComputedPlaceholderExpression.template_version_id == TemplatePlaceholder.template_version_id,
+        ))
+        .filter(TemplatePlaceholder.template_version_id == version_id)
+    )
+
+
+def _flush_unique_insert(db: Session, constraint: str, detail: str) -> None:
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == constraint:
+            raise HTTPException(status_code=400, detail=detail) from exc
+        raise
+
+
+def _flush_versioned_update(db: Session) -> None:
+    try:
+        db.flush()
+    except StaleDataError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Stale row version") from exc
+
+
 # ----------------- DocumentTemplate Endpoints -----------------
 
 @router.post("/templates", response_model=DocumentTemplateSchema, status_code=201)
@@ -53,13 +207,15 @@ def create_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:create"))
 ):
-    # Check code uniqueness
-    existing = db.query(DocumentTemplate).filter(DocumentTemplate.code == data.code).first()
+    if data.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=403, detail="Organization does not match the authenticated user")
+
+    existing = _tenant_templates(db, current_user.organization_id).filter(DocumentTemplate.code == data.code).first()
     if existing:
         raise HTTPException(status_code=400, detail="Template code already exists")
 
     tpl = DocumentTemplate(
-        organization_id=data.organization_id,
+        organization_id=current_user.organization_id,
         document_type=data.document_type,
         code=data.code,
         name=data.name,
@@ -68,8 +224,7 @@ def create_template(
         created_by=current_user.id
     )
     db.add(tpl)
-    db.commit()
-    db.refresh(tpl)
+    _flush_unique_insert(db, "uq_document_templates_org_code", "Template code already exists")
 
     log_audit_event(
         db=db,
@@ -89,7 +244,7 @@ def list_templates(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    return db.query(DocumentTemplate).all()
+    return _template_views(_tenant_templates(db, current_user.organization_id))
 
 
 @router.get("/templates/{template_id}", response_model=DocumentTemplateSchema)
@@ -98,10 +253,11 @@ def get_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
-    if not tpl:
+    templates = _tenant_templates(db, current_user.organization_id).filter(DocumentTemplate.id == template_id)
+    views = _template_views(templates)
+    if not views:
         raise HTTPException(status_code=404, detail="Template not found")
-    return tpl
+    return views[0]
 
 
 @router.patch("/templates/{template_id}", response_model=DocumentTemplateSchema)
@@ -111,14 +267,15 @@ def update_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
-    tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
-    if not tpl:
-        raise HTTPException(status_code=404, detail="Template not found")
+    tpl = _get_template(db, current_user.organization_id, template_id)
 
-    # Optimistic locking check
-    if data.expected_row_version is not None:
-        if tpl.row_version != data.expected_row_version:
-            raise HTTPException(status_code=409, detail="Stale row version")
+    if data.expected_row_version is not None and tpl.row_version != data.expected_row_version:
+        raise HTTPException(status_code=409, detail="Stale row version")
+
+    if data.current_version_id is not None:
+        _get_version_in_template(db, tpl.id, data.current_version_id)
+    if data.replacement_template_id is not None:
+        _get_template(db, current_user.organization_id, data.replacement_template_id)
 
     if data.name is not None:
         tpl.name = data.name
@@ -127,15 +284,11 @@ def update_template(
     if data.status is not None:
         tpl.status = data.status
     if data.current_version_id is not None:
-        ver = db.query(TemplateVersion).filter(TemplateVersion.id == data.current_version_id).first()
-        if not ver:
-            raise HTTPException(status_code=404, detail="Version not found")
         tpl.current_version_id = data.current_version_id
     if data.replacement_template_id is not None:
         tpl.replacement_template_id = data.replacement_template_id
 
-    db.commit()
-    db.refresh(tpl)
+    _flush_versioned_update(db)
 
     log_audit_event(
         db=db,
@@ -146,8 +299,9 @@ def update_template(
         actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "update_template", "document_template", tpl.id, {})
+    views = _template_views(_tenant_templates(db, current_user.organization_id).filter(DocumentTemplate.id == tpl.id))
     db.commit()
-    return tpl
+    return views[0]
 
 
 # ----------------- TemplateVersion Endpoints -----------------
@@ -159,9 +313,22 @@ def create_version(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:create"))
 ):
-    tpl = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
-    if not tpl:
-        raise HTTPException(status_code=404, detail="Template not found")
+    _get_template(db, current_user.organization_id, template_id)
+
+    if data.source_file_id is not None:
+        source = (
+            db.query(EvidenceFile.id)
+            .join(EvidenceFile.uploader)
+            .filter(
+                EvidenceFile.id == data.source_file_id,
+                EvidenceFile.status == EvidenceFileStatus.ACTIVE,
+                User.organization_id == current_user.organization_id,
+            )
+            .with_for_update(of=EvidenceFile, read=True)
+            .first()
+        )
+        if source is None:
+            raise HTTPException(status_code=404, detail="Source file not found")
 
     existing = db.query(TemplateVersion).filter(
         TemplateVersion.document_template_id == template_id,
@@ -179,8 +346,7 @@ def create_version(
         status=data.status
     )
     db.add(ver)
-    db.commit()
-    db.refresh(ver)
+    _flush_unique_insert(db, "uq_template_version_no", "Version number already exists for this template")
 
     log_audit_event(
         db=db,
@@ -201,10 +367,8 @@ def get_version(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
-    return ver
+    version = _get_version(db, current_user.organization_id, version_id)
+    return _version_view(db, version, current_user.organization_id)
 
 
 @router.post("/template-versions/{version_id}/deprecate", response_model=TemplateVersionSchema)
@@ -214,20 +378,20 @@ def deprecate_version(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:deprecate"))
 ):
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
+    ver = _get_version(db, current_user.organization_id, version_id)
 
     if ver.row_version != data.expected_row_version:
         raise HTTPException(status_code=409, detail="Stale row version")
+
+    if data.replacement_version_id is not None:
+        _get_version_in_template(db, ver.document_template_id, data.replacement_version_id)
 
     ver.status = TemplateVersionStatus.DEPRECATED
     ver.deprecation_reason = data.deprecation_reason
     if data.replacement_version_id is not None:
         ver.replacement_version_id = data.replacement_version_id
 
-    db.commit()
-    db.refresh(ver)
+    _flush_versioned_update(db)
 
     log_audit_event(
         db=db,
@@ -238,8 +402,9 @@ def deprecate_version(
         actor_user_id=current_user.id
     )
     log_action(db, current_user.id, "deprecate_version", "template_version", ver.id, {})
+    view = _version_view(db, ver, current_user.organization_id)
     db.commit()
-    return ver
+    return view
 
 
 # ----------------- TemplatePlaceholder Endpoints -----------------
@@ -250,7 +415,11 @@ def list_placeholders(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    return db.query(TemplatePlaceholder).filter(TemplatePlaceholder.template_version_id == version_id).all()
+    _get_version(db, current_user.organization_id, version_id)
+    return [
+        TemplatePlaceholderSchema.model_validate(placeholder).model_copy(update={"computed_expression_id": expression_id})
+        for placeholder, expression_id in _placeholder_expressions(db, version_id).all()
+    ]
 
 
 @router.post("/template-versions/{version_id}/placeholders", response_model=TemplatePlaceholderSchema, status_code=201)
@@ -260,9 +429,14 @@ def create_placeholder(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
+    _get_version(db, current_user.organization_id, version_id)
+    if data.computed_expression_id is not None:
+        expression = db.query(ComputedPlaceholderExpression.id).filter(
+            ComputedPlaceholderExpression.id == data.computed_expression_id,
+            ComputedPlaceholderExpression.template_version_id == version_id,
+        ).first()
+        if expression is None:
+            raise HTTPException(status_code=404, detail="Computed expression not found")
 
     pl = TemplatePlaceholder(
         template_version_id=version_id,
@@ -279,8 +453,7 @@ def create_placeholder(
         status=data.status
     )
     db.add(pl)
-    db.commit()
-    db.refresh(pl)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -304,9 +477,13 @@ def create_binding(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
+    _get_version(db, current_user.organization_id, version_id)
+    placeholder = _placeholder_expressions(db, version_id).filter(
+        TemplatePlaceholder.id == data.template_placeholder_id,
+        (TemplatePlaceholder.computed_expression_id.is_(None) | ComputedPlaceholderExpression.id.is_not(None)),
+    ).first()
+    if placeholder is None:
+        raise HTTPException(status_code=404, detail="Placeholder not found")
 
     bind = PlaceholderBinding(
         template_version_id=version_id,
@@ -317,8 +494,7 @@ def create_binding(
         is_required=data.is_required
     )
     db.add(bind)
-    db.commit()
-    db.refresh(bind)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -342,11 +518,10 @@ def create_computed_expression(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:template:update"))
 ):
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
+    _get_version(db, current_user.organization_id, version_id)
 
     expr = ComputedPlaceholderExpression(
+        template_version_id=version_id,
         placeholder_key=data.placeholder_key,
         expression_type=data.expression_type,
         inputs=data.inputs,
@@ -355,8 +530,7 @@ def create_computed_expression(
         created_by=current_user.id
     )
     db.add(expr)
-    db.commit()
-    db.refresh(expr)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -379,13 +553,9 @@ def create_render_job(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:render:create"))
 ):
-    proj = db.query(Project).filter(Project.id == data.project_id).first()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _get_project(db, current_user.organization_id, data.project_id)
 
-    ver = db.query(TemplateVersion).filter(TemplateVersion.id == data.template_version_id).first()
-    if not ver:
-        raise HTTPException(status_code=404, detail="Version not found")
+    ver = _get_version(db, current_user.organization_id, data.template_version_id)
 
     serialized_snapshot = json.dumps(data.data_snapshot, sort_keys=True)
     snapshot_hash = hashlib.sha256(serialized_snapshot.encode()).hexdigest()
@@ -403,8 +573,7 @@ def create_render_job(
         completed_at=datetime.now(timezone.utc)
     )
     db.add(job)
-    db.commit()
-    db.refresh(job)
+    db.flush()
 
     for fmt in data.output_formats:
         doc = GeneratedDocument(
@@ -421,8 +590,6 @@ def create_render_job(
             status=GeneratedDocumentStatus.DRAFT
         )
         db.add(doc)
-
-    db.commit()
 
     log_audit_event(
         db=db,
@@ -443,7 +610,20 @@ def get_render_job(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    job = db.query(RenderJob).filter(RenderJob.id == render_job_id).first()
+    job = (
+        db.query(RenderJob)
+        .join(RenderJob.project)
+        .join(RenderJob.creator)
+        .join(RenderJob.template_version)
+        .join(TemplateVersion.document_template)
+        .filter(
+            RenderJob.id == render_job_id,
+            Project.organization_id == current_user.organization_id,
+            User.organization_id == current_user.organization_id,
+            DocumentTemplate.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Render job not found")
     return job
@@ -455,10 +635,7 @@ def get_generated_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    doc = db.query(GeneratedDocument).filter(GeneratedDocument.id == generated_document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Generated document not found")
-    return doc
+    return _get_generated_document(db, current_user.organization_id, generated_document_id)
 
 
 # ----------------- DocumentPackage Endpoints -----------------
@@ -469,9 +646,7 @@ def create_package(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:package:create"))
 ):
-    proj = db.query(Project).filter(Project.id == data.project_id).first()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _get_project(db, current_user.organization_id, data.project_id)
 
     pkg = DocumentPackage(
         project_id=data.project_id,
@@ -481,8 +656,7 @@ def create_package(
         created_by=current_user.id
     )
     db.add(pkg)
-    db.commit()
-    db.refresh(pkg)
+    db.flush()
 
     log_audit_event(
         db=db,
@@ -503,10 +677,7 @@ def get_package(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:read"))
 ):
-    pkg = db.query(DocumentPackage).filter(DocumentPackage.id == package_id).first()
-    if not pkg:
-        raise HTTPException(status_code=404, detail="Package not found")
-    return pkg
+    return _get_package(db, current_user.organization_id, package_id)
 
 
 @router.post("/packages/{package_id}/items", response_model=DocumentPackageItemSchema, status_code=201)
@@ -516,13 +687,9 @@ def add_package_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document_engine:package:update"))
 ):
-    pkg = db.query(DocumentPackage).filter(DocumentPackage.id == package_id).first()
-    if not pkg:
-        raise HTTPException(status_code=404, detail="Package not found")
+    pkg = _get_package(db, current_user.organization_id, package_id)
 
-    doc = db.query(GeneratedDocument).filter(GeneratedDocument.id == data.generated_document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Generated document not found")
+    _get_generated_document(db, current_user.organization_id, data.generated_document_id, project_id=pkg.project_id)
 
     item = DocumentPackageItem(
         document_package_id=package_id,
@@ -530,8 +697,7 @@ def add_package_item(
         sort_order=data.sort_order
     )
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
 
     log_audit_event(
         db=db,
