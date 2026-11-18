@@ -164,6 +164,8 @@ Apply this checklist when the task requires Reviewer B under [CODEX §10.1](../.
 
 Every Dev/Codex prompt begins with the exact `CODEX MODEL` block required by `.agents/skills/valora-dev-handoff/SKILL.md`, then invokes `$valora-session-bootstrap` and supplies the Compact Task Contract by reference-first task delta.
 
+**Current model route — PO 18/11/2026:** Use **GPT-6.2 Sol** (`gpt-6.2-sol`) as the default Dev/Codex model in new handoffs, including resumes, corrections and reissued held prompts, replacing the former GPT-6.1 Sol default. Keep the task's proportional reasoning effort, named Selection reason and Escalation; architecture/security ambiguity still follows an explicit approved higher-model escalation rather than silent substitution. Validate model visibility under the actual authenticated Codex CLI/app before dispatch; if unavailable, STOP to Gate Owner. The full rule and exact prompt block live in [Dev handoff skill](../../.agents/skills/valora-dev-handoff/SKILL.md); previously delivered model declarations and audit artifacts remain historical, not retroactively re-signed. OpenAI announced GPT-6.2 Sol for Codex on 17/11/2026 ([release notes](https://learn.chatgpt.com/docs/whats-new/gpt-62-astra-sol)). This routing update changes **no** DoR, review, source, CI or PRECHECK_RELEASE gate.
+
 The handoff must name:
 
 - exact baseline/CI;
