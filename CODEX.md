@@ -427,17 +427,22 @@ required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner
 **Formal Lane P only:** Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
 for each required code-candidate reviewer. Provide one whole-candidate assignment with the exact HEAD,
 changed-file/hash evidence, diff and complete relevant frozen source, authority and test evidence.
-Use an inline packet or an indexed immutable snapshot. Enforce read-only isolation technically for
-either transport. Reviewers choose their inspection paths and available analysis tools within that
-verified boundary. Codex dispatches once and waits for the native final assessment.
+Use an inline packet or a protected, indexed immutable source snapshot; enforce the source
+candidate's **read-only/no-mutation** boundary through available legitimate access and native
+permissions. **Both lanes** permit reviewer-chosen investigative CLI/shell, code, web/search and
+MCP tools when accessible and relevant; a tool's availability does NOT authorize modifying files,
+Git/CI, credentials, live databases, external accounts or protected project resources.
+Codex dispatches once and waits for the native final, without prescribed tool counts.
 
-**For formal Lane P:** Keep access default-deny. Protect the original worktree and credentials and deny out-of-scope
-access and writes, shell, web, MCP and other external side effects on the scoped read route.
-If required evidence or safe capabilities are missing, STOP with REVIEW_INCOMPLETE and report the
-precise gap to PM / Gate Owner. Never bypass permissions, broaden access automatically, change
-global AGY settings, silently substitute a model or retry automatically. Follow the
-[PM playbook's formal Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#formal-agy-reviewer-b-preflight-and-dispatch)
-for the AGY route and its per-candidate isolation checks.
+**Formal Lane P:** Protect the original worktree, immutable frozen candidate/source identity and
+credentials. Deny actual out-of-scope writes, privilege changes and external side effects; do not
+require blanket disabling of all shell/web/MCP *inspection* tools. A full VM, C1–C8 canary campaign,
+headless MCP feasibility dossier or staged reviewer tool-call workflow is **not the default review
+prerequisite**. An explicit task-specific security control or real unauthorized behavior can still
+trigger a narrow STOP; never pretend that an unverified MCP configuration is an isolation PASS.
+Preserve same-HEAD A/B, separate clean sessions, actual original native finals, reviewer independence,
+CI/testing and Gate Owner decisions. Never silently substitute models, broaden permissions,
+change global AGY settings or auto-retry. Follow [PM formal reviewer guidance](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#formal-agy-reviewer-b-preflight-and-dispatch).
 
 ### 10.2 Task-scoped context and resume
 
