@@ -1,0 +1,770 @@
+{
+  "attempts": [
+    {
+      "attempt": 1,
+      "id": "a-00000001",
+      "identity": {
+        "base_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "packet_bytes": 4096,
+        "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "task_id": "VALORA-TASK-PM-OPS-004-03"
+      },
+      "independence": {
+        "evidence_sha256": "99286066cedd6b8e6a2963a6c913991128f861d435bd0544c6fa48175304e7e8",
+        "isolated": true,
+        "peer_reports_seen": false
+      },
+      "model_native": "opencode-go/deepseek-v4.1-flash",
+      "model_requested": "opencode-go/deepseek-v4.1-flash",
+      "native": {
+        "finish_evidence_sha256": "42af43e3616eba4a133a755540a88e6c61085dfe66c6e49e6ab8eaf9daf0c0da",
+        "finish_reason": "length",
+        "source": "SYNTHETIC",
+        "terminal_evidence_sha256": "e21c5873e05a88b3aef74f14b7a19928b3f1dd179212bbf1e2a25f560ff2495f",
+        "terminal_status": "INCOMPLETE"
+      },
+      "provider": "deepseek",
+      "report": null,
+      "retry": null,
+      "session_sha256": "6f7ac1823da81d2e52d1a1549ee69c85bbf8bb56d06682849e7c09da2785ce3b",
+      "telemetry": {
+        "event_id": "e-00000001",
+        "snapshot_kind": "per_turn",
+        "source": "SYNTHETIC",
+        "usage_format": "deepseek_chat"
+      }
+    },
+    {
+      "attempt": 2,
+      "id": "a-00000002",
+      "identity": {
+        "base_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "packet_bytes": 4096,
+        "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "task_id": "VALORA-TASK-PM-OPS-004-03"
+      },
+      "independence": {
+        "evidence_sha256": "99286066cedd6b8e6a2963a6c913991128f861d435bd0544c6fa48175304e7e8",
+        "isolated": true,
+        "peer_reports_seen": false
+      },
+      "model_native": "opencode-go/deepseek-v4.1-flash",
+      "model_requested": "opencode-go/deepseek-v4.1-flash",
+      "native": {
+        "finish_evidence_sha256": "42af43e3616eba4a133a755540a88e6c61085dfe66c6e49e6ab8eaf9daf0c0da",
+        "finish_reason": "length",
+        "source": "SYNTHETIC",
+        "terminal_evidence_sha256": "e21c5873e05a88b3aef74f14b7a19928b3f1dd179212bbf1e2a25f560ff2495f",
+        "terminal_status": "INCOMPLETE"
+      },
+      "provider": "deepseek",
+      "report": null,
+      "retry": {
+        "approval_ref": "SYNTHETIC",
+        "previous_attempt_id": "a-00000001",
+        "reason": "FINISH_LENGTH",
+        "settings_changed": false
+      },
+      "session_sha256": "6f7ac1823da81d2e52d1a1549ee69c85bbf8bb56d06682849e7c09da2785ce3b",
+      "telemetry": {
+        "event_id": "e-00000002",
+        "snapshot_kind": "per_turn",
+        "source": "SYNTHETIC",
+        "usage_format": "deepseek_chat"
+      }
+    },
+    {
+      "attempt": 3,
+      "id": "a-00000003",
+      "identity": {
+        "base_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "packet_bytes": 4096,
+        "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "task_id": "VALORA-TASK-PM-OPS-004-03"
+      },
+      "independence": {
+        "evidence_sha256": "99286066cedd6b8e6a2963a6c913991128f861d435bd0544c6fa48175304e7e8",
+        "isolated": true,
+        "peer_reports_seen": false
+      },
+      "model_native": "opencode-go/deepseek-v4.1-flash",
+      "model_requested": "opencode-go/deepseek-v4.1-flash",
+      "native": {
+        "finish_evidence_sha256": "42af43e3616eba4a133a755540a88e6c61085dfe66c6e49e6ab8eaf9daf0c0da",
+        "finish_reason": "stop",
+        "source": "SYNTHETIC",
+        "terminal_evidence_sha256": "e21c5873e05a88b3aef74f14b7a19928b3f1dd179212bbf1e2a25f560ff2495f",
+        "terminal_status": "COMPLETED"
+      },
+      "provider": "deepseek",
+      "report": {
+        "authorities": [
+          {
+            "blob_sha": "2f41a784d95be0f1a9c341b6d33fa58b075dc0ba",
+            "lines": 100,
+            "path": "CODEX.md",
+            "sha256": "2f41a784d95be0f1a9c341b6d33fa58b075dc0baa15ea24a0f86bfc61a070d6b",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          },
+          {
+            "blob_sha": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67",
+            "lines": 100,
+            "path": "ENGINEERING_GUARDRAILS.md",
+            "sha256": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67236593f231ad96d7159eddfe",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          }
+        ],
+        "changed_files": [
+          {
+            "blob_sha": "5555555555555555555555555555555555555555",
+            "lines": 40,
+            "path": "changed.py",
+            "revision": "head",
+            "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+          }
+        ],
+        "coverage": [
+          {
+            "axis": "source_integrity",
+            "evidence_sha256": "c147dafeac6c7dd6ace05c883f9771d3eebb7089e689ded2e2332b54d813b6f3",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "authority",
+            "evidence_sha256": "cc46600fd1c2dc6c16c7e38243f6c26a093070d9cc451897f5dbca1dca557a21",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "correctness",
+            "evidence_sha256": "a251dd35e9acae6c74735c903da4a0e99cdf69a9800cf36042f8990cdcd23843",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "security",
+            "evidence_sha256": "be5b465bb6b54dc5e36352b8885dd5034178df4921bf072e1684d236e825767e",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tenant_rbac",
+            "evidence_sha256": "7510bb96c6c3ad016f141a94a320006c6d87dc64ea65e8d5dc4b3945dc60bb4a",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "privacy",
+            "evidence_sha256": "2d30497e8ddaf8e9baa169e35487096680c69a8033fc5ecaca64ded4f7810cbe",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "audit",
+            "evidence_sha256": "c3bd4dad8424423466d0fe05c3cd4c355d8e1262975090f811ee98fe2f349869",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "cas_currentness",
+            "evidence_sha256": "52df2c3f47a9e40b9c99baefcedeb8f56c00aa1b790a5bb6b1a2124ae744eccf",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tests",
+            "evidence_sha256": "3437aec7cf702bfd6422ec8e615f5723ce794a30398be92d1833a24084433491",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "review_completeness",
+            "evidence_sha256": "9496ab4eb46f7bb0ecb65aae2dc1f358cbc660301806541214a6f8ec714aa8b2",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "independence",
+            "evidence_sha256": "982b2392d0e63629e86c0e2d5ef3895545c7156846e581eeb8f3345b91f3f1f0",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "budget_telemetry",
+            "evidence_sha256": "7bd64ae569942ef46d361a1d413f7e6718611a9ca516dcc4362a9a3cc173f924",
+            "rationale": null,
+            "state": "REVIEWED"
+          }
+        ],
+        "findings": [],
+        "sections": [
+          {
+            "evidence_sha256": "d2ff1564d580a584f3a600bcd1af52c0f59dba00accadea9fc201d5a5bbf340e",
+            "section": "identity"
+          },
+          {
+            "evidence_sha256": "6346c3f6f36ec0b999d7807f026a0a051df3194122682a33c5df20c73e647894",
+            "section": "scope"
+          },
+          {
+            "evidence_sha256": "be2231107ca09d34f4edf42a4145f60763c06252035cf2ca84e88709280f3d5d",
+            "section": "coverage"
+          },
+          {
+            "evidence_sha256": "e2d18ce6643d9ac255024de5334c4f8d1387049ce1e7fcf7a657d3609db84d6c",
+            "section": "findings"
+          },
+          {
+            "evidence_sha256": "873d1f8f6ba0e5f944287c7ec7a5355cf6ebe9abee1bc8f40c549d21ad81bc8d",
+            "section": "negative_checks"
+          },
+          {
+            "evidence_sha256": "35bb5c52fb3269555746316095a75cfb852f7ed0324232d4e1a4250660d04c4a",
+            "section": "limitations"
+          },
+          {
+            "evidence_sha256": "b7e1f3785eb58569c648227b83711ae46ea2c150bc25e59274370b6fd0e79b6c",
+            "section": "conclusion"
+          }
+        ],
+        "severity_checks": [
+          {
+            "evidence_sha256": "f73ce581d7fa38f22809328c2ca4bfb5e6571834fca4978cdd6a3ade9fcbece8",
+            "severity": "P0",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "be998e745426f1d5d2b86ca2814fea8aa047bfa311f584dc776946e4a00b706b",
+            "severity": "P1",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "77f3dec056e71e141a9d56e184c29fbc57a15e87abf47912b5afd3f50c78d242",
+            "severity": "P2",
+            "state": "NONE"
+          }
+        ],
+        "sha256": "9a87f7c013f93419fab47c810925205a89d099ba7523b19bf51c378d59a1b62d",
+        "source": "SYNTHETIC",
+        "state": "COMPLETE"
+      },
+      "retry": {
+        "approval_ref": "SYNTHETIC",
+        "previous_attempt_id": "a-00000002",
+        "reason": "FINISH_LENGTH",
+        "settings_changed": false
+      },
+      "session_sha256": "6f7ac1823da81d2e52d1a1549ee69c85bbf8bb56d06682849e7c09da2785ce3b",
+      "telemetry": {
+        "event_id": "e-00000003",
+        "snapshot_kind": "per_turn",
+        "source": "SYNTHETIC",
+        "usage_format": "deepseek_chat"
+      }
+    },
+    {
+      "attempt": 1,
+      "id": "a-00000004",
+      "identity": {
+        "base_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "packet_bytes": 4096,
+        "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "task_id": "VALORA-TASK-PM-OPS-004-03"
+      },
+      "independence": {
+        "evidence_sha256": "62edf615ca66aba8c4cd0781f2a0dadbffb4a5406ad3b03ff778b9b54a2a41f4",
+        "isolated": true,
+        "peer_reports_seen": false
+      },
+      "model_native": null,
+      "model_requested": "gemini-3.1-pro-high",
+      "native": {
+        "finish_evidence_sha256": null,
+        "finish_reason": "NOT_EXPOSED",
+        "source": "SYNTHETIC",
+        "terminal_evidence_sha256": "2633524b3149af86c7806314432f26f0907577c8602b10f6d6a5d4370fdd8a3f",
+        "terminal_status": "COMPLETED"
+      },
+      "provider": "google",
+      "report": {
+        "authorities": [
+          {
+            "blob_sha": "2f41a784d95be0f1a9c341b6d33fa58b075dc0ba",
+            "lines": 100,
+            "path": "CODEX.md",
+            "sha256": "2f41a784d95be0f1a9c341b6d33fa58b075dc0baa15ea24a0f86bfc61a070d6b",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          },
+          {
+            "blob_sha": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67",
+            "lines": 100,
+            "path": "ENGINEERING_GUARDRAILS.md",
+            "sha256": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67236593f231ad96d7159eddfe",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          }
+        ],
+        "changed_files": [
+          {
+            "blob_sha": "5555555555555555555555555555555555555555",
+            "lines": 40,
+            "path": "changed.py",
+            "revision": "head",
+            "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+          }
+        ],
+        "coverage": [
+          {
+            "axis": "source_integrity",
+            "evidence_sha256": "5ae44604cf3a4ee263de7a2dee7f4dbf14fe1afc741e294b9e9aa998becc1843",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "authority",
+            "evidence_sha256": "175a181949f91587197a05f527861c763f7c59b95350e9f6ae5cbe8058c38623",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "correctness",
+            "evidence_sha256": "8e29aa2198caccea24594e046c9e182c9c7c5540e60951c4b069377ded970b7e",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "security",
+            "evidence_sha256": "9a2c4c616254ce361bbaaccb388d6111cc75930cb8cb9ea43e5f32c0cea80948",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tenant_rbac",
+            "evidence_sha256": "8dc29ffae619ef33e922283e533b24e2733c10a71ed7f5caf674c5028182e78b",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "privacy",
+            "evidence_sha256": "a623fec4e965b40211ecb4e602084958a67a0635dfea5edadc611b7399e921dd",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "audit",
+            "evidence_sha256": "fb08f20c1d7335e722cccaddeb369ad567b83c06417a5fc812835aa003276fa3",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "cas_currentness",
+            "evidence_sha256": "402426869303219ad3d3ed8bc48212a21ee4d0d7f3d209079dd06e207ccba248",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tests",
+            "evidence_sha256": "32ee97441cce54d320543e1c794b14ef0136a5cedc192d2c079a38b3ff746e03",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "review_completeness",
+            "evidence_sha256": "b6b2ebcb51cf73d95ea7f26bce5436c781f6c3bcd42c6c057d36cef998fe35af",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "independence",
+            "evidence_sha256": "3323f72851debd30ecf1db5f247d3297da72d46e7731d6592ec3ac4898cbb8d2",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "budget_telemetry",
+            "evidence_sha256": "29172ce75eee6d512cd5f5666d64da654f8f8e2aa79d11b3010243a5882502b3",
+            "rationale": null,
+            "state": "REVIEWED"
+          }
+        ],
+        "findings": [],
+        "sections": [
+          {
+            "evidence_sha256": "38d63ad773e8842038b477cf0c375f9005d2b3b9d9595a820e02755ec4e8e57f",
+            "section": "identity"
+          },
+          {
+            "evidence_sha256": "56a16bcb590f6ea123ad0f8b61ed6aa80898ef38041074f849fb672ac75bca5f",
+            "section": "scope"
+          },
+          {
+            "evidence_sha256": "b7c666b42bb5dc9f0636272645bc31c5fb957b965160236b6f018882cf5bbefa",
+            "section": "coverage"
+          },
+          {
+            "evidence_sha256": "71d21df5daab25d77cf015cd54949f1b106d7969238a00f5c9bb088c6e7a3fb7",
+            "section": "findings"
+          },
+          {
+            "evidence_sha256": "f37bfa16b5f21653f7b109bf6f84e309cd7159ca1371bb91d7398a5f03463212",
+            "section": "negative_checks"
+          },
+          {
+            "evidence_sha256": "337e168a628e52ed55d483e684733825fec68bec5c6d3a87ded2ade6a14d116a",
+            "section": "limitations"
+          },
+          {
+            "evidence_sha256": "48fa64f058a1127e9a4514e9064163121c6965e697bbba2e49ceb1f2aae6c6d1",
+            "section": "conclusion"
+          }
+        ],
+        "severity_checks": [
+          {
+            "evidence_sha256": "36ad5f8c39a8636d4c8ebc8ab78967008d96dc99615b5be25769a36e7075dd36",
+            "severity": "P0",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "d0c622bd10f8967e99665bb752618d8b6b1ac7ae9a1aae80aadca26ee89862a3",
+            "severity": "P1",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "d9252bb5598dfb4de2eb317b54cbf69db10086d6079abb6414d4238c32488656",
+            "severity": "P2",
+            "state": "NONE"
+          }
+        ],
+        "sha256": "298b881eb491df537c4d002c69dbaf30b1af4e553b504a8ff687c4409b02446c",
+        "source": "SYNTHETIC",
+        "state": "COMPLETE"
+      },
+      "retry": null,
+      "session_sha256": "bbdefa2950f49882f295b1285d4fa9dec45fc4144bfb07ee6acc68762d12c2e3",
+      "telemetry": {
+        "event_id": "e-00000004",
+        "snapshot_kind": "cumulative",
+        "source": "SYNTHETIC",
+        "usage_format": "runner_metadata"
+      }
+    },
+    {
+      "attempt": 2,
+      "id": "a-00000005",
+      "identity": {
+        "base_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "packet_bytes": 4096,
+        "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "task_id": "VALORA-TASK-PM-OPS-004-03"
+      },
+      "independence": {
+        "evidence_sha256": "62edf615ca66aba8c4cd0781f2a0dadbffb4a5406ad3b03ff778b9b54a2a41f4",
+        "isolated": true,
+        "peer_reports_seen": false
+      },
+      "model_native": "gemini-3.1-pro-high",
+      "model_requested": "gemini-3.1-pro-high",
+      "native": {
+        "finish_evidence_sha256": null,
+        "finish_reason": "NOT_EXPOSED",
+        "source": "SYNTHETIC",
+        "terminal_evidence_sha256": "2633524b3149af86c7806314432f26f0907577c8602b10f6d6a5d4370fdd8a3f",
+        "terminal_status": "COMPLETED"
+      },
+      "provider": "google",
+      "report": {
+        "authorities": [
+          {
+            "blob_sha": "2f41a784d95be0f1a9c341b6d33fa58b075dc0ba",
+            "lines": 100,
+            "path": "CODEX.md",
+            "sha256": "2f41a784d95be0f1a9c341b6d33fa58b075dc0baa15ea24a0f86bfc61a070d6b",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          },
+          {
+            "blob_sha": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67",
+            "lines": 100,
+            "path": "ENGINEERING_GUARDRAILS.md",
+            "sha256": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67236593f231ad96d7159eddfe",
+            "spans": [
+              [
+                8,
+                20
+              ],
+              [
+                40,
+                60
+              ]
+            ],
+            "tier": "C1"
+          }
+        ],
+        "changed_files": [
+          {
+            "blob_sha": "5555555555555555555555555555555555555555",
+            "lines": 40,
+            "path": "changed.py",
+            "revision": "head",
+            "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+          }
+        ],
+        "coverage": [
+          {
+            "axis": "source_integrity",
+            "evidence_sha256": "5ae44604cf3a4ee263de7a2dee7f4dbf14fe1afc741e294b9e9aa998becc1843",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "authority",
+            "evidence_sha256": "175a181949f91587197a05f527861c763f7c59b95350e9f6ae5cbe8058c38623",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "correctness",
+            "evidence_sha256": "8e29aa2198caccea24594e046c9e182c9c7c5540e60951c4b069377ded970b7e",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "security",
+            "evidence_sha256": "9a2c4c616254ce361bbaaccb388d6111cc75930cb8cb9ea43e5f32c0cea80948",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tenant_rbac",
+            "evidence_sha256": "8dc29ffae619ef33e922283e533b24e2733c10a71ed7f5caf674c5028182e78b",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "privacy",
+            "evidence_sha256": "a623fec4e965b40211ecb4e602084958a67a0635dfea5edadc611b7399e921dd",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "audit",
+            "evidence_sha256": "fb08f20c1d7335e722cccaddeb369ad567b83c06417a5fc812835aa003276fa3",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "cas_currentness",
+            "evidence_sha256": "402426869303219ad3d3ed8bc48212a21ee4d0d7f3d209079dd06e207ccba248",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "tests",
+            "evidence_sha256": "32ee97441cce54d320543e1c794b14ef0136a5cedc192d2c079a38b3ff746e03",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "review_completeness",
+            "evidence_sha256": "b6b2ebcb51cf73d95ea7f26bce5436c781f6c3bcd42c6c057d36cef998fe35af",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "independence",
+            "evidence_sha256": "3323f72851debd30ecf1db5f247d3297da72d46e7731d6592ec3ac4898cbb8d2",
+            "rationale": null,
+            "state": "REVIEWED"
+          },
+          {
+            "axis": "budget_telemetry",
+            "evidence_sha256": "29172ce75eee6d512cd5f5666d64da654f8f8e2aa79d11b3010243a5882502b3",
+            "rationale": null,
+            "state": "REVIEWED"
+          }
+        ],
+        "findings": [],
+        "sections": [
+          {
+            "evidence_sha256": "38d63ad773e8842038b477cf0c375f9005d2b3b9d9595a820e02755ec4e8e57f",
+            "section": "identity"
+          },
+          {
+            "evidence_sha256": "56a16bcb590f6ea123ad0f8b61ed6aa80898ef38041074f849fb672ac75bca5f",
+            "section": "scope"
+          },
+          {
+            "evidence_sha256": "b7c666b42bb5dc9f0636272645bc31c5fb957b965160236b6f018882cf5bbefa",
+            "section": "coverage"
+          },
+          {
+            "evidence_sha256": "71d21df5daab25d77cf015cd54949f1b106d7969238a00f5c9bb088c6e7a3fb7",
+            "section": "findings"
+          },
+          {
+            "evidence_sha256": "f37bfa16b5f21653f7b109bf6f84e309cd7159ca1371bb91d7398a5f03463212",
+            "section": "negative_checks"
+          },
+          {
+            "evidence_sha256": "337e168a628e52ed55d483e684733825fec68bec5c6d3a87ded2ade6a14d116a",
+            "section": "limitations"
+          },
+          {
+            "evidence_sha256": "48fa64f058a1127e9a4514e9064163121c6965e697bbba2e49ceb1f2aae6c6d1",
+            "section": "conclusion"
+          }
+        ],
+        "severity_checks": [
+          {
+            "evidence_sha256": "36ad5f8c39a8636d4c8ebc8ab78967008d96dc99615b5be25769a36e7075dd36",
+            "severity": "P0",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "d0c622bd10f8967e99665bb752618d8b6b1ac7ae9a1aae80aadca26ee89862a3",
+            "severity": "P1",
+            "state": "NONE"
+          },
+          {
+            "evidence_sha256": "d9252bb5598dfb4de2eb317b54cbf69db10086d6079abb6414d4238c32488656",
+            "severity": "P2",
+            "state": "NONE"
+          }
+        ],
+        "sha256": "298b881eb491df537c4d002c69dbaf30b1af4e553b504a8ff687c4409b02446c",
+        "source": "SYNTHETIC",
+        "state": "COMPLETE"
+      },
+      "retry": {
+        "approval_ref": "SYNTHETIC",
+        "previous_attempt_id": "a-00000004",
+        "reason": "MODEL_IDENTITY_CORRECTION",
+        "settings_changed": false
+      },
+      "session_sha256": "bbdefa2950f49882f295b1285d4fa9dec45fc4144bfb07ee6acc68762d12c2e3",
+      "telemetry": {
+        "event_id": "e-00000005",
+        "snapshot_kind": "cumulative",
+        "source": "SYNTHETIC",
+        "usage_format": "runner_metadata"
+      }
+    }
+  ],
+  "expected": {
+    "authorities": [
+      {
+        "blob_sha": "2f41a784d95be0f1a9c341b6d33fa58b075dc0ba",
+        "lines": 100,
+        "path": "CODEX.md",
+        "sha256": "2f41a784d95be0f1a9c341b6d33fa58b075dc0baa15ea24a0f86bfc61a070d6b",
+        "spans": [
+          [
+            8,
+            20
+          ],
+          [
+            40,
+            60
+          ]
+        ],
+        "tier": "C1"
+      },
+      {
+        "blob_sha": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67",
+        "lines": 100,
+        "path": "ENGINEERING_GUARDRAILS.md",
+        "sha256": "ea023bdf847efa39eea74a0b8f27cd2d35d58f67236593f231ad96d7159eddfe",
+        "spans": [
+          [
+            8,
+            20
+          ],
+          [
+            40,
+            60
+          ]
+        ],
+        "tier": "C1"
+      }
+    ],
+    "changed_files": [
+      {
+        "blob_sha": "5555555555555555555555555555555555555555",
+        "lines": 40,
+        "path": "changed.py",
+        "revision": "head",
+        "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+      }
+    ],
+    "identity": {
+      "base_sha": "1111111111111111111111111111111111111111",
+      "head_sha": "2222222222222222222222222222222222222222",
+      "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "packet_bytes": 4096,
+      "packet_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "task_id": "VALORA-TASK-PM-OPS-004-03"
+    }
+  },
+  "profile_version": "1.0",
+  "sanitized_metadata": true,
+  "schema_version": "1.0"
+}
