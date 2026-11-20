@@ -413,9 +413,10 @@ audit, idempotency, human-approval or exact-SHA requirements.
 - Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent technical reviewer; read-only on the source candidate in formal PR review.
 - Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent technical reviewer; read-only on the source candidate in formal PR review.
   Neither reviewer may receive delegated VALORA implementation work.
-- Independent reviewers are read-only and cannot mutate files, credentials, networks or cloud
-  resources. Required reviewers inspect the same frozen HEAD and identical unchanged source packet.
-  A required unavailable reviewer leaves the review INCOMPLETE.
+- **Formal Lane P reviewers** are technically read-only on the candidate and cannot mutate files,
+  credentials, network/cloud resources or project state. Required A/B inspect the same frozen HEAD
+  and identical unchanged source packet. A required unavailable formal reviewer leaves review INCOMPLETE.
+  **Lane D** reviewers can use investigative tools but are not delegated implementation or external-account mutations.
 
 **Separate the review lanes:** [Independent Review Procedure v1](docs/plan/VALORA_INDEPENDENT_REVIEW_PROCESS_V1.md) defines **Lane D (pre-implementation design advisory)** and **Lane P (formal frozen-candidate review)**. Under the explicit 2026-11-20 PO decision, Codex directly dispatches one concise prompt to AGY and/or OpenCode for Lane D; those reviewers may use their available **investigative** CLI, code, web/MCP and research tools without a default VM, canary C1–C8, staged tool-count procedure or repeated MCP research before each advisory. Codex preserves the complete native report and forwards it to PM; **PM adjudicates** and returns material design/scope decisions to PO. This permission to use tools does not authorize reviewer writes to VALORA code/test/CI, Git/DB/deployment, credentials, protected data or external side-effecting actions. Disclose known ambient MCP exposure without falsely treating it as isolation PASS. Advisory does not substitute signed Security/Domain Owner acceptance, formal A/B, T0–T3 or exact-SHA CI.
 
