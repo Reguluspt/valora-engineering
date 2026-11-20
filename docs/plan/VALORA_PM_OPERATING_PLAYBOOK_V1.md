@@ -150,9 +150,17 @@ Use `Authority → Runtime → Product Closure` only where those slices are need
 
 Risk classification controls evidence depth; it does not grant integration authority.
 
-### AGY 1.5.3 Reviewer B preflight and dispatch
+### Direct technical design advisory — AGY or OpenCode (Lane D, PO 20/11/2026)
 
-Apply this checklist when the task requires Reviewer B under [CODEX §10.1](../../CODEX.md#101-responsibilities). The [AGY 1.5.3 runbook](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6722863585) records a configuration-specific result. Verify the effective route for each candidate.
+Follow [Independent Review Procedure v1](VALORA_INDEPENDENT_REVIEW_PROCESS_V1.md). **Codex directly sends one concise independent technical review prompt to AGY or OpenCode, receives the original native final, and passes it to PM/Gate Owner; PM, not Codex, analyzes substantive findings and presents PO options.** No default VM, canary C1–C8, global-MCP investigation, staged review workflow, artificial tool counters or duplicate prompts for a routine **design advisory**. Use an authorized source/Contract packet and the exact baseline/candidate provenance; a private Space URL returning 403 is missing evidence, not review permission. The reviewer may freely choose its available **investigative** read/search, CLI, browser or MCP tools; never convert this into permission for code edits, protected data, credentials, external account mutation, Git/DB/deploy or tenant data disclosure. Report ambient MCP risk rather than inventing a security-isolation PASS. If a mandatory higher-priority platform control blocks review, return one precise STOP instead of retry loops.
+
+**Tool routing:** AGY `gemini-3.8-flash-high` HIGH when actually available; OpenCode model/alias from current approved CODEX route (currently `opencode-go/deepseek-v4.1-flash`) after version/model discovery. OpenCode's official [V2 permissions](https://opencode.ai/docs/permissions) define `permissions` actions including `read/edit/shell/webfetch/websearch/external_directory` and MCP actions; do not assume older `permission/bash` names or blindly modify user-global tool settings. A Lane D advisory may use investigative tools; a **formal frozen-candidate review** still has the distinct technical read-only requirements below.
+
+Codex receipt: exact model/effort and invocation status; complete **unedited** native final + hash/reference; exact main and local candidate distinction; reported tools when available; missing canonical evidence and actual vs historical tests. PM cross-checks decisive file:line findings, separates `main` static shortcomings from an implemented regression, classifies findings `VALID / INVALID / DUPLICATE / OUT_OF_SCOPE / ADVISORY / UNVERIFIED`, and records a concise PO decision packet. An AGY/OpenCode design opinion is **not a signed Security Owner/Domain Owner acceptance**, does not grant an extra file path or activate implementation; formal High/Product/Security A/B reviews occur only on the later frozen implemented candidate.
+
+### Formal AGY Reviewer B preflight and dispatch
+
+Apply this checklist only to **formal Lane P frozen-candidate Reviewer B** when required by [CODEX §10.1](../../CODEX.md#101-responsibilities); it does not apply automatically to Lane D design advice. The [AGY 1.5.3 runbook](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6722863585) records a configuration-specific result. Verify the effective route for each candidate.
 
 1. Verify the live task authority, exact frozen HEAD and assigned reviewer. Run `agy --version` and `agy models` under the same authenticated CLI identity. Confirm `gemini-3.8-flash-high` is available and select high effort. A sign-in failure is an authentication finding. Stop with `REVIEW_INCOMPLETE` if identity or model cannot be verified.
 2. Seal an indexed read-only snapshot of the complete relevant frozen source, authority, diff and test evidence. Record hashes and source/config integrity before dispatch. Place the snapshot in a dedicated workspace outside the protected project tree. Keep the Dev worktree, private evidence and credentials outside the granted scope.
@@ -231,7 +239,7 @@ Minimum Gate Owner checks:
 - Local Saturation proof or a valid Early Push Exception and subsequently completed mandatory evidence are recorded;
 - no newer merge/authority change made evidence stale.
 
-For Direct Independent Review, retain the unedited native final and transcript, dispatch record and any required canary evidence. Bind them to the frozen HEAD with the report hash, role/model/effort, binary/settings fingerprints, invocation count, snapshot seal and before/after source and configuration integrity. Verify recorded hashes and distinguish a successful CLI exit from the reviewer's substantive verdict.
+For formal Lane P Direct Independent Review, retain the unedited native final and transcript, dispatch record and any task-required canary evidence. For Lane D use the short evidence and PM adjudication contract above; a design advisory is not a formal candidate A/B PASS. Bind them to the frozen HEAD with the report hash, role/model/effort, binary/settings fingerprints, invocation count, snapshot seal and before/after source and configuration integrity. Verify recorded hashes and distinguish a successful CLI exit from the reviewer's substantive verdict.
 
 PM / Gate Owner adjudicates the findings against the frozen evidence and Codex's dispositions. Record any corrections or unverified claims separately from the original report. A missing or unusable native final leaves the required review incomplete. Resolve material findings within task authority and renew required review and exact-head CI for any changed candidate.
 
