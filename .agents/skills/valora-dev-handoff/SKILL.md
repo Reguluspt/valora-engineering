@@ -29,6 +29,13 @@ When handoff scope touches `frontend/**`, React presentation, design tokens/them
 
 EVERY Dev/Codex handoff includes the compact [OpenViking policy block](../../../docs/plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md#mcp-usage-block); actual MCP recall remains optional. Carry the block even for tiny corrections and resumes. Full-profile reading is needed only for MCP use/debug/persistence, not merely to carry policy. Declare parallel ownership and whether final freeze/review/CI must serialize with another candidate. The prompt grants no later product or integration gate beyond its explicit authorization.
 
+## Independent review handoff (AGY **and** OpenCode)
+
+Use the [shared two-lane procedure](../../../docs/plan/VALORA_INDEPENDENT_REVIEW_PROCESS_V1.md) and distinguish:
+- **D — design advisory, before implementation:** Codex directly sends one short whole-review prompt to the assigned AGY and/or OpenCode reviewer with readable approved Contract/source, lets the reviewer select its own investigative tools (read/grep/shell/web/MCP etc.), waits for the native final, and forwards the **complete unedited** report to PM. **PM** verifies/analyzes findings and proposes PO decisions. Do not impose default VM, AGY C1–C8, staged W1–W5, tool-count monitors or an automatic MCP feasibility subtask as requirements for this advisory. Existing ambient MCP exposure is a disclosed limitation, not a security PASS; never include credentials/customer data or authorize project edits/external side-effecting changes.
+- **P — formal frozen candidate/PR review:** Keep CODEX §10.1 and Issue #221 same-HEAD independent A/B, technically read-only candidate protection, appropriate CI/T0–T3 and full Gate Owner assessment. D **cannot substitute** for P or signed named Security Owner/Domain Owner acceptance.
+- **For either lane:** request actual model availability (AGY `gemini-3.8-flash-high` HIGH; OpenCode currently `opencode-go/deepseek-v4.1-flash` subject to live route). Codex retains reviewer/model/effort/status, complete native final with hash/ref, actual source SHA, tools observed if available, missing canonical sources, and raw vs historical test provenance. Codex never promotes a reviewer's finding directly to PM approval or grants a new source path. Official OpenCode [permission schema](https://opencode.ai/docs/permissions) is versioned; inspect installed CLI rather than assuming legacy `permission/bash` or new `permissions/shell` works universally.
+
 ## Definition of Ready
 
 Validate the [Definition of Ready](../../../docs/plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md#definition-of-ready-and-stage-contracts) before preparing an implementation handoff:
