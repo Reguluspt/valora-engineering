@@ -410,31 +410,32 @@ audit, idempotency, human-approval or exact-SHA requirements.
   adjudicates review findings and reports the exact result. Codex commits or pushes only when
   the task authorizes it. The mechanical-worker role is removed; implementation must not be
   delegated to Gemini or other models.
-- Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent and
-  strictly read-only.
-- Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent and strictly read-only.
-  Gemini 3.8 is Reviewer B only and must never receive delegated implementation work.
+- Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent technical reviewer; read-only on the source candidate in formal PR review.
+- Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent technical reviewer; read-only on the source candidate in formal PR review.
+  Neither reviewer may receive delegated VALORA implementation work.
 - Independent reviewers are read-only and cannot mutate files, credentials, networks or cloud
   resources. Required reviewers inspect the same frozen HEAD and identical unchanged source packet.
   A required unavailable reviewer leaves the review INCOMPLETE.
+
+**Separate the review lanes:** [Independent Review Procedure v1](docs/plan/VALORA_INDEPENDENT_REVIEW_PROCESS_V1.md) defines **Lane D (pre-implementation design advisory)** and **Lane P (formal frozen-candidate review)**. Under the explicit 2026-11-20 PO decision, Codex directly dispatches one concise prompt to AGY and/or OpenCode for Lane D; those reviewers may use their available **investigative** CLI, code, web/MCP and research tools without a default VM, canary C1–C8, staged tool-count procedure or repeated MCP research before each advisory. Codex preserves the complete native report and forwards it to PM; **PM adjudicates** and returns material design/scope decisions to PO. This permission to use tools does not authorize reviewer writes to VALORA code/test/CI, Git/DB/deployment, credentials, protected data or external side-effecting actions. Disclose known ambient MCP exposure without falsely treating it as isolation PASS. Advisory does not substitute signed Security/Domain Owner acceptance, formal A/B, T0–T3 or exact-SHA CI.
 
 `gemini-3.1-pro-high` is retired: never invoke it or use it as a fallback. Query the model list
 when invoking an authorized provider; do not infer aliases or substitute models. An unavailable
 required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner.
 
-Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
-for each required reviewer. Provide one whole-candidate assignment with the exact HEAD,
+**Formal Lane P only:** Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
+for each required code-candidate reviewer. Provide one whole-candidate assignment with the exact HEAD,
 changed-file/hash evidence, diff and complete relevant frozen source, authority and test evidence.
 Use an inline packet or an indexed immutable snapshot. Enforce read-only isolation technically for
 either transport. Reviewers choose their inspection paths and available analysis tools within that
 verified boundary. Codex dispatches once and waits for the native final assessment.
 
-Keep access default-deny. Protect the original worktree and credentials and deny out-of-scope
+**For formal Lane P:** Keep access default-deny. Protect the original worktree and credentials and deny out-of-scope
 access and writes, shell, web, MCP and other external side effects on the scoped read route.
 If required evidence or safe capabilities are missing, STOP with REVIEW_INCOMPLETE and report the
 precise gap to PM / Gate Owner. Never bypass permissions, broaden access automatically, change
 global AGY settings, silently substitute a model or retry automatically. Follow the
-[PM playbook's Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch)
+[PM playbook's formal Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#formal-agy-reviewer-b-preflight-and-dispatch)
 for the AGY route and its per-candidate isolation checks.
 
 ### 10.2 Task-scoped context and resume
