@@ -427,7 +427,9 @@ required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner
 **Formal Lane P only:** Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
 for each required code-candidate reviewer. Provide one whole-candidate assignment with the exact HEAD,
 changed-file/hash evidence, diff and complete relevant frozen source, authority and test evidence.
-Use an inline packet or a protected, indexed immutable source snapshot; enforce the source
+**Private ChatGPT Space sources are not directly reachable by Codex or reviewers unless access has been independently verified.** For private SEC/DOM Contracts, PM must export an actual READ-ONLY file packet, **deliver it to PO**, and **PO manually attaches/transfers it to Codex** through the authorized file channel. Codex must verify received file hashes and contents before invoking a reviewer. Private Space page links alone count as `SOURCE_PACKET_NOT_DELIVERED`, not source evidence; never ask Codex to bypass authentication or make a private page public. For blind design advice, do not include AGY/PM prior findings in the packet.
+
+Use the actual PO-transferred file packet or a protected, indexed immutable source snapshot; enforce the source
 candidate's **read-only/no-mutation** boundary through available legitimate access and native
 permissions. **Both lanes** permit reviewer-chosen investigative CLI/shell, code, web/search and
 MCP tools when accessible and relevant; a tool's availability does NOT authorize modifying files,
