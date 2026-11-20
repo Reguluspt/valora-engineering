@@ -7,6 +7,8 @@ description: Execute a Valora High, Product or Security gate review on one froze
 
 Under live CODEX and the assigned contract:
 
+**Use this skill for formal Lane P, not a pre-implementation Lane D advisory.** [Review Procedure v1](../../../docs/plan/VALORA_INDEPENDENT_REVIEW_PROCESS_V1.md) separates the short Codex-to-AGY/OpenCode tool-enabled *design advice* from the later full frozen-candidate Gate review. For design advice Codex relays a genuine unedited native final to PM; PM analyzes, and independent signed Security/Domain acceptance remains separate. The advisory does not satisfy a mandatory formal A/B review.
+
 HIGH risk → freeze ONE HEAD → two independent read-only reviewers → SAME exact HEAD → exact-head CI SUCCESS → Gate Owner independent review → expected-head guarded Ready/merge → squash merge → exact-main postmerge certification.
 
 Give reviewers the exact SHA, changed-file/hash manifest, scoped authority and necessary evidence. Query live provider model lists. Missing required review is INCOMPLETE, never PASS. Adjudicate findings as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY with evidence; fix valid findings.
