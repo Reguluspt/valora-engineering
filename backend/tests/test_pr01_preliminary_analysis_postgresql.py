@@ -1,6 +1,7 @@
 """PostgreSQL-only concurrency and lock-order proof for PR-01 preliminary analysis."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import threading
 import uuid
@@ -10,23 +11,26 @@ from fastapi import HTTPException
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.project_master_data.application import preliminary_analysis_service as s1_service
 from app.modules.project_master_data.application.preliminary_analysis_service import (
-    finalize_preliminary_analysis,
+    begin_preliminary_analysis_execution, claim_preliminary_analysis_attempt, finalize_preliminary_analysis,
 )
 from app.modules.project_master_data.application.preliminary_project_lifecycle_service import (
     switch_current_preliminary_import_batch,
 )
 from app.modules.project_master_data.models import (
     AuditEvent,
+    PreliminaryAnalysisFinalizeAttempt,
     PreliminaryAnalysisSnapshot,
     Project,
     ProjectAssetImportBatch,
     User,
     UserRole,
+    UserSession,
 )
 from tests.test_pr01_preliminary_analysis_service import (
     PRELIMINARY_ANALYSIS_PERMISSION,
-    _seed,
+    _claim_and_begin, _seed, _seed_s1_session, _s1_claim, _s1_context, _s1_finalize,
 )
 
 
@@ -337,4 +341,124 @@ def test_postgresql_switch_wins_project_lock_before_analysis_finalization() -> N
         holder.rollback()
         holder.close()
         setup.close()
+        engine.dispose()
+
+def test_s1_postgresql_two_sessions_one_claim_and_one_commit():
+    engine = _postgres_engine_or_skip()
+    sessions = sessionmaker(engine)
+    try:
+        with sessions() as db:
+            ids, seeded = _seed_ids(db, suffix=f"s1-pg-{uuid.uuid4().hex[:8]}")
+            first_session, claim, binding = _s1_context(db, seeded, range(3, 153))
+            second_session = _seed_s1_session(db, seeded)[0].id
+            db.commit()
+        barrier = threading.Barrier(2, timeout=15)
+
+        def claim_once(owner_session, envelope):
+            with sessions() as db:
+                barrier.wait()
+                try:
+                    output = claim_preliminary_analysis_attempt(
+                        db, actor=db.get(User, ids["actor"]), session_id=owner_session,
+                        project_id=ids["project"], claim=envelope,
+                    )
+                    return owner_session, envelope, output
+                except HTTPException as denied:
+                    return denied.detail["error_code"]
+
+        other = claim.model_copy(update={"command_id": uuid.uuid4()})
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(claim_once, sid, envelope)
+                       for sid, envelope in ((first_session, claim), (second_session, other))]
+            outcomes = [future.result(timeout=30) for future in futures]
+        assert outcomes.count("preliminary_analysis_attempt_active") == 1
+        winning_session, winning_claim, receipt = next(value for value in outcomes if isinstance(value, tuple))
+        attempt_id = uuid.UUID(receipt["attempt_id"])
+        with sessions() as db:
+            actor = db.get(User, ids["actor"])
+            generation = begin_preliminary_analysis_execution(
+                db, actor=actor, session_id=winning_session, project_id=ids["project"],
+                attempt_id=attempt_id, command_id=str(winning_claim.command_id),
+            )
+            loaded = {"actor": actor, "org": actor.organization, "project": db.get(Project, ids["project"])}
+            snapshot = _s1_finalize(db, loaded, winning_session, winning_claim, attempt_id, generation, binding)
+            terminal = db.get(PreliminaryAnalysisFinalizeAttempt, attempt_id)
+            assert terminal.status == "COMMITTED" and terminal.committed_snapshot_id == snapshot.id
+            assert len(terminal.row_binding_proof["rows"]) == 150
+            same_claim = claim_preliminary_analysis_attempt(
+                db, actor=actor, session_id=winning_session, project_id=ids["project"], claim=winning_claim,
+            )
+            assert same_claim["attempt_id"] == str(attempt_id) and same_claim["status"] == "COMMITTED"
+            assert _s1_finalize(db, loaded, winning_session, winning_claim, attempt_id, None, binding).id == snapshot.id
+            with pytest.raises(HTTPException) as reused:
+                _s1_finalize(db, loaded, winning_session, winning_claim, attempt_id, None, binding, unit_price=1)
+            assert reused.value.detail["error_code"] == "preliminary_analysis_idempotency_key_reused"
+        _assert_one_fact_and_audit(sessions, ids)
+    finally:
+        engine.dispose()
+
+@pytest.mark.parametrize("failure", ["audit_write", "session_revoked", "row_reassigned"])
+def test_s1_postgresql_t3_has_no_partial_commit(monkeypatch, failure):
+    engine = _postgres_engine_or_skip()
+    sessions = sessionmaker(engine)
+    try:
+        with sessions() as db:
+            ids, seeded = _seed_ids(db, suffix=f"s1-pg-{uuid.uuid4().hex[:8]}")
+            session_id, claim, binding = _s1_context(db, seeded, [3, 4])
+            attempt_id, generation = _claim_and_begin(db, seeded, session_id, claim)
+            if failure == "audit_write":
+                audit = s1_service.log_audit_event
+
+                def append_then_interrupt(db, **kwargs):
+                    audit(db, **kwargs)
+                    db.flush()
+                    raise RuntimeError("synthetic failure before T3 commit")
+
+                monkeypatch.setattr(s1_service, "log_audit_event", append_then_interrupt)
+                with pytest.raises(RuntimeError, match="synthetic failure"):
+                    _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding)
+            elif failure == "session_revoked":
+                with sessions.begin() as other_db:
+                    other_db.get(UserSession, session_id).status = "revoked"
+                with pytest.raises(HTTPException) as denied:
+                    _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding)
+                assert denied.value.status_code == 401
+            else:
+                binding[0]["staging_row_id"], binding[1]["staging_row_id"] = binding[1]["staging_row_id"], binding[0]["staging_row_id"]
+                with pytest.raises(HTTPException) as denied:
+                    _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding)
+                assert denied.value.detail["error_code"] == "preliminary_analysis_staging_mismatch"
+
+            s1_service.mark_preliminary_analysis_unknown(db, org_id=ids["org"], project_id=ids["project"],
+                                                         attempt_id=attempt_id, generation=generation)
+        with sessions() as db:
+            attempt = db.get(PreliminaryAnalysisFinalizeAttempt, attempt_id)
+            assert attempt.status == "UNKNOWN" and attempt.committed_snapshot_id is None
+            assert attempt.row_binding_proof is None
+            assert db.query(PreliminaryAnalysisSnapshot).filter_by(project_id=ids["project"]).count() == 0
+            assert db.query(AuditEvent).filter_by(
+                organization_id=ids["org"], event_name="PreliminaryAnalysisSnapshotFinalized",
+            ).count() == 0
+    finally:
+        engine.dispose()
+
+
+def test_s1_postgresql_explicit_revision_requires_prior_terminal_and_new_base():
+    engine = _postgres_engine_or_skip()
+    try:
+        with Session(engine) as db:
+            _, seeded = _seed_ids(db, suffix=f"s1-pg-{uuid.uuid4().hex[:8]}")
+            session_id, first_claim, binding = _s1_context(db, seeded, [3])
+            first_id, generation = _claim_and_begin(db, seeded, session_id, first_claim)
+            first = _s1_finalize(db, seeded, session_id, first_claim, first_id, generation, binding)
+            with pytest.raises(HTTPException) as stale:
+                _claim_and_begin(db, seeded, session_id, _s1_claim(seeded, base=0))
+            assert stale.value.detail["error_code"] == "preliminary_analysis_base_conflict"
+            new_claim = _s1_claim(seeded, base=first.version)
+            second_id, generation = _claim_and_begin(db, seeded, session_id, new_claim)
+            second = _s1_finalize(db, seeded, session_id, new_claim, second_id, generation, binding, unit_price=2000)
+            assert second.version == first.version + 1
+            assert first.line_manifest[0]["proposed_unit_price"] == 9876543
+            assert second.line_manifest[0]["proposed_unit_price"] == 2000
+    finally:
         engine.dispose()

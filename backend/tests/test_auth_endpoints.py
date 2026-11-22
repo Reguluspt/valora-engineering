@@ -13,6 +13,7 @@ Covers:
 - PostgreSQL concurrent /refresh endpoint test (run only on CI with real PG)
 """
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -202,6 +203,32 @@ def test_me_endpoint_requires_auth(client: TestClient, test_setup):
     resp = client.get("/api/v1/auth/me")
     assert resp.status_code == 200
     assert resp.json()["email"] == "architect@regulus.com"
+    assert re.fullmatch(r"[0-9a-f]{64}", resp.json()["session_incarnation"])
+    assert resp.headers["cache-control"] == "no-store"
+
+
+def test_me_incarnation_stays_on_refresh_and_changes_on_new_login(client, test_setup, db_session):
+    login(client)
+    first = client.get("/api/v1/auth/me").json()["session_incarnation"]
+    session = db_session.query(UserSession).filter_by(status="active").one()
+    assert first not in (str(session.id), session.access_token_hash, session.csrf_token_hash)
+    refreshed = client.post("/api/v1/auth/refresh", headers={
+        "Origin": "http://localhost:5173", "X-CSRF-Token": client.cookies.get("XSRF-TOKEN"),
+    })
+    assert refreshed.status_code == 200
+    assert client.get("/api/v1/auth/me").json()["session_incarnation"] == first
+    login(client)
+    assert client.get("/api/v1/auth/me").json()["session_incarnation"] != first
+
+
+def test_session_incarnation_rejects_development_default_in_production(monkeypatch, db_session, test_setup):
+    from fastapi import HTTPException
+    from app.api.auth import session_incarnation
+    monkeypatch.setattr(settings, "valora_env", "production")
+    monkeypatch.setattr(settings, "app_secret_key", type(settings).model_fields["app_secret_key"].default)
+    with pytest.raises(HTTPException) as rejected:
+        session_incarnation(UserSession())
+    assert rejected.value.status_code == 503
 
 
 # ─────────────────────────────────────────────────

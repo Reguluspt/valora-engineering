@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.api.auth import get_cookie_keys, session_incarnation
 from app.db import Base, get_db
 from app.db.session import get_case_state_db
 from app.main import app
@@ -19,7 +20,9 @@ from app.modules.project_master_data.models import (
     ValidationIssueStatus,
 )
 from tests.test_g11b_lifecycle_service import _batch, _seed_case
-from tests.test_pr01_preliminary_analysis_service import _line, _seed as seed_analysis
+from tests.test_pr01_preliminary_analysis_service import (
+    _finalize, _line, _seed as seed_analysis, _seed_s1_session, _seed_s1_staging, _s1_claim,
+)
 from tests.test_pr01_official_intake_service import _add_issue
 from tests.test_pr01_preliminary_result_service import (
     _append_analysis_version, _seed as seed_result,
@@ -55,6 +58,14 @@ def api_db():
 
 def _headers(seeded):
     return {"X-User-Id": str(seeded["actor"].id)}
+
+
+def _analysis_headers(client, db, seeded):
+    session, access_token, csrf_token = _seed_s1_session(db, seeded)
+    db.commit()
+    client.cookies.set(get_cookie_keys()[0], access_token)
+    return {**_headers(seeded), "Origin": "http://localhost:5173", "X-CSRF-Token": csrf_token,
+            "X-Valora-Session-Incarnation": session_incarnation(session)}
 
 
 def _url(seeded, command):
@@ -188,6 +199,7 @@ def test_switch_batch_http_cas_replay_and_unresolved_pointer(api_db):
 def test_analysis_http_v2_contract_currentness_and_permission(api_db):
     client, db = api_db
     seeded = seed_analysis(db, suffix="api-analysis")
+    headers = _analysis_headers(client, db, seeded)
     payload = {
         "expected_project_version": seeded["project"].row_version,
         "import_batch_id": str(seeded["batch"].id),
@@ -200,22 +212,26 @@ def test_analysis_http_v2_contract_currentness_and_permission(api_db):
         "line_manifest": [_line()], "idempotency_key": "analysis-api", "confirmed": True,
     }
     url = _url(seeded, "preliminary-analyses")
-    assert client.post(url, headers=_headers(seeded), json={
+    assert client.post(url, headers=headers, json={
         **payload, "line_manifest": [{"identity": "old-v1"}],
     }).status_code == 422
-    assert client.post(url, headers=_headers(seeded), json={
+    assert client.post(url, headers=headers, json={
         key: value for key, value in payload.items() if key != "confirmed"
     }).status_code == 422
     seeded["role"].permissions = ["project:update"]
     db.commit()
-    assert client.post(url, headers=_headers(seeded), json=payload).status_code == 403
+    assert client.post(url, headers=headers, json=payload).status_code == 403
     seeded["role"].permissions = COMMAND_PERMISSIONS
     db.commit()
-    first = client.post(url, headers=_headers(seeded), json=payload)
+    rejected = client.post(url, headers=headers, json=payload)
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"]["error_code"] == "preliminary_analysis_v2_write_disabled"
+    _finalize(db, seeded, idempotency_key=payload["idempotency_key"])
+    first = client.post(url, headers=headers, json=payload)
     assert first.status_code == 201, first.text
     assert first.json()["version"] == 1
-    assert client.post(url, headers=_headers(seeded), json=payload).json() == first.json()
-    assert client.post(url, headers=_headers(seeded), json={
+    assert client.post(url, headers=headers, json=payload).json() == first.json()
+    assert client.post(url, headers=headers, json={
         **payload, "import_batch_id": str(uuid.uuid4()), "idempotency_key": "historical-api",
     }).status_code == 409
 
@@ -315,24 +331,31 @@ def test_api_created_unbound_project_reaches_official_intake(api_db):
         current_staging_usage_id=seeded["usage"].id,
     ))
     db.commit()
-    headers = _headers(seeded)
+    headers = _analysis_headers(client, db, seeded)
+    price_manifest = seeded["snapshot"].line_manifest
+    binding = _seed_s1_staging(db, seeded, [line["source_row_number"] for line in price_manifest])
+    claim = _s1_claim(seeded, base=1)
+    db.commit()
+    assert client.post(_url(seeded, "preliminary-analysis-attempts"),
+                       headers={**headers, "X-Valora-Session-Incarnation": "a" * 64},
+                       json=claim.model_dump(mode="json")).status_code == 401
+    claimed = client.post(_url(seeded, "preliminary-analysis-attempts"), headers=headers,
+                          json=claim.model_dump(mode="json"))
+    assert claimed.status_code == 201, claimed.text
     analysis_payload = {
-        "expected_project_version": seeded["project"].row_version,
-        "import_batch_id": str(seeded["batch"].id),
-        "source_artifact_id": str(seeded["artifact"].id),
-        "structure_snapshot_id": str(seeded["structure"].id),
-        "mapping_decision_id": str(seeded["decision"].id),
-        "mapping_profile_usage_id": str(seeded["usage"].id),
-        "mapping_decision_digest_sha256": seeded["decision"].mapping_digest_sha256,
-        "profile_usage_mapping_digest_sha256": seeded["usage"].mapping_digest_sha256,
-        "line_manifest": seeded["snapshot"].line_manifest,
-        "idempotency_key": "analysis-created-project", "confirmed": True,
+        **claim.model_dump(mode="json", exclude={"command_id", "source_generation", "source_checksum_sha256", "selection_revision"}),
+        "line_manifest": [{**line, **row} for line, row in zip(price_manifest, binding, strict=True)],
+        "attempt_id": claimed.json()["attempt_id"],
+        "idempotency_key": str(claim.command_id), "confirmed": True,
     }
     analysis = client.post(
         _url(seeded, "preliminary-analyses"), headers=headers, json=analysis_payload,
     )
     assert analysis.status_code == 201, analysis.text
     assert analysis.json()["version"] == 2
+    status = client.get(_url(seeded, "preliminary-analysis-attempts/" + claimed.json()["attempt_id"]), headers=headers)
+    assert status.status_code == 200 and status.json()["status"] == "COMMITTED"
+    assert "line_manifest" not in status.json()
     result = client.post(
         _url(seeded, "preliminary-results"), headers=headers,
         json={"preliminary_analysis_snapshot_id": analysis.json()["id"],
