@@ -1,9 +1,13 @@
 import React from "react";
 
 export type ShellIconName = "requests" | "workbench" | "overview" | "documents"
-  | "suppliers" | "upload" | "analysis" | "results" | "sidebar" | "logout";
+  | "suppliers" | "upload" | "analysis" | "results" | "sidebar" | "logout" | "compare" | "folder" | "search" | "expand";
 
 const paths: Record<ShellIconName, React.ReactNode> = {
+  compare: <path d="M4 7h15l-3-3M20 17H5l3 3M19 7l-3 3M5 17l3-3M4 3v8M20 13v8" />,
+  folder: <path d="M3 8V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18" />,
+  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
+  expand: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6" />,
   requests: <><rect x="5" y="3" width="14" height="18" rx="3" /><path d="M9 8h6M9 12h6M9 16h4" /></>,
   workbench: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M3 10h18M9 10v10M15 10v10" /></>,
   overview: <><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" /></>,

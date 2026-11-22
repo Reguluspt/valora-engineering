@@ -24,6 +24,8 @@ describe("preliminaryAnalysis API", () => {
     vi.mocked(request).mockResolvedValueOnce(responsePayload);
 
     const requestPayload: PreliminaryAnalysisFinalizeRequest = {
+      attempt_id: "attempt-1",
+      expected_analysis_version: 0,
       expected_project_version: 2,
       import_batch_id: "batch-1",
       source_artifact_id: "artifact-1",
@@ -42,6 +44,7 @@ describe("preliminaryAnalysis API", () => {
           human_line_confirmed: true,
           has_unresolved_blocking_line: false,
           source_row_number: 4,
+          staging_row_id: "row-4",
           quantity: 2,
         },
       ],
@@ -49,14 +52,16 @@ describe("preliminaryAnalysis API", () => {
       confirmed: true,
     };
 
-    const result = await finalizePreliminaryAnalysis("prj/1", requestPayload);
+    const result = await finalizePreliminaryAnalysis("prj/1", requestPayload, "a".repeat(64));
     expect(result).toBe(responsePayload);
     expect(request).toHaveBeenCalledWith(
       "/api/v1/projects/prj%2F1/preliminary-analyses",
       {
         method: "POST",
         body: JSON.stringify(requestPayload),
-      }
+        headers: { "X-Valora-Session-Incarnation": "a".repeat(64) },
+      },
+      true,
     );
   });
 

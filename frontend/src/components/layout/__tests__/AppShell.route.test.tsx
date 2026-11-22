@@ -7,6 +7,7 @@ import { APP_ROUTES, projectListVerificationPath } from "../../../contracts/valo
 vi.mock("../../../i18n", () => ({ t: (k: string) => k }));
 vi.mock("@fluentui/react-components", () => ({
   webLightTheme: {},
+  useModalAttributes: () => ({ modalAttributes: {} }),
   FluentProvider: ({ children, theme, ...props }: any) => React.createElement("div", props, children),
   Button: ({ children, icon, appearance, ...props }: any) => React.createElement("button", props, icon, children),
 }));
