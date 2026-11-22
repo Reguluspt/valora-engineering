@@ -317,6 +317,7 @@ function ResolvedPreliminaryAnalysis({
   }, [confirmOpen, reconcileOpen]);
   useLayoutEffect(() => {
     if (!active) {
+      setLoadState("loading");
       restoreFocus.current = true;
       setConfirmOpen(false);
       setReconcileOpen(false);
