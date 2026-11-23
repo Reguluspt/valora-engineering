@@ -1192,6 +1192,7 @@ def _claim_and_begin(db, seeded, session_id, claim):
     attempt_id = uuid.UUID(attempt["attempt_id"])
     generation = service.begin_preliminary_analysis_execution(
         db, actor=actor, session_id=session_id, project_id=project_id, attempt_id=attempt_id, command_id=str(claim.command_id),
+        line_manifest=[_line()],
     )
     return attempt_id, generation
 

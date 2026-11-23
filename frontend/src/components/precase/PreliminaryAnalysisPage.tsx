@@ -28,6 +28,13 @@ interface AnalysisData {
   source: ImportSourceArtifact | null;
 }
 
+interface RejectedAnalysisAttempt {
+  id: string;
+  claim: PreliminaryAnalysisAttemptClaim;
+  sourceFingerprint: string;
+  message: string;
+}
+
 const legacyPendingPrefix = "valora:g11i:analysis-pending:";
 const finalizePermission = "project:preliminary_analysis:finalize";
 const reconcilePermission = "project:preliminary_analysis:reconcile";
@@ -128,10 +135,13 @@ function ResolvedPreliminaryAnalysis({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reconcileOpen, setReconcileOpen] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [rejectedAttempt, setRejectedAttempt] = useState<RejectedAnalysisAttempt | null>(null);
   const [workspaceVersion, setWorkspaceVersion] = useState(0);
   const [canReconcile, setCanReconcile] = useState(false);
   const confirmDialogRef = useRef<HTMLDialogElement>(null);
   const reconcileDialogRef = useRef<HTMLDialogElement>(null);
+  const rejectionSummaryRef = useRef<HTMLElement>(null);
+  const focusRejection = useRef(false);
   const epoch = useRef(0);
   const fingerprint = useRef<string | null>(null);
   const currentOwner = useRef<string | null>(null);
@@ -159,6 +169,7 @@ function ResolvedPreliminaryAnalysis({
       clearDraft();
       currentOwner.current = null;
       attemptId.current = null;
+      setRejectedAttempt(null);
       setData(null);
       setCanReconcile(false);
       setUncertain(false);
@@ -273,6 +284,7 @@ function ResolvedPreliminaryAnalysis({
       setCanReconcile(verified.roles.includes("owner") && verified.permissions.includes(reconcilePermission));
       if (terminal) {
         attemptId.current = null;
+        setRejectedAttempt(null);
         setUncertain(false);
         clearDraft();
         if (committed) {
@@ -342,17 +354,31 @@ function ResolvedPreliminaryAnalysis({
   const manifest = buildAnalysisManifest(drafts);
   const reviewedCount = drafts.filter((row) => row.human_line_confirmed && !row.has_unresolved_blocking_line).length;
   const base = data?.attemptState.base_analysis_version;
+  const activeAttempt = data?.attemptState.active_attempt;
+  const knownRejection = rejectedAttempt && activeAttempt?.attempt_id === rejectedAttempt.id &&
+    activeAttempt.status === "RECEIVED" && activeAttempt.execution_generation === 0 ? rejectedAttempt : null;
+  const correction = data && knownRejection && sourceFingerprint(data) === knownRejection.sourceFingerprint
+    ? knownRejection : null;
+  const attemptBlocked = uncertain || (!correction && Boolean(rejectedAttempt || data?.attemptState.blocked));
   const canFinalize = Boolean(data && !data.snapshot && !data.blockedReason && data.recovery && data.source &&
-    typeof base === "number" && !data.attemptState.blocked && currentOwner.current &&
-    manifest && !busy && !uncertain && !quarantined && loadState === "ready" && active);
+    typeof base === "number" && !attemptBlocked && currentOwner.current &&
+    manifest && !busy && !quarantined && loadState === "ready" && active);
+
+  useEffect(() => {
+    if (focusRejection.current && active && knownRejection && loadState === "ready") {
+      focusRejection.current = false;
+      rejectionSummaryRef.current?.focus();
+    }
+  }, [active, knownRejection, loadState]);
 
   const confirmFinalize = async () => {
     if (!canFinalize || !data?.recovery || !data.source || !manifest || base === undefined || submitting.current) return;
     const mapping = data.recovery;
     const source = data.source;
-    const commandId = crypto.randomUUID();
-    const claim: PreliminaryAnalysisAttemptClaim = {
-      command_id: commandId,
+    const submittedSource = sourceFingerprint(data);
+    if (!submittedSource) return;
+    const claim: PreliminaryAnalysisAttemptClaim = correction?.claim ?? {
+      command_id: crypto.randomUUID(),
       expected_analysis_version: base,
       expected_project_version: data.caseState.preliminary.project_row_version,
       import_batch_id: source.import_batch_id,
@@ -376,17 +402,24 @@ function ResolvedPreliminaryAnalysis({
     setBusy(true);
     setConfirmOpen(false);
     let claimStarted = false;
+    let submittedAttemptId: string | null = null;
     try {
       const account = await verifiedAccount();
       if (epoch.current !== generation) return;
       const incarnation = account.session_incarnation!;
       claimStarted = true;
       setUncertain(true);
-      const attempt = await claimPreliminaryAnalysisAttempt(projectId, claim, incarnation);
-      attemptId.current = attempt.attempt_id;
-      if (epoch.current !== generation || attempt.status !== "RECEIVED") return;
+      if (correction) {
+        setRejectedAttempt(null);
+        submittedAttemptId = correction.id;
+      } else {
+        const attempt = await claimPreliminaryAnalysisAttempt(projectId, claim, incarnation);
+        attemptId.current = attempt.attempt_id;
+        if (epoch.current !== generation || attempt.status !== "RECEIVED") return;
+        submittedAttemptId = attempt.attempt_id;
+      }
       await finalizePreliminaryAnalysis(projectId, {
-        attempt_id: attempt.attempt_id,
+        attempt_id: submittedAttemptId,
         expected_analysis_version: claim.expected_analysis_version,
         expected_project_version: claim.expected_project_version,
         import_batch_id: claim.import_batch_id,
@@ -396,7 +429,7 @@ function ResolvedPreliminaryAnalysis({
         mapping_profile_usage_id: claim.mapping_profile_usage_id,
         mapping_decision_digest_sha256: claim.mapping_decision_digest_sha256,
         profile_usage_mapping_digest_sha256: claim.profile_usage_mapping_digest_sha256,
-        line_manifest: v3Lines, idempotency_key: commandId, confirmed: true,
+        line_manifest: v3Lines, idempotency_key: claim.command_id, confirmed: true,
       }, incarnation);
       if (epoch.current !== generation) return;
       setNotice(null);
@@ -409,7 +442,12 @@ function ResolvedPreliminaryAnalysis({
       } else if (!claimStarted) {
         invalidate(error);
       } else {
-        if (!attemptId.current && error instanceof ApiError && (error.status === 409 || error.status === 422)) {
+        if (submittedAttemptId && error instanceof ApiError && error.detail?.detail?.execution_started === false) {
+          focusRejection.current = true;
+          setRejectedAttempt({ id: submittedAttemptId, claim, sourceFingerprint: submittedSource, message: error.message });
+          setUncertain(false);
+          setNotice(null);
+        } else if (!attemptId.current && error instanceof ApiError && (error.status === 409 || error.status === 422)) {
           setUncertain(false);
           setNotice("Dữ liệu đã thay đổi hoặc đang có lệnh chốt. Hãy kiểm tra lại trạng thái.");
         } else {
@@ -437,6 +475,7 @@ function ResolvedPreliminaryAnalysis({
       if (epoch.current !== generation) return;
       setUncertain(false);
       attemptId.current = null;
+      setRejectedAttempt(null);
       clearDraft();
       setNotice("Đã đối soát lệnh chốt theo trạng thái máy chủ. Hãy rà soát lại dữ liệu trước khi chốt.");
       await load(revising);
@@ -454,7 +493,6 @@ function ResolvedPreliminaryAnalysis({
   if (!data) return null;
 
   const completed = data.snapshot;
-  const attemptBlocked = uncertain || data.attemptState.blocked;
   return (
     <div className="precase-analysis-page" onFocusCapture={(event) => {
       if (event.target instanceof HTMLElement) previousFocus.current = event.target;
@@ -467,10 +505,14 @@ function ResolvedPreliminaryAnalysis({
       {notice && <p className="precase-intake-warning" role="status">{notice}</p>}
       {loadState === "loading" && <p role="status">Đang kiểm tra dữ liệu hiện hành…</p>}
       {loadState === "error" && <ErrorState title="Chưa thể cập nhật phân tích" message="Không thể đọc trạng thái hiện hành. Dữ liệu đang hiển thị chưa được xác minh lại." onRetry={() => void load()} />}
-      {attemptBlocked && loadState === "ready" && <section className="valora-panel" role="alert">
-        <div className="valora-panel__header">Chưa rõ kết quả chốt phân tích</div>
-        <div className="valora-panel__body"><p>Kiểm tra trạng thái máy chủ. Có thể chốt lại sau khi lệnh trước đã có kết quả cuối cùng.</p>
-          <button className="valora-button valora-button--secondary" onClick={() => void load(revising)} type="button">Kiểm tra trạng thái</button>
+      {(attemptBlocked || knownRejection) && loadState === "ready" && <section className="valora-panel"
+        role={knownRejection ? "status" : "alert"} ref={rejectionSummaryRef} tabIndex={-1}>
+        <div className="valora-panel__header">{knownRejection ? "Dữ liệu chốt bị từ chối" : "Chưa rõ kết quả chốt phân tích"}</div>
+        <div className="valora-panel__body">
+          {correction ? <p>{correction.message} Hãy sửa dữ liệu rồi xác nhận lại lệnh chốt.</p>
+            : knownRejection ? <p>Dữ liệu hiện hành đã thay đổi. Lệnh chốt cần được đối soát.</p>
+              : <p>Kiểm tra trạng thái máy chủ. Có thể chốt lại sau khi lệnh trước đã có kết quả cuối cùng.</p>}
+          {attemptBlocked && <button className="valora-button valora-button--secondary" onClick={() => void load(revising)} type="button">Kiểm tra trạng thái</button>}
           {canReconcile && data.attemptState.active_attempt && <button className="valora-button valora-button--secondary" disabled={busy} onClick={() => setReconcileOpen(true)} type="button">Đối soát lệnh chốt</button>}
         </div>
       </section>}

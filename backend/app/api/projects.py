@@ -665,6 +665,7 @@ def _execute_preliminary_analysis(
     db: Session, current_user: User, current_session,
 ):
     params = payload.model_dump(exclude={"line_manifest", "attempt_id", "expected_analysis_version"})
+    line_manifest = [line.model_dump(exclude={"staging_row_id"}) for line in payload.line_manifest]
     binding = None
     attempt_id = None
     analysis_version = None
@@ -681,13 +682,13 @@ def _execute_preliminary_analysis(
             raise HTTPException(status_code=422, detail="Thiếu xác nhận hoặc dòng phân tích.")
         generation = begin_preliminary_analysis_execution(
             db, actor=current_user, session_id=current_session.id, project_id=project_id,
-            attempt_id=attempt_id, command_id=payload.idempotency_key,
+            attempt_id=attempt_id, command_id=payload.idempotency_key, line_manifest=line_manifest,
         )
     org_id = current_user.organization_id
     try:
         snapshot = finalize_preliminary_analysis(
             db, actor=current_user, org_id=org_id, project_id=project_id, **params,
-            line_manifest=[line.model_dump(exclude={"staging_row_id"}) for line in payload.line_manifest],
+            line_manifest=line_manifest,
             legacy_replay_only=True, session_id=current_session.id, attempt_id=attempt_id, execution_generation=generation,
             expected_analysis_version=analysis_version, row_binding=binding,
             correlation_id=get_correlation_id(request),

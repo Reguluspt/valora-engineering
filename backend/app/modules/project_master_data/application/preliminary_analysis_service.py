@@ -603,7 +603,7 @@ def claim_preliminary_analysis_attempt(
 
 def begin_preliminary_analysis_execution(
     db: Session, *, actor: User, session_id: uuid.UUID, project_id: uuid.UUID,
-    attempt_id: uuid.UUID, command_id: str,
+    attempt_id: uuid.UUID, command_id: str, line_manifest: list[dict],
 ) -> int | None:
     org_id = actor.organization_id
     _lock_project(db, org_id, project_id)
@@ -615,6 +615,12 @@ def begin_preliminary_analysis_execution(
         return None
     if attempt.status != "RECEIVED":
         _abort(db, 409, "preliminary_analysis_attempt_blocked", "Lệnh chốt hiện không thể gửi lại.")
+    try:
+        _validate_line_conditions(line_manifest)
+    except HTTPException as error:
+        db.rollback()
+        error.detail["execution_started"] = False
+        raise
     attempt.execution_generation += 1
     _transition(attempt, "IN_PROGRESS")
     generation = attempt.execution_generation

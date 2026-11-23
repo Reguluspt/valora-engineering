@@ -30,7 +30,7 @@ from app.modules.project_master_data.models import (
 )
 from tests.test_pr01_preliminary_analysis_service import (
     PRELIMINARY_ANALYSIS_PERMISSION,
-    _claim_and_begin, _seed, _seed_s1_session, _s1_claim, _s1_context, _s1_finalize,
+    _claim_and_begin, _line, _seed, _seed_s1_session, _s1_claim, _s1_context, _s1_finalize,
 )
 
 
@@ -61,7 +61,6 @@ def _command(
     idempotency_key: str,
     line_manifest: list[dict] | None = None,
 ) -> PreliminaryAnalysisSnapshot:
-    from tests.test_pr01_preliminary_analysis_service import _line
     actor = db.get(User, actor_id)
     assert actor is not None
     return finalize_preliminary_analysis(
@@ -375,10 +374,25 @@ def test_s1_postgresql_two_sessions_one_claim_and_one_commit():
         winning_session, winning_claim, receipt = next(value for value in outcomes if isinstance(value, tuple))
         attempt_id = uuid.UUID(receipt["attempt_id"])
         with sessions() as db:
+            with pytest.raises(HTTPException) as rejected:
+                begin_preliminary_analysis_execution(
+                    db, actor=db.get(User, ids["actor"]), session_id=winning_session, project_id=ids["project"],
+                    attempt_id=attempt_id, command_id=str(winning_claim.command_id),
+                    line_manifest=[_line(human_line_confirmed=False)],
+                )
+            assert rejected.value.detail["execution_started"] is False
+        with sessions() as db:
+            received = db.get(PreliminaryAnalysisFinalizeAttempt, attempt_id)
+            assert (received.status, received.state_version, received.execution_generation) == ("RECEIVED", 1, 0)
+            assert db.query(PreliminaryAnalysisSnapshot).filter_by(project_id=ids["project"]).count() == 0
+            assert db.query(AuditEvent).filter_by(
+                organization_id=ids["org"], event_name="PreliminaryAnalysisSnapshotFinalized",
+            ).count() == 0
             actor = db.get(User, ids["actor"])
             generation = begin_preliminary_analysis_execution(
                 db, actor=actor, session_id=winning_session, project_id=ids["project"],
                 attempt_id=attempt_id, command_id=str(winning_claim.command_id),
+                line_manifest=[_line(source_row_number=row["source_row_number"]) for row in binding],
             )
             loaded = {"actor": actor, "org": actor.organization, "project": db.get(Project, ids["project"])}
             snapshot = _s1_finalize(db, loaded, winning_session, winning_claim, attempt_id, generation, binding)
@@ -397,7 +411,7 @@ def test_s1_postgresql_two_sessions_one_claim_and_one_commit():
     finally:
         engine.dispose()
 
-@pytest.mark.parametrize("failure", ["audit_write", "session_revoked", "row_reassigned"])
+@pytest.mark.parametrize("failure", ["audit_write", "commit_error", "session_revoked", "row_reassigned"])
 def test_s1_postgresql_t3_has_no_partial_commit(monkeypatch, failure):
     engine = _postgres_engine_or_skip()
     sessions = sessionmaker(engine)
@@ -417,6 +431,15 @@ def test_s1_postgresql_t3_has_no_partial_commit(monkeypatch, failure):
                 monkeypatch.setattr(s1_service, "log_audit_event", append_then_interrupt)
                 with pytest.raises(RuntimeError, match="synthetic failure"):
                     _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding)
+            elif failure == "commit_error":
+                def fail_commit():
+                    db.flush()
+                    raise RuntimeError("synthetic T3 commit error")
+
+                with monkeypatch.context() as patch:
+                    patch.setattr(db, "commit", fail_commit)
+                    with pytest.raises(RuntimeError, match="synthetic T3 commit error"):
+                        _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding)
             elif failure == "session_revoked":
                 with sessions.begin() as other_db:
                     other_db.get(UserSession, session_id).status = "revoked"

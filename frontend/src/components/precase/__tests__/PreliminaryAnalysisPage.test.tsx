@@ -292,11 +292,56 @@ describe("PreliminaryAnalysisPage", () => {
     expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
   });
 
-  it("never sends another price POST after an uncertain POST and negative status lookup", async () => {
+  it.each([false, true])("checks current source before correcting a proved rejection (changed: %s)", async (sourceChanged) => {
+    const root = await mount();
+    await reviewLine(root);
+    api.finalizePreliminaryAnalysis.mockImplementationOnce(async () => {
+      api.getPreliminaryAnalysisAttemptState.mockResolvedValue({
+        blocked: true, base_analysis_version: 0,
+        active_attempt: { attempt_id: "attempt-1", status: "RECEIVED", execution_generation: 0 },
+      });
+      if (sourceChanged) {
+        api.getSourceArtifact.mockResolvedValue({ id: "source-1", import_batch_id: "batch-1", state: "available", generation: 2, checksum_sha256: "a".repeat(64) });
+      }
+      throw new ApiError("Dòng chưa xác nhận.", 409, "preliminary_analysis_line_confirmation_missing", {
+        detail: { execution_started: false },
+      });
+    });
+    act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
+    await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Dữ liệu chốt bị từ chối");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Chưa rõ kết quả chốt phân tích");
+    expect(button(root, "Đối soát lệnh chốt")).toBeUndefined();
+    if (sourceChanged) {
+      expect(JSON.stringify(root.toJSON())).toContain("Bản nháp đang được giữ riêng");
+      expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+      expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+      expect(api.claimPreliminaryAnalysisAttempt).toHaveBeenCalledTimes(1);
+      expect(stored.size).toBe(0);
+      return;
+    }
+    expect(tableField(root, 17, "proposed_unit_price").props.value).toBe("110");
+    act(() => tableField(root, 17, "proposed_unit_price").props.onChange({ target: { value: "175" } }));
+    expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
+    act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+    api.finalizePreliminaryAnalysis.mockResolvedValueOnce({ id: "analysis-1", version: 1 });
+    await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
+    const first = api.finalizePreliminaryAnalysis.mock.calls[0][1];
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenNthCalledWith(2, "project-1", {
+      ...first, line_manifest: [{ ...first.line_manifest[0], proposed_unit_price: 175 }],
+    }, "d".repeat(64));
+    expect(api.claimPreliminaryAnalysisAttempt).toHaveBeenCalledTimes(1);
+    expect(api.reconcilePreliminaryAnalysisAttempt).not.toHaveBeenCalled();
+    expect(stored.size).toBe(0);
+  });
+
+  it.each([0, 409])("never sends another price POST after indeterminate status %i and negative lookup", async (status) => {
     const root = await mount();
     await reviewLine(root);
     act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
-    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("offline", 0));
+    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("indeterminate", status, "preliminary_analysis_line_confirmation_missing"));
     api.getPreliminaryAnalysisAttempt.mockRejectedValue(new ApiError("not found", 404));
     await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
     expect(button(root, "Thử lại cùng mã lệnh")).toBeUndefined();

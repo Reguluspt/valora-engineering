@@ -9,14 +9,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.api.auth import get_cookie_keys, session_incarnation
+from app.core.rbac import get_current_user
 from app.db import Base, get_db
 from app.db.session import get_case_state_db
 from app.main import app
 from app.modules.excel_import.infrastructure.object_storage import set_object_storage_override
 from app.modules.excel_import.models import ColumnMappingDecision, ProjectColumnMappingAuthority
 from app.modules.project_master_data.models import (
-    AuditEvent, CustomerStatus, OrganizationStatus, PreliminaryResultArtifact,
-    Project, ProjectOfficialIntakeCommit, UserStatus, ValidationIssue, ValidationIssueSeverity,
+    AuditEvent, CustomerStatus, OrganizationStatus, PreliminaryAnalysisFinalizeAttempt,
+    PreliminaryAnalysisSnapshot, PreliminaryResultArtifact, Project, ProjectOfficialIntakeCommit,
+    UserStatus, ValidationIssue, ValidationIssueSeverity,
     ValidationIssueStatus,
 )
 from tests.test_g11b_lifecycle_service import _batch, _seed_case
@@ -70,6 +72,54 @@ def _analysis_headers(client, db, seeded):
 
 def _url(seeded, command):
     return f"/api/v1/projects/{seeded['project'].id}/{command}"
+
+
+@pytest.mark.parametrize(("invalid_line", "error_code"), [
+    ({"source_row_number": 3}, "preliminary_analysis_line_source_row_number_duplicate"),
+    ({"human_line_confirmed": False}, "preliminary_analysis_line_confirmation_missing"),
+])
+def test_analysis_v3_rejects_before_execution_and_accepts_explicit_correction(api_db, monkeypatch, invalid_line, error_code):
+    client, db = api_db
+    monkeypatch.delitem(app.dependency_overrides, get_current_user)
+    seeded = seed_analysis(db, suffix="api-f01")
+    seeded["role"].permissions = ["project:read", "project:preliminary_analysis:finalize"]
+    headers = _analysis_headers(client, db, seeded)
+    headers.pop("X-User-Id")
+    binding = _seed_s1_staging(db, seeded, [3, 4])
+    claim = _s1_claim(seeded)
+    db.commit()
+    attempt_url = _url(seeded, "preliminary-analysis-attempts")
+    finalize_url = _url(seeded, "preliminary-analyses")
+    claimed = client.post(attempt_url, headers=headers, json=claim.model_dump(mode="json"))
+    assert claimed.status_code == 201
+    receipt = claimed.json()
+    lines = [{**_line(), **row} for row in binding]
+    payload = {
+        **claim.model_dump(mode="json", exclude={"command_id", "source_generation", "source_checksum_sha256", "selection_revision"}),
+        "attempt_id": receipt["attempt_id"], "idempotency_key": str(claim.command_id), "confirmed": True,
+    }
+    invalid = {**payload, "line_manifest": [lines[0], {**lines[1], **invalid_line}]}
+    rejected = client.post(finalize_url, headers=headers, json=invalid)
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"]["error_code"] == error_code
+    assert rejected.json()["detail"]["execution_started"] is False
+    assert client.get(f"{attempt_url}/{receipt['attempt_id']}", headers=headers).json() == receipt
+    db.expire_all()
+    attempt = db.get(PreliminaryAnalysisFinalizeAttempt, uuid.UUID(receipt["attempt_id"]))
+    assert (attempt.status, attempt.state_version, attempt.execution_generation) == ("RECEIVED", 1, 0)
+    assert db.query(PreliminaryAnalysisSnapshot).count() == 0
+    audit = db.query(AuditEvent).filter_by(event_name="PreliminaryAnalysisSnapshotFinalized")
+    assert audit.count() == 0
+
+    corrected = {**payload, "line_manifest": lines}
+    committed = client.post(finalize_url, headers=headers, json=corrected)
+    assert committed.status_code == 201
+    db.expire_all()
+    assert (attempt.status, attempt.execution_generation) == ("COMMITTED", 1)
+    assert str(attempt.committed_snapshot_id) == committed.json()["id"]
+    assert client.post(finalize_url, headers=headers, json=corrected).json() == committed.json()
+    assert db.query(PreliminaryAnalysisFinalizeAttempt).count() == 1
+    assert db.query(PreliminaryAnalysisSnapshot).count() == audit.count() == 1
 
 
 def _result_payload(seeded, *, key="result-1"):
