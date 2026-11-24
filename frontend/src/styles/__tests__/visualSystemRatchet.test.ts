@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { parse } from "postcss";
 
 const SOURCE_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const INDEX_STYLES = join(SOURCE_ROOT, "index.css");
@@ -40,7 +41,7 @@ function occurrenceMap(rule: DebtRule): Record<string, number> {
     productionStyleFiles(SOURCE_ROOT).flatMap((path) => {
       const source = readFileSync(path, "utf8");
       const pattern = new RegExp(rule.pattern.source, rule.pattern.flags);
-      const count = [...source.matchAll(pattern)].length;
+      const count = rule.label === "backdrop blur" ? unauthorizedBackdropCount(sourcePath(path), source) : [...source.matchAll(pattern)].length;
       return count > 0 ? [[sourcePath(path), count] as const] : [];
     })
   );
@@ -49,6 +50,21 @@ function occurrenceMap(rule: DebtRule): Record<string, number> {
 function occurrenceCount(rule: DebtRule, source: string): number {
   const pattern = new RegExp(rule.pattern.source, rule.pattern.flags);
   return [...source.matchAll(pattern)].length;
+}
+
+const backdropPattern = /["']?(?:(?:-webkit-)?\bbackdrop-?filter|\bWebkitBackdropFilter)["']?\s*:/gi;
+const scrimStylesPath = "components/precase/preliminary-analysis-workspace.css";
+
+function unauthorizedBackdropCount(path: string, source: string): number {
+  const count = [...source.matchAll(backdropPattern)].length;
+  if (path !== scrimStylesPath || count !== 1) return count;
+  let approved = 0;
+  parse(source).walkDecls("backdrop-filter", declaration => {
+    const selector = declaration.parent;
+    const media = selector?.parent;
+    if (declaration.value === "blur(2px)" && !declaration.important && selector?.type === "rule" && selector.selector === ".analysis-panel-scrim" && media?.type === "atrule" && media.name === "media" && media.params.replace(/\s/g, "") === "(max-width:950px)" && media.parent?.type === "root") approved++;
+  });
+  return count - approved;
 }
 
 const TEMPORARY_DEBT: readonly DebtRule[] = [
@@ -66,7 +82,7 @@ const TEMPORARY_DEBT: readonly DebtRule[] = [
   },
   {
     label: "backdrop blur",
-    pattern: /(?:(?:-webkit-)?\bbackdrop-?filter|\bWebkitBackdropFilter)\s*:/gi,
+    pattern: backdropPattern,
     allowedOccurrences: {},
     forbiddenExamples: ["backdrop-filter: blur(8px)", 'backdropFilter: "blur(8px)"', 'WebkitBackdropFilter: "blur(8px)"'],
   },
@@ -176,6 +192,28 @@ const REQUIRED_PRIMITIVES = [
 ] as const;
 
 describe("Fluent 2 light visual-system foundation", () => {
+  it("permits exactly the PO-approved narrow detail scrim declaration", () => {
+    const source = readFileSync(join(SOURCE_ROOT, scrimStylesPath), "utf8");
+    expect([...source.matchAll(backdropPattern)]).toHaveLength(1);
+    expect(unauthorizedBackdropCount(scrimStylesPath, source)).toBe(0);
+  });
+
+  it.each([
+    [scrimStylesPath, "@media(max-width:950px){.sidebar{backdrop-filter:blur(2px)}}"],
+    [scrimStylesPath, "@media(max-width:960px){.analysis-panel-scrim{backdrop-filter:blur(2px)}}"],
+    [scrimStylesPath, ".analysis-panel-scrim{backdrop-filter:blur(2px)}"],
+    [scrimStylesPath, "@media(max-width:950px){.analysis-panel-scrim{backdrop-filter:blur(3px)}}"],
+    [scrimStylesPath, "@media(max-width:950px){.analysis-panel-scrim{backdrop-filter:blur(2px);backdrop-filter:blur(2px)}}"],
+    [scrimStylesPath, "@media(max-width:950px){.analysis-panel-scrim{-webkit-backdrop-filter:blur(2px)}}"],
+    [scrimStylesPath, "@media(max-width:950px){.analysis-panel-scrim,.sidebar{backdrop-filter:blur(2px)}}"],
+    ["components/layout/Other.css", "@media(max-width:950px){.analysis-panel-scrim{backdrop-filter:blur(2px)}}"],
+    ["components/layout/Other.tsx", 'const style = { backdropFilter: "blur(2px)" };'],
+    ["components/layout/Other.tsx", 'const style = { WebkitBackdropFilter: "blur(2px)" };'],
+    ["components/layout/Other.tsx", 'const style = { "backdrop-filter": "blur(2px)" };'],
+  ])("rejects unauthorized backdrop declaration in %s: %s", (path, source) => {
+    expect(unauthorizedBackdropCount(path, source)).toBeGreaterThan(0);
+  });
+
   it("loads canonical Fluent tokens and primitives without Astryx imports", () => {
     const source = readFileSync(INDEX_STYLES, "utf8");
     const tokens = source.indexOf('@import "./styles/fluent2-tokens.css";');

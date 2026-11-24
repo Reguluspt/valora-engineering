@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
@@ -25,20 +26,31 @@ from app.modules.excel_import.models import (
     ImportSourceArtifactState,
     WorkbookStructureSnapshot,
 )
+from app.modules.project_master_data.application.asset_review_authority import (
+    canonical_digest, materialized_inputs,
+)
+from app.modules.project_master_data.schemas import PreliminaryAnalysisAttemptClaim
 from app.modules.project_master_data.models import (
     OrganizationProfile,
     OrganizationStatus,
+    PreliminaryAnalysisFinalizeAttempt,
     PreliminaryAnalysisSnapshot,
     ProjectOfficialIntakeCommit,
     Project,
     ProjectAssetImportBatch,
+    ProjectAssetImportStagingRow,
+    Role,
     User,
     UserRole,
+    UserSession,
     UserStatus,
 )
 
 
 PRELIMINARY_ANALYSIS_FINALIZE_PERMISSION = "project:preliminary_analysis:finalize"
+
+PRELIMINARY_ANALYSIS_RECONCILE_PERMISSION = "project:preliminary_analysis:reconcile"
+_OPEN_ATTEMPT_STATES = ("RECEIVED", "IN_PROGRESS", "UNKNOWN")
 
 _LINE_V2_KEYS = frozenset(
     {
@@ -135,17 +147,20 @@ def _request_digest(
 
 
 def _reload_active_actor_and_org(
-    db: Session, *, actor: User, org_id: uuid.UUID
+    db: Session, *, actor: User, org_id: uuid.UUID,
+    permission: str = PRELIMINARY_ANALYSIS_FINALIZE_PERMISSION, lock: bool = False,
 ) -> User:
-    organization = (
-        db.query(OrganizationProfile)
-        .filter(OrganizationProfile.id == org_id)
-        .populate_existing()
-        .first()
-    )
+    organization_query = db.query(OrganizationProfile).filter(OrganizationProfile.id == org_id)
+    organization = (organization_query.with_for_update() if lock else organization_query).populate_existing().first()
     actor_id = getattr(actor, "id", None)
     persisted_actor = None
     if actor_id is not None:
+        if lock:
+            db.query(User.id).filter(User.id == actor_id, User.organization_id == org_id).with_for_update().first()
+            db.query(UserRole.id).filter(UserRole.user_id == actor_id).order_by(UserRole.id).with_for_update().all()
+            db.query(Role.id).join(UserRole, UserRole.role_id == Role.id).filter(
+                UserRole.user_id == actor_id,
+            ).order_by(Role.id).with_for_update(of=Role).all()
         persisted_actor = (
             db.query(User)
             .options(
@@ -163,9 +178,8 @@ def _reload_active_actor_and_org(
         or _status_value(organization.status) != OrganizationStatus.ACTIVE.value
     ):
         _abort(db, 403, "preliminary_analysis_forbidden", "Không thể thực hiện thao tác này.")
-    if PRELIMINARY_ANALYSIS_FINALIZE_PERMISSION not in derive_effective_permissions(
-        persisted_actor, db
-    ):
+    permissions = derive_effective_permissions(persisted_actor, db)
+    if permission not in permissions or (lock and "project:read" not in permissions):
         _abort(db, 403, "preliminary_analysis_forbidden", "Không thể thực hiện thao tác này.")
     return persisted_actor
 
@@ -288,107 +302,19 @@ def _validate_line_conditions(line_manifest: list[dict]) -> None:
             )
 
 
-def finalize_preliminary_analysis(
-    db: Session,
-    *,
-    actor: User,
-    org_id: uuid.UUID,
-    project_id: uuid.UUID,
-    expected_project_version: int,
-    import_batch_id: uuid.UUID,
-    source_artifact_id: uuid.UUID,
-    structure_snapshot_id: uuid.UUID,
-    mapping_decision_id: uuid.UUID,
-    mapping_profile_usage_id: uuid.UUID,
-    mapping_decision_digest_sha256: str,
-    profile_usage_mapping_digest_sha256: str,
-    line_manifest: list[dict],
-    idempotency_key: str,
-    confirmed: bool,
-    correlation_id: str | None = None,
-) -> PreliminaryAnalysisSnapshot:
-    """Finalize an immutable, versioned preliminary analysis for the current batch."""
-    if confirmed is not True:
-        _abort(db, 400, "preliminary_analysis_confirmation_required", "Cần xác nhận thao tác.")
-    normalized_key = idempotency_key.strip()
-    if not normalized_key or len(normalized_key) > 128:
-        _abort(db, 422, "invalid_idempotency_key", "Khóa idempotency không hợp lệ.")
-    if expected_project_version < 1:
-        _abort(db, 422, "invalid_expected_version", "Phiên bản yêu cầu không hợp lệ.")
-
-    # Branch A shape gate: v1-shaped requests are superseded before any DB lookup.
-    if _is_v1_shaped(line_manifest):
-        _abort(
-            db,
-            409,
-            "preliminary_analysis_contract_superseded",
-            "Dữ liệu phân tích sơ bộ đã được thay thế bởi phiên bản v2.",
-        )
-
-    try:
-        _validate_line_conditions(line_manifest)
-    except HTTPException:
-        db.rollback()
-        raise
-
-    actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
-
-    line_manifest_digest_sha256 = _sha256_hex(_canonical_json(line_manifest))
-    request_digest = _request_digest(
-        actor_id=actor.id,
-        project_id=project_id,
-        source_artifact_id=source_artifact_id,
-        structure_snapshot_id=structure_snapshot_id,
-        mapping_decision_id=mapping_decision_id,
-        mapping_profile_usage_id=mapping_profile_usage_id,
-        mapping_decision_digest_sha256=mapping_decision_digest_sha256,
-        profile_usage_mapping_digest_sha256=profile_usage_mapping_digest_sha256,
-        line_manifest_digest_sha256=line_manifest_digest_sha256,
-        expected_project_version=expected_project_version,
-    )
-
-    project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.organization_id == org_id)
-        .with_for_update()
-        .populate_existing()
-        .first()
-    )
-    if project is None:
-        _abort(db, 404, "project_not_found", "Không tìm thấy hồ sơ.")
-
-    # Replay is tied to the original command, even after newer versions or a batch switch.
-    existing = (
-        db.query(PreliminaryAnalysisSnapshot)
-        .filter(
-            PreliminaryAnalysisSnapshot.organization_id == org_id,
-            PreliminaryAnalysisSnapshot.idempotency_key == normalized_key,
-        )
-        .populate_existing()
-        .first()
-    )
-    if existing is not None:
-        if not _same_request(
-            existing,
-            actor_id=actor.id,
-            project_id=project_id,
-            source_artifact_id=source_artifact_id,
-            mapping_decision_id=mapping_decision_id,
-            mapping_profile_usage_id=mapping_profile_usage_id,
-            request_digest=request_digest,
-        ):
-            _abort(db, 409, "preliminary_analysis_idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
-        db.commit()
-        db.refresh(existing)
-        return existing
-
+def _lock_current_lineage(
+    db: Session, project: Project, org_id: uuid.UUID, *,
+    expected_project_version: int, import_batch_id: uuid.UUID, source_artifact_id: uuid.UUID,
+    structure_snapshot_id: uuid.UUID, mapping_decision_id: uuid.UUID, mapping_profile_usage_id: uuid.UUID,
+    mapping_decision_digest_sha256: str, profile_usage_mapping_digest_sha256: str,
+):
     if project.current_preliminary_import_batch_id != import_batch_id:
         _abort(db, 409, "preliminary_analysis_batch_not_current", "Đợt nhập liệu không còn hiện hành.")
     if (
         db.query(ProjectOfficialIntakeCommit.id)
         .filter(
             ProjectOfficialIntakeCommit.organization_id == org_id,
-            ProjectOfficialIntakeCommit.project_id == project_id,
+            ProjectOfficialIntakeCommit.project_id == project.id,
         )
         .first()
         is not None
@@ -547,14 +473,405 @@ def finalize_preliminary_analysis(
     if project.row_version != expected_project_version:
         _abort(db, 409, "project_version_conflict", "Dữ liệu hồ sơ đã thay đổi.")
 
-    current_version = (
-        db.query(func.max(PreliminaryAnalysisSnapshot.version))
+    return artifact, structure, decision, usage, slot
+
+
+def _lock_project(db: Session, org_id: uuid.UUID, project_id: uuid.UUID) -> Project:
+    project = db.query(Project).filter(
+        Project.id == project_id, Project.organization_id == org_id,
+    ).with_for_update().populate_existing().first()
+    if project is None:
+        _abort(db, 404, "project_not_found", "Không tìm thấy hồ sơ.")
+    return project
+
+
+def _latest_analysis_version(db: Session, org_id: uuid.UUID, project_id: uuid.UUID) -> int:
+    return db.query(func.max(PreliminaryAnalysisSnapshot.version)).filter(
+        PreliminaryAnalysisSnapshot.organization_id == org_id,
+        PreliminaryAnalysisSnapshot.project_id == project_id,
+    ).scalar() or 0
+
+
+def _lock_active_session(
+    db: Session, org_id: uuid.UUID, actor_id: uuid.UUID, session_id: uuid.UUID | None,
+) -> None:
+    session = db.query(UserSession).filter(
+        UserSession.id == session_id, UserSession.organization_id == org_id,
+        UserSession.user_id == actor_id, UserSession.status == "active",
+    ).with_for_update().populate_existing().first()
+    now = datetime.now(timezone.utc)
+    if session is None or any(
+        (expiry if expiry.tzinfo is not None else expiry.replace(tzinfo=timezone.utc)) <= now
+        for expiry in (session.access_expires_at, session.idle_expires_at, session.absolute_expires_at)
+    ):
+        _abort(db, 401, "preliminary_analysis_session_expired", "Phiên làm việc đã hết hạn.")
+
+
+def _scoped_attempts(db: Session, org_id: uuid.UUID, project_id: uuid.UUID):
+    return db.query(PreliminaryAnalysisFinalizeAttempt).filter_by(organization_id=org_id, project_id=project_id)
+
+
+def _locked_attempt(
+    db: Session, org_id: uuid.UUID, project_id: uuid.UUID, attempt_id: uuid.UUID,
+) -> PreliminaryAnalysisFinalizeAttempt:
+    attempt = _scoped_attempts(db, org_id, project_id).filter_by(id=attempt_id).with_for_update().populate_existing().first()
+    if attempt is None:
+        _abort(db, 404, "preliminary_analysis_attempt_not_found", "Không tìm thấy lệnh chốt.")
+    return attempt
+
+
+def _verify_executor(db: Session, attempt, actor: User, session_id: uuid.UUID | None, command_id: str) -> None:
+    if (attempt.actor_user_id, attempt.session_id, str(attempt.command_id)) != (actor.id, session_id, command_id):
+        _abort(db, 404, "preliminary_analysis_attempt_not_found", "Không tìm thấy lệnh chốt.")
+
+
+def _transition(attempt: PreliminaryAnalysisFinalizeAttempt, status: str) -> None:
+    attempt.status = status
+    attempt.state_version += 1
+
+
+def _check_materialization(db: Session, lineage: dict, artifact, slot, usage) -> None:
+    if (
+        lineage["source_generation"] != artifact.generation
+        or lineage["source_checksum_sha256"] != artifact.checksum_sha256
+        or lineage["selection_revision"] != slot.selection_revision
+        or not usage.materialized_input_sha256
+        or lineage.get("materialized_input_sha256", usage.materialized_input_sha256) != usage.materialized_input_sha256
+    ):
+        _abort(db, 409, "preliminary_analysis_source_changed", "Dữ liệu tạm hoặc nguồn đã thay đổi.")
+
+
+def _verify_staging_manifest(db: Session, org_id, project_id, batch_id, usage, row_binding):
+    rows = db.query(ProjectAssetImportStagingRow).filter_by(
+        organization_id=org_id, project_id=project_id, import_batch_id=batch_id,
+    ).order_by(ProjectAssetImportStagingRow.source_row_number, ProjectAssetImportStagingRow.id).with_for_update().all()
+    live_binding = [{"source_row_number": row.source_row_number, "staging_row_id": str(row.id)} for row in rows]
+    if (
+        not rows or row_binding != live_binding or len(rows) != usage.materialized_asset_row_count
+        or len({row.source_row_number for row in rows}) != len(rows)
+        or canonical_digest(materialized_inputs(rows)) != usage.materialized_input_sha256
+    ):
+        _abort(db, 409, "preliminary_analysis_staging_mismatch", "Dòng dữ liệu tạm không còn khớp ánh xạ hiện hành.")
+    return {"mapping_profile_usage_id": str(usage.id), "materialized_input_sha256": usage.materialized_input_sha256,
+            "rows": live_binding}
+
+
+def claim_preliminary_analysis_attempt(
+    db: Session, *, actor: User, session_id: uuid.UUID, project_id: uuid.UUID, claim: PreliminaryAnalysisAttemptClaim,
+) -> dict:
+    org_id = actor.organization_id
+    project = _lock_project(db, org_id, project_id)
+    actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id, lock=True)
+    _lock_active_session(db, org_id, actor.id, session_id)
+    envelope = claim.model_dump(mode="json", exclude={"command_id"})
+    existing = _scoped_attempts(db, org_id, project_id).filter_by(command_id=claim.command_id).with_for_update().first()
+    if existing is not None:
+        _verify_executor(db, existing, actor, session_id, str(claim.command_id))
+        if any(existing.lineage[key] != value for key, value in envelope.items()):
+            _abort(db, 409, "preliminary_analysis_attempt_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+        return _attempt_response(existing)
+    if _scoped_attempts(db, org_id, project_id).filter(PreliminaryAnalysisFinalizeAttempt.status.in_(_OPEN_ATTEMPT_STATES)).first():
+        _abort(db, 409, "preliminary_analysis_attempt_active", "Hồ sơ đang có lệnh chốt cần được xử lý.")
+    if db.query(PreliminaryAnalysisSnapshot.id).filter_by(
+        organization_id=org_id, idempotency_key=str(claim.command_id),
+    ).first() is not None:
+        _abort(db, 409, "preliminary_analysis_attempt_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+    if _latest_analysis_version(db, org_id, project_id) != claim.expected_analysis_version:
+        _abort(db, 409, "preliminary_analysis_base_conflict", "Phiên bản phân tích đã thay đổi.")
+
+    artifact, _, _, usage, slot = _lock_current_lineage(
+        db, project, org_id, **claim.model_dump(exclude={
+            "command_id", "expected_analysis_version", "source_generation", "source_checksum_sha256", "selection_revision",
+        }),
+    )
+    _check_materialization(db, envelope, artifact, slot, usage)
+    envelope["materialized_input_sha256"] = usage.materialized_input_sha256
+    attempt = PreliminaryAnalysisFinalizeAttempt(
+        organization_id=org_id, project_id=project_id, actor_user_id=actor.id, session_id=session_id,
+        command_id=claim.command_id, status="RECEIVED", state_version=1, execution_generation=0, lineage=envelope,
+    )
+    db.add(attempt)
+    try:
+        db.flush()
+        response = _attempt_response(attempt)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise _error(409, "preliminary_analysis_attempt_conflict", "Hồ sơ hoặc mã lệnh đã thay đổi.") from exc
+    return response
+
+
+def begin_preliminary_analysis_execution(
+    db: Session, *, actor: User, session_id: uuid.UUID, project_id: uuid.UUID,
+    attempt_id: uuid.UUID, command_id: str, line_manifest: list[dict],
+) -> int | None:
+    org_id = actor.organization_id
+    _lock_project(db, org_id, project_id)
+    attempt = _locked_attempt(db, org_id, project_id, attempt_id)
+    actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id, lock=True)
+    _lock_active_session(db, org_id, actor.id, session_id)
+    _verify_executor(db, attempt, actor, session_id, command_id)
+    if attempt.status == "COMMITTED":
+        return None
+    if attempt.status != "RECEIVED":
+        _abort(db, 409, "preliminary_analysis_attempt_blocked", "Lệnh chốt hiện không thể gửi lại.")
+    try:
+        _validate_line_conditions(line_manifest)
+    except HTTPException as error:
+        db.rollback()
+        error.detail["execution_started"] = False
+        raise
+    attempt.execution_generation += 1
+    _transition(attempt, "IN_PROGRESS")
+    generation = attempt.execution_generation
+    db.commit()
+    return generation
+
+
+def mark_preliminary_analysis_unknown(
+    db: Session, *, org_id: uuid.UUID, project_id: uuid.UUID, attempt_id: uuid.UUID, generation: int,
+) -> None:
+    db.rollback()
+    _lock_project(db, org_id, project_id)
+    attempt = _locked_attempt(db, org_id, project_id, attempt_id)
+    if attempt.status == "IN_PROGRESS" and attempt.execution_generation == generation:
+        _transition(attempt, "UNKNOWN")
+    db.commit()
+
+
+def _attempt_response(attempt: PreliminaryAnalysisFinalizeAttempt) -> dict:
+    return {
+        "attempt_id": str(attempt.id), "status": attempt.status,
+        "state_version": attempt.state_version, "execution_generation": attempt.execution_generation,
+        "committed_snapshot_id": str(attempt.committed_snapshot_id) if attempt.committed_snapshot_id else None,
+    }
+
+
+def _can_reconcile(actor: User) -> bool:
+    return any(
+        assignment.is_active and assignment.revoked_at is None and assignment.role is not None
+        and assignment.role.code == "owner" and PRELIMINARY_ANALYSIS_RECONCILE_PERMISSION in assignment.role.permissions
+        and "project:read" in assignment.role.permissions
+        for assignment in actor.roles
+    )
+
+
+def read_preliminary_analysis_attempts(
+    db: Session, *, actor: User, session_id: uuid.UUID, project_id: uuid.UUID,
+    attempt_id: uuid.UUID | None = None,
+) -> dict:
+    org_id = actor.organization_id
+    _lock_project(db, org_id, project_id)
+    actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id, permission="project:read", lock=True)
+    _lock_active_session(db, org_id, actor.id, session_id)
+    permissions = derive_effective_permissions(actor, db)
+    attempts = _scoped_attempts(db, org_id, project_id)
+    may_finalize = PRELIMINARY_ANALYSIS_FINALIZE_PERMISSION in permissions
+    can_detail = _can_reconcile(actor)
+    if attempt_id is not None:
+        attempt = attempts.filter_by(id=attempt_id).first()
+        if attempt is None or not (can_detail or (
+            may_finalize and attempt.actor_user_id == actor.id and attempt.session_id == session_id
+        )):
+            _abort(db, 404, "preliminary_analysis_attempt_not_found", "Không tìm thấy lệnh chốt.")
+        return _attempt_response(attempt)
+    active = attempts.filter(PreliminaryAnalysisFinalizeAttempt.status.in_(_OPEN_ATTEMPT_STATES)).first()
+    result = {"blocked": active is not None}
+    if may_finalize:
+        result["base_analysis_version"] = _latest_analysis_version(db, org_id, project_id)
+    if active is not None and (can_detail or (
+        may_finalize and active.actor_user_id == actor.id and active.session_id == session_id
+    )):
+        result["active_attempt"] = _attempt_response(active)
+    return result
+
+
+def reconcile_preliminary_analysis_attempt(
+    db: Session, *, actor: User, session_id: uuid.UUID, project_id: uuid.UUID, attempt_id: uuid.UUID,
+    expected_state_version: int, expected_execution_generation: int, reason: str, correlation_id: str | None = None,
+) -> dict:
+    org_id = actor.organization_id
+    _lock_project(db, org_id, project_id)
+    actor = _reload_active_actor_and_org(
+        db, actor=actor, org_id=org_id, lock=True, permission=PRELIMINARY_ANALYSIS_RECONCILE_PERMISSION,
+    )
+    _lock_active_session(db, org_id, actor.id, session_id)
+    if not _can_reconcile(actor):
+        _abort(db, 403, "preliminary_analysis_reconcile_forbidden", "Không thể đối soát lệnh chốt.")
+    attempt = _locked_attempt(db, org_id, project_id, attempt_id)
+    if (
+        attempt.status not in _OPEN_ATTEMPT_STATES or attempt.state_version != expected_state_version
+        or attempt.execution_generation != expected_execution_generation
+    ):
+        _abort(db, 409, "preliminary_analysis_attempt_conflict", "Trạng thái lệnh chốt đã thay đổi.")
+    if db.query(PreliminaryAnalysisSnapshot.id).filter_by(
+        organization_id=org_id, idempotency_key=str(attempt.command_id),
+    ).first() is not None:
+        _abort(db, 409, "preliminary_analysis_attempt_evidence_conflict", "Bằng chứng lệnh chốt chưa nhất quán.")
+
+    previous_status = attempt.status
+    attempt.execution_generation += 1
+    _transition(attempt, "REJECTED_TERMINAL")
+    log_audit_event(
+        db, event_name="PreliminaryAnalysisAttemptReconciled", entity_type="PreliminaryAnalysisFinalizeAttempt",
+        entity_id=attempt.id, organization_id=org_id, actor_user_id=actor.id,
+        command_name="ReconcilePreliminaryAnalysisAttempt", correlation_id=correlation_id,
+        payload={"project_id": str(project_id), "reason": reason, "previous_status": previous_status,
+                 "status": attempt.status, "snapshot_found_under_project_lock": False,
+                 "state_version": attempt.state_version, "execution_generation": attempt.execution_generation},
+    )
+    response = _attempt_response(attempt)
+    db.commit()
+    return response
+
+
+def finalize_preliminary_analysis(
+    db: Session,
+    *,
+    actor: User,
+    org_id: uuid.UUID,
+    project_id: uuid.UUID,
+    expected_project_version: int,
+    import_batch_id: uuid.UUID,
+    source_artifact_id: uuid.UUID,
+    structure_snapshot_id: uuid.UUID,
+    mapping_decision_id: uuid.UUID,
+    mapping_profile_usage_id: uuid.UUID,
+    mapping_decision_digest_sha256: str,
+    profile_usage_mapping_digest_sha256: str,
+    line_manifest: list[dict],
+    idempotency_key: str,
+    confirmed: bool,
+    correlation_id: str | None = None,
+    legacy_replay_only: bool = False,
+    session_id: uuid.UUID | None = None,
+    attempt_id: uuid.UUID | None = None,
+    expected_analysis_version: int | None = None,
+    row_binding: list[dict] | None = None,
+    execution_generation: int | None = None,
+) -> PreliminaryAnalysisSnapshot:
+    """Finalize an immutable, versioned preliminary analysis for the current batch."""
+    if confirmed is not True:
+        _abort(db, 400, "preliminary_analysis_confirmation_required", "Cần xác nhận thao tác.")
+    normalized_key = idempotency_key.strip()
+    if not normalized_key or len(normalized_key) > 128:
+        _abort(db, 422, "invalid_idempotency_key", "Khóa idempotency không hợp lệ.")
+    if expected_project_version < 1:
+        _abort(db, 422, "invalid_expected_version", "Phiên bản yêu cầu không hợp lệ.")
+
+    # Branch A shape gate: v1-shaped requests are superseded before any DB lookup.
+    if _is_v1_shaped(line_manifest):
+        _abort(
+            db,
+            409,
+            "preliminary_analysis_contract_superseded",
+            "Dữ liệu phân tích sơ bộ đã được thay thế bởi phiên bản v2.",
+        )
+
+    try:
+        _validate_line_conditions(line_manifest)
+    except HTTPException:
+        db.rollback()
+        raise
+
+
+    if attempt_id is None:
+        actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id)
+    project = _lock_project(db, org_id, project_id)
+    if attempt_id is not None:
+        actor = _reload_active_actor_and_org(db, actor=actor, org_id=org_id, lock=True)
+        _lock_active_session(db, org_id, actor.id, session_id)
+    line_manifest_digest_sha256 = _sha256_hex(_canonical_json(line_manifest))
+    request_digest = _request_digest(
+        actor_id=actor.id,
+        project_id=project_id,
+        source_artifact_id=source_artifact_id,
+        structure_snapshot_id=structure_snapshot_id,
+        mapping_decision_id=mapping_decision_id,
+        mapping_profile_usage_id=mapping_profile_usage_id,
+        mapping_decision_digest_sha256=mapping_decision_digest_sha256,
+        profile_usage_mapping_digest_sha256=profile_usage_mapping_digest_sha256,
+        line_manifest_digest_sha256=line_manifest_digest_sha256,
+        expected_project_version=expected_project_version,
+    )
+
+    # Replay is tied to the original command, even after newer versions or a batch switch.
+    existing = (
+        db.query(PreliminaryAnalysisSnapshot)
         .filter(
             PreliminaryAnalysisSnapshot.organization_id == org_id,
-            PreliminaryAnalysisSnapshot.project_id == project.id,
+            PreliminaryAnalysisSnapshot.idempotency_key == normalized_key,
         )
-        .scalar()
+        .populate_existing()
+        .first()
     )
+    if attempt_id is not None:
+        request_digest = canonical_digest({
+            "contract": "preliminary-analysis-finalize-v3", "v2_price_and_source_digest": request_digest,
+            "attempt_id": str(attempt_id), "base_analysis_version": expected_analysis_version,
+            "row_binding": row_binding,
+        })
+    if existing is not None:
+        if attempt_id is not None:
+            replay = _locked_attempt(db, org_id, project_id, attempt_id)
+            _verify_executor(db, replay, actor, session_id, normalized_key)
+            if replay.status != "COMMITTED" or replay.committed_snapshot_id != existing.id:
+                _abort(db, 409, "preliminary_analysis_attempt_conflict", "Lệnh chốt không khớp bản đã ghi nhận.")
+        if existing.import_batch_id != import_batch_id or not _same_request(
+            existing,
+            actor_id=actor.id,
+            project_id=project_id,
+            source_artifact_id=source_artifact_id,
+            mapping_decision_id=mapping_decision_id,
+            mapping_profile_usage_id=mapping_profile_usage_id,
+            request_digest=request_digest,
+        ):
+            _abort(db, 409, "preliminary_analysis_idempotency_key_reused", "Mã lệnh đã được dùng cho dữ liệu khác.")
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    if attempt_id is None and legacy_replay_only:
+        _abort(db, 409, "preliminary_analysis_v2_write_disabled", "Cần dùng quy trình chốt phân tích hiện hành.")
+
+    attempt = None
+    if attempt_id is not None:
+        attempt = _locked_attempt(db, org_id, project_id, attempt_id)
+        _verify_executor(db, attempt, actor, session_id, normalized_key)
+        if attempt.status != "IN_PROGRESS" or attempt.execution_generation != execution_generation:
+            _abort(db, 409, "preliminary_analysis_executor_fenced", "Lệnh chốt không còn được phép thực hiện.")
+        if attempt.lineage["expected_analysis_version"] != expected_analysis_version:
+            _abort(db, 409, "preliminary_analysis_base_conflict", "Phiên bản phân tích đã thay đổi.")
+        supplied_lineage = {
+            "expected_project_version": expected_project_version,
+            "import_batch_id": str(import_batch_id),
+            "source_artifact_id": str(source_artifact_id),
+            "structure_snapshot_id": str(structure_snapshot_id),
+            "mapping_decision_id": str(mapping_decision_id),
+            "mapping_profile_usage_id": str(mapping_profile_usage_id),
+            "mapping_decision_digest_sha256": mapping_decision_digest_sha256,
+            "profile_usage_mapping_digest_sha256": profile_usage_mapping_digest_sha256,
+        }
+        if any(attempt.lineage[field] != value for field, value in supplied_lineage.items()):
+            _abort(db, 409, "preliminary_analysis_attempt_source_changed", "Nguồn của lệnh chốt đã thay đổi.")
+
+    artifact, structure, decision, usage, slot = _lock_current_lineage(
+        db, project, org_id,
+        expected_project_version=expected_project_version, import_batch_id=import_batch_id,
+        source_artifact_id=source_artifact_id, structure_snapshot_id=structure_snapshot_id,
+        mapping_decision_id=mapping_decision_id, mapping_profile_usage_id=mapping_profile_usage_id,
+        mapping_decision_digest_sha256=mapping_decision_digest_sha256,
+        profile_usage_mapping_digest_sha256=profile_usage_mapping_digest_sha256,
+    )
+    current_version = _latest_analysis_version(db, org_id, project.id)
+    row_binding_proof = None
+    if attempt is not None:
+        if current_version != expected_analysis_version:
+            _abort(db, 409, "preliminary_analysis_base_conflict", "Phiên bản phân tích đã thay đổi.")
+        _check_materialization(db, attempt.lineage, artifact, slot, usage)
+        row_binding_proof = _verify_staging_manifest(
+            db, org_id, project.id, import_batch_id, usage, row_binding,
+        )
 
     snapshot = PreliminaryAnalysisSnapshot(
         organization_id=org_id,
@@ -578,6 +895,10 @@ def finalize_preliminary_analysis(
     db.add(snapshot)
     try:
         db.flush()
+        if attempt is not None:
+            attempt.committed_snapshot_id = snapshot.id
+            attempt.row_binding_proof = row_binding_proof
+            _transition(attempt, "COMMITTED")
         log_audit_event(
             db,
             event_name="PreliminaryAnalysisSnapshotFinalized",
@@ -588,6 +909,11 @@ def finalize_preliminary_analysis(
             command_name="FinalizePreliminaryAnalysisSnapshot",
             correlation_id=correlation_id,
             payload={
+                **({
+                    "attempt_id": str(attempt.id),
+                    "row_binding_proof_sha256": canonical_digest(row_binding_proof),
+                    "materialized_input_sha256": usage.materialized_input_sha256,
+                } if attempt is not None else {}),
                 "project_id": str(project.id),
                 "source_artifact_id": str(artifact.id),
                 "source_artifact_generation": artifact.generation,
@@ -613,7 +939,7 @@ def finalize_preliminary_analysis(
             .populate_existing()
             .first()
         )
-        if raced is not None and _same_request(
+        if attempt_id is None and raced is not None and raced.import_batch_id == import_batch_id and _same_request(
             raced,
             actor_id=actor.id,
             project_id=project_id,

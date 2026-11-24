@@ -2,6 +2,7 @@ import type { ProjectAssetImportStagingRowResponse } from "../../api/assetImport
 import type { MappingRecoveryState } from "../../api/preliminaryIntake";
 
 export interface AnalysisDraft {
+  staging_row_id?: string;
   source_row_number: number;
   quantity: string;
   identity: string;
@@ -27,6 +28,7 @@ export interface AnalysisLineManifest {
 
 export function draftFromStaging(row: ProjectAssetImportStagingRowResponse): AnalysisDraft {
   return {
+    staging_row_id: row.id,
     source_row_number: row.source_row_number,
     quantity: row.proposed_quantity ?? "",
     identity: row.proposed_asset_name ?? "",
@@ -96,9 +98,9 @@ type MappingAuthority = Pick<MappingRecoveryState,
   "selected_confirmation_decision_id" | "selected_usage_id" | "current_staging_usage_id" |
   "mapping_digest_sha256" | "materialized_mapping_digest_sha256" | "official_intake_closed">;
 
-export function analysisContextReady(preliminary: PreliminaryAuthority, recovery: MappingAuthority): boolean {
+export function analysisContextReady(preliminary: PreliminaryAuthority, recovery: MappingAuthority, revising = false): boolean {
   return Boolean(
-    !preliminary.official_intake_commit_id && !preliminary.current_preliminary_analysis_snapshot_id &&
+    !preliminary.official_intake_commit_id && (revising || !preliminary.current_preliminary_analysis_snapshot_id) &&
     preliminary.current_preliminary_import_batch_id && preliminary.current_source_artifact_id &&
     recovery.project_id === preliminary.project_id &&
     recovery.batch_id === preliminary.current_preliminary_import_batch_id &&

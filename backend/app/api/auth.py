@@ -49,6 +49,7 @@ class UserMeResponse(BaseModel):
     status: str
     roles: list[str]
     permissions: list[str]
+    session_incarnation: str
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -728,8 +729,22 @@ def logout(
     return {"status": "ok", "message": "Đăng xuất thành công."}
 
 
+def session_incarnation(session: UserSession) -> str:
+    key = settings.app_secret_key.encode("utf-8")
+    local_default = type(settings).model_fields["app_secret_key"].default
+    if settings.valora_env.strip().lower() == "production" and (
+        len(key) < 32 or settings.app_secret_key == local_default
+    ):
+        raise HTTPException(status_code=503, detail="Không thể xác minh phiên làm việc.")
+    message = b"valora:session-incarnation:v1\x00" + (
+        session.organization_id.bytes + session.user_id.bytes + session.id.bytes
+    )
+    return hmac.new(key, message, hashlib.sha256).hexdigest()
+
+
 @router.get("/me", response_model=UserMeResponse)
 def me(
+    response: Response,
     session: UserSession = Depends(get_current_session),
     db: Session = Depends(get_db)
 ):
@@ -741,6 +756,7 @@ def me(
     
     roles_list = [ur.role.code for ur in user.roles if ur.is_active and ur.revoked_at is None and ur.role]
     
+    response.headers["Cache-Control"] = "no-store"
     return UserMeResponse(
         id=str(user.id),
         email=user.email,
@@ -749,7 +765,8 @@ def me(
         organization_slug=org.organization_slug,
         status=user.status.value if hasattr(user.status, "value") else user.status,
         roles=roles_list,
-        permissions=list(perms)
+        permissions=list(perms),
+        session_incarnation=session_incarnation(session),
     )
 
 

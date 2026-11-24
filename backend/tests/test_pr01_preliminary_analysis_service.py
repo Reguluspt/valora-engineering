@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -18,6 +19,7 @@ from app.modules.project_master_data.application.preliminary_analysis_service im
     finalize_preliminary_analysis,
 )
 from app.modules.project_master_data.schemas import (
+    PreliminaryAnalysisAttemptClaim,
     PreliminaryAnalysisFinalizeRequest,
     PreliminaryAnalysisLineItem,
 )
@@ -28,13 +30,16 @@ from app.modules.project_master_data.models import (
     ImportBatchStatus,
     OrganizationProfile,
     OrganizationStatus,
+    PreliminaryAnalysisFinalizeAttempt,
     PreliminaryAnalysisSnapshot,
     Project,
     ProjectAssetImportBatch,
+    ProjectAssetImportStagingRow,
     ProjectWorkflowStatus,
     Role,
     User,
     UserRole,
+    UserSession,
     UserStatus,
 )
 from app.modules.excel_import.models import (
@@ -1129,3 +1134,146 @@ def test_finalize_persists_v2_line_fields_with_source_reference(analysis_db: Ses
     )
     assert snapshot.line_manifest[0]["source_row_number"] == 42
     assert snapshot.line_manifest[0]["quantity"] == 7.5
+
+def _seed_s1_session(db, seeded):
+    now = datetime.now(timezone.utc)
+    access_token = uuid.uuid4().hex
+    csrf_token = uuid.uuid4().hex
+    from app.api.auth import hash_token
+    session = UserSession(
+        organization_id=seeded["org"].id, user_id=seeded["actor"].id, status="active",
+        access_token_hash=hash_token(access_token), csrf_token_hash=hash_token(csrf_token),
+        access_expires_at=now + timedelta(hours=1), idle_expires_at=now + timedelta(hours=1),
+        absolute_expires_at=now + timedelta(days=1),
+    )
+    db.add(session)
+    db.flush()
+    return session, access_token, csrf_token
+
+
+def _seed_s1_staging(db, seeded, row_numbers):
+    rows = [ProjectAssetImportStagingRow(
+        organization_id=seeded["org"].id, project_id=seeded["project"].id,
+        import_batch_id=seeded["batch"].id, source_row_number=number, proposed_quantity="2",
+    ) for number in row_numbers]
+    db.add_all(rows)
+    db.flush()
+    seeded["usage"].materialized_asset_row_count = len(rows)
+    seeded["usage"].materialized_input_sha256 = service.canonical_digest(service.materialized_inputs(rows))
+    db.flush()
+    return [{"source_row_number": row.source_row_number, "staging_row_id": str(row.id)} for row in rows]
+
+
+def _s1_claim(seeded, *, base=0, command_id=None):
+    return PreliminaryAnalysisAttemptClaim(
+        command_id=command_id or uuid.uuid4(), expected_analysis_version=base,
+        expected_project_version=seeded["project"].row_version, import_batch_id=seeded["batch"].id,
+        source_artifact_id=seeded["artifact"].id, source_generation=seeded["artifact"].generation,
+        source_checksum_sha256=seeded["artifact"].checksum_sha256, structure_snapshot_id=seeded["structure"].id,
+        mapping_decision_id=seeded["decision"].id, mapping_profile_usage_id=seeded["usage"].id,
+        selection_revision=2, mapping_decision_digest_sha256=seeded["decision"].mapping_digest_sha256,
+        profile_usage_mapping_digest_sha256=seeded["usage"].mapping_digest_sha256,
+    )
+
+
+def _s1_context(db, seeded, row_numbers):
+    seeded["role"].permissions = list(set(seeded["role"].permissions) | {"project:read", PRELIMINARY_ANALYSIS_PERMISSION})
+    session, _, _ = _seed_s1_session(db, seeded)
+    binding = _seed_s1_staging(db, seeded, row_numbers)
+    claim = _s1_claim(seeded)
+    db.commit()
+    return session.id, claim, binding
+
+
+def _claim_and_begin(db, seeded, session_id, claim):
+    actor = seeded["actor"]
+    project_id = seeded["project"].id
+    attempt = service.claim_preliminary_analysis_attempt(db, actor=actor, session_id=session_id, project_id=project_id, claim=claim)
+    attempt_id = uuid.UUID(attempt["attempt_id"])
+    generation = service.begin_preliminary_analysis_execution(
+        db, actor=actor, session_id=session_id, project_id=project_id, attempt_id=attempt_id, command_id=str(claim.command_id),
+        line_manifest=[_line()],
+    )
+    return attempt_id, generation
+
+
+def _s1_finalize(db, seeded, session_id, claim, attempt_id, generation, binding, *, unit_price=9876543):
+    return service.finalize_preliminary_analysis(
+        db, actor=seeded["actor"], org_id=seeded["org"].id, project_id=seeded["project"].id,
+        **claim.model_dump(exclude={"command_id", "source_generation", "source_checksum_sha256", "selection_revision"}),
+        line_manifest=[_line(source_row_number=line["source_row_number"], proposed_unit_price=unit_price) for line in binding],
+        attempt_id=attempt_id, execution_generation=generation, session_id=session_id, row_binding=binding,
+        idempotency_key=str(claim.command_id), confirmed=True, legacy_replay_only=True,
+    )
+
+
+@pytest.mark.parametrize("row_count", [12, 150])
+def test_s1_exact_staging_binding_keeps_v2_snapshot(analysis_db, row_count):
+    seeded = _seed(analysis_db, suffix=f"s1-{row_count}")
+    session_id, claim, binding = _s1_context(analysis_db, seeded, range(3, 3 + row_count))
+    attempt_id, generation = _claim_and_begin(analysis_db, seeded, session_id, claim)
+    snapshot = _s1_finalize(analysis_db, seeded, session_id, claim, attempt_id, generation, binding)
+    attempt = analysis_db.get(PreliminaryAnalysisFinalizeAttempt, attempt_id)
+    assert attempt.status == "COMMITTED" and attempt.committed_snapshot_id == snapshot.id
+    assert attempt.row_binding_proof["rows"] == binding
+    assert len(snapshot.line_manifest) == row_count
+    assert all(set(line) == service._LINE_V2_KEYS for line in snapshot.line_manifest)
+    audit = analysis_db.query(AuditEvent).filter_by(entity_id=snapshot.id, event_name="PreliminaryAnalysisSnapshotFinalized").one()
+    assert audit.payload["row_binding_proof_sha256"] == service.canonical_digest(attempt.row_binding_proof)
+    assert "9876543" not in str(attempt.lineage) + str(attempt.row_binding_proof) + str(audit.payload)
+    replay = _s1_finalize(analysis_db, seeded, session_id, claim, attempt_id, None, binding)
+    assert replay.id == snapshot.id
+    with pytest.raises(HTTPException) as reused:
+        _s1_finalize(analysis_db, seeded, session_id, claim, attempt_id, None, binding, unit_price=1)
+    assert reused.value.detail["error_code"] == "preliminary_analysis_idempotency_key_reused"
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 1
+
+
+@pytest.mark.parametrize("change", ["unknown_uuid", "duplicate_uuid", "missing", "reassigned"])
+def test_s1_refuses_changed_staging_bindings(analysis_db, change):
+    seeded = _seed(analysis_db, suffix=f"s1-{change}")
+    session_id, claim, binding = _s1_context(analysis_db, seeded, [3, 4])
+    attempt_id, generation = _claim_and_begin(analysis_db, seeded, session_id, claim)
+    if change == "unknown_uuid":
+        binding[0]["staging_row_id"] = str(uuid.uuid4())
+    elif change == "duplicate_uuid":
+        binding[0]["staging_row_id"] = binding[1]["staging_row_id"]
+    elif change == "missing":
+        binding.pop()
+    else:
+        binding[0]["staging_row_id"], binding[1]["staging_row_id"] = binding[1]["staging_row_id"], binding[0]["staging_row_id"]
+    with pytest.raises(HTTPException) as denied:
+        _s1_finalize(analysis_db, seeded, session_id, claim, attempt_id, generation, binding)
+    assert denied.value.detail["error_code"] == "preliminary_analysis_staging_mismatch"
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 0
+    assert analysis_db.query(AuditEvent).filter_by(event_name="PreliminaryAnalysisSnapshotFinalized").count() == 0
+
+
+def test_s1_reconcile_checks_owner_cas_and_fences_delayed_executor(analysis_db):
+    seeded = _seed(analysis_db, suffix="s1-reconcile")
+    session_id, claim, binding = _s1_context(analysis_db, seeded, [3])
+    attempt_id, generation = _claim_and_begin(analysis_db, seeded, session_id, claim)
+    project_id, org_id = seeded["project"].id, seeded["org"].id
+    service.mark_preliminary_analysis_unknown(analysis_db, org_id=org_id, project_id=project_id,
+                                             attempt_id=attempt_id, generation=generation)
+    permission = service.PRELIMINARY_ANALYSIS_RECONCILE_PERMISSION
+    seeded["role"].permissions = [*seeded["role"].permissions, permission]
+    seeded["role"].code = "appraiser"
+    analysis_db.commit()
+    args = dict(actor=seeded["actor"], session_id=session_id, project_id=project_id, attempt_id=attempt_id,
+                expected_state_version=3, expected_execution_generation=generation, reason="executor_unresponsive")
+    with pytest.raises(HTTPException) as denied:
+        service.reconcile_preliminary_analysis_attempt(analysis_db, **args)
+    assert denied.value.status_code == 403
+    seeded["role"].code = "owner"
+    analysis_db.commit()
+    with pytest.raises(HTTPException) as stale:
+        service.reconcile_preliminary_analysis_attempt(analysis_db, **{**args, "expected_state_version": 2})
+    assert stale.value.status_code == 409
+    result = service.reconcile_preliminary_analysis_attempt(analysis_db, **args)
+    assert result["status"] == "REJECTED_TERMINAL" and result["execution_generation"] == generation + 1
+    with pytest.raises(HTTPException) as fenced:
+        _s1_finalize(analysis_db, seeded, session_id, claim, attempt_id, generation, binding)
+    assert fenced.value.detail["error_code"] == "preliminary_analysis_executor_fenced"
+    assert analysis_db.query(PreliminaryAnalysisSnapshot).count() == 0
+    assert analysis_db.query(AuditEvent).filter_by(event_name="PreliminaryAnalysisAttemptReconciled").count() == 1

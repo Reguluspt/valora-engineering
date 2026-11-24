@@ -1,7 +1,13 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
 
-const port = 8000;
+const port = Number(process.env.VALORA_ACCEPTANCE_PORT || 8000);
+const allowedOrigin = process.env.VALORA_ACCEPTANCE_ORIGIN || "http://localhost:5173";
 let authenticated = false;
+let sessionIncarnation = "a".repeat(64);
+let precaseAttempt = null;
+let precaseCommandId = null;
+let precaseRowCount = 12;
 let classification = "no_change";
 let m365Scenario = "normal";
 let m365Classification = "no_change";
@@ -739,9 +745,9 @@ function makeDocument(id, title) {
 function send(response, status, body, extraHeaders = {}) {
   response.writeHead(status, {
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type,X-CSRF-Token",
+    "Access-Control-Allow-Headers": "Content-Type,X-CSRF-Token,X-Valora-Session-Incarnation",
     "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
-    "Access-Control-Allow-Origin": "http://localhost:5173",
+    "Access-Control-Allow-Origin": allowedOrigin,
     "Content-Type": "application/json; charset=utf-8",
     ...extraHeaders,
   });
@@ -763,6 +769,9 @@ const server = http.createServer(async (request, response) => {
     const nextWorkbench = url.searchParams.get("workbench");
     const nextNcc = url.searchParams.get("ncc");
     const nextPrecase = url.searchParams.get("precase");
+    const rowCount = url.searchParams.get("precase_rows");
+    if (rowCount && !["12", "150"].includes(rowCount)) return send(response, 400, { detail: "Unknown row fixture" });
+    if (rowCount) precaseRowCount = Number(rowCount);
     const nextCompletion = url.searchParams.get("completion");
     const nextM365 = url.searchParams.get("m365");
     const nextM365Classification = url.searchParams.get("m365_classification");
@@ -805,6 +814,8 @@ const server = http.createServer(async (request, response) => {
       precaseProposalCommandId = null;
       precaseSelectedCommandId = null;
       precaseAnalysis = null;
+      precaseAttempt = null;
+      precaseCommandId = null;
       precaseAnalysisLostOnce = false;
     }
     if (nextCompletion) completionScenario = nextCompletion;
@@ -830,6 +841,7 @@ const server = http.createServer(async (request, response) => {
       return send(response, 422, { detail: { message: "Thiếu thông tin đăng nhập." } });
     }
     authenticated = true;
+    sessionIncarnation = randomUUID().replaceAll("-", "").repeat(2);
     return send(response, 200, { status: "ok" }, { "Set-Cookie": "XSRF-TOKEN=fixture-csrf; Path=/" });
   }
   if (url.pathname === "/api/v1/auth/refresh" && request.method === "POST") {
@@ -845,8 +857,9 @@ const server = http.createServer(async (request, response) => {
       organization_slug: "chi-nhanh-gia-lai",
       status: "active",
       roles: ["operator"],
+      session_incarnation: sessionIncarnation,
       permissions: m365Scenario === "limited" ? ["project:read"] :
-        ["project:read", "project:update", "master_data:customer:read", "project:preliminary_result:generate", "project:official_intake:commit"],
+        ["project:read", "project:update", "master_data:customer:read", "project:preliminary_analysis:finalize", "project:preliminary_result:generate", "project:official_intake:commit"],
     });
   }
   if (url.pathname === "/api/v1/auth/logout" && request.method === "POST") {
@@ -874,7 +887,7 @@ const server = http.createServer(async (request, response) => {
   }
   if (url.pathname === `${completionBase}/preliminary-results/${completionResult.id}/content` && request.method === "GET") {
     response.writeHead(200, {
-      "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Origin": "http://localhost:5173",
+      "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Origin": allowedOrigin,
       "Content-Type": completionResult.content_type,
       "Content-Disposition": 'attachment; filename="ket-qua-so-bo-v2.xlsx"',
     });
@@ -1012,14 +1025,41 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/api/v1/projects/precase-acceptance/case-state" && request.method === "GET") {
     return send(response, 200, precaseCaseProjection());
   }
+  const attemptsPath = "/api/v1/projects/precase-acceptance/preliminary-analysis-attempts";
+  if (url.pathname === attemptsPath || url.pathname.startsWith(attemptsPath + "/")) {
+    if (!authenticated || request.headers["x-valora-session-incarnation"] !== sessionIncarnation) {
+      return send(response, 401, { detail: "Session changed" });
+    }
+    const blocked = Boolean(precaseAttempt && precaseAttempt.status !== "COMMITTED");
+    if (url.pathname === attemptsPath && request.method === "GET") {
+      return send(response, 200, { blocked, base_analysis_version: precaseAnalysis?.version ?? 0 });
+    }
+    if (url.pathname === attemptsPath && request.method === "POST") {
+      const body = await readJson(request);
+      if (precaseCommandId === body.command_id) return send(response, 201, precaseAttempt);
+      if (blocked || body.expected_analysis_version !== (precaseAnalysis?.version ?? 0) || body.line_manifest) {
+        return send(response, 409, { detail: "Attempt conflict" });
+      }
+      precaseCommandId = body.command_id;
+      precaseAttempt = { attempt_id: randomUUID(), status: "RECEIVED", state_version: 1,
+        execution_generation: 0, committed_snapshot_id: null };
+      return send(response, 201, precaseAttempt);
+    }
+    return url.pathname === attemptsPath + "/" + precaseAttempt?.attempt_id && request.method === "GET"
+      ? send(response, 200, precaseAttempt) : send(response, 404, { detail: "Attempt absent" });
+  }
   if (url.pathname === "/api/v1/projects/precase-acceptance/preliminary-analyses" && request.method === "POST") {
     const body = await readJson(request);
+    if (!authenticated || request.headers["x-valora-session-incarnation"] !== sessionIncarnation) {
+      return send(response, 401, { detail: "Session changed" });
+    }
     if (!precaseAnalysis) {
-      if (body.expected_project_version !== precaseProject.row_version ||
+      if (!precaseAttempt || body.attempt_id !== precaseAttempt.attempt_id ||
+          body.idempotency_key !== precaseCommandId || body.expected_project_version !== precaseProject.row_version ||
           body.import_batch_id !== precaseBatch.id || body.source_artifact_id !== precaseSource.id ||
           body.mapping_profile_usage_id !== "usage-precase" ||
-          !body.confirmed || body.line_manifest?.length !== 12 ||
-          body.line_manifest.some((line, index) => line.source_row_number !== index + 3 ||
+          !body.confirmed || body.line_manifest?.length !== precaseRowCount ||
+          body.line_manifest.some((line, index) => line.source_row_number !== index + 3 || line.staging_row_id !== "staging-" + (index + 3) ||
             !line.human_line_confirmed || line.has_unresolved_blocking_line)) {
         return send(response, 409, { detail: "Current analysis authority changed" });
       }
@@ -1031,7 +1071,7 @@ const server = http.createServer(async (request, response) => {
         mapping_profile_usage_id: "usage-precase",
         mapping_decision_digest_sha256: "d".repeat(64),
         profile_usage_mapping_digest_sha256: "d".repeat(64),
-        line_manifest: body.line_manifest,
+        line_manifest: body.line_manifest.map(({ staging_row_id, ...line }) => line),
         line_manifest_digest_sha256: "e".repeat(64),
         finalized_by_user_id: "user-acceptance", finalized_at: "2026-09-30T00:00:00Z",
         idempotency_key: body.idempotency_key,
@@ -1039,6 +1079,8 @@ const server = http.createServer(async (request, response) => {
     } else if (body.idempotency_key !== precaseAnalysis.idempotency_key) {
       return send(response, 409, { detail: "Analysis already finalized" });
     }
+    precaseAttempt = { ...precaseAttempt, status: "COMMITTED", state_version: 3,
+      execution_generation: 1, committed_snapshot_id: precaseAnalysis.id };
     if (precaseScenario === "analysis-lost" && !precaseAnalysisLostOnce) {
       precaseAnalysisLostOnce = true;
       return send(response, 503, { detail: "Response lost after commit" });
@@ -1059,7 +1101,7 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === `${precaseBatchPath}/rows` && request.method === "GET") {
     const offset = Number(url.searchParams.get("offset") || 0);
     const limit = Number(url.searchParams.get("limit") || 100);
-    const items = Array.from({ length: 12 }, (_, index) => ({
+    const items = Array.from({ length: precaseRowCount }, (_, index) => ({
       id: `staging-${index + 3}`, import_batch_id: precaseBatch.id,
       source_row_number: index + 3, validation_status: "valid",
       validation_errors: [], validation_warnings: [],
@@ -1112,7 +1154,7 @@ const server = http.createServer(async (request, response) => {
       selected_outcome: selected ? "accepted" : null,
       selected_usage_id: materialized ? "usage-precase" : null,
       current_staging_usage_id: materialized ? "usage-precase" : null,
-      materialized_asset_row_count: materialized ? 12 : null,
+      materialized_asset_row_count: materialized ? precaseRowCount : null,
       materialized_mapping_digest_sha256: materialized ? "d".repeat(64) : null,
       recent_proposals: precaseProposalCommandId ? [{ proposal_decision_id: "proposal-precase",
         source_artifact_id: precaseSource.id, structure_snapshot_id: precaseSnapshot.id,

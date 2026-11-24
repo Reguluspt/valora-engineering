@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import uuid
 import re
 import json
@@ -9,7 +10,7 @@ from sqlalchemy import or_, func
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
-from app.api.auth import get_current_session
+from app.api.auth import get_current_session, session_incarnation, validate_csrf
 from app.modules.project_master_data.preliminary_project_create_schemas import (
     CreatePreliminaryRequest, PreliminaryCreateResponse, request_uuid,
 )
@@ -62,7 +63,8 @@ from app.modules.project_master_data.schemas import (
     ProjectResolutionResponse, CaseStateResponse,
     PreliminaryRequestManagementPage,
     PreliminaryCustomerBindRequest, PreliminaryBatchSwitchRequest,
-    PreliminaryAnalysisFinalizeRequest, PreliminaryResultGenerateRequest,
+    PreliminaryAnalysisAttemptClaim, PreliminaryAnalysisAttemptReconcile,
+    PreliminaryAnalysisFinalizeRequest, PreliminaryAnalysisFinalizeV3, PreliminaryResultGenerateRequest,
     OfficialIntakeCommitRequest, PreliminaryLifecycleCommandResponse,
     PreliminaryAnalysisCommandResponse, PreliminaryAnalysisReadResponse,
     PreliminaryResultCommandResponse,
@@ -85,7 +87,12 @@ from app.modules.project_master_data.application.preliminary_project_lifecycle_s
     switch_current_preliminary_import_batch,
 )
 from app.modules.project_master_data.application.preliminary_analysis_service import (
+    begin_preliminary_analysis_execution,
+    claim_preliminary_analysis_attempt,
     finalize_preliminary_analysis,
+    mark_preliminary_analysis_unknown,
+    read_preliminary_analysis_attempts,
+    reconcile_preliminary_analysis_attempt,
 )
 from app.modules.project_master_data.application.preliminary_result_service import (
     generate_preliminary_result_artifact,
@@ -603,36 +610,121 @@ def switch_project_current_preliminary_batch(
             "target_import_batch_id": receipt.target_import_batch_id}
 
 
-@router.post(
-    "/{project_id}/preliminary-analyses",
-    response_model=PreliminaryAnalysisCommandResponse,
-    status_code=201,
-)
-def finalize_project_preliminary_analysis(
-    project_id: uuid.UUID,
-    payload: PreliminaryAnalysisFinalizeRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+def _assert_analysis_session(request: Request, session) -> None:
+    if request.method == "POST":
+        validate_csrf(request, session)
+    expected = request.headers.get("X-Valora-Session-Incarnation", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected) or not hmac.compare_digest(expected, session_incarnation(session)):
+        raise HTTPException(status_code=401, detail="Phiên làm việc đã thay đổi.")
+
+
+@router.post("/{project_id}/preliminary-analysis-attempts", status_code=201)
+def claim_project_preliminary_analysis(
+    project_id: uuid.UUID, payload: PreliminaryAnalysisAttemptClaim, request: Request, response: Response,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+    current_session=Depends(get_current_session),
 ):
-    snapshot = finalize_preliminary_analysis(
-        db, actor=current_user, org_id=current_user.organization_id,
-        project_id=project_id, expected_project_version=payload.expected_project_version,
-        import_batch_id=payload.import_batch_id, source_artifact_id=payload.source_artifact_id,
-        structure_snapshot_id=payload.structure_snapshot_id,
-        mapping_decision_id=payload.mapping_decision_id,
-        mapping_profile_usage_id=payload.mapping_profile_usage_id,
-        mapping_decision_digest_sha256=payload.mapping_decision_digest_sha256,
-        profile_usage_mapping_digest_sha256=payload.profile_usage_mapping_digest_sha256,
-        line_manifest=[line.model_dump() for line in payload.line_manifest],
-        idempotency_key=payload.idempotency_key, confirmed=payload.confirmed,
-        correlation_id=get_correlation_id(request),
+    _assert_analysis_session(request, current_session)
+    response.headers["Cache-Control"] = "no-store"
+    return claim_preliminary_analysis_attempt(
+        db, actor=current_user, session_id=current_session.id, project_id=project_id, claim=payload,
     )
-    return {"id": snapshot.id, "project_id": snapshot.project_id,
-            "version": snapshot.version,
-            "expected_project_version": payload.expected_project_version,
-            "import_batch_id": snapshot.import_batch_id,
-            "source_artifact_id": snapshot.source_artifact_id}
+
+
+@router.get("/{project_id}/preliminary-analysis-attempts")
+@router.get("/{project_id}/preliminary-analysis-attempts/{attempt_id}")
+def get_project_preliminary_analysis_attempts(
+    project_id: uuid.UUID, request: Request, response: Response, attempt_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("project:read")),
+    current_session=Depends(get_current_session),
+):
+    _assert_analysis_session(request, current_session)
+    response.headers["Cache-Control"] = "no-store"
+    return read_preliminary_analysis_attempts(
+        db, actor=current_user, session_id=current_session.id, project_id=project_id, attempt_id=attempt_id,
+    )
+
+
+@router.post("/{project_id}/preliminary-analysis-attempts/{attempt_id}/reconcile")
+def reconcile_project_preliminary_analysis_attempt(
+    project_id: uuid.UUID, attempt_id: uuid.UUID, payload: PreliminaryAnalysisAttemptReconcile,
+    request: Request, response: Response,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+    current_session=Depends(get_current_session),
+):
+    _assert_analysis_session(request, current_session)
+    response.headers["Cache-Control"] = "no-store"
+    return reconcile_preliminary_analysis_attempt(
+        db, actor=current_user, session_id=current_session.id, project_id=project_id, attempt_id=attempt_id,
+        correlation_id=get_correlation_id(request), **payload.model_dump(),
+    )
+
+
+def _execute_preliminary_analysis(
+    project_id: uuid.UUID, payload: PreliminaryAnalysisFinalizeRequest, request: Request,
+    db: Session, current_user: User, current_session,
+):
+    params = payload.model_dump(exclude={"line_manifest", "attempt_id", "expected_analysis_version"})
+    line_manifest = [line.model_dump(exclude={"staging_row_id"}) for line in payload.line_manifest]
+    binding = None
+    attempt_id = None
+    analysis_version = None
+    generation = None
+    if isinstance(payload, PreliminaryAnalysisFinalizeV3):
+        _assert_analysis_session(request, current_session)
+        attempt_id = payload.attempt_id
+        analysis_version = payload.expected_analysis_version
+        binding = sorted(
+            [{"source_row_number": line.source_row_number, "staging_row_id": str(line.staging_row_id)}
+             for line in payload.line_manifest], key=lambda row: row["source_row_number"],
+        )
+        if not payload.confirmed or not payload.line_manifest:
+            raise HTTPException(status_code=422, detail="Thiếu xác nhận hoặc dòng phân tích.")
+        generation = begin_preliminary_analysis_execution(
+            db, actor=current_user, session_id=current_session.id, project_id=project_id,
+            attempt_id=attempt_id, command_id=payload.idempotency_key, line_manifest=line_manifest,
+        )
+    org_id = current_user.organization_id
+    try:
+        snapshot = finalize_preliminary_analysis(
+            db, actor=current_user, org_id=org_id, project_id=project_id, **params,
+            line_manifest=line_manifest,
+            legacy_replay_only=True, session_id=current_session.id, attempt_id=attempt_id, execution_generation=generation,
+            expected_analysis_version=analysis_version, row_binding=binding,
+            correlation_id=get_correlation_id(request),
+        )
+        return {"id": snapshot.id, "project_id": snapshot.project_id, "version": snapshot.version,
+                "expected_project_version": payload.expected_project_version,
+                "import_batch_id": snapshot.import_batch_id, "source_artifact_id": snapshot.source_artifact_id}
+    except Exception as error:
+        if attempt_id is not None and generation is not None:
+            try:
+                mark_preliminary_analysis_unknown(
+                    db, org_id=org_id, project_id=project_id, attempt_id=attempt_id, generation=generation,
+                )
+            except Exception:
+                raise HTTPException(status_code=503, detail="Chưa xác minh được kết quả chốt.") from None
+        if isinstance(error, HTTPException):
+            raise
+        raise HTTPException(status_code=503, detail="Chưa xác minh được kết quả chốt.") from None
+
+
+@router.post(
+    "/{project_id}/preliminary-analyses", response_model=PreliminaryAnalysisCommandResponse, status_code=201,
+)
+async def finalize_project_preliminary_analysis(
+    project_id: uuid.UUID, request: Request, response: Response,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+    current_session=Depends(get_current_session),
+):
+    try:
+        data = json.loads(await request.body(), object_pairs_hook=_preliminary_json_pairs)
+        schema = PreliminaryAnalysisFinalizeV3 if isinstance(data, dict) and "attempt_id" in data else PreliminaryAnalysisFinalizeRequest
+        payload = schema.model_validate(data)
+    except (ValueError, UnicodeError):
+        raise HTTPException(status_code=422, detail="Dữ liệu chốt phân tích không hợp lệ.") from None
+    response.headers["Cache-Control"] = "no-store"
+    return await run_in_threadpool(_execute_preliminary_analysis, project_id, payload, request, db, current_user, current_session)
 
 
 @router.get(

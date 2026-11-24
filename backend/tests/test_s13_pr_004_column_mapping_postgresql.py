@@ -497,6 +497,7 @@ def test_postgresql_prior_head_upgrade_downgrade_upgrade_historical_parity():
             "column_mapping_legacy_selection_receipts",
             "project_column_mapping_authorities",
         "preliminary_project_lifecycle_command_receipts",
+        "preliminary_analysis_finalize_attempts",
         "preliminary_analysis_snapshots",
         "project_official_intake_commits",
         "preliminary_result_artifacts",
