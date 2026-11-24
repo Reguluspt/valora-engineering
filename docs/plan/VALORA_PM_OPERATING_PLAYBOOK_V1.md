@@ -79,7 +79,7 @@ Unless the task explicitly delegates integration, Dev/Codex does not Mark Ready,
 
 ### Independent reviewer
 
-Reviews one exact frozen candidate read-only. Required reviewers must inspect the same HEAD. A changed HEAD invalidates prior candidate review evidence.
+Reviews one exact frozen candidate without changing official source or release state. Reviewer A and B have equal freedom to choose necessary authorized tools under [CODEX §10.1](../../CODEX.md#101-responsibilities). Required reviewers must inspect the same HEAD independently. A changed HEAD invalidates prior candidate review evidence.
 
 ## 3. Gate Owner session startup
 
@@ -150,15 +150,19 @@ Use `Authority → Runtime → Product Closure` only where those slices are need
 
 Risk classification controls evidence depth; it does not grant integration authority.
 
+### Reviewer A/B tool autonomy (PO decision 2026-11-23 and reaffirmation 2026-11-24)
+
+Apply [CODEX §10.1](../../CODEX.md#101-responsibilities) equally to both reviewers. The PO has authorized necessary review tools, including terminal, PowerShell, Git inspection, web, MCP, document/source reading, static analyzers and disposable synthetic tests. Do not mistake read-only product responsibility for a prohibition on these tools. PM/Codex must not invent extra denial rules, require negative tool-denial canaries as routine review admission, or send the PO repeated routine approvals that are already covered by the granted review scope. The [23 Nov PO clarification](https://github.com/Reguluspt/valora-engineering/pull/258#issuecomment-7105810824) and the 24 Nov reaffirmation supersede conflicting historical runner instructions. Preserve official source, release boundaries, independent findings and genuine platform permission requirements.
+
 ### AGY 1.5.3 Reviewer B preflight and dispatch
 
-Apply this checklist when the task requires Reviewer B under [CODEX §10.1](../../CODEX.md#101-responsibilities). The [AGY 1.5.3 runbook](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6722863585) records a configuration-specific result. Verify the effective route for each candidate.
+Apply this checklist when the task requires Reviewer B under CODEX §10.1. The [AGY 1.5.3 runbook](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6722863585) is historical configuration-specific evidence, not a requirement to use its restrictive permission profile or canary matrix.
 
-1. Verify the live task authority, exact frozen HEAD and assigned reviewer. Run `agy --version` and `agy models` under the same authenticated CLI identity. Confirm `gemini-3.8-flash-high` is available and select high effort. A sign-in failure is an authentication finding. Stop with `REVIEW_INCOMPLETE` if identity or model cannot be verified.
-2. Seal an indexed read-only snapshot of the complete relevant frozen source, authority, diff and test evidence. Record hashes and source/config integrity before dispatch. Place the snapshot in a dedicated workspace outside the protected project tree. Keep the Dev worktree, private evidence and credentials outside the granted scope.
-3. Use dummy canaries on the exact effective binary, profile and settings before exposing candidate material. Verify a scoped read succeeds and that a write to a readable file, a read from the protected tree, a shell command and an out-of-scope read are denied. The runbook used `request-review` with scoped reads and denied web and MCP. Retain the canary transcript, effective settings and verification record. Revalidate after any relevant change and require technical enforcement beyond a `PreToolUse` hook alone.
-4. Dispatch one whole-candidate review in a clean session. Provide the exact HEAD, indexed evidence and expected source-grounded PASS, FAIL or INCOMPLETE report. Withhold other reviewers' findings and Developer conclusions. Let the reviewer choose how to inspect the evidence within the verified boundary and wait for the native final. If the review needs additional capabilities, obtain PM approval for a separately verified disposable analysis sandbox with the same original-source protections.
-5. Stop with `REVIEW_INCOMPLETE` on missing material, failed isolation, unauthorized access, source or manifest drift, or a missing native final. Record the precise cause and escalate to PM / Gate Owner. No automatic retry, model substitution or permission expansion.
+1. Verify live task authority, exact frozen HEAD, effective authenticated AGY identity/version and model availability using the supported CLI or session route. Confirm `gemini-3.8-flash-high` at high effort; use supported version selection/pinning where needed. Stop with `REVIEW_INCOMPLETE` if identity or required model cannot be verified. No silent model substitution.
+2. Provide the complete relevant frozen source, authority, diff, manifest and test evidence through an indexed immutable snapshot or equivalent supported review workspace. Verify source hashes; keep official worktrees, credentials, unrelated private data and production resources protected. Record effective route and source/config integrity before and after. Disposable analysis/test artifacts are permitted outside official source.
+3. Select a supported review workflow that can obtain required tool approvals. If headless `request-review` cannot prompt, use a supported interactive or session-based route, such as ACP when actually available. Prefer official scoped approval for already-authorized routine review actions rather than requesting PO approval for each file listing/read/search. Honor all native consent requirements; where the platform requires explicit user approval, ask accurately. Do not bypass consent, alter global permission settings, silently expand access, or add artificial denial-canary prerequisites. A genuine task-specific restriction must be explicitly justified and authorized, not copied from the historical runbook.
+4. Dispatch one whole-candidate independent assessment against the exact HEAD. Give sufficient indexed material and expected source-grounded native PASS, FAIL or INCOMPLETE output, without disclosing the other reviewer's findings or Developer conclusions. Let B choose authorized tools. If a genuine capability gap remains, report its precise cause and propose the smallest supported continuation; preserve any completed valid A report on the same HEAD.
+5. Require a substantive, unedited native final. CLI exit 0 or `SUCCESS` with an empty response is `REVIEW_INCOMPLETE`, not PASS. Record actual access/permission failures, missing evidence, model/identity, manifest drift or integrity failures. Stop on unauthorized access or source mutation; escalate a real gap, not authorized tool use. No blind retries or silent model substitution.
 
 ## 6. Dev/Codex handoff
 
@@ -231,7 +235,7 @@ Minimum Gate Owner checks:
 - Local Saturation proof or a valid Early Push Exception and subsequently completed mandatory evidence are recorded;
 - no newer merge/authority change made evidence stale.
 
-For Direct Independent Review, retain the unedited native final and transcript, dispatch record and any required canary evidence. Bind them to the frozen HEAD with the report hash, role/model/effort, binary/settings fingerprints, invocation count, snapshot seal and before/after source and configuration integrity. Verify recorded hashes and distinguish a successful CLI exit from the reviewer's substantive verdict.
+For Direct Independent Review, retain the unedited substantive native final and transcript, dispatch record and actual required permission or integrity evidence. Bind them to the frozen HEAD with the report hash, role/model/effort, binary/settings fingerprints where available, invocation count, snapshot seal and before/after source and configuration integrity. Verify recorded hashes and distinguish a successful CLI exit from the reviewer's substantive verdict. Do not require routine negative tool-denial canaries or rerun a valid completed reviewer solely because the other review is incomplete.
 
 PM / Gate Owner adjudicates the findings against the frozen evidence and Codex's dispositions. Record any corrections or unverified claims separately from the original report. A missing or unusable native final leaves the required review incomplete. Resolve material findings within task authority and renew required review and exact-head CI for any changed candidate.
 

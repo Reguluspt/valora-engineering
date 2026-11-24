@@ -410,13 +410,16 @@ audit, idempotency, human-approval or exact-SHA requirements.
   adjudicates review findings and reports the exact result. Codex commits or pushes only when
   the task authorizes it. The mechanical-worker role is removed; implementation must not be
   delegated to Gemini or other models.
-- Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent and
-  strictly read-only.
-- Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent and strictly read-only.
-  Gemini 3.8 is Reviewer B only and must never receive delegated implementation work.
-- Independent reviewers are read-only and cannot mutate files, credentials, networks or cloud
-  resources. Required reviewers inspect the same frozen HEAD and identical unchanged source packet.
-  A required unavailable reviewer leaves the review INCOMPLETE.
+- Reviewer A — `opencode-go/deepseek-v4.1-flash` via OpenCode (`opencode`), independent, with
+  read-only responsibility for the official candidate.
+- Reviewer B — `gemini-3.8-flash-high` via AGY (`agy`), independent, with the same review-tool
+  authority as Reviewer A. Gemini 3.8 is Reviewer B only and must never receive delegated
+  implementation work.
+- Both reviewers inspect the same frozen HEAD and equivalent unchanged source evidence independently.
+  Reviewers must not change official source, protected worktrees, Git refs, PR state, credentials,
+  production data, infrastructure or external resources. Disposable analysis artifacts and synthetic
+  test fixtures are permitted within the authorized review task. A required unavailable reviewer
+  leaves the review INCOMPLETE.
 
 `gemini-3.1-pro-high` is retired: never invoke it or use it as a fallback. Query the model list
 when invoking an authorized provider; do not infer aliases or substitute models. An unavailable
@@ -425,17 +428,31 @@ required route means STOP with REVIEW_INCOMPLETE and escalate to PM / Gate Owner
 Use [Direct Independent Review](https://github.com/Reguluspt/valora-engineering/issues/221#issuecomment-6710280434)
 for each required reviewer. Provide one whole-candidate assignment with the exact HEAD,
 changed-file/hash evidence, diff and complete relevant frozen source, authority and test evidence.
-Use an inline packet or an indexed immutable snapshot. Enforce read-only isolation technically for
-either transport. Reviewers choose their inspection paths and available analysis tools within that
-verified boundary. Codex dispatches once and waits for the native final assessment.
+Use an inline packet or an indexed immutable snapshot. Preserve original-source integrity using
+appropriate supported workspace protections and before/after evidence. Codex dispatches the
+whole-candidate assignment and obtains each genuine native final assessment independently.
 
-Keep access default-deny. Protect the original worktree and credentials and deny out-of-scope
-access and writes, shell, web, MCP and other external side effects on the scoped read route.
-If required evidence or safe capabilities are missing, STOP with REVIEW_INCOMPLETE and report the
-precise gap to PM / Gate Owner. Never bypass permissions, broaden access automatically, change
-global AGY settings, silently substitute a model or retry automatically. Follow the
-[PM playbook's Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch)
-for the AGY route and its per-candidate isolation checks.
+**Reviewer tool autonomy — PO decision 2026-11-23, reaffirmed 2026-11-24.** Both Reviewer A and
+Reviewer B may choose all available tools that are necessary and authorized for review: repository
+and document inspection, shell/terminal, Git inspection, search, web, MCP tools/resources, static
+analysis and tests on disposable synthetic fixtures. Read-only responsibility describes the
+protected product and release boundary, not a blanket ban on review tools. Do not impose extra
+PM/Codex tool-denial rules, mandatory negative tool-denial canaries or repetitive approval gates.
+Successful use of an authorized tool is not a review finding. A specific material risk may require
+additional proportionate controls only under an explicit task-specific authority decision. See the
+[PO clarification recorded on #258](https://github.com/Reguluspt/valora-engineering/pull/258#issuecomment-7105810824).
+
+Honor the platform's actual access controls and consent requirements. Use official session-scoped
+or capability-scoped approvals when available and already authorized; do not ask PO to reapprove
+routine actions merely because PM/Codex imposed an extra restriction. If a native prompt genuinely
+requires user approval, surface it accurately; if needed, ask for one supported scoped approval
+rather than a series of redundant project-level approvals. Never bypass mandatory consent,
+weaken platform protections, silently broaden access or modify global reviewer settings. Protect
+credentials and unrelated private data; no unapproved source/data disclosure. If required evidence,
+authorized capability or a substantive native final is missing, report REVIEW_INCOMPLETE and the
+precise gap to PM / Gate Owner. Keep valid completed reviews on the same HEAD; resume only the
+unfinished required review through a supported route. No silent model substitution or automatic
+retry loop. Follow the [PM playbook's Reviewer B preflight](docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch).
 
 ### 10.2 Task-scoped context and resume
 
