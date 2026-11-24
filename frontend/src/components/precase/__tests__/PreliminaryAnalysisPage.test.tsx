@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   fetchAssetImportRows: vi.fn(), finalizePreliminaryAnalysis: vi.fn(), getPreliminaryAnalysis: vi.fn(),
   getCurrentAccount: vi.fn(), getPreliminaryAnalysisAttemptState: vi.fn(), getPreliminaryAnalysisAttempt: vi.fn(),
   claimPreliminaryAnalysisAttempt: vi.fn(), reconcilePreliminaryAnalysisAttempt: vi.fn(),
+  resolveProjectReference: vi.fn(),
 }));
 vi.mock("../../../api/caseState", () => ({ fetchCaseState: api.fetchCaseState }));
 vi.mock("../../../api/preliminaryIntake", () => ({
@@ -28,6 +29,7 @@ vi.mock("../../../api/preliminaryAnalysis", () => ({
   reconcilePreliminaryAnalysisAttempt: api.reconcilePreliminaryAnalysisAttempt,
 }));
 vi.mock("../../../api/auth", () => ({ getCurrentAccount: api.getCurrentAccount }));
+vi.mock("../../../api/projects", () => ({ resolveProjectReference: api.resolveProjectReference }));
 vi.mock("../../workbench/project-context", () => ({
   useResolvedProject: () => ({ state: "ready", projectId: "project-1" }),
 }));
@@ -84,6 +86,7 @@ describe("PreliminaryAnalysisPage", () => {
     api.getPreliminaryAnalysisAttempt.mockResolvedValue({ status: "UNKNOWN" });
     api.claimPreliminaryAnalysisAttempt.mockResolvedValue({ attempt_id: "attempt-1", status: "RECEIVED" });
     api.fetchCaseState.mockImplementation(async () => serverState);
+    api.resolveProjectReference.mockResolvedValue({ project_id: "project-1" });
     api.getMappingRecovery.mockResolvedValue(recovery);
     api.getSourceArtifact.mockResolvedValue({ id: "source-1", import_batch_id: "batch-1", state: "available", generation: 1, checksum_sha256: "a".repeat(64) });
     api.fetchAssetImportRows.mockResolvedValue({
@@ -92,10 +95,10 @@ describe("PreliminaryAnalysisPage", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  async function mount() {
+  async function mount(overrides: Partial<React.ComponentProps<typeof PreliminaryAnalysisPage>> = {}) {
     let root: ReturnType<typeof create>;
     await act(async () => {
-      root = create(<PreliminaryAnalysisPage projectRef="project-1" onNavigate={vi.fn()} onSessionExpired={vi.fn()} />);
+      root = create(<PreliminaryAnalysisPage projectRef="project-1" onNavigate={vi.fn()} onSessionExpired={vi.fn()} {...overrides} />);
     });
     return root!;
   }
@@ -120,6 +123,65 @@ describe("PreliminaryAnalysisPage", () => {
     const tag = name === "accepted_price_basis" ? "textarea" : "input";
     return root.root.findAllByType(tag).find((node) => node.props.name === `${name}_row_${rowNumber}`)!;
   }
+
+  it.each(["unchanged", "network", "row UUID changed", "route reassigned", "session changed", "permission removed"])(
+    "revalidates a parked draft before exposing it when authority is %s", async (scenario) => {
+      const props = {
+        projectRef: "project-1", onNavigate: vi.fn(), onSessionExpired: vi.fn(),
+        onDirtyChange: vi.fn(), onOwnerLost: vi.fn(),
+      };
+      const root = await mount(props);
+      const price = () => tableField(root, 17, "proposed_unit_price");
+      act(() => price().props.onChange({ target: { value: "9876543" } }));
+      expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+      await act(async () => root.update(<PreliminaryAnalysisPage {...props} active={false} />));
+      expect(root.root.findAllByProps({ hidden: true }).some((node) => node.findAllByProps({ name: "proposed_unit_price_row_17" }).length > 0)).toBe(true);
+
+      const account = await api.getCurrentAccount();
+      api.getCurrentAccount.mockClear();
+      api.resolveProjectReference.mockClear();
+      if (scenario === "network") api.getCurrentAccount.mockRejectedValueOnce(new Error("temporarily unavailable"));
+      if (scenario === "row UUID changed") api.fetchAssetImportRows.mockResolvedValue({
+        project_id: "project-1", import_batch_id: "batch-1", total: 1, offset: 0, items: [{ ...row, id: "different-row" }],
+      });
+      if (scenario === "route reassigned") api.resolveProjectReference.mockResolvedValue({ project_id: "project-2" });
+      if (scenario === "session changed") api.getCurrentAccount.mockResolvedValue({ ...account, session_incarnation: "e".repeat(64) });
+      if (scenario === "permission removed") api.getCurrentAccount.mockResolvedValue({ ...account, permissions: ["project:read"] });
+
+      await act(async () => root.update(<PreliminaryAnalysisPage {...props} active />));
+      expect(api.getCurrentAccount).toHaveBeenCalled();
+      if (scenario === "session changed" || scenario === "permission removed") {
+        expect(price()).toBeUndefined();
+        expect(props.onOwnerLost).toHaveBeenCalledOnce();
+        expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", false);
+      } else if (scenario === "route reassigned" || scenario === "row UUID changed") {
+        expect(api.resolveProjectReference).toHaveBeenCalledWith("project-1");
+        expect(JSON.stringify(root.toJSON())).toContain("Nguồn đã thay đổi. Bản nháp đang được giữ riêng.");
+        expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+        expect(props.onOwnerLost).not.toHaveBeenCalled();
+        if (scenario === "route reassigned") expect(price()).toBeUndefined();
+        else {
+          expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+          await act(async () => button(root, "Bỏ bản nháp")!.props.onClick());
+          expect(price().props.value).toBe("");
+        }
+      } else {
+        if (scenario === "network") {
+          expect(JSON.stringify(root.toJSON())).toContain("Chưa thể cập nhật phân tích");
+          expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+          expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+          await act(async () => button(root, "Thử lại")!.props.onClick());
+        }
+        expect(api.resolveProjectReference).toHaveBeenCalledWith("project-1");
+        expect(api.getCurrentAccount.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect(price().props.value).toBe("9.876.543");
+      }
+      expect(api.claimPreliminaryAnalysisAttempt).not.toHaveBeenCalled();
+      expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
+      expect(stored.size).toBe(0);
+      await act(async () => root.unmount());
+    },
+  );
 
   it("loads current materialized staging provenance and requires line review", async () => {
     const root = await mount();

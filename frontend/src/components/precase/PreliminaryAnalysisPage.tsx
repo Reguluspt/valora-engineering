@@ -10,10 +10,12 @@ import {
   type PreliminaryAnalysisAttemptClaim, type PreliminaryAnalysisAttemptState, type PreliminaryAnalysisReadResponse,
 } from "../../api/preliminaryAnalysis";
 import { getMappingRecovery, getSourceArtifact, type ImportSourceArtifact, type MappingRecoveryState } from "../../api/preliminaryIntake";
+import { resolveProjectReference } from "../../api/projects";
 import { projectOverviewPath, projectPreliminaryIntakePath, projectPreliminaryCompletionPath } from "../../contracts/valoraV23";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingState } from "../common/LoadingState";
 import { useResolvedProject } from "../workbench/project-context";
+import { isValidProjectUuid } from "../workbench/validators";
 import { analysisContextReady, buildAnalysisManifest, draftFromStaging, sourceQuantityValid, type AnalysisDraft } from "./analysisReviewModel";
 import { PreliminaryAnalysisWorkspace } from "./PreliminaryAnalysisWorkspace";
 import "./precase.css";
@@ -38,6 +40,8 @@ interface RejectedAnalysisAttempt {
 const legacyPendingPrefix = "valora:g11i:analysis-pending:";
 const finalizePermission = "project:preliminary_analysis:finalize";
 const reconcilePermission = "project:preliminary_analysis:reconcile";
+
+class AnalysisAccountError extends ApiError {}
 
 export function clearLegacyAnalysisStorage() {
   try {
@@ -108,8 +112,8 @@ interface AnalysisPageProps {
   onSessionExpired: () => void;
   active?: boolean;
   owner?: string | null;
-  onDirtyChange?: (dirty: boolean) => void;
-  discardVersion?: number;
+  onDirtyChange?: (projectRef: string, dirty: boolean) => void;
+  onOwnerLost?: () => void;
 }
 
 export function PreliminaryAnalysisPage(props: AnalysisPageProps) {
@@ -118,16 +122,17 @@ export function PreliminaryAnalysisPage(props: AnalysisPageProps) {
   if (resolved.state === "error" || !resolved.projectId) {
     return <ErrorState title={resolved.error?.title || "Chưa thể mở phân tích"} message={resolved.error?.message || "Không thể xác định hồ sơ."} onRetry={resolved.retry} />;
   }
-  return <ResolvedPreliminaryAnalysis key={resolved.projectId} projectId={resolved.projectId} {...props} />;
+  return <ResolvedPreliminaryAnalysis key={resolved.projectId} projectId={resolved.projectId} onResolveProject={resolved.retry} {...props} />;
 }
 
 function ResolvedPreliminaryAnalysis({
-  projectId, projectRef, onNavigate, onSessionExpired, active = true, owner, onDirtyChange, discardVersion = 0,
-}: AnalysisPageProps & { projectId: string }) {
+  projectId, projectRef, onNavigate, onSessionExpired, active = true, owner, onDirtyChange, onOwnerLost, onResolveProject,
+}: AnalysisPageProps & { projectId: string; onResolveProject: () => void }) {
   const [data, setData] = useState<AnalysisData | null>(null);
   const [drafts, setDrafts] = useState<AnalysisDraft[]>([]);
   const [dirty, setDirty] = useState(false);
   const [quarantined, setQuarantined] = useState(false);
+  const [projectChanged, setProjectChanged] = useState(false);
   const [revising, setRevising] = useState(false);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error" | "sessionExpired" | "forbidden">("loading");
   const [busy, setBusy] = useState(false);
@@ -149,7 +154,6 @@ function ResolvedPreliminaryAnalysis({
   const submitting = useRef(false);
   const draftDirty = useRef(false);
   const quarantine = useRef(false);
-  const priorDiscardVersion = useRef(discardVersion);
   const previousFocus = useRef<HTMLElement | null>(null);
   const restoreFocus = useRef(false);
 
@@ -167,6 +171,7 @@ function ResolvedPreliminaryAnalysis({
   const invalidate = useCallback((error: unknown) => {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
       clearDraft();
+      if (error.status === 401 || error instanceof AnalysisAccountError) onOwnerLost?.();
       currentOwner.current = null;
       attemptId.current = null;
       setRejectedAttempt(null);
@@ -175,13 +180,21 @@ function ResolvedPreliminaryAnalysis({
       setUncertain(false);
       setLoadState(error.status === 401 ? "sessionExpired" : "forbidden");
     } else setLoadState("error");
-  }, [clearDraft]);
+  }, [clearDraft, onOwnerLost]);
 
   const verifiedAccount = useCallback(async () => {
-    const account = await getCurrentAccount();
+    let account: AccountContext;
+    try {
+      account = await getCurrentAccount();
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        throw new AnalysisAccountError(error.message, error.status);
+      }
+      throw error;
+    }
     const observed = analysisOwner(account);
     if (!account.permissions.includes("project:read") || !account.session_incarnation ||
-        !/^[0-9a-f]{64}$/.test(account.session_incarnation)) throw new ApiError("Phiên không còn quyền truy cập.", 403);
+        !/^[0-9a-f]{64}$/.test(account.session_incarnation)) throw new AnalysisAccountError("Phiên không còn quyền truy cập.", 403);
     if ((owner && observed !== owner) || (currentOwner.current && observed !== currentOwner.current)) {
       throw new ApiError("Phiên làm việc đã thay đổi.", 401);
     }
@@ -196,6 +209,17 @@ function ResolvedPreliminaryAnalysis({
       if (generation !== epoch.current) return null;
       currentOwner.current = analysisOwner(account);
       const incarnation = account.session_incarnation!;
+      if (draftDirty.current && restoreFocus.current && !isValidProjectUuid(projectRef.trim())) {
+        const resolved = await resolveProjectReference(projectRef.trim());
+        if (generation !== epoch.current) return null;
+        if (resolved.project_id !== projectId) {
+          quarantine.current = true;
+          setQuarantined(true);
+          setProjectChanged(true);
+          setLoadState("ready");
+          return null;
+        }
+      }
       const [state, attemptState] = await Promise.all([
         fetchCaseState(projectId), getPreliminaryAnalysisAttemptState(projectId, incarnation),
       ]);
@@ -308,21 +332,14 @@ function ResolvedPreliminaryAnalysis({
       if (generation === epoch.current) invalidate(error);
       return null;
     }
-  }, [clearDraft, invalidate, projectId, verifiedAccount]);
+  }, [clearDraft, invalidate, projectId, projectRef, verifiedAccount]);
 
   useLayoutEffect(() => {
     if (active) void load(revising);
     return () => { epoch.current++; };
   }, [active, load, revising]);
 
-  useLayoutEffect(() => {
-    if (discardVersion === priorDiscardVersion.current) return;
-    priorDiscardVersion.current = discardVersion;
-    clearDraft();
-    if (active) void load(revising);
-  }, [active, clearDraft, discardVersion, load, revising]);
-
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(projectRef, dirty); }, [dirty, onDirtyChange, projectRef]);
   useEffect(() => {
     if (confirmOpen && confirmDialogRef.current && !confirmDialogRef.current.open) confirmDialogRef.current.showModal();
     if (reconcileOpen && reconcileDialogRef.current && !reconcileDialogRef.current.open) reconcileDialogRef.current.showModal();
@@ -489,8 +506,21 @@ function ResolvedPreliminaryAnalysis({
   if (!data && loadState === "loading") return <LoadingState message="Đang tải phân tích sơ bộ hiện hành…" />;
   if (loadState === "sessionExpired") return <ErrorState title="Phiên làm việc đã hết hạn" message="Đăng nhập lại rồi kiểm tra trạng thái phân tích trước khi tiếp tục." onRetry={onSessionExpired} retryLabel="Đăng nhập lại" />;
   if (loadState === "forbidden") return <ErrorState title="Chưa có quyền truy cập" message="Tài khoản hiện tại không có quyền xem hoặc chốt phân tích này." />;
-  if (!data && loadState === "error") return <ErrorState title="Chưa thể tải phân tích sơ bộ" message="Không thể xác minh nguồn và trạng thái hiện hành." onRetry={() => void load()} />;
+  if (!data && loadState === "error") return <ErrorState title="Chưa thể tải phân tích sơ bộ" message="Không thể xác minh nguồn và trạng thái hiện hành." onRetry={() => void load(revising)} />;
   if (!data) return null;
+
+  const quarantineNotice = quarantined && <section className="valora-panel" role="alert">
+    <div className="valora-panel__header">Nguồn đã thay đổi. Bản nháp đang được giữ riêng.</div>
+    <div className="valora-panel__body">
+      <button className="valora-button valora-button--secondary" onClick={() => onNavigate(projectPreliminaryIntakePath(projectRef))} type="button">Xem nguồn hiện tại</button>
+      <button className="valora-button valora-button--secondary" onClick={() => {
+        clearDraft();
+        if (projectChanged) onResolveProject();
+        else void load(revising);
+      }} type="button">Bỏ bản nháp</button>
+    </div>
+  </section>;
+  if (projectChanged && loadState === "ready") return quarantineNotice;
 
   const completed = data.snapshot;
   return (
@@ -504,7 +534,7 @@ function ResolvedPreliminaryAnalysis({
       </header>}
       {notice && <p className="precase-intake-warning" role="status">{notice}</p>}
       {loadState === "loading" && <p role="status">Đang kiểm tra dữ liệu hiện hành…</p>}
-      {loadState === "error" && <ErrorState title="Chưa thể cập nhật phân tích" message="Không thể đọc trạng thái hiện hành. Dữ liệu đang hiển thị chưa được xác minh lại." onRetry={() => void load()} />}
+      {loadState === "error" && <ErrorState title="Chưa thể cập nhật phân tích" message="Không thể đọc trạng thái hiện hành. Dữ liệu đang hiển thị chưa được xác minh lại." onRetry={() => void load(revising)} />}
       {(attemptBlocked || knownRejection) && loadState === "ready" && <section className="valora-panel"
         role={knownRejection ? "status" : "alert"} ref={rejectionSummaryRef} tabIndex={-1}>
         <div className="valora-panel__header">{knownRejection ? "Dữ liệu chốt bị từ chối" : "Chưa rõ kết quả chốt phân tích"}</div>
@@ -516,13 +546,7 @@ function ResolvedPreliminaryAnalysis({
           {canReconcile && data.attemptState.active_attempt && <button className="valora-button valora-button--secondary" disabled={busy} onClick={() => setReconcileOpen(true)} type="button">Đối soát lệnh chốt</button>}
         </div>
       </section>}
-      {quarantined && <section className="valora-panel" role="alert">
-        <div className="valora-panel__header">Nguồn đã thay đổi. Bản nháp đang được giữ riêng.</div>
-        <div className="valora-panel__body">
-          <button className="valora-button valora-button--secondary" onClick={() => onNavigate(projectPreliminaryIntakePath(projectRef))} type="button">Xem nguồn hiện tại</button>
-          <button className="valora-button valora-button--secondary" onClick={() => { clearDraft(); void load(revising); }} type="button">Bỏ bản nháp</button>
-        </div>
-      </section>}
+      {loadState === "ready" && quarantineNotice}
       {completed ? (
         <>
           <div className="valora-message valora-message--success precase-analysis-completed" data-analysis-state="completed">
