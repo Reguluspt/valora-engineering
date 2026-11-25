@@ -19,54 +19,21 @@ Agents must run `valora-live-authority-bootstrap`: `git fetch origin`, verify li
 
 Valora is a **valuation / asset-identity workbench** for non-IT business users. Primary UX language is **Vietnamese**. Current product visual authority is **Microsoft Fluent 2 light**, desktop-first and data-heavy/table-first. Word/Excel are input/output only — they are **not** the source of truth.
 
-## Current status (truthful)
+## Start here
 
-| Area | Status |
-|---|---|
-| Sprint 0–5 foundation domains | Implemented in monorepo (see module map) |
-| Sprint 10–11 Live Workbench loop | Merged historically; readiness **superseded** by S12-R gates |
-| S12-PR-001 / S12-PR-002 Excel staging + upload | Merged; hardened by S12-R-006 |
-| **S12-R-001 … S12-R-008** | **Merged to `main`** |
-| **S12-PR-003** Validation Engine | **Merged** (PR #8) |
-| **S12-PR-004** Apply Command & Provenance | **Merged** (PR #10); engineering gate **closed** |
-| S12 parser / Apply versions | Historical `.xlsx` fixed-alias parser and Apply v1 contract remain frozen evidence; current post-Intake promotion uses guarded Apply v2 under ADR 0048 |
-| **S13-PR-002** Legacy Workbook Adapter / Source Artifact | **Merged** (PR #15) at `137f8c5…` |
-| **S13-PR-003** Structure Discovery / Row Classification | **Merged** (PR #17) at `2af7535…` |
-| Adaptive Intake / Column Mapping Memory | Bounded G1.1H Intake & Mapping UX certified by PR #63; G1.1K / PR #68 certified/closed the Pre-case journey. Human-confirmed mapping/current selection and recovery are implemented; future provider AI matching is not implied |
-| Asset Identity Memory / dossiers / AI matching | Identity-decision/feedback and dossier extraction/alignment foundations are implemented; provider-backed AI matching and the full OS-G7 assistant runtime are not implemented |
-| **S13-PR-001** Design authority reconciliation | **Merged** (PR #11); design-authority gate **closed** |
-| Bounded-AI task/decision/policy architecture | ADR 0033–0034 accepted; `TaskJob`/worker durable execution foundation exists, but `AITaskRun`/`AIContextManifest`/`DecisionEpisode`/`ExecutionPolicy` runtime and provider gateway are not implemented |
-| UI/UX v2.3 PR-00 through PR-04 | **Merged** by PR #29 at `2775cb9…`; PR-01 remains a bounded prefix foundation |
-| UI/UX v2.3 PR-05 / PR-06 | **Merged** by PR #30 / #31; OneDrive Personal backend/provider acceptance passed; frontend absent |
-| UI/UX v2.3 product closure | OS-G0 complete (historical PR #32 / CI #485); OS-G1 CERTIFIED/CLOSED (G1.1K / PR #68 / CI #527); ASSET_REVIEW CERTIFIED/CLOSED (A5 / PR #86 / CI #555). Full OS-G2 and stages 6–16 remain incomplete/unavailable; no ASSET_WORKBENCH+ authorization. Local G6 + OneDrive Exchange G8 remain accepted/offline-complete foundations; Release/Publishing and full product completion remain open |
-| Windows Preview | **Deferred until Software Completion** |
-| Production-ready | **No** |
+- [Documentation entry point](docs/index.md): where to find governing decisions, scope-specific references and evidence, without rereading the repository.
+- [Status by workflow](docs/DOCUMENTATION_STATUS_INDEX.md#current-status-by-workflow): what is designed, integrated, or certified, with separate UAT and deployment boundaries.
+- For assigned work, start with the [Compact Task Contract](docs/plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md) and the [live task gate](CODEX.md#2-current-engineering-phase). Verify live main, the governing CODEX blob, exact-commit CI and the current task before changing anything.
 
-### Live task gate
-
-```text
-Live baseline: perform valora-live-authority-bootstrap; fetch origin/main, verify live HEAD/CODEX, assigned task and CI SUCCESS on that exact SHA.
-Historical OS-G0 milestone (2026-09-27): `51eab8648005186197d2fbb37a19bde4332aeaa5` (squash PR #32; exact-head CI #485 SUCCESS), not current main truth.
-Canonical UI/UX authority: VALORA_UIUX_HANDOFF_v2.3.md +
-VALORA_UIUX_V2_3_AUTHORITY_INDEX.md + Unified Appraisal OS roadmap v2.3 on the active repository branch.
-PR-00 through PR-04 — MERGED by PR #29; PR-01 is a bounded prefix foundation.
-PR-05 — MERGED by PR #30; OneDrive Personal backend/provider slice, no frontend.
-PR-06 — MERGED by PR #31; OneDrive Personal return/revalidation backend/provider slice, no frontend.
-Operational frontend entry — MERGED TO MAIN by squash PR #32 at `51eab864…`; exact-head CI #485 SUCCESS.
-The historical PR32 milestone contains Operational Frontend, accepted Local G6 and completed G8 offline Exchange. Subsequently OS-G1 closed through G1.1K / PR68 / CI527 and ASSET_REVIEW closed through A5 / PR86 / CI555. Current provider coverage reaches the first five stages; case completion remains fact-derived. Full OS-G2 is incomplete; ASSET_WORKBENCH+ stays NOT_AVAILABLE / UNAUTHORIZED. The original direct OneDrive replacement path is historical/blocked; new document-change runtime requires the ADR-0045 implementation contract. Release/Publishing and remaining stages are incomplete.
-Software Completion — REQUIRED before Windows Preview.
-Per-layer truth: docs/implementation/VALORA_UIUX_V2_3_PR00_PR13_FEATURE_ACCEPTANCE_MATRIX.md.
-Known legacy QC/approval/standalone-validation surfaces are debt and must not expand or drive new UI.
-Earlier S13 sequencing is historical context.
-```
+A documented design, a merged PR, product acceptance, UAT and deployment are different states. The linked status table is a dated navigation aid: it does not grant work or widen an existing task.
 
 ## Architecture (monorepo)
 
 ```text
 backend/     FastAPI + SQLAlchemy + Alembic (Python ≥3.12)
-frontend/    React 18 + TypeScript + Vite; Fluent 2 light product visual authority
+frontend/    React 19 + TypeScript + Vite; Fluent 2 light product visual authority
 worker/      Python reliable-job worker; durable TaskJob/attempt lease/retry/dead-letter runtime exists and is reused by document extraction/alignment; future AI must reuse it
-infra/       Local infra notes
+infra/       Development and Linux server foundation
 docs/        ADR, design contracts, audits, remediation, handoff
 .github/     CI workflows
 ```
@@ -80,7 +47,7 @@ knowledge_evidence/            evidence library, knowledge versions, quotes
 workflow_workbench/            workflow + workbench session helpers
 document_engine_intelligence/  document templates/render/intelligence tables
 ai_governance_security/        AI task/context/provider provenance + ExecutionPolicy boundary
-excel_import/                  streaming parser + staging + Apply (S12 v1)
+excel_import/                  streaming parser, mapping, staging and guarded Apply
 ```
 
 Future/continuing ownership follows current implementation state: mapping/identity memories remain in their existing bounded contexts; dossier extraction/alignment and durable job execution already have runtime foundations; future `AITaskRun`/context/attempt provenance, Task Registry/Gateway and deny-by-default `ExecutionPolicy` remain OS-G7 work under `ai_governance_security`/shared AI platform boundaries. AI must reuse the existing worker/runtime infrastructure.

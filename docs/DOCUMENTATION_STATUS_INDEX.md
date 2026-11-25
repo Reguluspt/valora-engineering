@@ -5,6 +5,18 @@
 **Scope:** Classification and reading rules for repository documentation.
 **Historical inventory reconciliation — 2026-09-24:** 380 documentation/config-document artifacts after the 2026-09-24 reconciliation closeout: 369 Markdown files + 11 supporting documentation artifacts (8 JSON/config evidence files + 3 approved design JPG assets) across the root governance set and `docs/**`. The pre-closeout audited source tree at `6a964112…` contained 379 artifacts; the additional artifact is the final reconciliation audit itself.
 
+## Current status by workflow
+
+Snapshot checked 2026-11-25 against main `5376683632dcacad1fc797dae3f18f7929eebb99` and [exact-main CI #706](https://github.com/Reguluspt/valora-engineering/actions/runs/45434337482). This table is a pointer, not an authority or a live release claim. The older sections below retain their dated context. Recheck the cited authority, Issue/PR and exact SHA at task start; if a row conflicts with its source, report the conflict before acting. Update a row's evidence and date together when its scope changes.
+
+| Workflow | Design and implementation evidence | Acceptance or boundary still in force |
+|---|---|---|
+| Upload and Mapping Excel / Pre-case | [ADR 0047](adr/0047-authoritative-column-mapping-selection-and-recovery.md) governs mapping choice/recovery. Use the [G1.1K evidence](implementation/G11K_PRECASE_PRODUCT_CLOSURE_E2E_EVIDENCE.md) and [PR #68](https://github.com/Reguluspt/valora-engineering/pull/68) for bounded Pre-case integration. | Upload/validate do not change official asset lines. Customer memory does not become the Project mapping authority. No provider-backed AI matching certification is implied. |
+| Official Intake / guarded Apply / Asset Review | [ADR 0048](adr/0048-post-intake-guarded-apply-and-asset-review-authority.md), [ADR 0049](adr/0049-asset-line-human-review-and-validation-authority.md) and [PR #86](https://github.com/Reguluspt/valora-engineering/pull/86) record the guarded Apply/Asset Review boundary and A5 milestone. | Explicit confirmation and exact lineage for guarded Apply. A5 is not the latest certified downstream boundary. |
+| Preliminary Analysis S1 | [PR #258](https://github.com/Reguluspt/valora-engineering/pull/258) integrated and [Issue #254 closeout](https://github.com/Reguluspt/valora-engineering/issues/254#issuecomment-7152139754) certifies source integration at the snapshot SHA. | No live migration, deployment or UAT certification. PG17/18 and operational R02/HMAC remain separately gated. |
+| Price Evidence / Supplier Quotes | A14 has bounded product/runtime certification through `SUPPLIER_QUOTES` ([certification](https://github.com/Reguluspt/valora-engineering/issues/139#issuecomment-6041091878)). [#252](https://github.com/Reguluspt/valora-engineering/issues/252) tracks price/source acceptance reconciliation. | Full OS-G2 remains incomplete. Do not infer authorization for Supplier Selection or Appraisal Result. [#255](https://github.com/Reguluspt/valora-engineering/issues/255) separately tracks NCCQ/S17/Word/M365 design-to-code coverage. |
+| UAT and deployment | [#199](https://github.com/Reguluspt/valora-engineering/issues/199) and [#203](https://github.com/Reguluspt/valora-engineering/issues/203) track separated test preparation and business acceptance. [ADR 0050](adr/0050-linux-server-windows-native-client.md) selects the server/client architecture. | Merge, source certification and CI are not PO acceptance, production deployment, or Windows Preview. Keep environment and data untouched outside the relevant authorization. |
+
 ## 1. Why this index exists
 
 The repository contains current authority, implementation contracts, historical sprint plans, audits,
