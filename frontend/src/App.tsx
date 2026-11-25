@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useCallback, useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { activateCreateScope, clearCreatePayloads } from "./components/precase/preliminaryCreateIntent";
 import { AppShell } from "./components/layout/AppShell";
 import { WorkbenchLayout } from "./components/layout/WorkbenchLayout";
@@ -12,7 +13,7 @@ import { ProjectListPage } from "./components/projects/ProjectListPage";
 import { PreliminaryRequestCreatePage } from "./components/precase/PreliminaryRequestCreatePage";
 import { PreliminaryRequestsPage } from "./components/precase/PreliminaryRequestsPage";
 import { PreliminaryIntakePage } from "./components/precase/PreliminaryIntakePage";
-import { PreliminaryAnalysisPage } from "./components/precase/PreliminaryAnalysisPage";
+import { analysisOwner, clearLegacyAnalysisStorage, PreliminaryAnalysisPage } from "./components/precase/PreliminaryAnalysisPage";
 import { PreliminaryCompletionPage } from "./components/precase/PreliminaryCompletionPage";
 import { M365ReturnPage, M365WorkspacePage } from "./components/m365/M365WorkspacePage";
 import { LoginPage } from "./auth/LoginPage";
@@ -21,6 +22,7 @@ import {
   APP_ROUTES,
   projectListVerificationCode,
   projectOverviewPath,
+  projectPreliminaryAnalysisPath,
   splitProjectRoute,
 } from "./contracts/valoraV23";
 
@@ -37,47 +39,113 @@ export function App() {
 
 function SessionGate() {
   const session = useSession();
-  if (session.status === "loading") {
-    return <LoadingState message="Đang khôi phục phiên làm việc…" />;
-  }
-  if (session.status === "error") {
-    return (
-      <ErrorState
-        title="Chưa thể xác minh phiên làm việc"
-        message={session.error || "Không thể kết nối với máy chủ."}
-        onRetry={() => void session.restore()}
-      />
-    );
-  }
-  if (session.status === "unauthenticated" || !session.account) return <LoginPage />;
-  return <AuthenticatedApp />;
+  useLayoutEffect(clearLegacyAnalysisStorage, []);
+  const authenticated = session.status === "authenticated";
+  const account = session.account;
+  if (session.status === "unauthenticated") return <LoginPage />;
+  return <>
+    {account && <div hidden={!authenticated}>
+      <AuthenticatedApp key={JSON.stringify([account.organization_id, account.id, account.session_incarnation, analysisOwner(account)])}
+        sessionActive={authenticated} />
+    </div>}
+    {session.status === "loading" && <LoadingState message="Đang khôi phục phiên làm việc…" />}
+    {session.status === "error" && <ErrorState
+      title="Chưa thể xác minh phiên làm việc"
+      message={session.error || "Không thể kết nối với máy chủ."}
+      onRetry={() => void session.restore()}
+    />}
+  </>;
 }
 
-export function AuthenticatedApp() {
+const historyPath = () => window.location.hash.slice(1) || NEUTRAL_PATH;
+
+function AnalysisRoute(props: React.ComponentProps<typeof PreliminaryAnalysisPage>) {
+  const host = useRef<HTMLDivElement>(null);
+  const [container] = useState(() => document.createElement("div"));
+  useLayoutEffect(() => {
+    if (props.active) host.current?.appendChild(container);
+    return () => container.remove();
+  }, [container, props.active]);
+  // Detached editors keep their UI state without putting their data or fixed workspace IDs in the destination DOM.
+  return <div ref={host} hidden={!props.active}>{createPortal(<PreliminaryAnalysisPage {...props} />, container)}</div>;
+}
+
+export function AuthenticatedApp({ sessionActive = true }: { sessionActive?: boolean } = {}) {
   const { account, logout, restore } = useSession();
   useLayoutEffect(() => {
     activateCreateScope(account ? { organization_id: account.organization_id, actor_user_id: account.id } : null);
     return () => activateCreateScope(null);
   }, [account?.organization_id, account?.id]);
-  const [currentPath, setCurrentPath] = useState(() => {
-    const hash = window.location.hash?.replace("#", "");
-    return hash || NEUTRAL_PATH;
-  });
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (hash) {
-        setCurrentPath(hash);
-      }
-    };
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+  const [currentPath, setCurrentPath] = useState(historyPath);
+  const [dirtyProjects, setDirtyProjects] = useState<ReadonlySet<string>>(() => new Set());
+  const [leavePath, setLeavePath] = useState<string | null>(null);
+  const leaveDialog = useRef<HTMLDialogElement>(null);
+  const leaveFocus = useRef<HTMLElement | null>(null);
+  const currentProjectRoute = splitProjectRoute(currentPath);
+  const activeAnalysis = currentProjectRoute?.view === "preliminary-analysis" ? currentProjectRoute.projectRef : null;
+  const parkedDrafts = [...dirtyProjects].filter((projectRef) => projectRef !== activeAnalysis);
+  const analysisProjects = [...dirtyProjects];
+  if (activeAnalysis && !dirtyProjects.has(activeAnalysis)) analysisProjects.push(activeAnalysis);
+  const setAnalysisDirty = useCallback((projectRef: string, dirty: boolean) => {
+    setDirtyProjects((current) => {
+      if (current.has(projectRef) === dirty) return current;
+      const next = new Set(current);
+      if (dirty) next.add(projectRef);
+      else next.delete(projectRef);
+      return next;
+    });
+  }, []);
+  const invalidateAnalysisOwner = useCallback(() => {
+    setDirtyProjects(new Set());
   }, []);
 
-  const handleNavigate = (path: string) => {
-    window.location.hash = path;
+  useLayoutEffect(() => {
+    const followBrowserHistory = () => {
+      const path = historyPath();
+      if (path === currentPath) return;
+      setLeavePath(null);
+      leaveFocus.current = null;
+      setCurrentPath(path);
+    };
+    window.addEventListener("hashchange", followBrowserHistory);
+    window.addEventListener("popstate", followBrowserHistory);
+    return () => {
+      window.removeEventListener("hashchange", followBrowserHistory);
+      window.removeEventListener("popstate", followBrowserHistory);
+    };
+  }, [currentPath]);
+
+  useEffect(() => {
+    if (leavePath && leaveDialog.current && !leaveDialog.current.open) leaveDialog.current.showModal();
+  }, [leavePath]);
+
+  const navigate = (path: string) => {
+    if (historyPath() !== path) window.history.pushState(null, "", `#${path}`);
     setCurrentPath(path);
+  };
+  const handleNavigate = (path: string) => {
+    if (path === currentPath) return;
+    const next = splitProjectRoute(path);
+    if (activeAnalysis && dirtyProjects.has(activeAnalysis) &&
+      (next?.view !== "preliminary-analysis" || next.projectRef !== activeAnalysis)) {
+      leaveFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setLeavePath(path);
+      return;
+    }
+    navigate(path);
+  };
+  const stay = () => {
+    setLeavePath(null);
+    leaveDialog.current?.close();
+    leaveFocus.current?.focus();
+    leaveFocus.current = null;
+  };
+  const discardAndNavigate = () => {
+    if (!leavePath || historyPath() !== currentPath) return;
+    if (activeAnalysis) setAnalysisDirty(activeAnalysis, false);
+    setLeavePath(null);
+    leaveFocus.current = null;
+    navigate(leavePath);
   };
   const supplierSelectionAvailable = useStageNavigation(splitProjectRoute(currentPath)?.projectRef || null,
     account ? `${account.organization_id}:${account.id}` : "");
@@ -90,10 +158,6 @@ export function AuthenticatedApp() {
 
     if (projectRoute?.view === "preliminary-intake") {
       return <PreliminaryIntakePage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
-    }
-
-    if (projectRoute?.view === "preliminary-analysis") {
-      return <PreliminaryAnalysisPage projectRef={projectRoute.projectRef} onNavigate={handleNavigate} onSessionExpired={() => void restore()} />;
     }
 
     if (projectRoute?.view === "preliminary-completion") {
@@ -155,7 +219,26 @@ export function AuthenticatedApp() {
       onNavigate={handleNavigate}
       utilityActions={<button className="valora-button valora-button--subtle" onClick={() => handleNavigate(APP_ROUTES.preliminaryRequestCreate)} type="button">Khôi phục yêu cầu sơ bộ</button>}
     >
-      {renderRoute()}
+      {sessionActive && <div role="status">{parkedDrafts.length > 0 && "Còn bản nháp phân tích chưa chốt trong phiên này."}</div>}
+      {sessionActive && parkedDrafts.map((projectRef) =>
+        <div key={projectRef} className="valora-message" role="group" aria-label={`Bản nháp phân tích hồ sơ ${projectRef}`}>
+          <span>Hồ sơ {projectRef}</span>{" "}
+          <button className="valora-button valora-button--secondary" onClick={() => handleNavigate(projectPreliminaryAnalysisPath(projectRef))} type="button">Quay lại tiếp tục chỉnh sửa</button>{" "}
+          <button className="valora-button valora-button--secondary" onClick={() => setAnalysisDirty(projectRef, false)} type="button">Bỏ bản nháp</button>
+        </div>)}
+      {analysisProjects.map((projectRef) => <AnalysisRoute key={projectRef} projectRef={projectRef}
+        active={projectRef === activeAnalysis && sessionActive} owner={analysisOwner(account)}
+        onNavigate={handleNavigate} onSessionExpired={() => void restore()} onOwnerLost={invalidateAnalysisOwner}
+        onDirtyChange={setAnalysisDirty} />)}
+      {!activeAnalysis && renderRoute()}
+      {leavePath && sessionActive && <dialog ref={leaveDialog} aria-label="Rời phân tích sơ bộ"
+        className="valora-panel precase-confirm-dialog" onCancel={(event) => { event.preventDefault(); stay(); }}>
+        <div className="valora-panel__header">Bản nháp phân tích chưa chốt</div>
+        <div className="valora-panel__body"><p>Rời trang sẽ bỏ các thay đổi trong bản nháp này.</p>
+          <button className="valora-button valora-button--secondary" onClick={stay} type="button">Ở lại chỉnh sửa</button>
+          <button className="valora-button valora-button--primary" onClick={discardAndNavigate} type="button">Rời đi và bỏ thay đổi</button>
+        </div>
+      </dialog>}
     </AppShell>
   );
 }

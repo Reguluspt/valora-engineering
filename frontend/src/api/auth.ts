@@ -9,6 +9,7 @@ export interface AccountContext {
   status: string;
   roles: string[];
   permissions: string[];
+  session_incarnation?: string;
 }
 
 export interface LoginRequest {

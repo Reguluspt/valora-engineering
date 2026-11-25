@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
 
@@ -131,6 +131,7 @@ def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch
     admin = create_engine(engine.url, isolation_level="AUTOCOMMIT")
     target = create_engine(engine.url.set(database=name))
     env = {**os.environ, "POSTGRES_DB": name}
+    audit_rows = select(AuditEvent.__table__)
 
     def migrate(revision, action="upgrade"):
         return subprocess.run(
@@ -166,7 +167,8 @@ def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch
             db.add_all([project, AuditEvent(event_name="Legacy nullable", entity_type="Legacy")])
             db.flush()
             before = (project.id, project.code, project.name)
-            before_audits = db.query(AuditEvent).count()
+            before_audits = {row.id: row for row in db.execute(audit_rows)}
+            owner_role_id = db.query(Role).filter_by(code="owner").one().id
             db.commit()
         result = migrate("0a1b2c3d4e5f")
         assert result.returncode == 0, result.stderr
@@ -178,7 +180,16 @@ def test_a28_additive_upgrade_preserves_synthetic_history(principal, monkeypatch
             project = db.get(Project, before[0])
             assert (project.id, project.code, project.name) == before
             assert db.query(Receipt).count() == 0
-            assert db.query(AuditEvent).count() == before_audits
+            after_audits = db.execute(audit_rows).all()
+            assert {row.id: row for row in after_audits if row.id in before_audits} == before_audits
+            (grant,) = [row for row in after_audits if row.id not in before_audits]
+            assert grant.event_name == "PreliminaryAnalysisReconcilePermissionGranted"
+            assert (grant.entity_type, grant.entity_id, grant.command_name) == (
+                "Role", owner_role_id, "d08a254f001a",
+            )
+            assert grant.organization_id is None and grant.actor_user_id is None
+            assert grant.payload == {"permission": "project:preliminary_analysis:reconcile", "added": True}
+            assert grant.payload["added"] is True
         if populated:
             now = datetime.now(timezone.utc)
             with Session(target) as db:

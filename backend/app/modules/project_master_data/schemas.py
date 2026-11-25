@@ -726,6 +726,42 @@ class PreliminaryAnalysisFinalizeRequest(BaseSchema):
         return value
 
 
+class PreliminaryAnalysisAttemptClaim(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: uuid.UUID
+    expected_project_version: int = Field(strict=True, ge=1)
+    expected_analysis_version: int = Field(strict=True, ge=0)
+    import_batch_id: uuid.UUID
+    source_artifact_id: uuid.UUID
+    source_generation: int = Field(strict=True, ge=1)
+    source_checksum_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    structure_snapshot_id: uuid.UUID
+    mapping_decision_id: uuid.UUID
+    mapping_profile_usage_id: uuid.UUID
+    selection_revision: int = Field(strict=True, ge=0)
+    mapping_decision_digest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    profile_usage_mapping_digest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class PreliminaryAnalysisV3LineItem(PreliminaryAnalysisLineItem):
+    staging_row_id: uuid.UUID
+
+
+class PreliminaryAnalysisFinalizeV3(PreliminaryAnalysisFinalizeRequest):
+    attempt_id: uuid.UUID
+    expected_analysis_version: int = Field(strict=True, ge=0)
+    line_manifest: List[PreliminaryAnalysisV3LineItem]
+
+
+class PreliminaryAnalysisAttemptReconcile(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_state_version: int = Field(strict=True, ge=1)
+    expected_execution_generation: int = Field(strict=True, ge=0)
+    reason: Literal["request_abandoned", "executor_unresponsive"]
+
+
 class PreliminaryAnalysisSnapshotResponse(BaseSchema):
     id: uuid.UUID
     organization_id: uuid.UUID

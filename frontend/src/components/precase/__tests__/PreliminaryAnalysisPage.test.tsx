@@ -2,9 +2,18 @@ import React from "react";
 import { act, create } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@fluentui/react-components", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@fluentui/react-components")>();
+  return { ...original, TabList: ({ children, selectedValue, onTabSelect, ...props }: any) => <div {...props} role="tablist">{React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as React.ReactElement<any>, { selected: child.props.value === selectedValue, onClick: (event: unknown) => onTabSelect(event, { value: child.props.value }) }) : child)}</div>,
+    Tab: ({ children, value, selected, onClick, ...props }: any) => <button {...props} role="tab" aria-selected={selected} onClick={onClick}>{children}</button> };
+});
+
 const api = vi.hoisted(() => ({
   fetchCaseState: vi.fn(), getMappingRecovery: vi.fn(), getSourceArtifact: vi.fn(),
   fetchAssetImportRows: vi.fn(), finalizePreliminaryAnalysis: vi.fn(), getPreliminaryAnalysis: vi.fn(),
+  getCurrentAccount: vi.fn(), getPreliminaryAnalysisAttemptState: vi.fn(), getPreliminaryAnalysisAttempt: vi.fn(),
+  claimPreliminaryAnalysisAttempt: vi.fn(), reconcilePreliminaryAnalysisAttempt: vi.fn(),
+  resolveProjectReference: vi.fn(),
 }));
 vi.mock("../../../api/caseState", () => ({ fetchCaseState: api.fetchCaseState }));
 vi.mock("../../../api/preliminaryIntake", () => ({
@@ -14,7 +23,13 @@ vi.mock("../../../api/assetImports", () => ({ fetchAssetImportRows: api.fetchAss
 vi.mock("../../../api/preliminaryAnalysis", () => ({
   finalizePreliminaryAnalysis: api.finalizePreliminaryAnalysis,
   getPreliminaryAnalysis: api.getPreliminaryAnalysis,
+  claimPreliminaryAnalysisAttempt: api.claimPreliminaryAnalysisAttempt,
+  getPreliminaryAnalysisAttempt: api.getPreliminaryAnalysisAttempt,
+  getPreliminaryAnalysisAttemptState: api.getPreliminaryAnalysisAttemptState,
+  reconcilePreliminaryAnalysisAttempt: api.reconcilePreliminaryAnalysisAttempt,
 }));
+vi.mock("../../../api/auth", () => ({ getCurrentAccount: api.getCurrentAccount }));
+vi.mock("../../../api/projects", () => ({ resolveProjectReference: api.resolveProjectReference }));
 vi.mock("../../workbench/project-context", () => ({
   useResolvedProject: () => ({ state: "ready", projectId: "project-1" }),
 }));
@@ -63,19 +78,27 @@ describe("PreliminaryAnalysisPage", () => {
       setItem: (key: string, value: string) => stored.set(key, value),
       removeItem: (key: string) => stored.delete(key),
     });
+    api.getCurrentAccount.mockResolvedValue({
+      id: "user-1", organization_id: "org-1", session_incarnation: "d".repeat(64), roles: ["appraiser"],
+      permissions: ["project:read", "project:preliminary_analysis:finalize"],
+    });
+    api.getPreliminaryAnalysisAttemptState.mockResolvedValue({ blocked: false, base_analysis_version: 0 });
+    api.getPreliminaryAnalysisAttempt.mockResolvedValue({ status: "UNKNOWN" });
+    api.claimPreliminaryAnalysisAttempt.mockResolvedValue({ attempt_id: "attempt-1", status: "RECEIVED" });
     api.fetchCaseState.mockImplementation(async () => serverState);
+    api.resolveProjectReference.mockResolvedValue({ project_id: "project-1" });
     api.getMappingRecovery.mockResolvedValue(recovery);
-    api.getSourceArtifact.mockResolvedValue({ id: "source-1", import_batch_id: "batch-1", state: "available" });
+    api.getSourceArtifact.mockResolvedValue({ id: "source-1", import_batch_id: "batch-1", state: "available", generation: 1, checksum_sha256: "a".repeat(64) });
     api.fetchAssetImportRows.mockResolvedValue({
       project_id: "project-1", import_batch_id: "batch-1", total: 1, limit: 100, offset: 0, items: [row],
     });
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  async function mount() {
+  async function mount(overrides: Partial<React.ComponentProps<typeof PreliminaryAnalysisPage>> = {}) {
     let root: ReturnType<typeof create>;
     await act(async () => {
-      root = create(<PreliminaryAnalysisPage projectRef="project-1" onNavigate={vi.fn()} onSessionExpired={vi.fn()} />);
+      root = create(<PreliminaryAnalysisPage projectRef="project-1" onNavigate={vi.fn()} onSessionExpired={vi.fn()} {...overrides} />);
     });
     return root!;
   }
@@ -91,7 +114,7 @@ describe("PreliminaryAnalysisPage", () => {
       transport_percentage: "0",
       proposed_unit_price: "110",
     })) {
-      act(() => root.root.findAllByType("input").find((node) => node.props.name === name)!.props.onChange({ target: { value } }));
+      act(() => root.root.findAllByType(name === "accepted_price_basis" ? "textarea" : "input").find((node) => node.props.name === name)!.props.onChange({ target: { value } }));
     }
     act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
   }
@@ -101,6 +124,65 @@ describe("PreliminaryAnalysisPage", () => {
     return root.root.findAllByType(tag).find((node) => node.props.name === `${name}_row_${rowNumber}`)!;
   }
 
+  it.each(["unchanged", "network", "row UUID changed", "route reassigned", "session changed", "permission removed"])(
+    "revalidates a parked draft before exposing it when authority is %s", async (scenario) => {
+      const props = {
+        projectRef: "project-1", onNavigate: vi.fn(), onSessionExpired: vi.fn(),
+        onDirtyChange: vi.fn(), onOwnerLost: vi.fn(),
+      };
+      const root = await mount(props);
+      const price = () => tableField(root, 17, "proposed_unit_price");
+      act(() => price().props.onChange({ target: { value: "9876543" } }));
+      expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+      await act(async () => root.update(<PreliminaryAnalysisPage {...props} active={false} />));
+      expect(root.root.findAllByProps({ hidden: true }).some((node) => node.findAllByProps({ name: "proposed_unit_price_row_17" }).length > 0)).toBe(true);
+
+      const account = await api.getCurrentAccount();
+      api.getCurrentAccount.mockClear();
+      api.resolveProjectReference.mockClear();
+      if (scenario === "network") api.getCurrentAccount.mockRejectedValueOnce(new Error("temporarily unavailable"));
+      if (scenario === "row UUID changed") api.fetchAssetImportRows.mockResolvedValue({
+        project_id: "project-1", import_batch_id: "batch-1", total: 1, offset: 0, items: [{ ...row, id: "different-row" }],
+      });
+      if (scenario === "route reassigned") api.resolveProjectReference.mockResolvedValue({ project_id: "project-2" });
+      if (scenario === "session changed") api.getCurrentAccount.mockResolvedValue({ ...account, session_incarnation: "e".repeat(64) });
+      if (scenario === "permission removed") api.getCurrentAccount.mockResolvedValue({ ...account, permissions: ["project:read"] });
+
+      await act(async () => root.update(<PreliminaryAnalysisPage {...props} active />));
+      expect(api.getCurrentAccount).toHaveBeenCalled();
+      if (scenario === "session changed" || scenario === "permission removed") {
+        expect(price()).toBeUndefined();
+        expect(props.onOwnerLost).toHaveBeenCalledOnce();
+        expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", false);
+      } else if (scenario === "route reassigned" || scenario === "row UUID changed") {
+        expect(api.resolveProjectReference).toHaveBeenCalledWith("project-1");
+        expect(JSON.stringify(root.toJSON())).toContain("Nguồn đã thay đổi. Bản nháp đang được giữ riêng.");
+        expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+        expect(props.onOwnerLost).not.toHaveBeenCalled();
+        if (scenario === "route reassigned") expect(price()).toBeUndefined();
+        else {
+          expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+          await act(async () => button(root, "Bỏ bản nháp")!.props.onClick());
+          expect(price().props.value).toBe("");
+        }
+      } else {
+        if (scenario === "network") {
+          expect(JSON.stringify(root.toJSON())).toContain("Chưa thể cập nhật phân tích");
+          expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+          expect(props.onDirtyChange).toHaveBeenLastCalledWith("project-1", true);
+          await act(async () => button(root, "Thử lại")!.props.onClick());
+        }
+        expect(api.resolveProjectReference).toHaveBeenCalledWith("project-1");
+        expect(api.getCurrentAccount.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect(price().props.value).toBe("9.876.543");
+      }
+      expect(api.claimPreliminaryAnalysisAttempt).not.toHaveBeenCalled();
+      expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
+      expect(stored.size).toBe(0);
+      await act(async () => root.unmount());
+    },
+  );
+
   it("loads current materialized staging provenance and requires line review", async () => {
     const root = await mount();
     expect(api.getMappingRecovery).toHaveBeenCalledWith("project-1", "batch-1");
@@ -109,6 +191,59 @@ describe("PreliminaryAnalysisPage", () => {
     expect(JSON.stringify(root.toJSON())).toContain("17");
     expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
     expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
+  });
+
+  it.each([320, 390, 832, 950])("opens with the table on the analysis page at %i CSS px", async (width) => {
+    const media = {
+      matches: width <= 950,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const matchMedia = vi.fn(() => media);
+    vi.stubGlobal("window", { matchMedia, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    const root = await mount();
+    const panel = () => root.root.findByType("aside");
+    const scrim = () => root.root.findAllByProps({ className: "analysis-panel-scrim" });
+
+    expect(matchMedia).toHaveBeenCalledWith("(max-width: 950px)");
+    expect(root.root.findAllByType("th")).toHaveLength(13);
+    expect(panel().props.hidden).toBe(true);
+    expect(scrim()).toHaveLength(0);
+
+    const opener = root.root.findAllByType("button").find((node) => node.props["aria-label"]?.startsWith("Xem chi tiết dòng 17:"))!;
+    act(() => opener.props.onClick());
+    expect(panel().props.hidden).toBe(false);
+    expect(panel().props.role).toBe("dialog");
+    expect(scrim()).toHaveLength(1);
+
+    act(() => panel().findAllByType("input").find((node) => node.props.name === "confirmed_reference_price")!.props.onChange({ target: { value: "100" } }));
+    expect(panel().props.hidden).toBe(false);
+
+    const updateViewport = media.addEventListener.mock.calls[0][1];
+    media.matches = false;
+    act(() => updateViewport());
+    expect(panel().props.hidden).toBe(false);
+    expect(panel().props.role).toBeUndefined();
+
+    media.matches = true;
+    act(() => updateViewport());
+    expect(panel().props.role).toBe("dialog");
+    act(() => panel().props.onKeyDown({ key: "Escape", preventDefault: vi.fn() }));
+    expect(panel().props.hidden).toBe(true);
+    expect(scrim()).toHaveLength(0);
+    act(() => root.unmount());
+  });
+
+  it("opens the initial detail beside the table above the overlay breakpoint", async () => {
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      matchMedia: () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    });
+    const root = await mount();
+    expect(root.root.findByType("aside").props.hidden).toBe(false);
+    expect(root.root.findByType("aside").props.role).toBeUndefined();
+    act(() => root.unmount());
   });
 
   it("loads every ordered staging page and keeps the review table bounded", async () => {
@@ -159,8 +294,8 @@ describe("PreliminaryAnalysisPage", () => {
       structure_snapshot_id: "structure-1", mapping_decision_id: "decision-1",
       mapping_profile_usage_id: "usage-1", mapping_decision_digest_sha256: "a".repeat(64),
       profile_usage_mapping_digest_sha256: "a".repeat(64), confirmed: true,
-      line_manifest: [expect.objectContaining({ source_row_number: 17, quantity: 2, human_line_confirmed: true })],
-    }));
+      line_manifest: [expect.objectContaining({ source_row_number: 17, staging_row_id: "row-1", quantity: 2, human_line_confirmed: true })],
+    }), "d".repeat(64));
     expect(api.getPreliminaryAnalysis).toHaveBeenCalledWith("project-1", "analysis-1");
     expect(JSON.stringify(root.toJSON())).toContain("Đã chốt phân tích sơ bộ");
     expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
@@ -175,20 +310,21 @@ describe("PreliminaryAnalysisPage", () => {
     const root = await mount();
     await reviewLine(root);
     act(() => root.root.findAllByType("input").find((node) => node.props.type === "search")!.props.onChange({ target: { value: "Máy nén" } }));
+    act(() => root.root.findAllByType("button").find(node => node.props["aria-label"] === "Xem nguồn giá dòng 42")!.props.onClick());
     for (const [name, value] of Object.entries({ accepted_price_basis: "Báo giá đã đối chiếu", confirmed_reference_price: "100", transport_percentage: "0", proposed_unit_price: "110" })) {
-      act(() => tableField(root, 42, name).props.onChange({ target: { value } }));
-      expect(root.root.findAllByType("input").find((node) => node.props.name === name)!.props.value).toBe(value);
+      act(() => root.root.findAllByType(name === "accepted_price_basis" ? "textarea" : "input").find(node => node.props.name === (name === "proposed_unit_price" ? "proposed_unit_price_row_42" : name))!.props.onChange({ target: { value } }));
+      expect(root.root.findAllByType(name === "accepted_price_basis" ? "textarea" : "input").find((node) => node.props.name === name)!.props.value).toBe(value);
     }
     expect(root.root.findByType("aside").findByType("h2").children).toEqual(["Máy nén khí"]);
     act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
     for (const [name, value] of [["proposed_unit_price", "175"], ["confirmed_reference_price", "200"], ["transport_percentage", "5"]]) {
-      act(() => tableField(root, 42, name).props.onChange({ target: { value } }));
+      act(() => root.root.findAllByType(name === "accepted_price_basis" ? "textarea" : "input").find(node => node.props.name === (name === "proposed_unit_price" ? "proposed_unit_price_row_42" : name))!.props.onChange({ target: { value } }));
     }
     expect(tableField(root, 42, "proposed_unit_price").props.value).toBe("175");
     expect(root.root.findAllByType("input").find((node) => node.props.name === "proposed_unit_price")!.props.value).toBe("175");
     expect(root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.checked).toBe(false);
-    act(() => root.root.findAllByType("input").find((node) => node.props.name === "accepted_price_basis")!.props.onChange({ target: { value: "Giá tham chiếu đã kiểm tra" } }));
-    expect(tableField(root, 42, "accepted_price_basis").props.value).toBe("Giá tham chiếu đã kiểm tra");
+    act(() => root.root.findAllByType("textarea").find((node) => node.props.name === "accepted_price_basis")!.props.onChange({ target: { value: "Giá tham chiếu đã kiểm tra" } }));
+    expect(root.root.findAllByType("textarea").find(node => node.props.name === "accepted_price_basis")!.props.value).toBe("Giá tham chiếu đã kiểm tra");
     act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
     expect(root.root.findAllByProps({ "data-row-source": 17 })).toHaveLength(0);
     expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(false);
@@ -207,7 +343,7 @@ describe("PreliminaryAnalysisPage", () => {
 
   it("retains a row while inline editing changes its filter match, then releases it on leaving the row", async () => {
     const root = await mount();
-    act(() => root.root.findByType("select").props.onChange({ target: { value: "missing-price" } }));
+    act(() => root.root.findAllByType("select").find(node => node.props["aria-label"] === "Lọc trạng thái rà soát")!.props.onChange({ target: { value: "missing-price" } }));
     act(() => tableField(root, 17, "proposed_unit_price").props.onChange({ target: { value: "175" } }));
     expect(root.root.findAllByProps({ "data-row-source": 17 })).toHaveLength(1);
     expect(tableField(root, 17, "proposed_unit_price").props.value).toBe("175");
@@ -218,45 +354,82 @@ describe("PreliminaryAnalysisPage", () => {
     expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
   });
 
-  it("keeps the same command key after an unknown uncommitted result", async () => {
+  it.each([false, true])("checks current source before correcting a proved rejection (changed: %s)", async (sourceChanged) => {
     const root = await mount();
     await reviewLine(root);
+    api.finalizePreliminaryAnalysis.mockImplementationOnce(async () => {
+      api.getPreliminaryAnalysisAttemptState.mockResolvedValue({
+        blocked: true, base_analysis_version: 0,
+        active_attempt: { attempt_id: "attempt-1", status: "RECEIVED", execution_generation: 0 },
+      });
+      if (sourceChanged) {
+        api.getSourceArtifact.mockResolvedValue({ id: "source-1", import_batch_id: "batch-1", state: "available", generation: 2, checksum_sha256: "a".repeat(64) });
+      }
+      throw new ApiError("Dòng chưa xác nhận.", 409, "preliminary_analysis_line_confirmation_missing", {
+        detail: { execution_started: false },
+      });
+    });
     act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
-    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("offline", 0));
     await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
-    const firstKey = api.finalizePreliminaryAnalysis.mock.calls[0][1].idempotency_key;
-    expect(button(root, "Thử lại cùng mã lệnh")).toBeDefined();
+    expect(JSON.stringify(root.toJSON())).toContain("Dữ liệu chốt bị từ chối");
+    expect(JSON.stringify(root.toJSON())).not.toContain("Chưa rõ kết quả chốt phân tích");
+    expect(button(root, "Đối soát lệnh chốt")).toBeUndefined();
+    if (sourceChanged) {
+      expect(JSON.stringify(root.toJSON())).toContain("Bản nháp đang được giữ riêng");
+      expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+      expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+      expect(api.claimPreliminaryAnalysisAttempt).toHaveBeenCalledTimes(1);
+      expect(stored.size).toBe(0);
+      return;
+    }
+    expect(tableField(root, 17, "proposed_unit_price").props.value).toBe("110");
+    act(() => tableField(root, 17, "proposed_unit_price").props.onChange({ target: { value: "175" } }));
     expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+    act(() => root.root.findAllByType("input").find((node) => node.props.name === "human_line_confirmed")!.props.onChange({ currentTarget: { checked: true } }));
+    act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
     api.finalizePreliminaryAnalysis.mockResolvedValueOnce({ id: "analysis-1", version: 1 });
-    await act(async () => button(root, "Thử lại cùng mã lệnh")?.props.onClick());
-    expect(api.finalizePreliminaryAnalysis.mock.calls[1][1].idempotency_key).toBe(firstKey);
+    await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
+    const first = api.finalizePreliminaryAnalysis.mock.calls[0][1];
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenNthCalledWith(2, "project-1", {
+      ...first, line_manifest: [{ ...first.line_manifest[0], proposed_unit_price: 175 }],
+    }, "d".repeat(64));
+    expect(api.claimPreliminaryAnalysisAttempt).toHaveBeenCalledTimes(1);
+    expect(api.reconcilePreliminaryAnalysisAttempt).not.toHaveBeenCalled();
+    expect(stored.size).toBe(0);
   });
 
-  it("restores an uncertain command after navigation and retries its original payload", async () => {
-    const first = await mount();
-    await reviewLine(first);
-    act(() => button(first, "Chốt phân tích sơ bộ")?.props.onClick());
-    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("offline", 0));
-    await act(async () => button(first, "Xác nhận chốt")?.props.onClick());
-    const original = api.finalizePreliminaryAnalysis.mock.calls[0][1];
-    act(() => first.unmount());
-    const returned = await mount();
-    expect(button(returned, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
-    expect(button(returned, "Thử lại cùng mã lệnh")).toBeDefined();
-    api.finalizePreliminaryAnalysis.mockResolvedValueOnce({ id: "analysis-1", version: 1 });
-    await act(async () => button(returned, "Thử lại cùng mã lệnh")?.props.onClick());
-    expect(api.finalizePreliminaryAnalysis.mock.calls[1][1]).toEqual(original);
-  });
-
-  it("treats a stale 409 as a review reset without reusing the command", async () => {
+  it.each([0, 409])("never sends another price POST after indeterminate status %i and negative lookup", async (status) => {
     const root = await mount();
     await reviewLine(root);
     act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
-    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("stale", 409));
+    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("indeterminate", status, "preliminary_analysis_line_confirmation_missing"));
+    api.getPreliminaryAnalysisAttempt.mockRejectedValue(new ApiError("not found", 404));
     await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
-    expect(JSON.stringify(root.toJSON())).toContain("Dữ liệu đã thay đổi");
     expect(button(root, "Thử lại cùng mã lệnh")).toBeUndefined();
     expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+    await act(async () => button(root, "Kiểm tra trạng thái")?.props.onClick());
+    expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
+    expect(stored.size).toBe(0);
+    expect(api.claimPreliminaryAnalysisAttempt.mock.calls[0][1]).not.toHaveProperty("line_manifest");
+  });
+
+  it("blocks a new browser view when the server reports an unresolved attempt", async () => {
+    api.getPreliminaryAnalysisAttemptState.mockResolvedValue({ blocked: true, base_analysis_version: 0 });
+    const root = await mount();
+    expect(button(root, "Chốt phân tích sơ bộ")?.props.disabled).toBe(true);
+    expect(JSON.stringify(root.toJSON())).toContain("Chưa rõ kết quả chốt phân tích");
+    expect(api.finalizePreliminaryAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("clears the draft on a definitive authorization failure without resending price", async () => {
+    const root = await mount();
+    await reviewLine(root);
+    act(() => button(root, "Chốt phân tích sơ bộ")?.props.onClick());
+    api.finalizePreliminaryAnalysis.mockRejectedValueOnce(new ApiError("forbidden", 403));
+    await act(async () => button(root, "Xác nhận chốt")?.props.onClick());
+    expect(JSON.stringify(root.toJSON())).toContain("Chưa có quyền truy cập");
+    expect(button(root, "Chốt phân tích sơ bộ")).toBeUndefined();
     expect(api.finalizePreliminaryAnalysis).toHaveBeenCalledTimes(1);
   });
 

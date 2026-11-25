@@ -1,7 +1,7 @@
 # CODEX.md — Valora Engineering Rules for Coding Agents
 
 **Created:** 2026-07-06
-**Last reconciled:** 2026-10-06 (A10 runtime certified; A11 PRICE_EVIDENCE product closure candidate)
+**Last scoped reconciliation:** 2026-11-25 (Price Evidence and Supplier Quotes only; see §2)
 **Applies to:** All agent-generated work in the Valora repository
 **v2.3 gate:** PR-00 — **CLOSED**; PR-01 / PR-02 / PR-03 / PR-04 contracts — **ACCEPTED** and merged.
 
@@ -69,10 +69,10 @@ A9 is CERTIFIED/CLOSED at `53b26838e4f01f34b1bb3bc0c5c91986d0af13ed`, exact-main
 / run `37445602131` SUCCESS, certification comment `6015361224`. A10 / Issue #131 is CERTIFIED/CLOSED:
 PR #132 merged at `387a8d1d630d4245cdc77b886aafa137cf755515`, exact-main CI #614 / run `37479177837` SUCCESS,
 certification comment `6019045198`. The bounded PRICE_EVIDENCE backend/domain/provider/API is described in
-`docs/implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md`. Its shared Case State v5 may reach
-PRICE_EVIDENCE after current Workbench COMPLETE and holds there with NO_AUTHORIZED_DOWNSTREAM_ACTION.
-A11 / Issue #133 authorizes the existing Workbench/Asset Context product UX, bounded read projection and browser evidence candidate described in `docs/implementation/VALORA_OS_G2_PRICE_EVIDENCE_PRODUCT.md`. This candidate is not product certification. SUPPLIER_QUOTES+ remains UNAUTHORIZED.
-Full OS-G2 remains PARTIAL; membership mutation, further RBAC and later-stage work remain unauthorized.
+`docs/implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md`. Its original Case State v5 scope reached
+PRICE_EVIDENCE after current Workbench COMPLETE and stopped there at that milestone.
+See "Price Evidence and Supplier Quotes" below for the later A11/A14 certified scope, the current
+write gate and the #252 design decisions. Full OS-G2 remains PARTIAL; this grants no new runtime authority.
 PR-05 — MERGED by PR #30; delegated OneDrive Personal read/OAuth foundation accepted.
 PR-06 — MERGED by PR #31; return/revalidation baseline and live read acceptance accepted.
 
@@ -167,8 +167,9 @@ A6 / Issue #120 / PR #121 is CERTIFIED/CLOSED with D1–D8 ACCEPTED; A7 / Issue 
 certified backend-only ASSET_WORKBENCH runtime and cap via PR #123 / CI #597, retaining NO_AUTHORIZED_DOWNSTREAM_ACTION after
 completion, absent a higher-priority authorized blocker. A8 / Issue #126 product UX/E2E is CERTIFIED/CLOSED
 by exact-main CI #604 and comment `6010285363`. A9 / Issue #129 authority D1–D12 is ACCEPTED (comment
-`6011401776`) and CERTIFIED/CLOSED. A10 / Issue #131 runtime is CERTIFIED/CLOSED at PR #132 / CI #614 / comment `6019045198`. A11 / Issue #133 authorizes the bounded product UX candidate; product certification remains pending. Membership mutation, further RBAC and
-SUPPLIER_QUOTES+ remain UNAUTHORIZED; full OS-G2 remains PARTIAL.
+`6011401776`) and CERTIFIED/CLOSED. A10 / Issue #131 runtime is CERTIFIED/CLOSED at PR #132 / CI #614 /
+comment `6019045198`. Later A11/A14 product certifications and downstream limits are recorded in the
+scoped section below; full OS-G2 remains PARTIAL.
 With a NULL current-batch pointer, a Project with no batches is INCOMPLETE; retained batches mean
 current-batch authority is unresolved and PRELIMINARY_REQUEST is NOT_AVAILABLE pending audited
 remediation. A Result lineage manifest records the Result artifact's Customer snapshot at generation;
@@ -214,6 +215,19 @@ authorized unless the Product Owner explicitly opens that gate.
 
 Agents must `git fetch origin` and verify live `origin/main` and the assigned task branch HEAD. Listed
 SHAs are **evidence**, not evergreen truth.
+
+### Price Evidence and Supplier Quotes: certified scope vs approved design
+
+**Certified scope.** [A11 Price Evidence](https://github.com/Reguluspt/valora-engineering/issues/133#issuecomment-6028637334) closed the Workbench / Asset Context product slice in [PR #134](https://github.com/Reguluspt/valora-engineering/pull/134), main `0804bd865f810483cc2249662880802faf04541a`, [CI #617](https://github.com/Reguluspt/valora-engineering/actions/runs/37549820332). [A14 Supplier Quotes](https://github.com/Reguluspt/valora-engineering/issues/139#issuecomment-6041091878) later closed the bounded inbound Workbench slice in [PR #140](https://github.com/Reguluspt/valora-engineering/pull/140), main `dbcc4f5ca39803dffa360e4eddba064156335dd3`, [CI #625](https://github.com/Reguluspt/valora-engineering/actions/runs/37639051093). These are historical certification checkpoints; verify the live SHA and exact-head CI. After `SUPPLIER_QUOTES COMPLETE`, the certified flow reports `NO_AUTHORIZED_DOWNSTREAM_ACTION`. OS-G2 remains PARTIAL; [A15 Supplier Selection](https://github.com/Reguluspt/valora-engineering/issues/145#issuecomment-6055863807) has an accepted design, not runtime activation, and Appraisal Result is outside this certified scope.
+
+**Current runtime.** A9/A10 and A12/A13 still govern these actions. The [Supplier Quotes provider](backend/app/modules/project_master_data/application/supplier_quote_provider.py) requires server-derived, current `PRICE_EVIDENCE COMPLETE` before quote writes; source registration or a working price alone cannot establish it. The [A14 product contract](docs/implementation/VALORA_OS_G2_SUPPLIER_QUOTES_PRODUCT.md) covers registering a quote against an existing retained source revision and explicit human confirmation of that quote. Coverage remains at least one current qualifying confirmed independent supplier per exact sealed line. A quote confirmation is not final price-basis acceptance and does not overwrite the appraisal unit price. Do not bypass the current gate, simulate COMPLETE in the UI, or reinterpret historical A10 confirmations as completed dossiers.
+
+**Approved business direction (not a runtime contract).**
+- [#222 carry-forward](https://github.com/Reguluspt/valora-engineering/issues/222#issuecomment-6527200064) and [final acceptance](https://github.com/Reguluspt/valora-engineering/issues/222#issuecomment-6527664352): reuse sources from preliminary analysis as working candidates with exact-line provenance, and let the operator update sources, evidence and appraisal prices while the dossier is open. Working readiness governs which collection/review actions can proceed; it is not final acceptance. Record `Chấp nhận làm cơ sở` only when the operator explicitly chooses `Xác nhận hoàn thành hồ sơ`, and only for eligible, expressly selected asset-line/source-revision pairs.
+- [#252 Option A](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-6771617305), [D1](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-6771778640) and [D2–D4](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-6772074151): one authorized operator, no second approver; VALORA generates the outbound proposal, and the operator checks and confirms the signed return. Technical security, file integrity and audit still apply. Invalidate only affected dependencies and reconcile older dossiers one at a time without losing history. The final successor ADR, exact finalization trigger and implementation require separate approval.
+- The [S17 design](docs/design/assets/VALORA_S17_BASELINE_v2.3.md) already covers Word generation from a supplier template, sending, signed return and human completion. A14 does not certify that end-to-end workflow including automatic sending and returned-price comparison. [#255](https://github.com/Reguluspt/valora-engineering/issues/255) is a design-vs-code inventory, not certification or permission to implement.
+
+**UAT boundary.** [#203 R2](https://github.com/Reguluspt/valora-engineering/issues/203#issuecomment-6527905687) remains open. The scoped Supplier Quotes inspection is read-only; quote writes, source-relevance acceptance and whole-set Price Evidence confirmation remain on hold for that UAT. Do not accept synthetic sources, alter protected fixtures or run new write tests to force progression. This documentation does not authorize code, migration, release, deployment or a new UAT run.
 
 ### Deployment/client v1 authority — Issue #89 (2026-10-03)
 

@@ -1299,6 +1299,55 @@ class ProjectAssetReviewSeal(Base, UUIDMixin):
     )
 
 
+class PreliminaryAnalysisFinalizeAttempt(Base, UUIDMixin):
+    __tablename__ = "preliminary_analysis_finalize_attempts"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    state_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    execution_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    lineage: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)
+    row_binding_proof: Mapped[Optional[dict]] = mapped_column(JSON().with_variant(JSONB, "postgresql"))
+    committed_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, unique=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now(),
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["organization_id", "project_id"], ["projects.organization_id", "projects.id"],
+            name="fk_analysis_attempt_project_tenant", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["organization_id", "project_id", "committed_snapshot_id"],
+            ["preliminary_analysis_snapshots.organization_id", "preliminary_analysis_snapshots.project_id",
+             "preliminary_analysis_snapshots.id"],
+            name="fk_analysis_attempt_snapshot_tenant", ondelete="RESTRICT",
+        ),
+        UniqueConstraint("organization_id", "command_id", name="uq_analysis_attempt_command"),
+        CheckConstraint(
+            "status IN ('RECEIVED', 'IN_PROGRESS', 'UNKNOWN', 'COMMITTED', 'REJECTED_TERMINAL')",
+            name="ck_analysis_attempt_status",
+        ),
+        CheckConstraint(
+            "state_version >= 1 AND execution_generation >= 0", name="ck_analysis_attempt_versions",
+        ),
+        CheckConstraint(
+            "(status = 'COMMITTED') = (committed_snapshot_id IS NOT NULL)",
+            name="ck_analysis_attempt_committed_snapshot",
+        ),
+        Index(
+            "uq_analysis_attempt_open_project", "organization_id", "project_id", unique=True,
+            postgresql_where=text("status IN ('RECEIVED', 'IN_PROGRESS', 'UNKNOWN')"),
+            sqlite_where=text("status IN ('RECEIVED', 'IN_PROGRESS', 'UNKNOWN')"),
+        ),
+    )
+
+
 class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
     """Immutable, versioned authoritative fact for preliminary catalog/price analysis."""
 
@@ -1342,6 +1391,9 @@ class PreliminaryAnalysisSnapshot(Base, UUIDMixin):
             "project_id",
             "version",
             name="uq_preliminary_analysis_project_version",
+        ),
+        UniqueConstraint(
+            "organization_id", "project_id", "id", name="uq_preliminary_analysis_tenant_snapshot",
         ),
         UniqueConstraint(
             "organization_id",

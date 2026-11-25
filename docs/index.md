@@ -2,9 +2,21 @@
 
 Navigation index; this file does not replace design authority or acceptance evidence. Links below cover the current engineering entry points, not an exhaustive inventory of historical sprint documents.
 
+## Start a scoped session
+
+1. **What must not change?** Read the governing [CODEX sections](../CODEX.md#1-source-of-truth), [engineering guardrails](../ENGINEERING_GUARDRAILS.md) and the relevant PO decision, roadmap/UX authority and accepted ADR below. Read by scope; this is not a list to read end to end.
+2. **What is actually in place?** Open [current status by workflow](DOCUMENTATION_STATUS_INDEX.md#current-status-by-workflow), then follow the specific source for that row. Verify the live commit, exact-commit CI and current Issue/PR before relying on the dated summary.
+3. **What is this session allowed to do?** Use the assigned [Compact Task Contract](plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md). Before edits, identify the governing decision, paths in scope, acceptance evidence and what remains out of scope. A gap, conflict or missing authorization blocks the affected work; report it rather than inventing a decision.
+
+### Upload and Mapping Excel
+
+- **Pre-case: upload, then confirm mapping, then create staging rows.** Upload stores the workbook source; it does not create staging rows. The user explicitly confirms the column mapping, then runs a separate action to create staging rows. Reusable customer mapping memory is advisory. Start with [ADR 0047](adr/0047-authoritative-column-mapping-selection-and-recovery.md) (D1–D6), [G1.1K Pre-case evidence](implementation/G11K_PRECASE_PRODUCT_CLOSURE_E2E_EVIDENCE.md), and the [mapping API tests](../backend/tests/test_g11g_column_mapping_api.py) and [mapping authority PostgreSQL tests](../backend/tests/test_g11h_f0_mapping_authority_postgresql.py). [ADR 0030](adr/0030-versioned-column-mapping-memory-and-adaptive-workbook-intake.md) is background on reusable memory.
+- **After Official Intake: validate existing staging rows.** The user clicks **Kiểm tra danh mục nhập** to check the already-selected staging rows, subject to [ADR 0048 D3](adr/0048-post-intake-guarded-apply-and-asset-review-authority.md#d3-bounded-validation-after-intake). This can update validation results, counters and allowed batch state; it does not recreate staging rows or write official asset lines. See the [Validate UI tests](../frontend/src/components/asset-import/__tests__/usePostIntakeImport.test.tsx#L34-L55) and the [PostgreSQL validation vs Apply test](../backend/tests/test_g2_authority_postgresql.py#L179-L192).
+- **Implementation entry points:** [Excel import module](../backend/app/modules/excel_import), [Pre-case API client](../frontend/src/api/preliminaryIntake.ts) and [post-Intake import API client](../frontend/src/api/assetImports.ts). Do not read this as one Pre-case screen with Validate immediately after mapping. Guarded Apply requires separate explicit confirmation; this index authorizes no Apply, downstream work or UAT.
+
 ## Authority and implementation status
 
-- [A10 PRICE_EVIDENCE runtime candidate](implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md) — bounded backend/domain/provider/API implementation under Issue #131; product closure and Gate Owner certification remain pending.
+- [A10 PRICE_EVIDENCE runtime candidate](implementation/VALORA_OS_G2_PRICE_EVIDENCE_RUNTIME.md) — bounded runtime implementation evidence under Issue #131. See the [dated workflow status](DOCUMENTATION_STATUS_INDEX.md#current-status-by-workflow) and [open domain reconciliation #252](https://github.com/Reguluspt/valora-engineering/issues/252) before interpreting current scope.
 - [UI/UX v2.3 master](design/VALORA_UIUX_HANDOFF_v2.3.md) + [authority reading order](design/VALORA_UIUX_V2_3_AUTHORITY_INDEX.md) — current product semantics, workflow, IA, interaction and Microsoft Fluent 2 light visual authority.
 - [Frontend Architecture Rule](architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md) — Product Owner-approved 2026-10-04 implementation layering, dependency direction, reusable presentation, incremental migration and scoped frontend PR checklist; implements current UI/UX authority without replacing product semantics or authorizing runtime work.
 - [Unified Appraisal OS roadmap](VALORA_APPRAISAL_OS_UNIFIED_ROADMAP_V2_3.md) — current development sequencing / architecture integration; it does not silently override UI/UX semantics.
@@ -21,8 +33,8 @@ Navigation index; this file does not replace design authority or acceptance evid
 - [VALORA-FLUENT2-REMEDIATION-001](implementation/VALORA-FLUENT2-REMEDIATION-001.md) — historical / completed OS-G0 implementation contract and F2-PR-001…008 delivery sequence (PR #32 / CI #485); retained historical packets are `VALORA-FLUENT2-F2-PR-001_IMPLEMENTATION_PLAN.md` through `...008...` in `docs/implementation/`.
 
 - [Coding-agent rules](../CODEX.md) and [engineering guardrails](../ENGINEERING_GUARDRAILS.md).
-- [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical Codex,
-  delegated mechanical-worker, independent-review and commit-ownership rules.
+- [Project AI execution policy](../CODEX.md#10-project-ai-execution-policy) — canonical execution,
+  independent-review and commit-ownership rules.
 - [Agent Operating Protocol v2](plan/VALORA_AGENT_OPERATING_PROTOCOL_V2.md) — single current general operating-process entrypoint for fresh Gate Owner/Architect and Dev/Codex sessions; Reference-first, Local-first, startup, verification/review and exact-SHA integration.
 - [Compact Task Contract](plan/VALORA_COMPACT_TASK_CONTRACT_TEMPLATE.md), [session bootstrap skill](../.agents/skills/valora-session-bootstrap/SKILL.md) and [OpenViking profile](plan/VALORA_OPENVIKING_OPERATING_PROFILE_V1.md) — supporting template/procedures and specialized optional MCP policy.
 - [Lean Agent Protocol v1](plan/VALORA_LEAN_AGENT_PROTOCOL_V1.md) — SUPERSEDED / HISTORICAL; preserved body, current successor is V2.
