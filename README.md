@@ -11,7 +11,7 @@
 **PR-00 alignment gate:** **CLOSED**
 **PR-01 / PR-02 / PR-03 / PR-04 implementation contracts:** **ACCEPTED**
 **PR-01 schema scope:** no projection migration; durable downstream facts keep their owning migrations.
-**Current execution direction:** **OS-G0 complete; OS-G1 CERTIFIED/CLOSED; OS-G2 PARTIAL / certified through ASSET_REVIEW. Full OS-G2 remains incomplete; ASSET_WORKBENCH and later stages are unavailable/not authorized.**
+**Appraisal Core:** Full OS-G2 remains partial. Use the [dated workflow status](docs/DOCUMENTATION_STATUS_INDEX.md#current-status-by-workflow) for bounded certifications and verify the assigned task before acting. A past milestone is not current execution authorization.
 
 Agents must run `valora-live-authority-bootstrap`: `git fetch origin`, verify live `origin/main` and CODEX, inspect the assigned task and require successful CI on the exact claimed SHA. README milestone SHAs do not certify the current baseline or authorize the next stage.
 
