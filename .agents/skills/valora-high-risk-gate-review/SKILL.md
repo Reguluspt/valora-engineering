@@ -9,7 +9,7 @@ Under live CODEX and the assigned contract:
 
 HIGH risk → freeze ONE HEAD → two independent read-only reviewers → SAME exact HEAD → exact-head CI SUCCESS → Gate Owner independent review → expected-head guarded Ready/merge → squash merge → exact-main postmerge certification.
 
-Give reviewers the exact SHA, changed-file/hash manifest, scoped authority and necessary evidence. Query live provider model lists. Missing required review is INCOMPLETE, never PASS. Adjudicate findings as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY with evidence; fix valid findings.
+Give reviewers the exact SHA, changed-file/hash manifest, scoped authority and necessary evidence. Query live provider model lists. Apply [CODEX §10.1 reviewer autonomy](../../../CODEX.md#101-responsibilities) and the [PM playbook](../../../docs/plan/VALORA_PM_OPERATING_PLAYBOOK_V1.md#agy-153-reviewer-b-preflight-and-dispatch): A and B may choose necessary authorized tools, including shell, Git, web, MCP and disposable tests. Do not add routine tool-denial canaries or repetitive project-level approvals; use supported scoped approvals where available and honor actual platform consent. Protect official source and release state. Missing or empty required native final is INCOMPLETE, never PASS; retain any valid completed reviewer on the same HEAD. Adjudicate findings as VALID, INVALID, DUPLICATE, OUT_OF_SCOPE or ADVISORY with evidence; fix valid findings.
 
 Any changed reviewed HEAD invalidates the prior candidate reviews and CI. Freeze a new candidate and obtain required evidence again. A successful parent commit cannot certify it.
 
