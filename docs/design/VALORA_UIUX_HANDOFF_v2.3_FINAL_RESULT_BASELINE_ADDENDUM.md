@@ -7,7 +7,7 @@ Authority chi tiết: [`assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md`](./assets/V
 
 Addendum này **supersede** mọi mô tả/iteration trước mâu thuẫn với các quyết định dưới đây.
 
-> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), §§A–C và I lưu thiết kế trước Iteration 7 trong phạm vi logic báo giá và đối chiếu. Bảng 2 giữ nguyên cột nhưng lập riêng cho từng nhóm, đúng ba slot NCC thật đã xác nhận theo từng dòng chính xác. Giữ STT, ĐVT, SL và đơn giá/thành tiền TĐG độc lập. Chỉ nguồn độc lập đủ điều kiện được chọn khi chốt hồ sơ. S17 dùng cho chi tiết/ngoại lệ, việc giữ hay thay checkpoint lựa chọn và vị trí chốt còn chờ P252-04/P252-02. Xem [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) và [ADR #252 đề xuất](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md).
+> **Thiết kế đích, 2026-11-28.** [P252-02/04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md#7-p252-02-a--finalization) thay phạm vi routing/chọn NCC/so sánh và nhãn chờ quyết định trong §§A–B, I và [baseline hình ảnh](assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md) §§1, 4–5. Server suy ra SUPPLIER_SELECTION từ exact group-slot proof. Một người có quyền `Xác nhận hoàn thành hồ sơ` trong APPRAISAL_RESULT, bind cùng lúc nguồn độc lập được chọn và coverage thủ tục NCC riêng. Bảng 2 giữ cột gốc mỗi nhóm, đúng ba slot NCC thật theo exact line. Giữ layout C1–C3, STT, ĐVT, SL và đơn giá/thành tiền TĐG độc lập. S17 phục vụ chi tiết/ngoại lệ. Quy tắc so sánh cũ thuộc phạm vi lịch sử; DOC/Release giữ gate của mình. B09 còn mở cho hợp đồng result, trong khi Draft #147 giữ nguyên.
 
 ## A. Routing sau báo giá NCC
 

@@ -71,11 +71,11 @@ Record exact revision/version when used; do not pull moving main into gated work
 
 ### NCCQ Iteration 7 — target authority (2026-11-28)
 
-[quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) chi phối phạm vi thiết kế NCCQ được cập nhật. [Baseline Iteration 7 / Prototype 04](assets/VALORA_NCCQ_BASELINE_v2.3.md) thay Iteration 6 về giao diện NCCQ đích. [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) quy định thứ tự xác nhận nguồn/giá, ba NCC theo nhóm, phạm vi giá đề xuất, xác nhận thật và dữ liệu báo cáo. [Editable Data Grid v1](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) và [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) mô tả interaction đã duyệt và các chi tiết kỹ thuật chờ duyệt.
+[quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) chi phối phạm vi thiết kế NCCQ được cập nhật. [Baseline Iteration 7 / Prototype 04](assets/VALORA_NCCQ_BASELINE_v2.3.md) thay Iteration 6 về giao diện NCCQ đích. [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) quy định thứ tự xác nhận nguồn/giá, ba NCC theo nhóm, phạm vi giá đề xuất, xác nhận thật và dữ liệu báo cáo. [Editable Data Grid v1](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) và [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) mô tả tương tác và tái sử dụng đã duyệt; hợp đồng vật lý nằm trong DoR.
 
 [Bổ sung của PO về Kho tri thức NCC](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233544880) giới hạn chức năng ở tái sử dụng dữ liệu NCC và lịch sử giá thực tế đã xác nhận. Hồ sơ tiếp tục quản lý ngày/hạn, chứng từ và xác nhận báo giá.
 
-Thiết kế đích thay thế các mô tả cũ về chuẩn bị song song, đối chiếu giá NCC để đánh giá giá TĐG, báo giá theo NCC riêng từng dòng và đi qua S17 bắt buộc. S17 Iteration 3 giữ chi tiết, ngoại lệ và lineage. Tài liệu NCC Selection Iteration 1 giữ bằng chứng và routing trong khi P252-04 còn mở. [#252 successor v1.1](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) và [ADR 0051](../adr/0051-a13-bound-supplier-selection-successor-to-0039.md) vẫn PROPOSED. A9–A14 tiếp tục chi phối runtime v1 theo [CODEX](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design).
+Áp dụng [Successor #252 v1.2](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md) và [bảng supersession theo điều khoản](../plan/VALORA_252_TECHNICAL_RECONCILIATION_AND_DOR_V1.md#clause-specific-supersession) cho sáu quyết định PO đã duyệt. Giữ S17 Iteration 3 cho chi tiết, ngoại lệ và lineage. NCC Selection Iteration 1, ADR 0039, ADR 0051 (PROPOSED) và v1.1 giữ vai trò hồ sơ trước đó. Thiết kế đích giữ checkpoint từ exact group-slot proof, chốt một lần tại APPRAISAL_RESULT và giữ [Profile S09/S10](VALORA_OFFICIAL_CASE_PROFILE_CONTRACT_V1.md). Chờ chứng nhận tài liệu và các quyền triển khai riêng. [CODEX](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design) giữ A9–A14 là runtime v1.
 
 ## 2. Audit / Lineage entry-point authority
 `Audit / Lineage Entry-point Consistency Contract v1` + `Audit & Lineage Entry-point Pattern Board — Iteration 1` là cross-product traceability/navigation authority. Đây không phải workflow checkpoint, không tạo màn `Audit toàn hệ thống` và không tạo audit subsystem mới.
@@ -158,10 +158,10 @@ Hard invariants: Empty không che Error; Loading khác Processing; usable data k
 `Đã phát hành` là success/read-only result state sau `Xác nhận phát hành` commit thành công, không phải bước thứ 4 của Publishing. UI chỉ hiển thị khi Release Manifest final commit hợp lệ. Published release/revisions immutable; muốn thay đổi phải tạo revision/release mới.
 
 ## 6. Tổng quan hồ sơ / orchestration authority
-`Tổng quan hồ sơ` là project-level orchestration hub. Global Case State derive từ business facts; completion không từ màn đã mở; một primary next-action; resume target không bypass blocker/stale; frontend không tự dựng workflow state machine.
+`Tổng quan hồ sơ` là project-level orchestration hub. Case State dựa trên business facts và sở hữu primary Next Action. [OFFICIAL-CASE-PROFILE](VALORA_OFFICIAL_CASE_PROFILE_CONTRACT_V1.md) bổ sung thao tác xem/bổ sung metadata theo quyền, với field bắt buộc kiểm tại consumer thực sự dùng. Resume vẫn theo blocker/stale hiện hành.
 
 ## 7. NCC Selection authority
-`Chọn NCC đã xác nhận giá` là checkpoint sau hoàn tất báo giá NCC và trước Kết quả thẩm định giá. Selection là project-line context; đổi NCC tạo revision mới; Warning không Blocking; selection không override appraisal price.
+Trong v2 đích, server suy ra `SUPPLIER_SELECTION` sau SUPPLIER_QUOTES từ đúng ba slot có xác nhận thật hiện hành cho từng dòng của mỗi nhóm. Thao tác của người dùng là thiết lập nhóm và xác nhận báo giá thật. [Addendum Selection](VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md) lưu thiết kế Iteration 1 lịch sử. [Addendum Kết quả](VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md) quy định một lần chốt tại APPRAISAL_RESULT.
 
 ## 8. Knowledge Management authority
 Supporting workspace: `Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc`. Structured KTKT là business data; historical dossier là candidate pipeline; knowledge review cần explicit human decision; history/lineage read-only.

@@ -1,6 +1,6 @@
 # VALORA — NCCQ Knowledge Reuse Contract v1
 
-**Status:** PO-approved reuse purpose, PM-proposed technical model, 28/11/2026. Applies to target only. Existing v1.4 / Knowledge Management and lineage/review/activation authority remains in force. No new DB/API/provider or AI invocation authorized.
+**Status:** PO-approved KB-01 reuse and [P252-05-A](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md#5-p252-05-a--grouped-nccq-and-knowledge-reuse) target. Physical integration is proposed. Existing Knowledge Management and lineage/review/activation authority remains in force.
 
 The [PO clarification on NCC knowledge reuse](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233544880) applies to this target. See [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) for the price-work gate and dossier records, and [the Knowledge Management addendum](VALORA_UIUX_HANDOFF_v2.3_KNOWLEDGE_MANAGEMENT_BASELINE_ADDENDUM.md) for review and activation.
 
@@ -24,13 +24,13 @@ The NCC KB surface supports supplier and confirmed-price reuse for a subsequent 
 
 - Unchanged historical appraisal price and exact compatible identity + same supplier: use historical quote value as a labeled draft reference. If one supplier history absent or incompatible, mark missing/needs attention for that slot; do not attach another issuer's price or invent fallback. Group selection is fixed trio, not per-line list.
 - User updated appraisal price: keep old actual confirmed quote history intact, record new appraisal decision under existing authorized workflow; mark affected new proposal as needing refresh; use confirmed new price as proposal reference only. Never retroactively modify real supplier offers.
-- New identity: use approved classification/assignment; proposal generation uses current confirmed price, requires settled policy (see workflow and ADR). Ambiguous classification/manual review rather than a new supplier for every item. Track no-match vs ambiguous vs missing proof distinctly.
+- New identity: use approved classification/assignment and the P/105%/110% internal draft policy from [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md#3-preparation-cases). Ambiguity requires attention. Preserve distinct no-match, ambiguous and missing-proof reasons.
 
 ## 4. Update lifecycle
 
 A newly confirmed appraisal price may produce a versioned appraisal-result candidate under its owning workflow. Historical-result acceptance remains a separate decision. An authorized update from an actual supplier quote uses the already confirmed dossier revision to create a supplier-price candidate. The user can update and reuse the price without re-entering the quotation date or uploading the source document again. Active reuse still requires existing review and activation. Store internal proposals separately as draft lineage and exclude them from actual supplier price history and valuation sources.
 
-Keep append-only price versions, revision identity, audit metadata and the minimum reference to the owning confirmed revision needed for integrity. Deduplication and idempotency bind the exact source/version/actor and canonical identity. Preserve existing dates, evidence and historical records in their owning storage. A13 source custody, expiry/currentness and integrity still govern current-case eligibility and report binding. Changes affect exact dependencies only.
+Keep append-only price versions, audit metadata and the exact confirmed dossier revision/item reference under the owning issuer, asset/variant, compatible unit/currency/terms and scoped identity. Use source/version/actor-bound idempotency and dedupe with atomic candidate/version/receipt/audit and commit-valid currentness proof. KB-01 uses existing review and activation. The legacy multi-commit revise path supplies historical behavior. [T14 and B07](../plan/VALORA_252_TECHNICAL_RECONCILIATION_AND_DOR_V1.md#technical-source-crosswalk) retain the required new atomic handoff and race proof. Dossier source custody, expiry/currentness and current report binding remain governed by their owning contract.
 
 ## 5. Acceptance (future)
 

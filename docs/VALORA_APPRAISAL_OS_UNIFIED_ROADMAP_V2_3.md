@@ -321,11 +321,12 @@ ASSET_REVIEW
 
 The final Appraisal Result must expose authoritative data that can feed a document `DataSnapshot`.
 
-#### NCCQ target dependency order — 2026-11-28
+#### #252 target dependency order — 2026-11-28
 
-1. [#249 master backlog](https://github.com/Reguluspt/valora-engineering/issues/249#issuecomment-7233061285) tracks the [approved NCCQ target](design/assets/VALORA_NCCQ_BASELINE_v2.3.md). Review the [proposed #252 successor draft v1.1](plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) for working source/price confirmation, action authority, dependency-scoped currentness and v1 compatibility before any runtime assignment.
-2. Subject to separate authorization, sequence grouped preparation, exact trio coverage, source-phase knowledge reuse and the shared grid before product closure of the actual Word, sent and return flow. [#255 audit and target overlay](https://github.com/Reguluspt/valora-engineering/issues/255#issuecomment-7233060782) identify the narrow template, test-fill and retained-byte dependencies. Evaluate the minimum necessary DOC-G slice with PM/PO before any early Document Runtime work.
-3. Keep selection/checkpoint resolution, report slot binding and final dossier acceptance as separately gated authority. [#222](https://github.com/Reguluspt/valora-engineering/issues/222#issuecomment-7233062247) preserves independent source carry and final acceptance. [#251](https://github.com/Reguluspt/valora-engineering/issues/251#issuecomment-7233061803) may reference the grid contract for design/DoR. #199/#203 stay protected and #203 UAT ordering remains a PO decision. The certified cap stays at SUPPLIER_QUOTES.
+1. Certify the [AUTH-02 documentation candidate](plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md) under its own gate. The six target choices are PO-accepted. [B01–B10 and runtime DoR](plan/VALORA_252_TECHNICAL_RECONCILIATION_AND_DOR_V1.md#open-blockers) stay open.
+2. Resolve [#203's UAT disposition](https://github.com/Reguluspt/valora-engineering/issues/203) separately after docs authority certification and before any runtime. Keep #199/R2 protected and retain v1 through SUPPLIER_QUOTES. [PO sequencing](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7236521543).
+3. Under separate authorized tasks and proof, retain **RT-A → RT-B → DOC-Q → RT-C → RT-D**. RT-A covers policy/working-source proof and recovery, RT-B group/trio/draft grid and reuse, DOC-Q the smallest approved real quotation template and field/byte verification, RT-C actual sent/returned confirmation, exact coverage and KB candidate handoff, RT-D derived selection and one APPRAISAL_RESULT completion with independent evidence. DOC-Q needs separately granted DOC-G1–8 scope for these quotation artifacts only.
+4. [OFFICIAL-CASE-PROFILE](design/VALORA_OFFICIAL_CASE_PROFILE_CONTRACT_V1.md) covers S09/S10 on the same Project, with B06 and its own runtime task. Complete only the approved fields/registry actually consumed by each authorized template before that consumer. Report/certificate and release readiness, #222 carry-forward and follow-on grid/product work retain their own scope. [#255 static audit](https://github.com/Reguluspt/valora-engineering/issues/255#issuecomment-7233060782).
 
 ### OS-G3 — Document Runtime
 

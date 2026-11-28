@@ -18,11 +18,13 @@
 ```text
 Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ → Upload & Mapping Excel
 → Phân tích danh mục → Rà soát tích hợp → Tạo file kết quả sơ bộ
-→ Chuyển sang thẩm định chính thức → Tổng quan hồ sơ [orchestration hub]
+→ S09 Chuyển sang thẩm định chính thức [giữ Project ID, bind Customer thật, Profile tùy chọn]
+→ S10 Tổng quan hồ sơ [orchestration hub, xem/bổ sung Profile]
 → Xác nhận & điều chỉnh danh mục → Workbench tài sản [Asset Context Drawer theo ngữ cảnh]
 → Nguồn giá & Chứng cứ → Xác nhận công việc nguồn giá và đơn giá TĐG
 → NCCQ theo nhóm → Xác nhận NCC đồng ý (từng NCC)
-→ Chọn NCC đã xác nhận giá [checkpoint chờ quyết định P252-04] → Kết quả thẩm định giá
+→ SUPPLIER_SELECTION [checkpoint do server suy ra từ exact group-slot proof]
+→ Kết quả thẩm định giá → Xác nhận hoàn thành hồ sơ [một thao tác của người dùng có quyền]
 → Không gian tài liệu [Document Workspace — provider-neutral]
    → Tạo & Xem lại bộ tài liệu hồ sơ
       → deterministic generation → GeneratedDocumentCandidate → Review → explicit Accept Version → Document Revision
@@ -47,6 +49,8 @@ Quản lý Kho tri thức
   → Tài sản chuẩn | Cần rà soát | Hồ sơ cũ | Lịch sử & nguồn gốc
   ↔ Workbench tra cứu Kho tri thức
 ```
+
+Đối chiếu [16 stage canonical và 46 dòng Profile](VALORA_OFFICIAL_CASE_PROFILE_CONTRACT_V1.md) và [Successor v1.2](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md) cho quy trình đích. #252 giữ cap SUPPLIER_QUOTES v1 và các gate riêng cho tài liệu, UAT và runtime.
 
 ## 1.1 Tổng quan hồ sơ — Orchestration Hub Baseline Iteration 2
 `Tổng quan hồ sơ` là project-level orchestration hub, không phải approval dashboard và không tạo màn `Tiến độ hồ sơ` riêng.
@@ -180,7 +184,7 @@ anchor?
 Canonical lineage mental models:
 - Document/Release: `Release → Release Manifest → Document Revision → Data Snapshot → Managed Region/business data → source/evidence nếu có`.
 - Knowledge: `Knowledge Version → review decision → candidate → extracted value → source locator → historical dossier/file`.
-- NCC Selection: `NCC Selection Revision → selected QuoteLine → Quote revision → Supplier → Evidence/Source → confirmation event`.
+- NCC Selection Iteration 1 (lịch sử): `Selection Revision → selected QuoteLine → Quote revision → Supplier → Evidence/Source → confirmation event`. Target v2: group/ordered slot → actual confirmed quote revision → exact items → legal issuer, retained document and receipt. Kết quả bind exact group-slot map.
 
 Missing/broken link:
 - không có provenance đã lưu → `Chưa được ghi nhận`;
@@ -197,8 +201,8 @@ Thứ tự nguồn giá giữ theo `Giá khảo sát Internet → Thuyết minh 
 
 Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), [NCCQ Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md) có một bảng mỗi nhóm và đúng ba NCC cố định, đủ ba xác nhận thật cho từng dòng tài sản chính xác. Dùng lại kết quả đối sánh ở bước nguồn giá. Mỗi NCC có một thao tác xác nhận đồng ý theo đúng revision, với S17 dùng cho chi tiết và ngoại lệ. Giới hạn 115% chỉ áp dụng cho giá đề xuất nội bộ. Xem [quy trình NCCQ](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md), [bảng nhập liệu](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) và [tái sử dụng tri thức](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md).
 
-### 2.1 Chọn NCC đã xác nhận giá — Baseline Iteration 1
-Iteration 1 ghi nhận thiết kế checkpoint giữa NCCQ và Kết quả thẩm định giá. Giữ routing trong lúc [P252-04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md#9-remaining-decision-table--dor) chờ quyết định về ràng buộc revision báo giá theo ba slot của nhóm. Thiết kế chọn một QuoteLine mỗi dòng và cảnh báo giá NCC không chi phối bảng báo cáo đích. ADR 0051 vẫn PROPOSED. Vòng đời và bằng chứng lịch sử xem [NCC Selection Iteration 1](VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md).
+### 2.1 SUPPLIER_SELECTION — checkpoint từ báo giá hiện hành
+[P252-04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md#6-p252-04-a--derived-supplier_selection) giữ stage key, với binding ordered group×line×slot do server derive. Lựa chọn nhóm và xác nhận quote thật cung cấp ý định người dùng. Thiết kế một QuoteLine mỗi dòng và routing Iteration 1 thuộc [hồ sơ trước đó](VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md). ADR 0051 vẫn PROPOSED.
 
 ## 3. Kết quả thẩm định giá
 Ba bảng công ty immutable về cấu trúc:
@@ -206,7 +210,7 @@ Ba bảng công ty immutable về cấu trúc:
 2. `STT | Tên tài sản | ĐVT | SL | NCC1 | NCC2 | NCC3 | Tổ TĐG đánh giá: Đơn giá | Thành tiền`
 3. `STT | Tên tài sản | ĐVT | SL | Đơn giá | Thành tiền`
 
-Bảng 2 lặp theo nhóm báo giá, đúng ba cột NCC lấy từ báo giá thật đã xác nhận theo slot của nhóm. Đơn giá và thành tiền TĐG độc lập với dữ liệu NCC. Vị trí thao tác xác nhận hoàn thành hồ sơ còn chờ P252-02.
+Bảng 2 lặp theo nhóm báo giá, đúng ba cột NCC lấy từ báo giá thật đã xác nhận theo slot của nhóm. Đơn giá và thành tiền TĐG độc lập với dữ liệu NCC. Theo [P252-02](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md#7-p252-02-a--finalization), một người có quyền `Xác nhận hoàn thành hồ sơ` tại APPRAISAL_RESULT. Lệnh bind atomically exact nguồn độc lập theo dòng, quyết định giá, ba bảng và coverage thủ tục riêng. Chấp nhận revision tài liệu và phát hành theo gate riêng.
 Giữ Tổng cộng/Làm tròn/Số tiền bằng chữ; không rename/reorder/cardize.
 
 ## 4. Knowledge Management
