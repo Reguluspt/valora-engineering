@@ -4,7 +4,7 @@
 **Date:** 31/08/2026
 **Scope:** NCCQ — `Tạo & quản lý báo giá nhà cung cấp`.
 
-> **NCCQ Iteration 7 — 2026-11-28.** §§2–5 lưu cảnh báo so sánh giá chào thật với giá làm việc của A13 v1. Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), thiết kế đích chỉ áp dụng ngưỡng cho giá **đề xuất nội bộ** của tài sản mới hoặc có giá TĐG cập nhật: một giá bằng P và hai giá còn lại > P, ≤ 1,15P. Ghi đúng giá NCC trả kể cả ngoài khoảng. Giữ đối chiếu bản gửi và bản trả để truy vết báo giá. Không cảnh báo, chặn hay đổi giá thẩm định dựa trên giá NCC. Xem [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md).
+> **Target 2026-11-28.** §§2–5 lưu cảnh báo A13 v1. Theo [P252-05](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.2.md#5-p252-05-a--grouped-nccq-and-knowledge-reuse), mặc định P/105%/110% với quantum được duyệt và trần 115% chỉ dùng để chuẩn bị đề xuất nội bộ. Ghi đúng giá NCC trả kể cả ngoài khoảng. So phiên bản gửi và trả để truy vết báo giá. Giá NCC không thay đổi đơn giá TĐG hoặc kích hoạt cảnh báo về tính phù hợp thẩm định trong target. Xem [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md).
 
 ## 1. Supersession
 

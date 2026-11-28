@@ -10,6 +10,10 @@
 
 Màn hình phải trả lời: hồ sơ đang ở đâu; đã hoàn tất gì; blocker/warning/stale nào cần chú ý; hành động tiếp theo là gì; khi quay lại nên resume ở đâu.
 
+### OFFICIAL-CASE-PROFILE đích
+
+[Profile](VALORA_OFFICIAL_CASE_PROFILE_CONTRACT_V1.md) giữ Project ID và lineage từ S09. S10 hiển thị tóm tắt gọn và thao tác `Xem/Bổ sung thông tin hồ sơ` theo quyền. Dữ liệu tùy chọn có thể thiếu; yêu cầu field được tính tại hành động thực sự dùng field đó. Hub giữ primary Next Action và resume do Case State sở hữu. Profile thuộc metadata của hồ sơ.
+
 ## 2. Global Case State projection
 UI dùng project-level projection tổng hợp từ Project + WorkflowInstance + domain completion facts + ValidationIssue + document/release state + last meaningful context. Không lấy một enum đơn lẻ làm UI route authority và không để frontend tự suy luận state machine.
 
