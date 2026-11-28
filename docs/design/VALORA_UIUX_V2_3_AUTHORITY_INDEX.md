@@ -73,6 +73,8 @@ Record exact revision/version when used; do not pull moving main into gated work
 
 [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) chi phối phạm vi thiết kế NCCQ được cập nhật. [Baseline Iteration 7 / Prototype 04](assets/VALORA_NCCQ_BASELINE_v2.3.md) thay Iteration 6 về giao diện NCCQ đích. [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) quy định thứ tự xác nhận nguồn/giá, ba NCC theo nhóm, phạm vi giá đề xuất, xác nhận thật và dữ liệu báo cáo. [Editable Data Grid v1](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) và [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) mô tả interaction đã duyệt và các chi tiết kỹ thuật chờ duyệt.
 
+[Bổ sung của PO về Kho tri thức NCC](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233544880) giới hạn chức năng ở tái sử dụng dữ liệu NCC và lịch sử giá thực tế đã xác nhận. Hồ sơ tiếp tục quản lý ngày/hạn, chứng từ và xác nhận báo giá.
+
 Thiết kế đích thay thế các mô tả cũ về chuẩn bị song song, đối chiếu giá NCC để đánh giá giá TĐG, báo giá theo NCC riêng từng dòng và đi qua S17 bắt buộc. S17 Iteration 3 giữ chi tiết, ngoại lệ và lineage. Tài liệu NCC Selection Iteration 1 giữ bằng chứng và routing trong khi P252-04 còn mở. [#252 successor v1.1](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) và [ADR 0051](../adr/0051-a13-bound-supplier-selection-successor-to-0039.md) vẫn PROPOSED. A9–A14 tiếp tục chi phối runtime v1 theo [CODEX](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design).
 
 ## 2. Audit / Lineage entry-point authority

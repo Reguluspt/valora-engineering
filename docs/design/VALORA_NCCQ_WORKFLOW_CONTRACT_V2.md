@@ -2,7 +2,7 @@
 
 **Status:** PO-approved target direction + PM draft technical contract, 28/11/2026. Runtime v1 remains certified/current until separately superseded and implemented. See [#252 decision receipt](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154). No production implementation permission.
 
-Read with the [Iteration 7 baseline](assets/VALORA_NCCQ_BASELINE_v2.3.md), [Editable Data Grid v1](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) and [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md).
+Read with the [Iteration 7 baseline](assets/VALORA_NCCQ_BASELINE_v2.3.md), [Editable Data Grid v1](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) and [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md). The [PO clarification on NCC knowledge reuse](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233544880) defines the KB surface.
 
 ## 1. Purpose and scope
 
@@ -28,6 +28,8 @@ DRAFT proposed data → deterministic actual Word generation using verified temp
 
 Preserve app-owned immutable retained bytes, exact template version, proposal snapshot, sent/returned revision, identity, mapping, actor/time, receipt and audit. `04_Báo giá nhà cung cấp` outbound working/sent documents and `05_Pháp lý` received signed evidence under existing document placement; never turn provider Working copy or metadata into accepted bytes. TM01/TM03/TM04 real `.docx` template mapping/fill/preview/READY, no mock render proof or PDF export scope. Returned PDF evidence only if separately authorized admission rules; PDF return is not PDF generation authority. Original source and historical revisions unchanged.
 
+The dossier owns quotation dates, applicable expiry/currentness, source custody, actual confirmation and report binding. An authorized KB update reuses the exact confirmed supplier-price revision under existing knowledge review/activation. It requires neither date re-entry nor a duplicate source upload. Price history and minimal integrity lineage support subsequent preparation without a separate KB date/expiry or document workflow.
+
 ## 5. Coverage and report
 
 For every g in groups, trio T(g) has exactly 3 independent suppliers. For every l in g and s in T(g), a current human-confirmed actual quote revision of that supplier with exact current line mapping, retained evidence/terms/issuer integrity and no applicable blocking dependency must exist. A group COMPLETE only when its 3 slot revisions cover all exact lines; dossier procedural COMPLETE only when all groups are complete and the full S partition/proofs are valid. No file counting, extra slot, duplicate issuer or unconfirmed proposal. Report `NCC1–NCC3` by ordered group slots, selected confirmed exact revision items; one table per group preserving existing report column schema (STT, tên, ĐVT, SL, 3 NCC price columns, Tổ TĐG đánh giá đơn giá/thành tiền independently). Do not fill missing cells from history/proposals. Report format and business prose must not state valuation depends on NCC if it does not. Proposed elimination of per-line redundant NCC Selection remains OPEN; keep existing checkpoint/ADR0051 non-activated until authority settled. No downstream stage activation or official report acceptance in this task.
@@ -51,4 +53,4 @@ Server policy derives read and action-specific capabilities: prepare/fill/save d
 | W09 | Three confirmed actual quotes cannot satisfy missing evidence; independent source acceptance remains distinct. |
 | W10 | Report preview excludes unconfirmed prices; one table per group and stable slots, no fabricated third cell, no extra report columns. |
 | W11 | Expiry, invalid retained file, supplier disabled, changed mapping, withdrawal, stale CAS, concurrent changes: fail closed where affected, retain unaffected history, no bulk rebind. |
-| W12 | Real Word mapping and fill, sent/return source, retained bytes and lineage require separate #255 slices; no claim mock preview completes those. |
+| W12 | Real Word mapping/fill, sent/return source, retained bytes and dossier lineage require separate #255 slices. KB price reuse references the confirmed revision without duplicating dossier document handling or currentness checks in the KB surface. |

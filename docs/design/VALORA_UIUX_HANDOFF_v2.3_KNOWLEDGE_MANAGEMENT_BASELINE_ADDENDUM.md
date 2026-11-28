@@ -5,7 +5,7 @@
 **Date:** 31/08/2026
 **Scope:** Knowledge-management workspace aligned with `taxonomy_asset_identity`, `knowledge_evidence`, `document_engine_intelligence` and existing v1.4 Knowledge Memory authority.
 
-> **NCCQ Iteration 7 — 2026-11-28.** Thiết kế NCCQ tái sử dụng đối sánh đã hoàn tất ở bước nguồn giá. [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) tách ba nhóm dữ liệu: kết quả/chứng cứ thẩm định độc lập, báo giá NCC thật đã xác nhận và đề xuất nội bộ. Giữ version, nguồn gốc và quyết định của người dùng tại `Cần rà soát`. Lưu candidate theo thẩm quyền hiện hành, không tự kích hoạt hay ghi đè. [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154).
+> **NCCQ Iteration 7 — 2026-11-28.** Thiết kế NCCQ tái sử dụng đối sánh đã hoàn tất ở bước nguồn giá. [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) quy định cách tái sử dụng định danh tài sản, nhóm và bộ ba NCC ưu tiên, thông tin NCC và lịch sử đơn giá thực tế đã xác nhận. Đề xuất nội bộ và chứng cứ giá thẩm định có thẩm quyền riêng. Giữ lịch sử phiên bản, tham chiếu nguồn gốc tối thiểu và thẩm quyền hiện hành tại `Cần rà soát`. [Quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) · [Bổ sung về Kho tri thức NCC](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233544880).
 
 ## 1. Purpose
 
@@ -52,6 +52,8 @@ Management/review surface for historical paired dossiers and extracted knowledge
 ### 2.4 Lịch sử & nguồn gốc
 
 Provides lineage, version and activity visibility: source dossier/file/locator, confirmed actor/time, current/superseded version and usage references.
+
+Riêng dữ liệu giá NCC, hiển thị lịch sử giá và metadata phiên bản, audit, tham chiếu cần thiết để đối chiếu với revision đã xác nhận. Kho tri thức NCC không có chức năng riêng để theo dõi ngày/hạn báo giá hoặc đính kèm, quản lý, tra cứu chứng từ báo giá. Người dùng cập nhật và tái sử dụng giá từ revision đã xác nhận mà không phải nhập lại ngày báo giá hay tải lại tài liệu nguồn. Hồ sơ sở hữu chứng từ, phiên bản gửi, tài liệu trả về, xác nhận thực tế và dữ liệu báo cáo theo [NCCQ Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md#4-document-and-confirmation-lifecycle).
 
 ## 3. Baseline layout — `Tài sản chuẩn`
 
@@ -197,7 +199,7 @@ Workbench uses the Knowledge Base for contextual retrieval. Knowledge Management
 - One primary CTA per context.
 - No silent accept/activation/overwrite.
 - No fake Word editor.
-- Historical price/knowledge is support evidence and does not override v2.3 price-source authority.
+- Historical appraisal results follow v2.3 price-source authority. Historical NCC prices support quotation preparation and never serve as valuation price evidence.
 - Structured KTKT is business data; report formatting belongs to the company template.
 
 ## 12. ADR trigger
