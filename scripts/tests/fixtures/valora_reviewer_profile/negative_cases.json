@@ -1,0 +1,518 @@
+[
+  {
+    "exit": 1,
+    "name": "deepseek_length",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/native/finish_reason",
+        "value": "length"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "gemini_max_tokens",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/native/finish_reason",
+        "value": "MAX_TOKENS"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "native_incomplete",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/native/terminal_status",
+        "value": "INCOMPLETE"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "completed_without_report",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_final_findings_section",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/0/report/sections/3",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_limitations",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/1/report/sections/5",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "empty_section_receipt",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/sections/3/evidence_sha256",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_changed_file",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/0/report/changed_files/0",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_authority",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/1/report/authorities/0",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_authority_span",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/authorities/0/spans/0/0",
+        "value": 9
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_privacy_axis",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/0/report/coverage/5",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_p1_discussion",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/0/report/severity_checks/1",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "missing_p2_discussion",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/1/report/severity_checks/2",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "contradictory_finding_claim",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/severity_checks/1/state",
+        "value": "FINDINGS"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "security_na",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/coverage/3/state",
+        "value": "N/A"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "domain_na_without_rationale",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/report/coverage/4/state",
+        "value": "N/A"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_head",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/identity/head_sha",
+        "value": "9999999999999999999999999999999999999999"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_base",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/identity/base_sha",
+        "value": "9999999999999999999999999999999999999999"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_packet",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/identity/packet_sha256",
+        "value": "9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_packet_bytes",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/identity/packet_bytes",
+        "value": 4000
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "changed_inventory",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/identity/inventory_sha256",
+        "value": "9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "native_model_missing",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/model_native",
+        "value": null
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "native_wrong_model",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/model_native",
+        "value": "gemini-3.1-pro-high"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "requested_wrong_model",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/model_requested",
+        "value": "opencode-go/deepseek-v4.1-flash"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "native_terminal_unknown",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/native/terminal_status",
+        "value": "UNKNOWN"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "terminal_receipt_missing",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/native/terminal_evidence_sha256",
+        "value": null
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "deepseek_finish_not_exposed",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/native/finish_reason",
+        "value": "NOT_EXPOSED"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "unknown_finish",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/native/finish_reason",
+        "value": "UNKNOWN"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "fabricated_gemini_stop_receipt",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/native/finish_evidence_sha256",
+        "value": "f34368eb2cc63c2d0e05c10ea1b2f08db90db0748a7bc1a8ca45c9c99fe2dcb7"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "peer_report_seen",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/independence/peer_reports_seen",
+        "value": true
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "nonisolated_session",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/independence/isolated",
+        "value": false
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "shared_session",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/session_sha256",
+        "value": "6f7ac1823da81d2e52d1a1549ee69c85bbf8bb56d06682849e7c09da2785ce3b"
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "isolation_unknown",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/independence/isolated",
+        "value": null
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "missing_session",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/session_sha256",
+        "value": null
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 1,
+    "name": "missing_reviewer",
+    "patches": [
+      {
+        "op": "delete",
+        "path": "/attempts/1",
+        "value": null
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 1,
+    "name": "empty_history",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts",
+        "value": []
+      }
+    ],
+    "state": "INCOMPLETE"
+  },
+  {
+    "exit": 2,
+    "name": "extra_raw_content_field",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/reasoning",
+        "value": "REJECTED_SYNTHETIC_CONTENT"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "unknown_native_finish",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/native/finish_reason",
+        "value": "REJECTED_SYNTHETIC_CONTENT"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "bool_attempt",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/attempt",
+        "value": true
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "unsupported_version",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/profile_version",
+        "value": "9.0"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "duplicate_attempt_id",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/1/id",
+        "value": "a-00000001"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "unsafe_source_path",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/changed_files/0/path",
+        "value": "../private.txt"
+      }
+    ],
+    "state": "UNKNOWN"
+  },
+  {
+    "exit": 2,
+    "name": "bad_evidence_range",
+    "patches": [
+      {
+        "op": "set",
+        "path": "/attempts/0/report/authorities/0/spans/0/1",
+        "value": 200
+      }
+    ],
+    "state": "UNKNOWN"
+  }
+]
