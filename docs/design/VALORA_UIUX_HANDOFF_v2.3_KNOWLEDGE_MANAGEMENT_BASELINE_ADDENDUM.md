@@ -5,6 +5,8 @@
 **Date:** 31/08/2026
 **Scope:** Knowledge-management workspace aligned with `taxonomy_asset_identity`, `knowledge_evidence`, `document_engine_intelligence` and existing v1.4 Knowledge Memory authority.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Thiết kế NCCQ tái sử dụng đối sánh đã hoàn tất ở bước nguồn giá. [Knowledge Reuse v1](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) tách ba nhóm dữ liệu: kết quả/chứng cứ thẩm định độc lập, báo giá NCC thật đã xác nhận và đề xuất nội bộ. Giữ version, nguồn gốc và quyết định của người dùng tại `Cần rà soát`. Lưu candidate theo thẩm quyền hiện hành, không tự kích hoạt hay ghi đè. [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154).
+
 ## 1. Purpose
 
 `Quản lý Kho tri thức` is the dedicated knowledge-management workspace. It is distinct from the `Kho tri thức` panel embedded in the asset Workbench.

@@ -6,7 +6,7 @@ This directory preserves the Product Owner-provided PDF copies and reproducible 
 
 These files are **non-canonical**. They do not replace or outrank live `CODEX.md`, `ENGINEERING_GUARDRAILS.md`, the canonical [`VALORA_UIUX_HANDOFF_v2.3.md`](../../VALORA_UIUX_HANDOFF_v2.3.md), [`VALORA_UIUX_V2_3_AUTHORITY_INDEX.md`](../../VALORA_UIUX_V2_3_AUTHORITY_INDEX.md), current governing addenda, or accepted ADR/domain contracts. The current explicit Product Owner decision governs its named scope. If wording or sample data in a visual reference conflicts with current semantic or domain authority, that authority wins. Visual composition still matters where an approved baseline applies.
 
-The canonical master reconciled Part 2C's `PR-00 → PR-13` execution sequence as historical; the Unified Roadmap controls current sequencing. Part 1 appendix B contains historical iterations and a removed S14 mockup. Part 2B's **Orchestration Hub Iteration 2** supersedes Part 1's S10 composition. Part 1's **NCCQ Iteration 6** supersedes its earlier NCCQ iterations.
+The canonical master reconciled Part 2C's `PR-00 → PR-13` execution sequence as historical; the Unified Roadmap controls current sequencing. Part 1 appendix B contains historical iterations and a removed S14 mockup. Part 2B's **Orchestration Hub Iteration 2** supersedes Part 1's S10 composition. Part 1's **NCCQ Iteration 6** superseded earlier NCCQ iterations at that checkpoint. [NCCQ Iteration 7 / Prototype 04](../../assets/VALORA_NCCQ_BASELINE_v2.3.md) is the PO-approved target from 2026-11-28.
 
 ## Source PDFs
 
@@ -31,13 +31,16 @@ Each PNG is a full approved PDF page rendered at 144 DPI (2× PDF points), RGB, 
 | S12 Workbench | `EXACT_VISUAL_BASELINE` | Approved appendix A.3, Part 1 p. 14 | [s12-workbench-approved.png](baselines/s12-workbench-approved.png) |
 | S13 Asset Context Drawer within S12 | `EXACT_VISUAL_BASELINE` | Approved appendix A.4, Part 1 p. 15 | [s13-asset-context-drawer-approved.png](baselines/s13-asset-context-drawer-approved.png) |
 | Price & Evidence | `EXACT_VISUAL_BASELINE` | Approved appendix A.5, Part 1 p. 16 | [price-evidence-approved.png](baselines/price-evidence-approved.png) |
-| NCCQ Supplier Quote Management | `EXACT_VISUAL_BASELINE` | Iteration 6, Part 1 p. 17 | [nccq-iteration-6-approved.png](baselines/nccq-iteration-6-approved.png) |
+| NCCQ Supplier Quote Management | `TARGET_DESIGN_BASELINE` | Iteration 7 / Prototype 04, synthetic standalone HTML and fresh captures | [Prototype 04](baselines/nccq-iteration-7-prototype-04.html) · [Vật tư](baselines/nccq-iteration-7-vat-tu.png) · [Cây xanh](baselines/nccq-iteration-7-cay-xanh.png) |
+| NCCQ Supplier Quote Management | `HISTORICAL_VISUAL_BASELINE` | Iteration 6, Part 1 p. 17 | [nccq-iteration-6-approved.png](baselines/nccq-iteration-6-approved.png) |
 | NCC Selection | `EXACT_VISUAL_BASELINE` | Iteration 1, Part 2B p. 2 | [ncc-selection-iteration-1-approved.png](baselines/ncc-selection-iteration-1-approved.png) |
 | Cross-product states | `VISUAL_GRAMMAR_ONLY` for each host screen | State Pattern Board Iteration 1, Part 2B p. 6 | [cross-product-state-pattern-board-iteration-1.png](baselines/cross-product-state-pattern-board-iteration-1.png) |
 | M365 Word Return/Revalidation state | `EXACT_VISUAL_BASELINE` for the approved Word return state board; `VISUAL_GRAMMAR_ONLY` for the surrounding Workspace and the separate OAuth connection callback | Iteration 1, Part 2B p. 8 | [m365-return-revalidation-iteration-1.png](baselines/m365-return-revalidation-iteration-1.png) |
 | Audit/Lineage entry points | `VISUAL_GRAMMAR_ONLY` within their host screens | Pattern Board Iteration 1, Part 2B p. 10 | [audit-lineage-entrypoint-pattern-board-iteration-1.png](baselines/audit-lineage-entrypoint-pattern-board-iteration-1.png) |
 
 The **Price & Evidence** PNG is an exact baseline for its approved standalone screen. The current VF0 runtime exposes only a smaller Workbench price/evidence context tab; that tab uses the approved visual grammar and does not claim whole-screen parity. Its absent Internet/old-dossier/evidence capabilities are outside VF0. The NCC Selection primary commit action appears only after a human selects an eligible quote; an unopened or unselected drawer is not evidence that the action is missing.
+
+Prototype 04 is a standalone synthetic design reference. The HTML was re-serialized from the approved chat prototype and the PNGs are new Chromium captures. They illustrate the grouped workflow and do not certify application behavior, actual supplier agreement, or Word/Excel interoperability.
 
 ## Production surfaces without an exact approved mockup in this bundle
 

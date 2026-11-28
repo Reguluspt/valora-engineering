@@ -6,6 +6,8 @@
 
 > Quyết định authority quan trọng: Iteration 3 được duyệt về visual + interaction, nhưng scope nghiệp vụ được khóa là **hoàn tất một báo giá của một NCC**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định. Badge `S17` xuất hiện trên mockup được giữ như nhãn iteration lịch sử; khi triển khai/chuẩn hóa screen ID, màn hình này phải được phân loại là child screen của NCCQ. Quyết định `Kết quả thẩm định giá` mới hơn supersede mọi suy diễn rằng còn một standalone `S17 — Hoàn tất hồ sơ` dashboard/checkpoint chen giữa NCC Selection và Final Result; action state/audit tương lai (nếu cần) không được đổi routing nếu chưa có explicit authority mới.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), xác nhận đồng ý thật cho đúng revision thực hiện bằng một thao tác trên thẻ NCC. Companion Iteration 3 dưới đây giữ layout, lifecycle Word/gửi/trả và lineage của child chi tiết/ngoại lệ. Routing bắt buộc qua child và cảnh báo so giá TĐG là semantic cũ. Xem [NCCQ Iteration 7](VALORA_NCCQ_BASELINE_v2.3.md) và [Workflow v2](../VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md).
+
 ## 1. Mục tiêu
 
 Cho phép người dùng rà soát trạng thái của **một báo giá hiện tại**, xem phản hồi NCC, giá NCC đã xác nhận, file ký/đóng dấu, chênh lệch so với giá đã gửi và lineage/evidence trước khi explicit bấm `Hoàn tất báo giá`.

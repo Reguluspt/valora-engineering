@@ -36,6 +36,8 @@ Tài sản hiện tại
 
 Việc dùng hồ sơ cũ làm căn cứ không tự copy giá cũ thành `Đơn giá hiện hành`.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), §§C–G dưới đây lưu các quy tắc trước Iteration 7. Thiết kế đích chỉ dùng giá NCC cho thủ tục và Bảng 2, một bảng mỗi nhóm với đúng ba slot và revision thật đã xác nhận. Giá NCC không thuộc nguồn/chứng cứ thẩm định và không dùng làm ngưỡng, cảnh báo hoặc căn cứ chỉnh đơn giá TĐG. §§A–B tiếp tục chi phối nguồn độc lập và giá Kết quả thẩm định của hồ sơ cũ. Xác nhận công việc nguồn và đơn giá TĐG trước NCCQ, còn `Chấp nhận làm cơ sở` thuộc [xác nhận hoàn thành hồ sơ theo #222](https://github.com/Reguluspt/valora-engineering/issues/222#issuecomment-6527664352). Giữ routing và các hold hiện hành khi vị trí chốt hồ sơ và checkpoint lựa chọn còn mở. Xem [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md).
+
 ## C. Vai trò của giá nhà cung cấp
 
 Giá của các nhà cung cấp, bao gồm giá NCC lịch sử và giá NCC đã xác nhận trong báo giá hiện tại, **không phải nguồn chính để xác định Đơn giá thẩm định cuối cùng**.
@@ -54,6 +56,8 @@ NCCQ tiếp tục giữ semantic riêng:
 Các mức giá NCC không tự thay `Đơn giá hiện hành`.
 
 ## D. Rule kiểm tra Kết quả thẩm định giá
+
+> **Phạm vi lịch sử.** So sánh mức giá NCC với đơn giá Kết quả bên dưới đã được thay thế trong thiết kế đích. Xem [NCCQ Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md#5-coverage-and-report).
 
 Rule nghiệp vụ được khóa:
 

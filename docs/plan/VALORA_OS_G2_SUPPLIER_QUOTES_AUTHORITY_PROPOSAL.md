@@ -10,6 +10,8 @@
 
 Retained order: `ASSET_REVIEW → ASSET_WORKBENCH → PRICE_EVIDENCE → SUPPLIER_QUOTES → SUPPLIER_SELECTION → APPRAISAL_RESULT`. The certified usable product still ends at PRICE_EVIDENCE and `NO_AUTHORIZED_DOWNSTREAM_ACTION`. SUPPLIER_QUOTES runtime and the two downstream stages remain UNAUTHORIZED; full OS-G2 remains PARTIAL / INCOMPLETE. D1–D12 business authority is accepted; every future runtime behavior below still requires a separately authorized runtime contract, implementation and certification.
 
+> **NCCQ Iteration 7 target — 2026-11-28.** The A12 decisions below remain the basis of certified v1, including one confirmed supplier per exact line, whole-set Price Evidence gating and nonblocking comparisons. For the target, the [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) requires source-work and appraisal-price confirmation first, one grid and exactly three fixed independent suppliers per group, and one explicit action per supplier for real agreement. Each line must have all three actual confirmations. The target uses supplier prices only for procedure/reporting and applies the 115% bound only to internal proposals. See [NCCQ Workflow v2](../design/VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) and the [proposed #252 successor draft v1.1](VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md).
+
 ## 1. Authority and repository inventory
 
 Inventory observations refer to the exact baseline above, not a claim of stage acceptance or production deployment. The task expressly requires reconciling legacy persistence and current product authority before recommending a model.
