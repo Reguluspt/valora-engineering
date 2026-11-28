@@ -1,0 +1,34 @@
+# VALORA UI/UX v2.3 — NCCQ Iteration 7 / Prototype 04
+
+**Disposition:** PO-approved design target, 27–28/11/2026; packaging and integration review pending. Not current implemented UI, not runtime authority. Task `VALORA-NCCQ-DESIGN-RECONCILIATION-01`, #252/#255.
+
+**Authority:** [PO receipt, #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154). Main baseline `cbe99790fd6017166df5b0cedb19d882b5366fe1`, CODEX blob `a670270d0573edbeb3b7014dbebbe807b93408dc`, CI #715 completed SUCCESS 5/5. The prior [NCCQ Iteration 6](https://github.com/Reguluspt/valora-engineering/blob/cbe99790fd6017166df5b0cedb19d882b5366fe1/docs/design/visual-reference/v2.3/baselines/nccq-iteration-6-approved.png) is preserved as historical visual evidence, not deleted or overwritten. S17 Iteration 3 remains the child detail/exception contract except for mandatory navigation now superseded. No standalone whole-case NCCQ intermediate dashboard or new canonical stage.
+
+## 1. Visual reference and scope
+
+Open the standalone [Prototype 04 HTML](../visual-reference/v2.3/baselines/nccq-iteration-7-prototype-04.html), re-serialized from the approved chat prototype. See the new Chromium captures for [Vật tư](../visual-reference/v2.3/baselines/nccq-iteration-7-vat-tu.png) and [Cây xanh](../visual-reference/v2.3/baselines/nccq-iteration-7-cay-xanh.png). These are synthetic, no actual supplier agreement or report. The original chat source has no independently available file hash; do not assert byte identity to an original exported file. Preserve approved layout and behavior, not the illustrative inline CSS/JS as production React code. Future implementation follows Fluent 2 light, React v9, shared components and [Frontend Architecture Rule](../../architecture/VALORA_FRONTEND_ARCHITECTURE_RULE.md).
+
+## 2. Layout (NCCQ-01 through NCCQ-15)
+
+- Heading Báo giá nhà cung cấp; prior price-source confirmation status, preview report, group count, confirmed supplier quote count, count of exact official asset lines with three eligible confirmations. Counts are server facts over full scope, not pagination or local drafts. Mock 2/6/9 is illustrative only.
+- Tabs: one group is one consolidated quote table, exactly three fixed supplier slots; switching does not discard work. Each group has its own identity, membership and ordered trio. A group is not necessarily a section heading in the original asset list.
+- Above the table, three supplier cards: slot, full legal name, current status and filled/confirmed line count, tax identifier, address, telephone, contact, template/version/readiness; detail exposes representative/email and other authorized contact fields. Legal identity is resolved from the supplier catalog, not a free-text alias. Template readiness comes from the approved TM04 contract; cannot be toggled into real readiness by the mock control.
+- Actions on card: Xem chi tiết, Thay NCC, Xem trước báo giá, Xác nhận NCC đồng ý; after confirmation, locked current data and permitted new-revision action. Replace exactly one slot and clear or independently retrieve its matching values. Never copy old issuer's price to new issuer.
+- Grid: STT | Tên tài sản | ĐVT | SL | Đơn giá TĐG (read-only) | [short company 1] | [short company 2] | [short company 3]. Headers show **short company names only**, no bare NCC1/NCC2/NCC3, no duplicate information link, no draft badge. Full name may be available via accessible title; updating selected supplier or short name changes header. Original STT and exact stable line ID preserved. No report columns changed by workbench display labels.
+- Origin labels Kế thừa / Giá đã cập nhật / Tài sản mới / Thủ công distinguish preparation, not valuation evidence or current supplier confirmation. Keep compact and table-first.
+- Auto/manual modes share one working dataset; auto fills eligible blanks without overwriting manual or confirmed cells; manual supports editing and Word/Excel rectangular paste, one or three columns, keyboard selection/copy/paste/delete/undo/redo. Clear/truncate only authorized draft values; do not clear confirmed columns. Draft persistence/recovery per grid contract.
+- A single explicit human click per supplier records actual agreement for that exact revision. Do not require opening S17, reviewing each line, an extra confirmation modal, or a second reviewer. S17 remains detail/history/sent vs returned differences/exception handling. Technical command checks run behind one button; failure/unknown outcome is not confirmation. Record the real returned data, not enforce suggested bounds on real prices.
+
+## 3. States and visual acceptance
+
+Show loading, empty (no group, unassigned lines, missing supplier/template), partial draft, pending/confirmed, stale/conflict, denied, invalid paste, unavailable receipt and uncertain result; show meaningful recovery and focus. No green status inferred from presence of price values. Read-only cells protected from paste/clear; retain immutable confirmed data. No automatic confirmation, fake Word download, synthetic signatures, auto-send or network simulation presented as real. Preview/report distinguishes unconfirmed data and selected confirmed revision. Respect keyboard and accessible names, focus order, focus return from detail and table; preserve horizontal scrolling and screen-reader semantics for dense table; physical Windows/large dataset and responsive acceptance later.
+
+## 4. Visual scope vs product contract
+
+Prototype is reference, not product engine: no DB, auth, real KB retrieval, Word bytes, send/return evidence or production writes. It uses synthetic placeholder metadata, local state and hard-coded seeds; demo confirmation is in-memory. Manual toggle of template status, fixed counts, simple local undo and revision opening are not implementation specs. Native clipboard and physical Word/Excel interoperability not proven by simulated browser events. Do not promote these mock behaviors into domain authority. The workflow, grid, knowledge and proposed successor ADR govern server contracts; unresolved selection/finalization/cutover details remain separate.
+
+## 5. Acceptance references
+
+- [#255 audit accepted](https://github.com/Reguluspt/valora-engineering/issues/255#issuecomment-7196026314) — G01–G14 historical static inventory; not updated runtime certification.
+- [Workflow v2](../VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md), [Editable Data Grid v1](../VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md), [Knowledge Reuse v1](../VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md) and the [proposed successor ADR v1.1](../../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md).
+- [PM packet receipt](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7233058369) records the offline synthetic smoke checks and both attempts. The raw smoke artifacts are retained with the packet.

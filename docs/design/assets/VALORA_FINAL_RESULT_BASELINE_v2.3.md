@@ -6,6 +6,8 @@
 
 > Authority rule quan trọng: **03 bảng nghiệp vụ là biểu mẫu do công ty ban hành và có layout bất biến.** Fluent Design 2 light chỉ áp dụng cho application shell và các vùng điều khiển xung quanh; không được redesign cấu trúc biểu mẫu.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), §§1 và 4–5 được bổ sung cho thiết kế đích. Giữ layout/cột gốc, STT, ĐVT, SL và phần TĐG độc lập. Mỗi nhóm có một Bảng 2 với đúng ba cột NCC theo slot và chỉ dùng giá thật đã xác nhận của exact revision. Đề xuất nội bộ và giá thừa kế chưa xác nhận lại không đi vào báo cáo như giá thật. Quy tắc cũ về so giá NCC với giá thẩm định không chi phối thiết kế đích. Xem [Workflow v2](../VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) và [P252-02/P252-04](../../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md#9-remaining-decision-table--dor) cho vị trí chốt và checkpoint chưa quyết định.
+
 ## 1. Flow đã khóa
 
 ```text

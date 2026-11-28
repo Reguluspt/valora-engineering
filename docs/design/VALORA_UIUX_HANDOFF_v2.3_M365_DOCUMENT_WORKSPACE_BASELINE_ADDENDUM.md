@@ -127,7 +127,7 @@ Không có `Gửi kiểm tra / Chờ kiểm tra` trong single-user workflow hi�
 ## H. Quan hệ với các authority trước
 
 - Baseline `Kết quả thẩm định giá` với 03 bảng immutable tiếp tục giữ nguyên.
-- Baseline NCCQ và child flow `Hoàn tất 01 báo giá NCC` tiếp tục giữ nguyên.
+- [NCCQ Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md) là thiết kế đích từ 2026-11-28. Ghi nhận đồng ý thật ở thẻ NCC, dùng S17 cho chi tiết/ngoại lệ. Giữ lineage Word bản gửi và bản ký trả về theo workflow tài liệu hiện hành.
 - File báo giá Word làm việc nằm ở `04_Báo giá nhà cung cấp`; bản ký/đóng dấu có thể nằm ở `05_Pháp lý` và được lineage ngược về báo giá.
 - File KSCL có thể tồn tại trong bộ hồ sơ mẫu/thực tế nhưng không tạo màn hình hay workflow KSCL riêng.
 

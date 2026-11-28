@@ -6,6 +6,8 @@
 
 **Verified baseline:** live `main=58f9613a260e8e66889569e3b8954763d9b56086`; CODEX blob `de7a69f2068bef39012dd5aa3045320456c5cf2e`; [exact-main CI #604 / run 37414654381](https://github.com/Reguluspt/valora-engineering/actions/runs/37414654381) `completed / success`, with frontend, backend, worker, server-foundation and committed-whitespace all successful. [A8 / Issue #126](https://github.com/Reguluspt/valora-engineering/issues/126) is CLOSED as completed; [certification comment 6010285363](https://github.com/Reguluspt/valora-engineering/issues/126#issuecomment-6010285363) certifies ASSET_WORKBENCH. CI #602 remains historical failure evidence; it is not rewritten as a pass.
 
+> **NCCQ Iteration 7 target — 2026-11-28.** The accepted A9 record below governs v1. The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) calls for an explicit source-work and appraisal unit-price confirmation before grouped NCCQ, distinct from final acceptance of eligible independent source revisions under #222. Supplier quote data serve procedure and reporting only. The [proposed #252 successor draft v1.1](VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) holds the exact technical gate, currentness and cutover for separate approval.
+
 ### Accepted-decision record
 
 - **Product Owner decision:** ACCEPT D1–D12 AS PROPOSED.

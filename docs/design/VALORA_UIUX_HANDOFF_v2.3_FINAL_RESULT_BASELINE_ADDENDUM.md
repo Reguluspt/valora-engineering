@@ -7,6 +7,8 @@ Authority chi tiết: [`assets/VALORA_FINAL_RESULT_BASELINE_v2.3.md`](./assets/V
 
 Addendum này **supersede** mọi mô tả/iteration trước mâu thuẫn với các quyết định dưới đây.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), §§A–C và I lưu thiết kế trước Iteration 7 trong phạm vi logic báo giá và đối chiếu. Bảng 2 giữ nguyên cột nhưng lập riêng cho từng nhóm, đúng ba slot NCC thật đã xác nhận theo từng dòng chính xác. Giữ STT, ĐVT, SL và đơn giá/thành tiền TĐG độc lập. Chỉ nguồn độc lập đủ điều kiện được chọn khi chốt hồ sơ. S17 dùng cho chi tiết/ngoại lệ, việc giữ hay thay checkpoint lựa chọn và vị trí chốt còn chờ P252-04/P252-02. Xem [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) và [ADR #252 đề xuất](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md).
+
 ## A. Routing sau báo giá NCC
 
 Flow mới nhất được khóa:
@@ -113,8 +115,8 @@ Nếu cần thêm context, dùng panel/drawer/tooltip hoặc horizontal/vertical
 
 | Scope | Authority v2.3 |
 |---|---|
-| NCCQ tổng hợp quản lý báo giá | Baseline NCCQ Iteration 6 |
-| NCCQ child — Hoàn tất 01 báo giá NCC | Baseline Iteration 3 đã duyệt |
+| NCCQ quản lý báo giá theo nhóm | [Baseline NCCQ Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md); Iteration 6 là lịch sử |
+| NCCQ child — Chi tiết / ngoại lệ cho 01 báo giá NCC | Baseline Iteration 3 đã duyệt, dùng khi cần |
 | NCCQ post-completion aggregate trước chọn NCC | **Không dùng / superseded** |
 | Bước cuối — Kết quả thẩm định giá | **Baseline Iteration 1 — authority addendum này** |
 
@@ -133,6 +135,8 @@ Các mockup bước cuối trước baseline này không còn authority nếu c�
 Sau khi baseline này được chốt, UI/UX nên chuyển sang **cách tạo/preview Báo cáo thẩm định giá & Chứng thư từ dữ liệu đã khóa**, hoặc module/output tiếp theo mà người dùng yêu cầu; không quay lại chèn thêm một màn NCCQ aggregate trung gian nếu chưa có business rule mới.
 
 ## I. Price & Evidence authority — cập nhật mới nhất
+
+> **Phạm vi sau 2026-11-28.** Thứ tự nguồn độc lập ở mục này tiếp tục có hiệu lực. Phần so sánh và validation giá NCC là lịch sử. Thiết kế đích dùng [giá NCC cho Bảng 2 theo nhóm](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md#5-coverage-and-report), giữ giá thẩm định độc lập.
 
 Authority chi tiết: [`VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md`](./VALORA_UIUX_HANDOFF_v2.3_PRICE_EVIDENCE_AUTHORITY_ADDENDUM.md).
 

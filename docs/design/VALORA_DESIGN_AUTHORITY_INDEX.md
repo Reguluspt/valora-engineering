@@ -56,6 +56,10 @@ When two sources conflict, the newer explicit decision governs only the scope it
 | [ADR 0048](../adr/0048-post-intake-guarded-apply-and-asset-review-authority.md) | Post-Intake guarded Apply v2, sealed initial set and Asset Review Case State | A2 / PR #76 / CI #538 implemented; [Case State contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_CASE_STATE_CONTRACT.md) retains full-set/fail-closed predicates; later membership/stages remain gated |
 | [ADR 0049](../adr/0049-asset-line-human-review-and-validation-authority.md) | Dedicated server validation and explicit human line review, separate from ADR 0028 value drafts | A4 / PR #80 / CI #545 implemented; [Line Decision Contract](../implementation/VALORA_OS_G2_ASSET_REVIEW_LINE_DECISION_CONTRACT.md) governs proof/negative-hold/CAS/audit/replay. A5 / PR #86 / CI #555 CERTIFIED/CLOSED ASSET_REVIEW. [A6 authority](../plan/VALORA_OS_G2_ASSET_WORKBENCH_AUTHORITY_PROPOSAL.md) / Issue #120 / PR #121 CERTIFIED/CLOSED, D1–D8 ACCEPTED; A7 / Issue #122 / PR #123 / CI #597 CERTIFIED/CLOSED ASSET_WORKBENCH backend runtime. A8 / Issue #126 UX/E2E is implemented as an uncertified candidate; PRICE_EVIDENCE+ stays UNAUTHORIZED / NOT_AVAILABLE |
 
+### NCCQ Iteration 7 scoped supersession — 2026-11-28
+
+The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) controls the NCCQ target. Start with the [v2.3 scoped authority](VALORA_UIUX_V2_3_AUTHORITY_INDEX.md#nccq-iteration-7--target-authority-2026-11-28) and [Iteration 7 baseline](assets/VALORA_NCCQ_BASELINE_v2.3.md). Iteration 6 stays historical. S17 Iteration 3 remains the detail and exception child. Selection Iteration 1 and ADR 0039 remain predecessor evidence. ADR 0051 and the [#252 successor draft v1.1](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) remain PROPOSED. The A9–A14 certified v1 baseline and downstream holds are recorded in [CODEX](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design).
+
 ## 3. Engineering baseline (evidence, not evergreen)
 
 ```text

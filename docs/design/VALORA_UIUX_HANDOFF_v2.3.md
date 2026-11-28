@@ -20,8 +20,9 @@ Trang chủ → Quản lý yêu cầu sơ bộ → Tạo yêu cầu sơ bộ →
 → Phân tích danh mục → Rà soát tích hợp → Tạo file kết quả sơ bộ
 → Chuyển sang thẩm định chính thức → Tổng quan hồ sơ [orchestration hub]
 → Xác nhận & điều chỉnh danh mục → Workbench tài sản [Asset Context Drawer theo ngữ cảnh]
-→ Nguồn giá & Chứng cứ → Tạo & quản lý báo giá NCC
-→ Hoàn tất từng báo giá NCC → Chọn NCC đã xác nhận giá → Kết quả thẩm định giá
+→ Nguồn giá & Chứng cứ → Xác nhận công việc nguồn giá và đơn giá TĐG
+→ NCCQ theo nhóm → Xác nhận NCC đồng ý (từng NCC)
+→ Chọn NCC đã xác nhận giá [checkpoint chờ quyết định P252-04] → Kết quả thẩm định giá
 → Không gian tài liệu [Document Workspace — provider-neutral]
    → Tạo & Xem lại bộ tài liệu hồ sơ
       → deterministic generation → GeneratedDocumentCandidate → Review → explicit Accept Version → Document Revision
@@ -192,16 +193,20 @@ Visual baseline `Audit & Lineage Entry-point Pattern Board — Iteration 1` đã
 Implementation ưu tiên reuse audit/lineage primitives hiện hữu. Nếu cần unified traceability projection, generic cross-domain reference persistence, lineage graph persistence hoặc thay đổi semantics của audit/lineage primitives thì phải đánh giá ADR trước persistence/architecture change.
 
 ## 2. Price & Evidence
-`Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Giá NCC không phải nguồn chính. NCC thấp hơn đơn giá hiện hành luôn Warning; chênh tuyệt đối >15% Warning; không Blocking. Dữ liệu Kho tri thức chỉ hỗ trợ/tra cứu và không override price-source authority.
+Thứ tự nguồn giá giữ theo `Giá khảo sát Internet → Thuyết minh đơn giá → Giá Kết quả thẩm định giá hồ sơ cũ`. Xác nhận công việc nguồn giá và đơn giá TĐG trước khi chuẩn bị NCCQ. `Chấp nhận làm cơ sở` thuộc xác nhận hoàn thành hồ sơ theo [#222](https://github.com/Reguluspt/valora-engineering/issues/222#issuecomment-6527664352). Giá NCC chỉ dùng cho thủ tục và báo cáo. Cảnh báo so giá NCC với đơn giá TĐG thuộc A13 v1, xem [crosswalk hiện hành](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design).
+
+Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), [NCCQ Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md) có một bảng mỗi nhóm và đúng ba NCC cố định, đủ ba xác nhận thật cho từng dòng tài sản chính xác. Dùng lại kết quả đối sánh ở bước nguồn giá. Mỗi NCC có một thao tác xác nhận đồng ý theo đúng revision, với S17 dùng cho chi tiết và ngoại lệ. Giới hạn 115% chỉ áp dụng cho giá đề xuất nội bộ. Xem [quy trình NCCQ](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md), [bảng nhập liệu](VALORA_EDITABLE_DATA_GRID_CONTRACT_V1.md) và [tái sử dụng tri thức](VALORA_NCCQ_KNOWLEDGE_REUSE_CONTRACT_V1.md).
 
 ### 2.1 Chọn NCC đã xác nhận giá — Baseline Iteration 1
-`Chọn NCC đã xác nhận giá` là checkpoint sau `Hoàn tất từng báo giá NCC` và trước `Kết quả thẩm định giá`. Selection scope: `1 Project + 1 ProjectAssetLine + 1 confirmed QuoteLine = 1 current NCC Selection`. Đổi NCC tạo revision mới; quote revision/source thay đổi không auto-rebind; Warning không Blocking. Primary commit CTA `Xác nhận NCC đã chọn`. Selection không tự tạo/sửa AppraisedPriceDecision và không ghi đè giá Kết quả thẩm định.
+Iteration 1 ghi nhận thiết kế checkpoint giữa NCCQ và Kết quả thẩm định giá. Giữ routing trong lúc [P252-04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md#9-remaining-decision-table--dor) chờ quyết định về ràng buộc revision báo giá theo ba slot của nhóm. Thiết kế chọn một QuoteLine mỗi dòng và cảnh báo giá NCC không chi phối bảng báo cáo đích. ADR 0051 vẫn PROPOSED. Vòng đời và bằng chứng lịch sử xem [NCC Selection Iteration 1](VALORA_UIUX_HANDOFF_v2.3_NCC_SELECTION_BASELINE_ADDENDUM.md).
 
 ## 3. Kết quả thẩm định giá
 Ba bảng công ty immutable về cấu trúc:
 1. `STT | Tên tài sản | Đặc điểm KTKT | ĐVT | SL`
 2. `STT | Tên tài sản | ĐVT | SL | NCC1 | NCC2 | NCC3 | Tổ TĐG đánh giá: Đơn giá | Thành tiền`
 3. `STT | Tên tài sản | ĐVT | SL | Đơn giá | Thành tiền`
+
+Bảng 2 lặp theo nhóm báo giá, đúng ba cột NCC lấy từ báo giá thật đã xác nhận theo slot của nhóm. Đơn giá và thành tiền TĐG độc lập với dữ liệu NCC. Vị trí thao tác xác nhận hoàn thành hồ sơ còn chờ P252-02.
 Giữ Tổng cộng/Làm tròn/Số tiền bằng chữ; không rename/reorder/cardize.
 
 ## 4. Knowledge Management

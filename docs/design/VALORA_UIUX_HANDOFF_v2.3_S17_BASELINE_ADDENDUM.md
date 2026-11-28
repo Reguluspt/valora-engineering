@@ -8,6 +8,8 @@ Authority chi tiết: [`assets/VALORA_S17_BASELINE_v2.3.md`](./assets/VALORA_S17
 
 > **2026-09-23 current routing disposition:** Addendum này tiếp tục là authority cho child screen `Hoàn tất một báo giá NCC`. `VALORA_UIUX_HANDOFF_v2.3_FINAL_RESULT_BASELINE_ADDENDUM.md` mới hơn khóa routing sau NCC Selection và không cho phép phục hồi một standalone whole-case S17 readiness dashboard.
 
+> **NCCQ Iteration 7 — 2026-11-28.** Theo [quyết định PO #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154), thao tác thường lệ `Xác nhận NCC đồng ý` nằm ngay trên thẻ NCC và ghi nhận đồng ý thật cho đúng revision hiện hành. S17 Iteration 3 giữ chi tiết, lịch sử, chênh lệch bản gửi/bản trả và xử lý ngoại lệ. S17 không bắt buộc và không có màn S17 riêng cho hồ sơ. Phần dưới lưu baseline S17, gồm routing và cảnh báo cũ. Thiết kế NCCQ xem [Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md) và [Workflow v2](VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md).
+
 ## A. Quyết định scope mới nhất
 
 Người dùng đã làm rõ rằng flow đang thiết kế tại Iteration 3 là **xử lý/hoàn tất một báo giá cụ thể của một nhà cung cấp**, không phải readiness/hoàn tất toàn bộ hồ sơ thẩm định.
@@ -81,7 +83,7 @@ Thiếu file ký/đóng dấu không mặc định là warning ở giai đoạn 
 
 | Scope | Authority hiện tại |
 |---|---|
-| NCCQ | Baseline Iteration 6 — màn hình tổng hợp quản lý báo giá NCC |
+| NCCQ | [Baseline Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md) — một bảng và đúng ba NCC cố định mỗi nhóm. Iteration 6 là lịch sử. |
 | NCCQ child — Hoàn tất 1 báo giá NCC | **Baseline Iteration 3 — authority addendum này** |
 | S17 — Hoàn tất hồ sơ toàn cục | Không có standalone dashboard/checkpoint trong routing hiện hành; action state/audit tương lai (nếu cần) phải giữ nguyên routing và cần explicit authority mới |
 

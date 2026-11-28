@@ -2,6 +2,8 @@
 
 This is the bounded implementation candidate for [Issue #133](https://github.com/Reguluspt/valora-engineering/issues/133). A10 backend/domain/provider/API was certified at PR #132, merge `387a8d1d630d4245cdc77b886aafa137cf755515`, exact-main CI #614 / run `37479177837`, [comment 6019045198](https://github.com/Reguluspt/valora-engineering/issues/131#issuecomment-6019045198). A9 D1–D12 remains unchanged. A11 product certification, Ready, integration and closure belong to the Gate Owner. Full OS-G2 remains incomplete; SUPPLIER_QUOTES+ remains unauthorized.
 
+> **NCCQ Iteration 7 target — 2026-11-28.** The A11 surface and evidence below describe v1. The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) directs human confirmation of source work and appraisal unit price before grouped NCCQ. Final dossier acceptance is a separate future action under #222. [NCCQ Workflow v2](../design/VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) and the [proposed #252 successor draft v1.1](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) record the target and the open technical details.
+
 ## Product surface and authority
 
 The existing Workbench hosts a project-scoped region and the existing Asset Context hosts the exact selected line's evidence workspace. Its four accessible Fluent tabs are `Tổng quan | Thông số kỹ thuật | Nguồn giá & Chứng cứ | Lịch sử`. Validation appears in the selected asset's overview. The former quote/appraised-price panel presentation is replaced; downstream records and API/domain implementations are preserved.

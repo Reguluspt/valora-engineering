@@ -3,6 +3,8 @@
 **Trạng thái:** `DESIGN SUPPORT / FLOW MAP`
 **Authority:** Bám theo handoff v2.3 + các addendum mới nhất. Nếu mâu thuẫn, business/design authority mới nhất thắng.
 
+**2026-11-28:** Sơ đồ phản ánh thiết kế đích [NCCQ Iteration 7](assets/VALORA_NCCQ_BASELINE_v2.3.md). Xem [CODEX](../../CODEX.md#price-evidence-and-supplier-quotes-certified-scope-vs-approved-design) cho runtime v1 và cap hiện hành.
+
 ```mermaid
 mindmap
   root((VALORA\nSingle-user Workflow))
@@ -36,37 +38,31 @@ mindmap
         1. Giá khảo sát Internet
         2. Thuyết minh đơn giá
         3. Giá trong Kết quả hồ sơ cũ
-        Tổng hợp căn cứ
-        Người dùng chỉnh Đơn giá hiện hành
-    NCCQ
-      Hệ thống sinh báo giá nháp
-      Dedupe theo NCC
-      Gộp / Tách / Chuyển thiết bị
-      STT bất biến
-      Giá NCC lịch sử
-        Chỉ phục vụ tái tạo báo giá
-      Internet-only
-        1 báo giá dùng Đơn giá hiện hành làm giá đề nghị
-        2 báo giá còn lại 100%-115%
-      Hoàn tất từng báo giá NCC
-        Tạo báo giá nháp
-        Tạo file theo mẫu NCC
-        Gửi NCC xác nhận
-        Nhận phản hồi / file ký
-        Hoàn tất báo giá
-      Chọn nhà cung cấp đã xác nhận giá
-        Không tự biến giá NCC thành giá thẩm định
-        Lưu NCC → Báo giá → Dòng → Giá xác nhận → File evidence
+        Đối sánh Kho tri thức và chọn nguồn độc lập
+        Xác nhận công việc nguồn và đơn giá TĐG
+    NCCQ sau xác nhận nguồn và đơn giá
+      Một bảng mỗi nhóm báo giá
+        Đúng ba NCC cố định cho mọi dòng trong nhóm
+        STT bất biến
+      Dùng lại kết quả đối sánh từ bước nguồn
+        Giá lịch sử khớp đúng NCC là tham chiếu nháp
+        Tài sản mới hoặc đổi giá dùng đề xuất nội bộ
+          Một giá bằng P
+          Hai giá lớn hơn P và tối đa 115% P
+      Báo giá thật theo NCC
+        Word theo mẫu và lưu đúng bản gửi
+        Nhận phản hồi hoặc file ký và giữ lineage
+        Xác nhận đồng ý thật một thao tác theo revision
+        S17 chi tiết hoặc ngoại lệ khi cần
+      Checkpoint lựa chọn NCC chờ P252-04
     Kết quả thẩm định giá
-      Rule đối chiếu
-        Đơn giá Kết quả <= Đơn giá báo giá NCC
-        Không đạt thì validation
-        Không auto sửa giá
+      Đơn giá TĐG độc lập với báo giá NCC
+      Chấp nhận nguồn khi chốt hồ sơ theo thẩm quyền riêng
       Bảng 1
         Đặc điểm kinh tế - kỹ thuật
         Immutable layout
       Bảng 2
-        Tổng hợp 03 giá NCC
+        Một bảng mỗi nhóm với ba giá NCC thật đã xác nhận
         Không có Thành tiền NCC
       Bảng 3
         Kết quả thẩm định giá
@@ -103,15 +99,11 @@ Giá khảo sát Internet
 → Giá trong phần Kết quả của hồ sơ cũ
 → Người dùng quyết định Đơn giá hiện hành / Đơn giá Kết quả
 
-Luồng báo giá NCC:
-Đơn giá hiện hành
-→ Giá đề nghị
-→ NCC xác nhận
-→ Đơn giá NCC đã xác nhận
-→ Dùng làm báo giá/evidence đối chiếu
-
-Rule kết quả:
-Đơn giá Kết quả định giá <= Đơn giá báo giá NCC dùng để đối chiếu
+Luồng báo giá NCC đích:
+Xác nhận công việc nguồn và đơn giá TĐG → chuẩn bị dự thảo theo nhóm
+→ ghi nhận phản hồi thật theo đúng NCC và revision → báo cáo theo nhóm
+Giá đề xuất nội bộ chỉ dùng để chuẩn bị yêu cầu. Báo giá NCC chỉ dùng cho thủ tục và báo cáo.
+Nguồn giá độc lập đủ điều kiện chỉ được chấp nhận khi xác nhận hoàn thành hồ sơ.
 ```
 
 ## Working Change Observation / Revision flow
@@ -135,7 +127,7 @@ canonical case stage. Word Save/provider notification never creates a revision b
 ## Guardrail
 
 - `Kho tri thức` chỉ gợi ý; không tự ra quyết định giá.
-- Giá NCC không phải nguồn chính để xác định Đơn giá thẩm định cuối cùng.
+- Giá NCC chỉ phục vụ thủ tục và báo cáo. Nguồn/chứng cứ và đơn giá TĐG có thẩm quyền độc lập.
 - Giá NCC lịch sử phục vụ tái tạo báo giá và lineage.
 - Người dùng kiểm soát `Đơn giá hiện hành`; mọi thay đổi có history/lineage/audit.
 - Không có S14 xác nhận lại giá, màn Kiểm tra hồ sơ riêng hoặc workflow KSCL riêng.

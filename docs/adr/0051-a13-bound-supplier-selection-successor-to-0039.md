@@ -4,6 +4,8 @@
 
 **Task:** `VALORA-TASK-OS-G2-A17-SUPPLIER-SELECTION-ADR0051-A13-SUCCESSOR`, [Issue #149](https://github.com/Reguluspt/valora-engineering/issues/149). **Date:** 2026-10-08. This document proposes the future official SUPPLIER_SELECTION architecture. Integration/review/CI does not accept it. Product Owner must explicitly accept the integrated ADR; runtime requires separately authorized, certified prerequisites and its own task. No schema, migration, API, provider, frontend, RBAC or runtime is changed here.
 
+> **NCCQ Iteration 7 target — 2026-11-28.** This ADR remains PROPOSED. Its A13-bound one-QuoteLine-per-asset selection, ranking and warning proposal does not establish the target group-slot contract. The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) binds the target report to three fixed supplier identities per group. [P252-04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md#9-remaining-decision-table--dor) must reconcile the checkpoint with exact confirmed group-slot revisions, including whether the checkpoint is needed. Preserve this proposal and ADR 0039 as predecessor records. SUPPLIER_SELECTION is outside current runtime authority.
+
 ## 1. Authority, evidence and E1 resolution
 
 Verified drafting baseline: `ee9a5611d2b6217413d43293cd3c3f7fc2fce996`; CODEX blob `de7e47d224a4f90bc190c182638d6a55c17540e5`; [exact-main CI #640 / run 37745117988](https://github.com/Reguluspt/valora-engineering/actions/runs/37745117988) COMPLETED / SUCCESS, all five required jobs. These are baseline facts, not candidate CI. Certified runtime/product ends at SUPPLIER_QUOTES; full OS-G2 remains PARTIAL / INCOMPLETE.

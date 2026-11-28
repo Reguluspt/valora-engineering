@@ -5,6 +5,8 @@
 **Date:** 01/09/2026
 **Parent authority:** `VALORA_UIUX_HANDOFF_v2.3.md`
 
+> **NCCQ Iteration 7 — 2026-11-28.** Sections 2–6 describe the Iteration 1 selection proposal and visual record. The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) binds the target report to the three fixed supplier slots per group and their actual confirmed revisions. Per-line reselection and NCC-to-appraisal warnings do not govern the target. Routing remains pending the owning decision on [P252-04](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md#9-remaining-decision-table--dor), including whether to remove the checkpoint. ADR 0051 remains PROPOSED and SUPPLIER_SELECTION remains outside current runtime authority.
+
 ## 1. Purpose
 `Chọn NCC đã xác nhận giá` là checkpoint sau `Hoàn tất từng báo giá NCC` và trước `Kết quả thẩm định giá` trong north-star flow. Mục tiêu là ghi nhận NCC/báo giá đã được người dùng xác nhận cho từng dòng tài sản của hồ sơ.
 

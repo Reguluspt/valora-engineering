@@ -2,6 +2,8 @@
 
 This is the bounded backend/domain/provider/API candidate for [Issue #137](https://github.com/Reguluspt/valora-engineering/issues/137), based on main `4b8f227e304a3066b79d48c82ac3ebee723d5478`. Accepted authority is [A12](../plan/VALORA_OS_G2_SUPPLIER_QUOTES_AUTHORITY_PROPOSAL.md): D1–D5 and D7–D12 accepted as proposed; D6 accepted with the Product Owner's explicit human-click clarification. A13 certification, integration, and product UX closure remain Gate Owner decisions. The certified runtime boundary remains PRICE_EVIDENCE until integration is certified.
 
+> **NCCQ Iteration 7 target — 2026-11-28.** The A13 provider, commands, one-supplier minimum, whole-set binding and warning codes below are certified v1. The [PO decision #252](https://github.com/Reguluspt/valora-engineering/issues/252#issuecomment-7232992154) sets a separate target after explicit source-work and appraisal-price confirmation, requiring all three fixed suppliers per group and exact-line coverage. Future actual quotes have a procedure/report role and sent-versus-returned lineage. Working-price comparisons do not govern target quote eligibility or valuation. See [NCCQ Workflow v2](../design/VALORA_NCCQ_WORKFLOW_CONTRACT_V2.md) and the [proposed #252 successor draft v1.1](../plan/VALORA_252_SUCCESSOR_ADR_DRAFT_v1.1.md) for the proposed dependency-scoped proof and cutover.
+
 ## Persistence and lifecycle
 
 One additive Alembic head, `e8f9a0b1c2d3`, succeeds `d7e8f9a0b1c2`. It creates three dedicated tables with tenant/project composite foreign keys; no legacy promotion or backfill occurs.
